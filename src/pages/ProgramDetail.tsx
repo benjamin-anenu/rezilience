@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProject } from '@/hooks/useProjects';
-import { useEffect, useState } from 'react';
+import { useClaimedProfileByProgramId, useClaimedProfileByProjectId } from '@/hooks/useClaimedProfiles';
 import type { ClaimedProfile } from '@/types';
 import { PROJECT_CATEGORIES } from '@/types';
 
@@ -27,38 +27,13 @@ const ProgramDetail = () => {
   // Fetch project from database by program_id
   const { data: project, isLoading, error } = useProject(id || '');
   
-  const [isVerified, setIsVerified] = useState(false);
-  const [claimedProfile, setClaimedProfile] = useState<ClaimedProfile | null>(null);
-
-  useEffect(() => {
-    if (project) {
-      // Check localStorage for claimed profile data
-      const verifiedPrograms = JSON.parse(localStorage.getItem('verifiedPrograms') || '{}');
-      
-      let profile = verifiedPrograms[project.program_id];
-      
-      if (!profile) {
-        Object.values(verifiedPrograms).forEach((p: unknown) => {
-          const prof = p as ClaimedProfile;
-          if (prof.programId === project.program_id) {
-            profile = prof;
-          }
-        });
-      }
-      
-      if (profile) {
-        setIsVerified(true);
-        setClaimedProfile(profile);
-      } else if (project.verified) {
-        // Project is verified in database
-        setIsVerified(true);
-      }
-    }
-
-    if (searchParams.get('verified') === 'true') {
-      setIsVerified(true);
-    }
-  }, [project, searchParams]);
+  // Fetch claimed profile from database
+  const { data: claimedProfileByProgram } = useClaimedProfileByProgramId(id || '');
+  const { data: claimedProfileByProject } = useClaimedProfileByProjectId(project?.id || '');
+  
+  // Use whichever claimed profile we found
+  const claimedProfile = claimedProfileByProgram || claimedProfileByProject;
+  const isVerified = project?.verified || claimedProfile?.verified || searchParams.get('verified') === 'true';
 
   if (isLoading) {
     return (

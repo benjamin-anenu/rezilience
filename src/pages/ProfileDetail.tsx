@@ -1,4 +1,3 @@
-import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -13,12 +12,13 @@ import {
   Youtube,
   Image,
   Video,
+  Loader2,
 } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Carousel,
   CarouselContent,
@@ -26,48 +26,42 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
-import { PROJECT_CATEGORIES, type ClaimedProfile } from '@/types';
+import { PROJECT_CATEGORIES } from '@/types';
+import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
 
 const ProfileDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [profile, setProfile] = useState<ClaimedProfile | null>(null);
-  const [loading, setLoading] = useState(true);
 
+  const { data: profile, isLoading, error } = useClaimedProfile(id || '');
   const justVerified = searchParams.get('verified') === 'true';
 
-  useEffect(() => {
-    // Load profile from localStorage
-    const stored = localStorage.getItem('verifiedPrograms');
-    if (stored) {
-      try {
-        const profiles = JSON.parse(stored);
-        if (id && profiles[id]) {
-          setProfile(profiles[id]);
-        }
-      } catch {
-        // Ignore parse errors
-      }
-    }
-    setLoading(false);
-  }, [id]);
-
-  if (loading) {
+  if (isLoading) {
     return (
       <Layout>
-        <div className="flex min-h-[60vh] items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
+        <div className="py-12">
+          <div className="container mx-auto max-w-4xl px-4 lg:px-8">
+            <Skeleton className="mb-6 h-10 w-24" />
+            <Skeleton className="mb-6 h-32 w-full" />
+            <div className="grid gap-6 md:grid-cols-2">
+              <Skeleton className="h-64" />
+              <Skeleton className="h-64" />
+            </div>
+          </div>
         </div>
       </Layout>
     );
   }
 
-  if (!profile) {
+  if (error || !profile) {
     return (
       <Layout>
         <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
           <p className="text-muted-foreground">Profile not found</p>
+          <p className="text-sm text-muted-foreground/70">
+            This profile may not exist or hasn't been verified yet.
+          </p>
           <Button asChild variant="outline">
             <Link to="/explorer">Return to Explorer</Link>
           </Button>

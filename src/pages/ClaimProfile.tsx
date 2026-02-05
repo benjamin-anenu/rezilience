@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle, AlertCircle, Loader2, Shield, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, Shield, Wallet, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useProject } from '@/hooks/useProjects';
+import { useToast } from '@/hooks/use-toast';
 import {
   StepIndicator,
   CoreIdentityForm,
@@ -22,6 +23,10 @@ const ClaimProfile = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading, signInWithX } = useAuth();
   const { publicKey, connected } = useWallet();
+  const { toast } = useToast();
+  
+  // Check if GitHub OAuth is configured
+  const isGitHubConfigured = !!import.meta.env.VITE_GITHUB_CLIENT_ID;
 
   // Current step (1-5)
   const [currentStep, setCurrentStep] = useState(1);
@@ -136,6 +141,11 @@ const ClaimProfile = () => {
     
     if (!clientId) {
       console.error('GitHub OAuth not configured');
+      toast({
+        title: "GitHub Integration Not Available",
+        description: "GitHub OAuth is not configured. Please contact the administrator.",
+        variant: "destructive",
+      });
       return;
     }
 
@@ -367,6 +377,25 @@ const ClaimProfile = () => {
           {/* Step 3: Socials */}
           {isAuthenticated && currentStep === 3 && (
             <>
+              {/* GitHub OAuth Warning */}
+              {!isGitHubConfigured && (
+                <Card className="mb-6 border-destructive/50 bg-destructive/10">
+                  <CardContent className="py-4">
+                    <div className="flex items-center gap-3">
+                      <AlertTriangle className="h-5 w-5 text-destructive" />
+                      <div>
+                        <p className="font-display text-sm font-semibold uppercase text-destructive">
+                          GitHub Integration Unavailable
+                        </p>
+                        <p className="text-xs text-destructive/80">
+                          GitHub OAuth is not configured. You can still enter your GitHub URL, but verification will not work.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+              
               <SocialsForm
                 githubOrgUrl={githubOrgUrl}
                 setGithubOrgUrl={setGithubOrgUrl}

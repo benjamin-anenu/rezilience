@@ -12,7 +12,8 @@ function calculateLivenessStatus(daysSinceCommit: number): "ACTIVE" | "STALE" | 
   return "STALE";
 }
 
-// Calculate resilience score using exponential decay
+// Calculate resilience score using exponential decay (unified formula)
+// λ = 0.05/month converted to per-day: 0.05/30 ≈ 0.00167
 function calculateResilienceScore(params: {
   commitVelocity: number;
   daysSinceCommit: number;
@@ -22,18 +23,23 @@ function calculateResilienceScore(params: {
 }): number {
   const { commitVelocity, daysSinceCommit, contributors, stars, isFork } = params;
   
+  // O (Originality): 0.3 for forks, 1.0 for original (per spec)
   const originality = isFork ? 0.3 : 1.0;
-  const velocityScore = Math.min(commitVelocity * 2, 20);
-  const contributorScore = Math.min(contributors * 0.5, 15);
-  const starScore = Math.min(Math.log10(stars + 1) * 5, 15);
-  const intensity = velocityScore + contributorScore + starScore;
   
-  const lambda = 0.02;
+  // I (Impact): logarithmic scale of contributors + stars
+  const impact = Math.log10(Math.max(contributors + stars, 1));
+  
+  // λ = 0.05/month = 0.00167/day
+  const lambda = 0.05 / 30;
   const decayFactor = Math.exp(-lambda * daysSinceCommit);
   
-  const finalScore = Math.min(Math.max((originality * intensity) * decayFactor, 0), 100);
+  // R(P,t) = (O × I) × e^(-λ × t) (no stake bonus in OAuth flow)
+  const baseScore = (originality * impact) * decayFactor;
   
-  return Math.round(finalScore * 10) / 10;
+  // Normalize to 0-100 scale (max theoretical baseScore ~4)
+  const normalizedScore = Math.min((baseScore / 4) * 100, 100);
+  
+  return Math.round(normalizedScore * 10) / 10;
 }
 
 // Parse GitHub URL to get owner/repo
@@ -256,16 +262,49 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Step 4: Create or update claimed_profile
+    // Step 4: Link to existing project if program_id provided
+    let projectId: string | null = null;
+    const programId = profile_data?.programId;
+    
+    if (programId) {
+      // Try to find existing project by program_id
+      const { data: existingProject } = await supabase
+        .from("projects")
+        .select("id")
+        .eq("program_id", programId)
+        .maybeSingle();
+      
+      if (existingProject) {
+        projectId = existingProject.id;
+        
+        // Update project as verified and update GitHub data
+        await supabase
+          .from("projects")
+          .update({
+            verified: true,
+            github_url: githubOrgUrl || primaryRepo?.html_url || null,
+            github_stars: primaryRepo?.stargazers_count ?? 0,
+            github_forks: primaryRepo?.forks_count ?? 0,
+            github_last_commit: primaryRepo?.pushed_at ?? null,
+            resilience_score: resilienceScore,
+            liveness_status: livenessStatus,
+            is_fork: primaryRepo?.fork ?? false,
+          })
+          .eq("id", projectId);
+      }
+    }
+
+    // Step 5: Create or update claimed_profile
     const profileId = profile_data?.id || `profile_${Date.now()}_${githubUser.id}`;
     
     const claimedProfile = {
       id: profileId,
+      project_id: projectId, // Link to projects table
       project_name: profile_data?.projectName || githubUser.name || githubUser.login,
       description: profile_data?.description || null,
       category: profile_data?.category || null,
       website_url: profile_data?.websiteUrl || null,
-      program_id: profile_data?.programId || null,
+      program_id: programId || null,
       wallet_address: profile_data?.walletAddress || null,
       claimer_wallet: profile_data?.walletAddress || null,
       github_org_url: githubOrgUrl || primaryRepo?.html_url || null,
@@ -302,6 +341,7 @@ Deno.serve(async (req) => {
         success: true,
         profile: {
           id: savedProfile.id,
+          projectId: projectId,
           projectName: savedProfile.project_name,
           githubUsername: savedProfile.github_username,
           score: resilienceScore,
