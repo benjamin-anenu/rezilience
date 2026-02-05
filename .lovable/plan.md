@@ -1,73 +1,92 @@
 
-# Fix Program Detail to Display Full Profile Information
 
-## Issues Identified
+# Prepopulate Verified Profile for Raydium AMM
 
-### Issue 1: ProgramDetail doesn't show collected profile data
-The `ProgramDetail.tsx` page only shows the verification badge but doesn't display:
-- Media gallery
-- Website snippet/preview
-- Social links (Discord, Telegram)
-- Verified timeline (milestones)
-- Description and category
-
-### Issue 2: "Claim Profile" button shown on verified programs
-When a program is already verified, the "UNVERIFIED" banner with "CLAIM PROFILE" button should not appear. Currently, this is correctly controlled by the `isVerified` state, but verified programs still only show a minimal banner instead of the full profile data.
-
-### Issue 3: Storage lookup may fail
-ProgramDetail looks up profiles by `program.programId`, but if the user didn't enter a programId during claiming, the profile is stored with a generated ID like `profile_123456_xUserId`. This means the lookup will fail.
+## Overview
+Add mock verified profile data for Raydium AMM (program id '3') with all collected information (media, socials, milestones, website) so you can see the full Heartbeat Dashboard when viewing this program.
 
 ---
 
-## Solution
+## Changes
 
-### Approach
-Merge the rich profile display from `ProfileDetail.tsx` into `ProgramDetail.tsx` when a verified profile exists. When verified, show all the collected information (media, socials, milestones, website preview).
+### 1. `src/data/mockData.ts`
 
----
-
-## Files to Modify
-
-### 1. `src/pages/ProgramDetail.tsx`
-
-**Changes:**
-1. **Remove the "Claim Profile" CTA entirely for verified programs** - The unverified banner (lines 88-107) should only show when NOT verified
-2. **Display full profile data when verified** - Import and render the same sections as ProfileDetail:
-   - Media Gallery (carousel)
-   - Website Snippet (iframe preview with external link)
-   - Social Pulse (X, Discord, Telegram, GitHub)
-   - Verified Timeline (milestones with status)
-3. **Add fallback lookup** - Also search by profile ID patterns in localStorage
-
-**New sections to add when `isVerified && claimedProfile`:**
-- Media Gallery section with carousel
-- Website preview with launch button
-- Social pulse with all linked socials
-- Verified timeline with milestones
-- Description display
-
-**Remove:**
-- The "CLAIM PROFILE" button from the unverified banner (lines 101-106) - or only show it when NOT already in the verified programs list
-
-### 2. Storage Lookup Enhancement
-
-Update the useEffect to also check if this program's programId matches any stored profile's programId:
+Add a new export containing prepopulated verified profile data:
 
 ```typescript
+export const mockVerifiedProfiles: Record<string, ClaimedProfile> = {
+  'RaydiumPFKoXLY8HbXUqe6ZZ4D2jXZ5xCp1uxSp9yQB1': {
+    id: 'profile_raydium_001',
+    projectName: 'Raydium AMM',
+    description: 'Leading Solana AMM powering the evolution of DeFi',
+    category: 'defi',
+    websiteUrl: 'https://raydium.io',
+    logoUrl: 'https://raw.githubusercontent.com/raydium-io/media-assets/main/logo.png',
+    programId: 'RaydiumPFKoXLY8HbXUqe6ZZ4D2jXZ5xCp1uxSp9yQB1',
+    walletAddress: '7YttLkHDoNj9wyDur5pM1ejNaAvT9X4eqaYcHQqtj2G5',
+    
+    xUserId: 'raydium_x_001',
+    xUsername: 'RaydiumProtocol',
+    
+    githubOrgUrl: 'https://github.com/raydium-io',
+    githubUsername: 'raydium-io',
+    
+    socials: {
+      xHandle: 'RaydiumProtocol',
+      discordUrl: 'https://discord.gg/raydium',
+      telegramUrl: 'https://t.me/raydiumprotocol',
+    },
+    
+    mediaAssets: [
+      { id: 'm1', type: 'image', url: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800', order: 0, title: 'Platform Dashboard' },
+      { id: 'm2', type: 'youtube', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', order: 1, title: 'Product Demo' },
+      { id: 'm3', type: 'image', url: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=800', order: 2, title: 'Architecture Overview' },
+    ],
+    
+    milestones: [
+      { id: 'ms1', title: 'Mainnet V3 Launch', targetDate: '2024-01-15', isLocked: true, status: 'completed' },
+      { id: 'ms2', title: 'Concentrated Liquidity', targetDate: '2024-03-01', isLocked: true, status: 'upcoming' },
+      { id: 'ms3', title: 'Cross-Chain Bridge', targetDate: '2024-06-15', isLocked: true, status: 'upcoming' },
+      { id: 'ms4', title: 'Security Audit V2', targetDate: '2024-01-01', isLocked: true, status: 'overdue', varianceRequested: true },
+    ],
+    
+    verified: true,
+    verifiedAt: '2024-01-08T12:00:00Z',
+    score: 88,
+    livenessStatus: 'active',
+  },
+};
+```
+
+---
+
+### 2. `src/pages/ProgramDetail.tsx`
+
+Update the lookup logic to also check the mock data:
+
+```typescript
+import { getProgramById, mockVerifiedProfiles } from '@/data/mockData';
+
+// In useEffect:
 useEffect(() => {
   if (program) {
+    // First check localStorage
     const verifiedPrograms = JSON.parse(localStorage.getItem('verifiedPrograms') || '{}');
-    
-    // Direct lookup by programId
     let profile = verifiedPrograms[program.programId];
     
-    // Fallback: search all profiles for matching programId
+    // Fallback: search localStorage profiles
     if (!profile) {
-      Object.values(verifiedPrograms).forEach((p: ClaimedProfile) => {
-        if (p.programId === program.programId) {
-          profile = p;
+      Object.values(verifiedPrograms).forEach((p: unknown) => {
+        const prof = p as ClaimedProfile;
+        if (prof.programId === program.programId) {
+          profile = prof;
         }
       });
+    }
+    
+    // Fallback: check mock verified profiles
+    if (!profile && mockVerifiedProfiles[program.programId]) {
+      profile = mockVerifiedProfiles[program.programId];
     }
     
     if (profile) {
@@ -75,95 +94,33 @@ useEffect(() => {
       setClaimedProfile(profile);
     }
   }
-}, [program]);
+}, [program, searchParams]);
 ```
 
 ---
 
-## Updated ProgramDetail Layout (When Verified)
+## Result
 
-```text
-┌─────────────────────────────────────────────────────────┐
-│ [← Back to Explorer]                                    │
-├─────────────────────────────────────────────────────────┤
-│ [VERIFIED TITAN] GitHub connected • Score validated     │
-├─────────────────────────────────────────────────────────┤
-│ PROGRAM HEADER (existing)                               │
-│ Score: 94 | Rank: #1 | Status: Active                  │
-├─────────────────────────────────────────────────────────┤
-│ DESCRIPTION (from claimed profile)                      │
-│ "Your decentralized exchange for..."                   │
-├─────────────────────────────────────────────────────────┤
-│ MEDIA GALLERY                                           │
-│ [Carousel with images/videos]                           │
-├─────────────────────────────────────────────────────────┤
-│ WEBSITE SNIPPET      │ SOCIAL PULSE                     │
-│ [iframe preview]     │ 𝕏 @handle | Discord | Telegram  │
-│ [View Site ↗]        │ GitHub: linked                   │
-├─────────────────────────────────────────────────────────┤
-│ VERIFIED TIMELINE                                       │
-│ ✓ Mainnet Launch - Jan 15  │ ○ V2 Release - Mar 01     │
-├─────────────────────────────────────────────────────────┤
-│ UPGRADE CHART (existing) │ RECENT EVENTS (existing)     │
-├─────────────────────────────────────────────────────────┤
-│ METRIC CARDS (existing)                                 │
-├─────────────────────────────────────────────────────────┤
-│ STAKE CTA (existing)                                    │
-└─────────────────────────────────────────────────────────┘
-```
+When you navigate to `/program/3` (Raydium AMM), you will see:
+
+| Section | Content |
+|---------|---------|
+| Verified Badge | "VERIFIED TITAN" banner with GitHub connected status |
+| Description | "Leading Solana AMM powering the evolution of DeFi" |
+| Media Gallery | 3 assets in carousel (2 images, 1 YouTube video) |
+| Website Snippet | Live iframe preview of raydium.io with "Launch Site" button |
+| Social Pulse | X (@RaydiumProtocol), Discord, Telegram, GitHub links |
+| Verified Timeline | 4 milestones showing completed, upcoming, and overdue statuses |
+| Development Stats | Existing metrics + charts |
 
 ---
 
-## Implementation Details
+## Summary
 
-### New Imports to Add
-```typescript
-import {
-  ExternalLink,
-  Github,
-  MessageCircle,
-  Send,
-  Calendar,
-  Lock,
-  AlertTriangle,
-  Youtube,
-  Image as ImageIcon,
-  Video,
-} from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from '@/components/ui/carousel';
-import { PROJECT_CATEGORIES } from '@/types';
-```
+| Change | File | Description |
+|--------|------|-------------|
+| Add mock profiles | `mockData.ts` | Export `mockVerifiedProfiles` with full Raydium data |
+| Update lookup | `ProgramDetail.tsx` | Check mock profiles as fallback after localStorage |
 
-### Helper Functions to Add
-```typescript
-const getEmbedUrl = (url: string, type: string) => {
-  if (type === 'youtube') {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
-    if (match) return `https://www.youtube.com/embed/${match[1]}`;
-  }
-  return url;
-};
-```
+This lets you see all the rich profile information without going through the claim flow.
 
----
-
-## Summary of Changes
-
-| Change | Description |
-|--------|-------------|
-| Remove "Claim Profile" button for verified | Don't show the unverified banner at all when verified |
-| Add Media Gallery | Carousel with images/videos from claimed profile |
-| Add Website Preview | Iframe snippet with external link button |
-| Add Social Pulse | Display all linked social platforms |
-| Add Verified Timeline | Show milestones with status indicators |
-| Add Description | Display project description if available |
-| Fix storage lookup | Search all profiles for matching programId |
-
-This ensures that when someone clicks on a program in the Explorer, they see all the rich information that was collected during the claim profile flow.
