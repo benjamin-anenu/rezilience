@@ -1,4 +1,47 @@
- import { Program, EcosystemStats, UpgradeEvent, ChartDataPoint } from '@/types';
+import { Program, EcosystemStats, UpgradeEvent, ChartDataPoint, ClaimedProfile } from '@/types';
+
+export const mockVerifiedProfiles: Record<string, ClaimedProfile> = {
+  'RaydiumPFKoXLY8HbXUqe6ZZ4D2jXZ5xCp1uxSp9yQB1': {
+    id: 'profile_raydium_001',
+    projectName: 'Raydium AMM',
+    description: 'Leading Solana AMM powering the evolution of DeFi',
+    category: 'defi',
+    websiteUrl: 'https://raydium.io',
+    logoUrl: 'https://raw.githubusercontent.com/raydium-io/media-assets/main/logo.png',
+    programId: 'RaydiumPFKoXLY8HbXUqe6ZZ4D2jXZ5xCp1uxSp9yQB1',
+    walletAddress: '7YttLkHDoNj9wyDur5pM1ejNaAvT9X4eqaYcHQqtj2G5',
+    
+    xUserId: 'raydium_x_001',
+    xUsername: 'RaydiumProtocol',
+    
+    githubOrgUrl: 'https://github.com/raydium-io',
+    githubUsername: 'raydium-io',
+    
+    socials: {
+      xHandle: 'RaydiumProtocol',
+      discordUrl: 'https://discord.gg/raydium',
+      telegramUrl: 'https://t.me/raydiumprotocol',
+    },
+    
+    mediaAssets: [
+      { id: 'm1', type: 'image', url: 'https://images.unsplash.com/photo-1639762681485-074b7f938ba0?w=800', order: 0, title: 'Platform Dashboard' },
+      { id: 'm2', type: 'youtube', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', order: 1, title: 'Product Demo' },
+      { id: 'm3', type: 'image', url: 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?w=800', order: 2, title: 'Architecture Overview' },
+    ],
+    
+    milestones: [
+      { id: 'ms1', title: 'Mainnet V3 Launch', targetDate: '2024-01-15', isLocked: true, status: 'completed' },
+      { id: 'ms2', title: 'Concentrated Liquidity', targetDate: '2024-03-01', isLocked: true, status: 'upcoming' },
+      { id: 'ms3', title: 'Cross-Chain Bridge', targetDate: '2024-06-15', isLocked: true, status: 'upcoming' },
+      { id: 'ms4', title: 'Security Audit V2', targetDate: '2024-01-01', isLocked: true, status: 'overdue', varianceRequested: true },
+    ],
+    
+    verified: true,
+    verifiedAt: '2024-01-08T12:00:00Z',
+    score: 88,
+    livenessStatus: 'active',
+  },
+};
  
  export const ecosystemStats: EcosystemStats = {
    programsIndexed: 2847,

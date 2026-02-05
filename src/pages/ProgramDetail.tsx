@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { getProgramById } from '@/data/mockData';
+import { getProgramById, mockVerifiedProfiles } from '@/data/mockData';
 import { useEffect, useState } from 'react';
 import type { ClaimedProfile } from '@/types';
 import { PROJECT_CATEGORIES } from '@/types';
@@ -42,6 +42,11 @@ const ProgramDetail = () => {
             profile = prof;
           }
         });
+      }
+      
+      // Fallback: check mock verified profiles
+      if (!profile && mockVerifiedProfiles[program.programId]) {
+        profile = mockVerifiedProfiles[program.programId];
       }
       
       if (profile) {
