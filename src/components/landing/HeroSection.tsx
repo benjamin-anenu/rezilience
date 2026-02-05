@@ -1,5 +1,5 @@
- import { Link } from 'react-router-dom';
- import { ArrowRight, Shield, Activity, Fingerprint } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Shield, Activity, Fingerprint, Lock } from 'lucide-react';
  import { Button } from '@/components/ui/button';
  import heroBg from '@/assets/hero-bg.png';
  
@@ -22,29 +22,33 @@
                <span className="font-mono text-xs text-primary">ON-CHAIN ASSURANCE</span>
              </div>
  
-             <h1 className="mb-6 font-display text-4xl font-bold uppercase leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl">
-               MAINTENANCE IS{' '}
-               <span className="text-primary">RESILIENCE</span>
-             </h1>
+            <h1 className="mb-6 font-display text-4xl font-bold uppercase leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl">
+                REPUTATION CAN'T BE{' '}
+                <span className="text-primary">FORKED.</span>
+              </h1>
+
+              <p className="mb-8 max-w-xl text-lg text-muted-foreground">
+                Any dev can copy a repo. You can't fake a heartbeat. We turn your development velocity into an immutable Resilience score that investors can bank on. Don't just launch. Outlast.
+              </p>
  
-             <p className="mb-8 max-w-xl text-lg text-muted-foreground">
-               Quantified trust metrics for Solana programs. Track upgrade frequency, 
-               verify bytecode originality, and stake on program integrity.
-             </p>
- 
-             <div className="flex flex-wrap gap-4">
-               <Button asChild size="lg" className="font-display font-semibold uppercase tracking-wider">
-                 <Link to="/explorer">
-                   EXPLORE PROGRAMS
-                   <ArrowRight className="ml-2 h-4 w-4" />
-                 </Link>
-               </Button>
-               <Button asChild variant="outline" size="lg" className="font-display font-semibold uppercase tracking-wider">
-                 <Link to="/staking">
-                   STAKE NOW
-                 </Link>
-               </Button>
-             </div>
+              <div className="flex flex-wrap gap-4">
+                <Button asChild size="lg" className="font-display font-semibold uppercase tracking-wider">
+                  <Link to="/explorer">
+                    CHECK PROGRAM VITALS
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="lg" 
+                  disabled 
+                  className="font-display font-semibold uppercase tracking-wider cursor-not-allowed"
+                >
+                  <Lock className="mr-2 h-4 w-4" />
+                  STAKE NOW
+                  <span className="ml-2 text-xs text-muted-foreground">(COMING SOON)</span>
+                </Button>
+              </div>
  
              {/* Stats */}
              <div className="mt-12 grid grid-cols-3 gap-8">

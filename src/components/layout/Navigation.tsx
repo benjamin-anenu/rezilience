@@ -1,6 +1,5 @@
- import { Link, useLocation } from 'react-router-dom';
- import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
- import { Menu, X } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { Menu, X, User } from 'lucide-react';
  import { useState } from 'react';
  import { Button } from '@/components/ui/button';
  import { cn } from '@/lib/utils';
@@ -60,10 +59,13 @@ const navLinks = [
              )}
            </div>
  
-           {/* Wallet Button */}
-           <div className="hidden md:block">
-             <WalletMultiButton />
-           </div>
+            {/* Claim Profile Button */}
+            <div className="hidden md:block">
+              <Button className="font-display font-semibold uppercase tracking-wider">
+                <User className="mr-2 h-4 w-4" />
+                CLAIM MY PROFILE
+              </Button>
+            </div>
  
            {/* Mobile Menu Button */}
            <Button
@@ -108,9 +110,12 @@ const navLinks = [
                    </Link>
                  )
                )}
-               <div className="pt-2">
-                 <WalletMultiButton />
-               </div>
+                <div className="pt-2">
+                  <Button className="font-display font-semibold uppercase tracking-wider w-full">
+                    <User className="mr-2 h-4 w-4" />
+                    CLAIM MY PROFILE
+                  </Button>
+                </div>
              </div>
            </div>
          )}
