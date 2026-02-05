@@ -67,7 +67,7 @@ export interface GitHubData {
   stars: number;
   forks: number;
   activeContributors: number;
-  commitVelocity: number; // commits per day (30-day average)
+  commitVelocity: number;
   lastCommitDate: string;
   openIssues: number;
   releases: number;
@@ -83,16 +83,110 @@ export interface ResilienceScoreResult {
   };
 }
 
+// Media & Roadmap Types
+export interface MediaAsset {
+  id: string;
+  type: 'image' | 'youtube' | 'video';
+  url: string;
+  thumbnailUrl?: string;
+  title?: string;
+  order: number;
+}
+
+export interface Milestone {
+  id: string;
+  title: string;
+  targetDate: string;
+  isLocked: boolean;
+  status: 'upcoming' | 'completed' | 'overdue';
+  varianceRequested?: boolean;
+}
+
+export interface SocialLinks {
+  xHandle?: string;
+  discordUrl?: string;
+  telegramUrl?: string;
+}
+
+// Category options
+export type ProjectCategory = 
+  | 'defi' 
+  | 'nft' 
+  | 'infrastructure' 
+  | 'gaming' 
+  | 'social' 
+  | 'dao' 
+  | 'payments' 
+  | 'developer-tools' 
+  | 'other';
+
+export const PROJECT_CATEGORIES: { value: ProjectCategory; label: string }[] = [
+  { value: 'defi', label: 'DeFi' },
+  { value: 'nft', label: 'NFT / Digital Collectibles' },
+  { value: 'infrastructure', label: 'Infrastructure' },
+  { value: 'gaming', label: 'Gaming' },
+  { value: 'social', label: 'Social' },
+  { value: 'dao', label: 'DAO / Governance' },
+  { value: 'payments', label: 'Payments' },
+  { value: 'developer-tools', label: 'Developer Tools' },
+  { value: 'other', label: 'Other' },
+];
+
+// Complete Claimed Profile
 export interface ClaimedProfile {
-  programId?: string; // Optional - user might not claim a specific program
-  programName?: string;
-  walletAddress?: string; // Optional - linked wallet
-  xUserId: string; // Required - X user ID
-  xUsername: string; // Required - X username
+  id: string;
+  
+  // Core Identity (Step 2)
+  projectName: string;
+  description?: string;
+  category: ProjectCategory;
+  websiteUrl?: string;
+  logoUrl?: string;
+  programId?: string;
+  walletAddress?: string;
+  
+  // Auth (Step 1)
+  xUserId: string;
+  xUsername: string;
+  
+  // GitHub (Step 3)
+  githubOrgUrl: string;
   githubUsername?: string;
-  githubRepoUrl?: string;
+  
+  // Socials (Step 3)
+  socials: SocialLinks;
+  
+  // Media (Step 4)
+  mediaAssets: MediaAsset[];
+  
+  // Roadmap (Step 5)
+  milestones: Milestone[];
+  
+  // Verification
   verified: boolean;
   verifiedAt: string;
   score: number;
   livenessStatus: 'active' | 'dormant' | 'degraded';
+}
+
+// Form data for multi-step claim flow
+export interface ClaimProfileFormData {
+  // Step 2: Core Identity
+  projectName: string;
+  description: string;
+  category: ProjectCategory | '';
+  websiteUrl: string;
+  programId: string;
+  walletAddress: string;
+  
+  // Step 3: Socials
+  githubOrgUrl: string;
+  discordUrl: string;
+  telegramUrl: string;
+  
+  // Step 4: Media
+  mediaAssets: MediaAsset[];
+  
+  // Step 5: Roadmap
+  milestones: Milestone[];
 }

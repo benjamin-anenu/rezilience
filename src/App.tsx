@@ -8,6 +8,7 @@ import { AuthProvider } from "@/context/AuthContext";
 import Index from "./pages/Index";
 import Explorer from "./pages/Explorer";
 import ProgramDetail from "./pages/ProgramDetail";
+import ProfileDetail from "./pages/ProfileDetail";
 import ClaimProfile from "./pages/ClaimProfile";
 import GitHubCallback from "./pages/GitHubCallback";
 import XCallback from "./pages/XCallback";
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/explorer" element={<Explorer />} />
               <Route path="/program/:id" element={<ProgramDetail />} />
+              <Route path="/profile/:id" element={<ProfileDetail />} />
               <Route path="/claim-profile" element={<ClaimProfile />} />
               <Route path="/github-callback" element={<GitHubCallback />} />
               <Route path="/x-callback" element={<XCallback />} />
