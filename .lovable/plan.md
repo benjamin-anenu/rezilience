@@ -1,257 +1,304 @@
 
 
-# Claim My Profile Journey with GitHub OAuth
+# X (Twitter) Authentication + Flexible Claim Profile Flow
 
 ## Overview
-Implement a complete "Claim Profile" flow that allows developers to verify ownership of their Solana programs by connecting their GitHub account. This uses OAuth for read-only access, building trust through transparency and converting unverified programs to "Verified Titan" status.
+Implement X (Twitter) OAuth as the primary authentication layer. Users must sign in with X before claiming their profile. After authentication, they can optionally link a Program ID or Wallet, but GitHub connection remains required for scoring.
 
 ---
 
-## User Flow
+## New User Flow
 
 ```text
-"CLAIM MY PROFILE" (Nav Button)
-         ↓
-   /claim-profile
-         ↓
-┌─────────────────────────────┐
-│  Step 1: Enter Program ID   │
-│  [Input Field] [VERIFY]     │
-└─────────────────────────────┘
-         ↓ (on-chain check)
-┌─────────────────────────────┐
-│  Step 2: Connect GitHub     │
-│  Trust messaging + OAuth    │
-│  [CONNECT GITHUB button]    │
-└─────────────────────────────┘
-         ↓ (GitHub OAuth)
-   /github-callback
-         ↓ (token exchange)
-┌─────────────────────────────┐
-│  Step 3: Data Indexed       │
-│  Step 4: Score Calculated   │
-└─────────────────────────────┘
-         ↓
-   /program/:id?verified=true
-   (Shows VERIFIED TITAN badge)
+User clicks "CLAIM MY PROFILE"
+            ↓
+┌─────────────────────────────────────┐
+│      SIGN IN WITH X (Required)      │
+│   "X is your identity layer"        │
+│   [𝕏 SIGN IN WITH X button]         │
+└─────────────────────────────────────┘
+            ↓
+       /x-callback
+            ↓
+     User authenticated
+            ↓
+┌─────────────────────────────────────┐
+│    CLAIM YOUR PROTOCOL              │
+│                                     │
+│  ┌─────────────┐ ┌─────────────┐   │
+│  │ Program ID  │ │   Wallet    │   │
+│  │ (OPTIONAL)  │ │ (OPTIONAL)  │   │
+│  └─────────────┘ └─────────────┘   │
+│                                     │
+│  ┌─────────────────────────────┐   │
+│  │    GitHub (REQUIRED)        │   │
+│  │    [CONNECT GITHUB]         │   │
+│  └─────────────────────────────┘   │
+└─────────────────────────────────────┘
+            ↓
+      /github-callback
+            ↓
+   Score Calculated → VERIFIED TITAN
 ```
 
 ---
 
 ## Files to Create
 
-### 1. `src/pages/ClaimProfile.tsx`
-Complete claiming interface with:
-- Step 1: Program ID verification (mock on-chain check)
-- Step 2: GitHub OAuth connection with trust messaging
-- Progress bar showing verification steps
-- "Read-Only Access" trust indicator
-- Quote: "IN AN OPEN-SOURCE WORLD, PRIVACY IS ROT."
+### 1. `src/context/AuthContext.tsx`
+Authentication context for managing X OAuth state:
+- `user` - Current authenticated user (X profile)
+- `loading` - Auth loading state
+- `isAuthenticated` - Boolean check
+- `signInWithX()` - Initiate OAuth flow
+- `signOut()` - Clear session
 
-### 2. `src/pages/GitHubCallback.tsx`
-OAuth callback handler:
-- Receive authorization code from GitHub
-- Display loading spinner during processing
-- Show error state if verification fails
-- Redirect to program page on success
+### 2. `src/pages/XCallback.tsx`
+X OAuth callback handler:
+- Receive authorization code from X
+- Exchange for token (mock in Phase 0)
+- Create/update user session in localStorage
+- Redirect to `/claim-profile` or `/dashboard`
 
-### 3. `src/lib/github.ts`
-GitHub utility functions:
-- `fetchGitHubData()` - Get repo stats (stars, forks, commits, contributors)
-- `calculateGitHubMetrics()` - Process raw GitHub data
-
-### 4. `src/lib/scoring.ts`
-Resilience scoring algorithm:
-- `calculateResilienceScore()` - Compute score from GitHub data
-- Determine liveness status based on commit frequency
-
-### 5. `supabase/functions/github-token/index.ts`
-Edge function for secure token exchange:
-- Receives authorization code
-- Exchanges for access token using client secret
-- Returns token to client (never exposes secret)
+### 3. `src/pages/Dashboard.tsx`
+Authenticated user dashboard:
+- Display X profile (avatar, username)
+- List verified projects
+- Quick actions: Claim Protocol, Explore
 
 ---
 
 ## Files to Modify
 
 ### 1. `src/App.tsx`
-Add new routes:
-- `/claim-profile` → ClaimProfile page
-- `/github-callback` → GitHubCallback page
+- Wrap app with `AuthProvider`
+- Add `/x-callback` and `/dashboard` routes
+- Add protected route wrapper for authenticated pages
 
-### 2. `src/components/layout/Navigation.tsx`
-- "CLAIM MY PROFILE" button already exists (added previously)
-- Link it to `/claim-profile` route
+### 2. `src/pages/ClaimProfile.tsx`
+Complete redesign:
+- Check auth state first - redirect to sign in if not authenticated
+- Show 3 cards: Program ID (optional), Wallet (optional), GitHub (required)
+- Wallet uses existing `useWallet()` from Solana adapter
+- "OPTIONAL" and "REQUIRED" badges on cards
+- GitHub always visible (not gated behind program verification)
 
-### 3. `src/pages/ProgramDetail.tsx`
-Add verification status display:
-- "VERIFIED TITAN" badge for verified programs
-- "UNVERIFIED" badge with "CLAIM PROFILE" CTA for unverified
+### 3. `src/pages/GitHubCallback.tsx`
+- Handle claims with or without Program ID
+- Handle claims with or without Wallet address
+- Store X user ID with claimed profile
 
-### 4. `src/types/index.ts`
+### 4. `src/components/layout/Navigation.tsx`
+- Show user avatar + username when authenticated
+- "Sign Out" button for authenticated users
+- "SIGN IN" button for unauthenticated users
+- Conditional nav links based on auth state
+
+### 5. `src/types/index.ts`
 Add new types:
-- `VerificationStep` interface
-- `GitHubData` interface
-- `ResilienceScoreResult` interface
+- `XUser` interface (id, username, avatar_url)
+- `AuthState` interface
+- Update `ClaimedProfile` to include `xUserId` and make `programId` optional
 
 ---
 
-## Technical Implementation Details
+## Technical Implementation
 
-### ClaimProfile Page UI Structure
-
+### AuthContext Structure
 ```tsx
-// Verification Steps
-const verificationSteps = [
-  { step: 1, label: 'Program Claimed', status: 'pending' },
-  { step: 2, label: 'GitHub Connected', status: 'pending' },
-  { step: 3, label: 'Data Indexed', status: 'pending' },
-  { step: 4, label: 'Score Calculated', status: 'pending' },
-];
-
-// Step 1: Program Input
-<Card>
-  <Input placeholder="Enter Solana Program ID..." />
-  <Button>VERIFY PROGRAM</Button>
-</Card>
-
-// Step 2: GitHub OAuth (shown after program verified)
-<Card>
-  <Quote>"IN AN OPEN-SOURCE WORLD, PRIVACY IS ROT."</Quote>
-  <TrustMessage>Read-Only Access: We only read commit history...</TrustMessage>
-  <Button onClick={handleGitHubConnect}>
-    <Github /> CONNECT GITHUB
-  </Button>
-</Card>
-
-// Progress Bar
-<Progress value={(completedSteps / 4) * 100} />
-```
-
-### GitHub OAuth Flow
-
-```tsx
-// Initiate OAuth
-const handleGitHubConnect = () => {
-  const clientId = 'GITHUB_CLIENT_ID'; // From secrets
-  const redirectUri = `${window.location.origin}/github-callback`;
-  const scope = 'public_repo read:user';
-  
-  const authUrl = `https://github.com/login/oauth/authorize?` +
-    `client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scope}`;
-  
-  window.location.href = authUrl;
-};
-```
-
-### Edge Function for Token Exchange
-
-```typescript
-// supabase/functions/github-token/index.ts
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
-
-  const { code } = await req.json();
-  
-  const response = await fetch('https://github.com/login/oauth/access_token', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    },
-    body: JSON.stringify({
-      client_id: Deno.env.get('GITHUB_CLIENT_ID'),
-      client_secret: Deno.env.get('GITHUB_CLIENT_SECRET'),
-      code,
-    }),
-  });
-
-  const data = await response.json();
-  
-  return new Response(JSON.stringify(data), {
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
-});
-```
-
-### Scoring Algorithm
-
-```typescript
-// src/lib/scoring.ts
-export function calculateResilienceScore(githubData: GitHubData, stake: { stakedSOL: number }) {
-  // Liveness (40%): Commit frequency, recency
-  const livenessScore = calculateLiveness(githubData);
-  
-  // Originality (30%): Stars, forks ratio, contributors
-  const originalityScore = calculateOriginality(githubData);
-  
-  // Assurance (30%): Staked SOL
-  const assuranceScore = calculateAssurance(stake);
-  
-  const totalScore = Math.round(
-    livenessScore * 0.4 + 
-    originalityScore * 0.3 + 
-    assuranceScore * 0.3
-  );
-  
-  return {
-    score: totalScore,
-    livenessStatus: livenessScore > 70 ? 'active' : 
-                   livenessScore > 40 ? 'degraded' : 'dormant',
-    breakdown: { liveness: livenessScore, originality: originalityScore, assurance: assuranceScore }
-  };
+interface XUser {
+  id: string;
+  username: string;
+  avatarUrl: string;
 }
+
+interface AuthContextType {
+  user: XUser | null;
+  loading: boolean;
+  isAuthenticated: boolean;
+  signInWithX: () => void;
+  signOut: () => void;
+}
+
+// Check localStorage for existing session on mount
+useEffect(() => {
+  const storedUser = localStorage.getItem('x_user');
+  if (storedUser) {
+    setUser(JSON.parse(storedUser));
+  }
+  setLoading(false);
+}, []);
+```
+
+### X OAuth Flow (Mock for Phase 0)
+```tsx
+const signInWithX = () => {
+  // Phase 0: Mock OAuth - go directly to callback
+  // In production: redirect to X OAuth URL
+  window.location.href = '/x-callback?code=mock_x_auth_code';
+};
+```
+
+### ClaimProfile UI Structure
+```tsx
+{/* Auth Check */}
+{!isAuthenticated && <SignInPrompt />}
+
+{isAuthenticated && (
+  <>
+    {/* Optional Identifiers */}
+    <div className="grid md:grid-cols-2 gap-4 mb-6">
+      {/* Program ID Card */}
+      <Card>
+        <Badge>OPTIONAL</Badge>
+        <Input placeholder="Solana Program ID..." />
+        <Button>VERIFY PROGRAM</Button>
+        <p>Skip if you're not claiming a specific program</p>
+      </Card>
+      
+      {/* Wallet Card */}
+      <Card>
+        <Badge>OPTIONAL</Badge>
+        <WalletMultiButton />
+        <p>Link your wallet for on-chain identity</p>
+      </Card>
+    </div>
+
+    {/* Required: GitHub */}
+    <Card className="border-primary">
+      <Badge variant="primary">REQUIRED</Badge>
+      <Quote>"IN AN OPEN-SOURCE WORLD, PRIVACY IS ROT."</Quote>
+      <TrustMessage>Read-Only Access...</TrustMessage>
+      <Button>CONNECT GITHUB</Button>
+    </Card>
+  </>
+)}
+```
+
+### Navigation Auth Display
+```tsx
+{isAuthenticated ? (
+  <div className="flex items-center gap-3">
+    <img src={user.avatarUrl} className="h-8 w-8 rounded-full" />
+    <span>@{user.username}</span>
+    <Button variant="ghost" onClick={signOut}>
+      <LogOut className="h-4 w-4" />
+    </Button>
+  </div>
+) : (
+  <Button asChild>
+    <Link to="/claim-profile">SIGN IN</Link>
+  </Button>
+)}
 ```
 
 ---
 
-## Mock Implementation (Phase 0)
+## Verification Steps Update
 
-Since this is Phase 0 without live Supabase database yet, the implementation will use:
+Old flow (4 steps):
+1. Program Claimed
+2. GitHub Connected
+3. Data Indexed
+4. Score Calculated
 
-1. **localStorage** to persist verification state temporarily
-2. **Mock GitHub API responses** for demo purposes
-3. **URL parameters** to show verified badge on program detail
-
-The full database integration can be added when Supabase is connected.
-
----
-
-## Design Consistency
-
-All new components will follow the existing Bloomberg Terminal aesthetic:
-
-| Element | Classes |
-|---------|---------|
-| Cards | `border-border bg-card border-primary/30` (active) |
-| Headers | `font-display text-lg uppercase tracking-tight` |
-| Data values | `font-mono text-primary` |
-| Trust messaging | `text-muted-foreground text-sm` |
-| Buttons | `bg-primary text-primary-foreground` |
-| Progress | `bg-primary/20` track, `bg-primary` fill |
-| Verified badge | `bg-primary/20 text-primary border-primary/30` |
-| Unverified badge | `bg-destructive/20 text-destructive border-destructive/30` |
+New flow (4 steps):
+1. X Authenticated (auto-complete on page load)
+2. Identity Linked (optional - program or wallet)
+3. GitHub Connected (required)
+4. Score Calculated
 
 ---
 
-## Secrets Required
+## UX Improvements to Keep
 
-Before implementing the GitHub OAuth, these secrets need to be configured:
+From previous plan, these will be maintained:
+- "OPTIONAL" and "REQUIRED" badges with distinct styling
+- Trust messaging with "Read-Only Access" indicator
+- Quote: "IN AN OPEN-SOURCE WORLD, PRIVACY IS ROT."
+- Progress bar showing verification status
+- Data Provenance notice at bottom
+- "VERIFIED TITAN" badge on successful verification
 
-| Secret | Description |
-|--------|-------------|
-| `GITHUB_CLIENT_ID` | OAuth App Client ID from GitHub Developer Settings |
-| `GITHUB_CLIENT_SECRET` | OAuth App Client Secret (never exposed to frontend) |
+---
 
-I will prompt you to add these secrets when implementing the edge function.
+## Design Details
+
+### Badge Styling
+```tsx
+// Optional badge (muted)
+<span className="rounded-sm bg-muted px-2 py-0.5 text-[10px] font-mono uppercase text-muted-foreground">
+  OPTIONAL
+</span>
+
+// Required badge (primary)
+<span className="rounded-sm bg-primary/20 px-2 py-0.5 text-[10px] font-mono uppercase text-primary">
+  REQUIRED
+</span>
+```
+
+### X Sign-In Button
+```tsx
+<Button className="w-full bg-black text-white hover:bg-black/90">
+  <span className="mr-2 text-xl">𝕏</span>
+  SIGN IN WITH X
+</Button>
+```
+
+### User Avatar in Nav
+```tsx
+<div className="flex items-center gap-2">
+  <img 
+    src={user.avatarUrl} 
+    alt={user.username}
+    className="h-7 w-7 rounded-full border border-primary/30"
+  />
+  <span className="font-mono text-sm text-muted-foreground">
+    @{user.username}
+  </span>
+</div>
+```
+
+---
+
+## Mock Data for Phase 0
+
+Since no backend yet, X authentication will use mock data:
+
+```tsx
+// Mock X user on successful "OAuth"
+const mockXUser: XUser = {
+  id: 'x_mock_' + Date.now(),
+  username: 'verified_builder',
+  avatarUrl: 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png',
+};
+
+// Store in localStorage
+localStorage.setItem('x_user', JSON.stringify(mockXUser));
+```
+
+---
+
+## Implementation Order
+
+1. **Types**: Add `XUser` and update `ClaimedProfile`
+2. **AuthContext**: Create auth context with mock X OAuth
+3. **XCallback**: Create callback page (mock success)
+4. **Update App.tsx**: Add AuthProvider and new routes
+5. **Update Navigation**: Add auth-aware UI
+6. **Redesign ClaimProfile**: X auth check + optional/required cards
+7. **Update GitHubCallback**: Handle flexible claim data
+8. **Dashboard**: Create authenticated user dashboard (optional)
+
+---
+
+## Secrets Required (Future)
+
+When connecting real X OAuth:
+- `X_CLIENT_ID` - OAuth App Client ID from X Developer Portal
+- `X_CLIENT_SECRET` - OAuth App Client Secret
+
+For Phase 0, these are not needed as we use mock authentication.
 
 ---
 
@@ -259,23 +306,13 @@ I will prompt you to add these secrets when implementing the edge function.
 
 | Requirement | Implementation |
 |-------------|----------------|
-| Developer can enter Program ID | Step 1 input with verify button |
-| Program is verified on-chain | Mock verification against existing programs |
-| GitHub OAuth with read-only scope | `public_repo read:user` scope only |
-| Trust messaging displayed | Quote + "Read-Only Access" indicator |
-| Progress bar shows verification status | 4-step progress with completion tracking |
-| "VERIFIED TITAN" badge on success | Badge displayed on ProgramDetail page |
-| "CLAIM PROFILE" CTA for unverified | Link to /claim-profile from program page |
-
----
-
-## Implementation Order
-
-1. **Types & Utilities**: Add new types and helper functions
-2. **ClaimProfile Page**: Create the main claiming interface (mock data)
-3. **GitHubCallback Page**: Create callback handler (mock success)
-4. **Update Routes**: Add new routes to App.tsx
-5. **Update Navigation**: Link "CLAIM MY PROFILE" button
-6. **Update ProgramDetail**: Add verified/unverified badges
-7. **Edge Function**: Create github-token function (requires secrets)
+| X sign-in required first | Auth check on ClaimProfile page |
+| Mock X OAuth for Phase 0 | Direct redirect to /x-callback with mock code |
+| Program ID is optional | Card with "OPTIONAL" badge, skip allowed |
+| Wallet is optional | Card with "OPTIONAL" badge, uses existing adapter |
+| GitHub is required | Card with "REQUIRED" badge, highlighted styling |
+| User displayed in nav | Avatar + @username when authenticated |
+| Sign out functionality | Clear localStorage, redirect to home |
+| Trust messaging preserved | Quote + Read-Only Access indicator |
+| Progress bar updated | 4-step flow with new labels |
 
