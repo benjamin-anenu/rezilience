@@ -1,6 +1,6 @@
 # Phase 0 Data Infrastructure: Implementation Status
 
-## ✅ COMPLETED (Phase 0.1 - 0.3)
+## ✅ COMPLETED (Phase 0.1 - 0.5)
 
 ### Step 1: Supabase Schema ✅
 - `projects` table with all fields (program_id, github data, resilience score, etc.)
@@ -46,49 +46,60 @@
 - `ProgramDetail.tsx` - now uses `useProject()` hook
 - `StakingForm.tsx` - now uses `useProject()` for verification
 - `ClaimProfile.tsx` - now uses `useProject()` for validation
+- `UpgradeChart.tsx` - now uses `useScoreHistoryChart()` hook
+- `RecentEvents.tsx` - now uses `useScoreHistory()` hook
 
-### Step 6: Initial Data Seeded ✅
-10 programs seeded with production-like data:
-1. Jupiter Exchange (94) - ACTIVE
-2. Marinade Finance (91) - ACTIVE
-3. Raydium AMM (88) - ACTIVE
-4. Orca Whirlpool (85) - ACTIVE
-5. Drift Protocol (82) - ACTIVE
-6. Mango Markets (79) - STALE
-7. Serum DEX (76) - DECAYING
-8. Tensor NFT (74) - ACTIVE (fork)
-9. Phoenix DEX (71) - ACTIVE
-10. Kamino Finance (68) - STALE
-
----
-
-## 📋 Next Steps (Phase 0.5)
-
-### Real GitHub API Integration
-- [ ] Create edge function `fetch-github` for GitHub data fetching
-- [ ] Add `GITHUB_TOKEN` secret
-- [ ] Implement daily cron job for score updates
-
-### Score History Population
-- [ ] Create edge function `update-scores` to snapshot scores daily
-- [ ] Wire chart data from `score_history` table to `UpgradeChart.tsx`
-
-### Enhanced Claim Flow
-- [ ] Save claimed profiles to database (new `claimed_profiles` table)
-- [ ] Replace localStorage with Supabase persistence
-
-### Components Still Using Mock Data
-- `UpgradeChart.tsx` - uses `upgradeChartData` from mockData
-- `RecentEvents.tsx` - uses `recentEvents` from mockData
+### Step 6: Edge Functions ✅
+- `supabase/functions/fetch-github/index.ts`:
+  - Fetches real GitHub data (stars, forks, contributors, velocity)
+  - Calculates resilience score using exponential decay
+  - Updates liveness status based on last commit
+  - Records score history snapshots
+- `supabase/functions/add-project/index.ts`:
+  - Adds new projects to database
+  - Validates required fields
+  - Triggers GitHub fetch on creation
 
 ---
 
-## 🔮 Future (Phase 1+)
+## 🧹 Cleanup Completed
+
+- Removed all dummy/mock data from database
+- Database is now clean and ready for real project submissions
+- Explorer shows empty state when no projects exist
+
+---
+
+## 📋 Next Steps (Phase 1)
+
+### Project Submission Flow
+- [ ] Create UI for submitting new projects (program ID + GitHub URL)
+- [ ] Add validation for Solana program IDs
+- [ ] Display submission confirmation
+
+### GitHub Token Setup
+- [ ] Add `GITHUB_TOKEN` secret for increased API rate limits
+- [ ] Set up daily cron job for score updates
+
+### Claim Profile Enhancement
+- [ ] Create `claimed_profiles` table in database
+- [ ] Persist verified profiles to Supabase
+- [ ] Remove localStorage dependency
+
+### UI Polish
+- [ ] Empty state improvements on Explorer
+- [ ] Add "Submit a Project" CTA
+- [ ] Loading skeleton refinements
+
+---
+
+## 🔮 Future (Phase 2+)
 
 - On-chain staking smart contracts
 - Bytecode fingerprinting
 - Multisig authority verification
 - Real-time Supabase subscriptions
+- Daily cron job for automated score updates
 
 ---
 
@@ -101,6 +112,8 @@
 | `src/hooks/useProjects.ts` | Project data fetching hooks |
 | `src/hooks/useScoreHistory.ts` | Score history hooks |
 | `src/hooks/useBonds.ts` | Bond data hooks |
+| `supabase/functions/fetch-github/index.ts` | GitHub data fetching |
+| `supabase/functions/add-project/index.ts` | Project submission API |
 
 ## Files Modified
 
@@ -108,16 +121,18 @@
 |------|--------|
 | `src/types/index.ts` | Added re-exports and extended GitHubData |
 | `src/pages/Explorer.tsx` | Migrated to Supabase hooks |
-| `src/pages/ProgramDetail.tsx` | Migrated to Supabase hooks |
+| `src/pages/ProgramDetail.tsx` | Migrated to Supabase hooks, passes projectId to charts |
 | `src/pages/ClaimProfile.tsx` | Migrated to Supabase hooks |
 | `src/components/explorer/EcosystemStats.tsx` | Migrated to Supabase hooks |
 | `src/components/explorer/ProgramLeaderboard.tsx` | Updated to DBProject type |
 | `src/components/staking/StakingForm.tsx` | Migrated to Supabase hooks |
+| `src/components/program/UpgradeChart.tsx` | Uses real score_history data |
+| `src/components/program/RecentEvents.tsx` | Uses real score_history data |
 
-## Legacy Files (Can be removed in Phase 0.4)
+## Legacy Files (Can be removed)
 
 | File | Status |
 |------|--------|
-| `src/data/mockData.ts` | Still used by UpgradeChart, RecentEvents |
+| `src/data/mockData.ts` | No longer used by core components |
 | `src/lib/scoring.ts` | Replaced by resilience-scoring.ts |
-| `src/lib/github.ts` | To be replaced by edge function |
+| `src/lib/github.ts` | Replaced by edge function |

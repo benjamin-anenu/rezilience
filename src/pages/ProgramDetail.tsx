@@ -191,10 +191,10 @@ const ProgramDetail = () => {
           {/* Upgrade Chart + Recent Events */}
           <div className="mb-6 grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <UpgradeChart />
+              <UpgradeChart projectId={project.id} />
             </div>
             <div>
-              <RecentEvents />
+              <RecentEvents projectId={project.id} />
             </div>
           </div>
 
