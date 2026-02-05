@@ -104,7 +104,7 @@ const ClaimProfile = () => {
       localStorage.setItem('claimingXUsername', user.username);
     }
 
-    // Store form data
+    // Store form data for retrieval after OAuth callback
     const claimingProfile = {
       projectName,
       description,
@@ -112,6 +112,8 @@ const ClaimProfile = () => {
       websiteUrl,
       programId: programId || undefined,
       walletAddress: connected && publicKey ? publicKey.toBase58() : undefined,
+      xUserId: user?.id,
+      xUsername: user?.username,
       socials: {
         xHandle: user?.username,
         discordUrl: discordUrl || undefined,
@@ -124,7 +126,27 @@ const ClaimProfile = () => {
 
     localStorage.setItem('claimingProfile', JSON.stringify(claimingProfile));
 
-    navigate('/github-callback?code=mock_auth_code_12345');
+    // Generate CSRF state token
+    const state = crypto.randomUUID();
+    localStorage.setItem('github_oauth_state', state);
+
+    // Redirect to real GitHub OAuth
+    const redirectUri = `${window.location.origin}/github-callback`;
+    const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+    
+    if (!clientId) {
+      console.error('GitHub OAuth not configured');
+      return;
+    }
+
+    const params = new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      scope: 'read:user read:org repo',
+      state,
+    });
+
+    window.location.href = `https://github.com/login/oauth/authorize?${params.toString()}`;
   };
 
   const canProceedFromStep2 = projectName.trim() && category;

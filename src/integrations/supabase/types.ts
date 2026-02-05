@@ -59,7 +59,9 @@ export type Database = {
           created_at: string
           description: string | null
           discord_url: string | null
+          github_access_token: string | null
           github_org_url: string | null
+          github_token_scope: string | null
           github_username: string | null
           id: string
           logo_url: string | null
@@ -83,7 +85,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           discord_url?: string | null
+          github_access_token?: string | null
           github_org_url?: string | null
+          github_token_scope?: string | null
           github_username?: string | null
           id?: string
           logo_url?: string | null
@@ -107,7 +111,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           discord_url?: string | null
+          github_access_token?: string | null
           github_org_url?: string | null
+          github_token_scope?: string | null
           github_username?: string | null
           id?: string
           logo_url?: string | null

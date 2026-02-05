@@ -2,6 +2,37 @@
 import { GitHubData } from '@/types';
 
 /**
+ * Build the GitHub OAuth authorization URL
+ */
+export function buildGitHubOAuthUrl(redirectUri: string, state: string): string {
+  const clientId = import.meta.env.VITE_GITHUB_CLIENT_ID;
+  
+  if (!clientId) {
+    console.error('VITE_GITHUB_CLIENT_ID not configured');
+    // Return a placeholder that will show an error
+    return '#github-oauth-not-configured';
+  }
+  
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    scope: 'read:user read:org repo',
+    state,
+  });
+  
+  return `https://github.com/login/oauth/authorize?${params.toString()}`;
+}
+
+/**
+ * Generate a CSRF state token for OAuth
+ */
+export function generateOAuthState(): string {
+  const array = new Uint8Array(16);
+  crypto.getRandomValues(array);
+  return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+/**
  * Fetch GitHub repository data
  * In Phase 0, this returns mock data. When connected to backend,
  * this will make actual GitHub API calls.
