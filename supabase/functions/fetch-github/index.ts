@@ -12,7 +12,8 @@ function calculateLivenessStatus(daysSinceCommit: number): "ACTIVE" | "STALE" | 
   return "STALE";
 }
 
-// Calculate resilience score using exponential decay
+// Calculate resilience score using exponential decay (unified formula)
+// λ = 0.05/month converted to per-day: 0.05/30 ≈ 0.00167
 function calculateResilienceScore(params: {
   commitVelocity: number;
   daysSinceCommit: number;
@@ -23,20 +24,26 @@ function calculateResilienceScore(params: {
 }): number {
   const { commitVelocity, daysSinceCommit, contributors, stars, isFork, totalStaked } = params;
   
-  const originality = isFork ? 0.7 : 1.0;
-  const velocityScore = Math.min(commitVelocity * 2, 20);
-  const contributorScore = Math.min(contributors * 0.5, 15);
-  const starScore = Math.min(Math.log10(stars + 1) * 5, 15);
-  const intensity = velocityScore + contributorScore + starScore;
+  // O (Originality): 0.3 for forks, 1.0 for original (per spec)
+  const originality = isFork ? 0.3 : 1.0;
   
-  const lambda = 0.02;
+  // I (Impact): logarithmic scale of contributors + stars
+  const impact = Math.log10(Math.max(contributors + stars, 1));
+  
+  // λ = 0.05/month = 0.00167/day
+  const lambda = 0.05 / 30;
   const decayFactor = Math.exp(-lambda * daysSinceCommit);
-  const stakingBonus = Math.min(Math.log10(totalStaked + 1) * 3, 15);
   
-  const baseScore = (originality * intensity) * decayFactor;
-  const finalScore = Math.min(Math.max(baseScore + stakingBonus, 0), 100);
+  // S (Stake bonus)
+  const stakingBonus = totalStaked > 0 ? Math.min(totalStaked / 1000, 50) : 0;
   
-  return Math.round(finalScore * 10) / 10;
+  // R(P,t) = (O × I) × e^(-λ × t) + S
+  const baseScore = (originality * impact) * decayFactor;
+  
+  // Normalize to 0-100 scale (max theoretical baseScore ~4 without stake)
+  const normalizedScore = Math.min((baseScore / 4) * 100 + stakingBonus, 100);
+  
+  return Math.round(normalizedScore * 10) / 10;
 }
 
 // Parse GitHub URL to get owner/repo
