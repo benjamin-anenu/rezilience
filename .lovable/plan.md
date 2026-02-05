@@ -1,146 +1,96 @@
 
-# Redesign: Premium Trust Gap Section with Slanted Stamps
+# Add "My Bonds" Portfolio Page
 
 ## Overview
-Enhance the Problem/Solution section with a sophisticated, icon-centric design featuring slanted stamps (like the reference image), premium icons, and bullet points explaining each ocean concept.
+Add the "My Bonds" page to complete the staking user flow. This page allows users to manage their staked bonds, view yield earnings, and claim/unstake based on protocol health (Resilience Score must be >= 70 to claim yield).
 
 ---
 
-## Visual Design
+## Features to Implement
 
-### Layout Structure
+### 1. My Bonds Page (`src/pages/MyBonds.tsx`)
+A complete bond portfolio management dashboard featuring:
+
+**Portfolio Overview (4 stat cards):**
+- Total Staked SOL (sum across all bonds)
+- Total Yield Earned (accumulated rewards)
+- Claimable Now (yield available when score >= 70)
+- Active Bonds count
+
+**Smart Yield Claiming Logic:**
+- "CLAIM YIELD" button enabled when Resilience Score >= 70
+- "CLAIM LOCKED" button disabled when score < 70
+- Red warning banner explains why claiming is blocked for low-score protocols
+
+**Lockup Management:**
+- Lock-up end date for each bond
+- "UNSTAKE" button enabled only after lockup expires
+- "LOCKED" button shows when still in lockup period
+
+**Bonds Table with columns:**
+- Program name (clickable to program detail)
+- Program ID (truncated, monospace)
+- Staked amount
+- Lock-up end date
+- Current Resilience Score (color-coded)
+- Accumulated yield
+- Estimated APY
+- Action buttons (Claim/Unstake)
+
+### 2. Navigation Update
+Add "MY BONDS" link to the navigation bar between "STAKING" and wallet button
+
+### 3. Staking Page Enhancement
+Add "VIEW MY BONDS" button in the staking page header for easy navigation
+
+---
+
+## Technical Details
+
+### Files to Create
+1. **`src/pages/MyBonds.tsx`** - New portfolio page adapted to use existing UI components (Card, Button, Alert, Table) and Tailwind classes from the project's design system
+
+### Files to Modify
+1. **`src/App.tsx`** - Add route for `/my-bonds`
+2. **`src/components/layout/Navigation.tsx`** - Add "MY BONDS" nav link
+3. **`src/pages/Staking.tsx`** - Add "VIEW MY BONDS" button in header
+
+### Mock Data
+Three sample bonds with different states:
+- Bond 1: Score 94 (can claim, locked for unstake)
+- Bond 2: Score 91 (can claim, locked for unstake)  
+- Bond 3: Score 65 (can't claim due to low score - demonstrates the enforcement mechanism)
+
+### Design Consistency
+- Use existing UI components: Card, Button, Alert, Badge, Table
+- Match the Bloomberg Terminal aesthetic with existing Tailwind CSS variables
+- Use `font-display` for headers, `font-mono` for data values
+- Color-coded scores: `text-primary` (teal) for healthy >= 70, `text-destructive` (orange) for low < 70
+
+---
+
+## User Flow Diagram
+
 ```text
-+------------------------------------------------------------------+
-|            THE PROBLEM: VANITY METRICS FAIL.                      |
-+------------------------------------------------------------------+
-|                                                                   |
-|  +-----------------------------+  +-----------------------------+ |
-|  |      THE RED OCEAN          |  |    THE BLUE OCEAN           | |
-|  |    What Exists Today        |  |   What Resilience Unlocks   | |
-|  |                             |  |                             | |
-|  |    [Star]     [Utensils]    |  | [Heart] [Fingerprint] [Lock]| |
-|  |   GitHub         TVL        |  | Liveness Originality Staked | |
-|  |   Stars                     |  |  Score     Index   Assurance| |
-|  |                             |  |                             | |
-|  |  • Opaque upgrade history   |  | • Transparent liveness      | |
-|  |  • No standardized health   |  | • Quantified resilience     | |
-|  |  • Forks erode integrity    |  | • Bytecode verification     | |
-|  |  • Manual diligence         |  | • Automated risk assessment | |
-|  |                             |  |                             | |
-|  |      ╱‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾╲      |  |     ╱‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾╲     | |
-|  |     ╱ DECAY DETECTED  ╲     |  |    ╱ VERIFIED ACTIVE   ╲    | |
-|  |     ╲________________╱      |  |    ╲_________________╱     | |
-|  |        (rotated -6deg)      |  |       (rotated 6deg)        | |
-|  +-----------------------------+  +-----------------------------+ |
-+------------------------------------------------------------------+
+Explorer → Program Detail → "STAKE" button
+                               ↓
+                        Staking Page
+                         ↓        ↑
+            "VIEW MY BONDS"      "CREATE NEW BOND"
+                         ↓        ↑
+                      My Bonds Page
+                         ↓
+              Claim Yield (if score >= 70)
+              Unstake (if lockup expired)
 ```
 
 ---
 
-## Component Details
+## Acceptance Criteria (User Story 4.2: Yield Distribution)
 
-### Section Header
-- Title: "THE PROBLEM: VANITY METRICS FAIL."
-- Left-aligned, uppercase, bold Space Grotesk
-- Optional subtitle about Solana's trust gap
-
-### Red Ocean Panel (Left)
-**Visual Style:**
-- Background: `bg-destructive/5` with subtle red tint
-- Border: `border-destructive/20`
-- Muted, faded aesthetic
-
-**Icons (Large, ~48px):**
-- `Star` - GitHub Stars (vanity metric)
-- `Utensils` - TVL / Fork metaphor
-- Icons rendered in muted gray color (`text-muted-foreground`)
-
-**Bullet Points:**
-- Opaque upgrade history creates trust vacuum
-- No standardized way to assess program health
-- Forks and clones erode ecosystem integrity
-- Manual due diligence doesn't scale
-
-**Slanted Stamp:**
-- "DECAY DETECTED" text
-- Dashed border in orange/rot color
-- Rotated `-6deg` for that authentic stamp look
-- Uppercase, monospace font
-
-### Blue Ocean Panel (Right)
-**Visual Style:**
-- Background: `bg-card` with teal accent
-- Border: `border-primary/30` with subtle glow
-- Premium, vibrant aesthetic
-
-**Icons (Large, ~48px, with glow):**
-- `HeartPulse` - Liveness Score
-- `Fingerprint` - Originality Index
-- `Shield` - Staked Assurance
-- Icons in teal with drop-shadow glow effect
-
-**Bullet Points:**
-- Transparent liveness indexing on every program
-- Quantified resilience scores across ecosystem
-- Bytecode originality verification and fingerprinting
-- Automated, real-time program risk assessment
-
-**Slanted Stamp:**
-- "VERIFIED ACTIVE" text
-- Solid teal border with glow effect
-- Rotated `6deg` (opposite direction)
-- Uppercase, monospace font
-
----
-
-## Technical Implementation
-
-### File Changes
-1. **`src/components/landing/ProblemSolutionSection.tsx`** - Complete redesign
-
-### Icons from lucide-react
-- `Star` - GitHub stars
-- `Utensils` - TVL/forks
-- `HeartPulse` - Liveness
-- `Fingerprint` - Originality
-- `Shield` - Staked assurance
-
-### Stamp Styling (Tailwind + inline)
-```tsx
-// Red Ocean stamp - rotated left
-<div className="inline-block -rotate-6 border-2 border-dashed border-destructive px-4 py-2">
-  <span className="font-mono text-sm uppercase tracking-wider text-destructive">
-    DECAY DETECTED
-  </span>
-</div>
-
-// Blue Ocean stamp - rotated right, with glow
-<div className="inline-block rotate-6 border-2 border-primary px-4 py-2 shadow-[0_0_15px_hsl(174,100%,38%,0.4)]">
-  <span className="font-mono text-sm uppercase tracking-wider text-primary">
-    VERIFIED ACTIVE
-  </span>
-</div>
-```
-
-### Icon Glow Effect
-```tsx
-// Teal icons with glow
-<HeartPulse 
-  className="h-12 w-12 text-primary" 
-  style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} 
-/>
-```
-
-### Responsive Behavior
-- Desktop: Side-by-side panels
-- Mobile: Stacked vertically, icons in a row
-
----
-
-## Expected Result
-A premium, sophisticated comparison section that:
-- Uses large, meaningful icons to represent metrics
-- Features authentic-looking slanted stamps
-- Includes explanatory bullet points
-- Maintains the Bloomberg Terminal aesthetic
-- Creates clear visual contrast between problems and solutions
+| Requirement | Implementation |
+|------------|---------------|
+| Contract calculates yield based on time-weighted stake | Mock data shows accumulated yield per bond |
+| Claim function enables withdrawal only if Score > 70 | `canClaim` logic based on `currentScore >= 70` |
+| Visual feedback on bond health | Color-coded scores + warning banners |
+| Clear messaging on requirements | Info banner explains yield claiming rules |
