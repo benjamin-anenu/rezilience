@@ -1,21 +1,17 @@
  import { Link } from 'react-router-dom';
  import { ArrowRight, Shield, Activity, Fingerprint } from 'lucide-react';
  import { Button } from '@/components/ui/button';
+ import heroBg from '@/assets/hero-bg.png';
  
  export function HeroSection() {
    return (
      <section className="relative overflow-hidden py-20 lg:py-32">
-       {/* Background grid pattern */}
-       <div className="absolute inset-0 opacity-5">
-         <div
-           className="h-full w-full"
-           style={{
-             backgroundImage: `linear-gradient(hsl(var(--primary) / 0.3) 1px, transparent 1px),
-                              linear-gradient(90deg, hsl(var(--primary) / 0.3) 1px, transparent 1px)`,
-             backgroundSize: '50px 50px',
-           }}
-         />
-       </div>
+       {/* Background image with dark overlay */}
+       <div 
+         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+         style={{ backgroundImage: `url(${heroBg})` }}
+       />
+       <div className="absolute inset-0 bg-background/80" />
  
        <div className="container relative mx-auto px-4 lg:px-8">
          <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
