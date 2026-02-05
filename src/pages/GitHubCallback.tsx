@@ -24,14 +24,19 @@ const GitHubCallback = () => {
           throw new Error('No authorization code received from GitHub');
         }
 
-        // Get stored program info
-        const programId = localStorage.getItem('claimingProgramId');
-        const programName = localStorage.getItem('claimingProgramName') || 'Unknown Program';
-        const internalId = localStorage.getItem('claimingProgramInternalId');
+        // Get stored X user info (required)
+        const xUserId = localStorage.getItem('claimingXUserId');
+        const xUsername = localStorage.getItem('claimingXUsername');
 
-        if (!programId) {
-          throw new Error('No program ID found. Please start the claim process again.');
+        if (!xUserId || !xUsername) {
+          throw new Error('X authentication required. Please sign in with X first.');
         }
+
+        // Get optional identifiers
+        const programId = localStorage.getItem('claimingProgramId');
+        const programName = localStorage.getItem('claimingProgramName');
+        const internalId = localStorage.getItem('claimingProgramInternalId');
+        const walletAddress = localStorage.getItem('claimingWalletAddress');
 
         // Step 2: Simulate token exchange
         setCurrentStep('Verifying GitHub authorization...');
@@ -39,7 +44,9 @@ const GitHubCallback = () => {
 
         // Step 3: Fetch GitHub data (mock)
         setCurrentStep('Indexing repository data...');
-        const mockRepoUrl = `https://github.com/mock-org/${programName.toLowerCase().replace(/\s+/g, '-')}`;
+        const mockRepoUrl = programName 
+          ? `https://github.com/mock-org/${programName.toLowerCase().replace(/\s+/g, '-')}`
+          : `https://github.com/${xUsername}/main-project`;
         const githubData = await fetchGitHubData(mockRepoUrl);
 
         // Step 4: Calculate score
@@ -49,8 +56,11 @@ const GitHubCallback = () => {
 
         // Store claimed profile in localStorage (Phase 0)
         const claimedProfile: ClaimedProfile = {
-          programId,
-          programName,
+          programId: programId || undefined,
+          programName: programName || undefined,
+          walletAddress: walletAddress || undefined,
+          xUserId,
+          xUsername,
           githubUsername: 'verified-builder',
           githubRepoUrl: mockRepoUrl,
           verified: true,
@@ -59,15 +69,19 @@ const GitHubCallback = () => {
           livenessStatus: scoreResult.livenessStatus,
         };
 
-        // Store verified programs list
+        // Store verified programs list (keyed by X user ID if no program)
         const verifiedPrograms = JSON.parse(localStorage.getItem('verifiedPrograms') || '{}');
-        verifiedPrograms[programId] = claimedProfile;
+        const key = programId || `x_${xUserId}`;
+        verifiedPrograms[key] = claimedProfile;
         localStorage.setItem('verifiedPrograms', JSON.stringify(verifiedPrograms));
 
         // Clean up temp storage
         localStorage.removeItem('claimingProgramId');
         localStorage.removeItem('claimingProgramName');
         localStorage.removeItem('claimingProgramInternalId');
+        localStorage.removeItem('claimingWalletAddress');
+        localStorage.removeItem('claimingXUserId');
+        localStorage.removeItem('claimingXUsername');
 
         setStatus('success');
         setCurrentStep('Verification complete!');
@@ -77,7 +91,7 @@ const GitHubCallback = () => {
           if (internalId) {
             navigate(`/program/${internalId}?verified=true`);
           } else {
-            navigate('/explorer?verified=true');
+            navigate('/dashboard');
           }
         }, 2000);
 
@@ -133,7 +147,7 @@ const GitHubCallback = () => {
                     Your profile has been verified successfully.
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Redirecting to your program page...
+                    Redirecting to your dashboard...
                   </p>
                 </div>
               )}
