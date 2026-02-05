@@ -48,6 +48,13 @@ export interface BondSummary {
   unlockDate: string;
 }
 
+// X (Twitter) Authentication Types
+export interface XUser {
+  id: string;
+  username: string;
+  avatarUrl: string;
+}
+
 // Claim Profile Types
 export interface VerificationStep {
   step: number;
@@ -77,10 +84,13 @@ export interface ResilienceScoreResult {
 }
 
 export interface ClaimedProfile {
-  programId: string;
-  programName: string;
-  githubUsername: string;
-  githubRepoUrl: string;
+  programId?: string; // Optional - user might not claim a specific program
+  programName?: string;
+  walletAddress?: string; // Optional - linked wallet
+  xUserId: string; // Required - X user ID
+  xUsername: string; // Required - X username
+  githubUsername?: string;
+  githubRepoUrl?: string;
   verified: boolean;
   verifiedAt: string;
   score: number;
