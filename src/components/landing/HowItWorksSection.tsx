@@ -1,22 +1,26 @@
- import { Database, Cpu, Shield, BarChart3 } from 'lucide-react';
+ import { Database, Cpu, Shield, ArrowRight } from 'lucide-react';
  
- const pipelineNodes = [
-   { icon: Database, title: 'Solana Mainnet', subtitle: '(Geyser)' },
-   { icon: Cpu, title: 'Ingestion Engine', subtitle: '(Rust)' },
-   { icon: Shield, title: 'Bytecode Analyzer', subtitle: '(SSDeep)' },
-   { icon: BarChart3, title: 'Resilience', subtitle: 'Score API' },
+ const steps = [
+   {
+     icon: Database,
+     title: 'INGEST',
+     description: 'Real-time indexing of on-chain program data, upgrades, and authority changes.',
+   },
+   {
+     icon: Cpu,
+     title: 'ANALYZE',
+     description: 'Bytecode fingerprinting, liveness scoring, and originality verification.',
+   },
+   {
+     icon: Shield,
+     title: 'ASSURE',
+     description: 'Stake-backed guarantees and quantified trust metrics for every program.',
+   },
  ];
- 
- const codeSnippet = `struct ProgramHealth {
-     pub program_id: Pubkey,
-     pub last_maintenance: i64,
-     pub originality_score: u8,
-     pub staked_sol: u64
- }`;
  
  export function HowItWorksSection() {
    return (
-     <section className="border-t border-border bg-background py-20">
+     <section className="py-20">
        <div className="container mx-auto px-4 lg:px-8">
          <div className="mb-12 text-center">
            <h2 className="mb-4 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
@@ -27,102 +31,40 @@
            </p>
          </div>
  
-         {/* Pipeline Diagram */}
-         <div className="relative mx-auto max-w-5xl rounded-lg border border-border bg-card/50 p-8 md:p-12">
-           {/* Connection Lines - SVG Overlay */}
-           <svg 
-             className="pointer-events-none absolute inset-0 hidden h-full w-full md:block" 
-             preserveAspectRatio="none"
-           >
-             {/* Horizontal line connecting nodes */}
-             <line 
-               x1="12%" y1="35%" x2="88%" y2="35%" 
-               stroke="hsl(174 100% 38%)" 
-               strokeWidth="2"
-               strokeDasharray="0"
-             />
-             {/* Vertical line down to code block */}
-             <line 
-               x1="62%" y1="35%" x2="62%" y2="55%" 
-               stroke="hsl(174 100% 38%)" 
-               strokeWidth="2"
-             />
-             {/* Horizontal line to code block */}
-             <line 
-               x1="62%" y1="55%" x2="75%" y2="55%" 
-               stroke="hsl(174 100% 38%)" 
-               strokeWidth="2"
-             />
-             {/* Arrow heads */}
-             <polygon 
-               points="0,-4 8,0 0,4" 
-               fill="hsl(174 100% 38%)" 
-               transform="translate(315, 107)"
-             />
-           </svg>
+         <div className="relative">
+           {/* Connection line (desktop) */}
+           <div className="absolute left-0 right-0 top-12 hidden h-px bg-border md:block" />
  
-           {/* Pipeline Nodes */}
-           <div className="relative z-10 grid grid-cols-2 gap-4 md:grid-cols-4 md:gap-6">
-             {pipelineNodes.map((node, index) => (
-               <div key={node.title} className="flex flex-col items-center">
-                 <div 
-                   className="mb-3 flex h-16 w-full items-center justify-center gap-2 rounded border border-primary/40 bg-card px-3 py-2 transition-all hover:border-primary hover:glow-signal"
-                   style={{ boxShadow: '0 0 20px hsl(174 100% 38% / 0.1)' }}
-                 >
-                   <node.icon 
-                     className="h-5 w-5 shrink-0 text-primary" 
-                     style={{ filter: 'drop-shadow(0 0 4px hsl(174 100% 38% / 0.5))' }}
-                   />
-                   <div className="text-center">
-                     <p className="font-display text-xs font-semibold uppercase tracking-tight text-foreground md:text-sm">
-                       {node.title}
-                     </p>
-                     <p className="font-mono text-[10px] text-muted-foreground md:text-xs">
-                       {node.subtitle}
-                     </p>
+           <div className="grid gap-8 md:grid-cols-3">
+             {steps.map((step, index) => (
+               <div key={step.title} className="relative">
+                 {/* Step card */}
+                 <div className="flex flex-col items-center text-center">
+                   {/* Icon container */}
+                   <div className="relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-sm border border-border bg-card">
+                     <step.icon className="h-10 w-10 text-primary" />
                    </div>
+ 
+                   {/* Step number */}
+                   <div className="mb-2 font-mono text-xs text-muted-foreground">
+                     STEP {index + 1}
+                   </div>
+ 
+                   <h3 className="mb-2 font-display text-xl font-bold uppercase tracking-tight text-foreground">
+                     {step.title}
+                   </h3>
+ 
+                   <p className="text-sm text-muted-foreground">{step.description}</p>
                  </div>
-                 {/* Arrow indicator for mobile */}
-                 {index < pipelineNodes.length - 1 && (
-                   <div className="my-2 text-primary md:hidden">→</div>
+ 
+                 {/* Arrow (between cards) */}
+                 {index < steps.length - 1 && (
+                   <div className="absolute -right-4 top-12 hidden md:block">
+                     <ArrowRight className="h-6 w-6 text-primary" />
+                   </div>
                  )}
                </div>
              ))}
-           </div>
- 
-           {/* Code Snippet Panel */}
-           <div className="mt-8 flex justify-center md:justify-end">
-             <div className="w-full max-w-sm rounded border border-border bg-background p-4 md:mr-8">
-               <div className="mb-2 flex items-center gap-2">
-                 <div className="h-2 w-2 rounded-full bg-primary" />
-                 <span className="font-mono text-xs text-muted-foreground">Concrete</span>
-               </div>
-               <pre className="overflow-x-auto font-mono text-xs leading-relaxed">
-                 <code>
-                   <span className="text-primary">struct</span>{' '}
-                   <span className="text-foreground">ProgramHealth</span>{' '}
-                   <span className="text-muted-foreground">{'{'}</span>
-                   {'\n'}
-                   {'    '}<span className="text-primary">pub</span>{' '}
-                   <span className="text-foreground">program_id</span>:{' '}
-                   <span className="text-muted-foreground">Pubkey</span>,
-                   {'\n'}
-                   {'    '}<span className="text-primary">pub</span>{' '}
-                   <span className="text-foreground">last_maintenance</span>:{' '}
-                   <span className="text-muted-foreground">i64</span>,
-                   {'\n'}
-                   {'    '}<span className="text-primary">pub</span>{' '}
-                   <span className="text-foreground">originality_score</span>:{' '}
-                   <span className="text-muted-foreground">u8</span>,
-                   {'\n'}
-                   {'    '}<span className="text-primary">pub</span>{' '}
-                   <span className="text-foreground">staked_sol</span>:{' '}
-                   <span className="text-muted-foreground">u64</span>
-                   {'\n'}
-                   <span className="text-muted-foreground">{'}'}</span>
-                 </code>
-               </pre>
-             </div>
            </div>
          </div>
        </div>
