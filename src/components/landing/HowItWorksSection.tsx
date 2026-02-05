@@ -1,22 +1,18 @@
- import { Database, Cpu, Shield, ArrowRight } from 'lucide-react';
+ import { ArrowRight } from 'lucide-react';
  
- const steps = [
-   {
-     icon: Database,
-     title: 'INGEST',
-     description: 'Real-time indexing of on-chain program data, upgrades, and authority changes.',
-   },
-   {
-     icon: Cpu,
-     title: 'ANALYZE',
-     description: 'Bytecode fingerprinting, liveness scoring, and originality verification.',
-   },
-   {
-     icon: Shield,
-     title: 'ASSURE',
-     description: 'Stake-backed guarantees and quantified trust metrics for every program.',
-   },
+ const pipelineSteps = [
+   { label: 'Solana Mainnet', sublabel: 'Geyser' },
+   { label: 'Ingestion Engine', sublabel: 'Rust' },
+   { label: 'Bytecode Analyzer', sublabel: 'SSDeep' },
+   { label: 'Resilience Score', sublabel: 'API' },
  ];
+ 
+ const codeSnippet = `struct ProgramHealth {
+     pub program_id: Pubkey,
+     pub last_maintenance: i64,
+     pub originality_score: u8,
+     pub staked_sol: u64,
+ }`;
  
  export function HowItWorksSection() {
    return (
@@ -24,47 +20,34 @@
        <div className="container mx-auto px-4 lg:px-8">
          <div className="mb-12 text-center">
            <h2 className="mb-4 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
-             HOW IT WORKS
+             HOW IT WORKS: THE TRUTH ENGINE
            </h2>
-           <p className="mx-auto max-w-2xl text-muted-foreground">
-             A three-stage pipeline that transforms raw on-chain data into actionable trust metrics.
-           </p>
          </div>
  
-         <div className="relative">
-           {/* Connection line (desktop) */}
-           <div className="absolute left-0 right-0 top-12 hidden h-px bg-border md:block" />
- 
-           <div className="grid gap-8 md:grid-cols-3">
-             {steps.map((step, index) => (
-               <div key={step.title} className="relative">
-                 {/* Step card */}
-                 <div className="flex flex-col items-center text-center">
-                   {/* Icon container */}
-                   <div className="relative z-10 mb-6 flex h-24 w-24 items-center justify-center rounded-sm border border-border bg-card">
-                     <step.icon className="h-10 w-10 text-primary" />
-                   </div>
- 
-                   {/* Step number */}
-                   <div className="mb-2 font-mono text-xs text-muted-foreground">
-                     STEP {index + 1}
-                   </div>
- 
-                   <h3 className="mb-2 font-display text-xl font-bold uppercase tracking-tight text-foreground">
-                     {step.title}
-                   </h3>
- 
-                   <p className="text-sm text-muted-foreground">{step.description}</p>
-                 </div>
- 
-                 {/* Arrow (between cards) */}
-                 {index < steps.length - 1 && (
-                   <div className="absolute -right-4 top-12 hidden md:block">
-                     <ArrowRight className="h-6 w-6 text-primary" />
-                   </div>
-                 )}
+         {/* Pipeline Diagram */}
+         <div className="mb-12 flex flex-wrap items-center justify-center gap-2 md:gap-4">
+           {pipelineSteps.map((step, index) => (
+             <div key={step.label} className="flex items-center gap-2 md:gap-4">
+               <div className="flex flex-col items-center rounded-sm border border-border bg-card px-4 py-3 md:px-6 md:py-4">
+                 <span className="font-mono text-xs font-medium text-foreground md:text-sm">{step.label}</span>
+                 <span className="font-mono text-[10px] text-primary md:text-xs">{step.sublabel}</span>
                </div>
-             ))}
+               {index < pipelineSteps.length - 1 && (
+                 <ArrowRight className="h-4 w-4 text-primary md:h-5 md:w-5" />
+               )}
+             </div>
+           ))}
+         </div>
+ 
+         {/* Code Snippet */}
+         <div className="mx-auto max-w-2xl">
+           <div className="rounded-sm border border-border bg-card">
+             <div className="border-b border-border px-4 py-2">
+               <span className="font-mono text-xs text-muted-foreground">program_health.rs</span>
+             </div>
+             <pre className="overflow-x-auto p-4">
+               <code className="font-mono text-sm text-foreground">{codeSnippet}</code>
+             </pre>
            </div>
          </div>
        </div>
