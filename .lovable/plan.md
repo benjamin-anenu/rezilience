@@ -1,318 +1,390 @@
 
 
-# X (Twitter) Authentication + Flexible Claim Profile Flow
+# Complete Claim Profile Flow: The Heartbeat Dashboard
 
 ## Overview
-Implement X (Twitter) OAuth as the primary authentication layer. Users must sign in with X before claiming their profile. After authentication, they can optionally link a Program ID or Wallet, but GitHub connection remains required for scoring.
+Implement the full 5-step claim profile journey with comprehensive metadata collection, social registry, media showcase, and roadmap milestones. The public profile ("Heartbeat Dashboard") will display all verified information.
 
 ---
 
-## New User Flow
+## Complete User Flow
 
 ```text
-User clicks "CLAIM MY PROFILE"
-            ↓
-┌─────────────────────────────────────┐
-│      SIGN IN WITH X (Required)      │
-│   "X is your identity layer"        │
-│   [𝕏 SIGN IN WITH X button]         │
-└─────────────────────────────────────┘
-            ↓
-       /x-callback
-            ↓
-     User authenticated
-            ↓
-┌─────────────────────────────────────┐
-│    CLAIM YOUR PROTOCOL              │
-│                                     │
-│  ┌─────────────┐ ┌─────────────┐   │
-│  │ Program ID  │ │   Wallet    │   │
-│  │ (OPTIONAL)  │ │ (OPTIONAL)  │   │
-│  └─────────────┘ └─────────────┘   │
-│                                     │
-│  ┌─────────────────────────────┐   │
-│  │    GitHub (REQUIRED)        │   │
-│  │    [CONNECT GITHUB]         │   │
-│  └─────────────────────────────┘   │
-└─────────────────────────────────────┘
-            ↓
-      /github-callback
-            ↓
-   Score Calculated → VERIFIED TITAN
+Step 1: X Authentication (already implemented)
+                    ↓
+Step 2: Core Identity (Metadata)
+   • Project Name & Description
+   • Category Selection
+   • Website URL with Live Preview
+                    ↓
+Step 3: Pulse Connection (GitHub & Socials)
+   • GitHub Organization (Required)
+   • X, Discord, Telegram links
+   • Reputation Progress Bar
+                    ↓
+Step 4: Media & Proof of Work
+   • Upload up to 5 assets (images/YouTube/videos)
+   • Carousel with drag-and-drop reorder
+                    ↓
+Step 5: Roadmap (Tentative Timelines)
+   • Milestone input with dates
+   • Commitment Lock mechanism
+                    ↓
+      /profile/:id
+   Heartbeat Dashboard (Public Profile)
 ```
 
 ---
 
-## Files to Create
+## New Data to Collect
 
-### 1. `src/context/AuthContext.tsx`
-Authentication context for managing X OAuth state:
-- `user` - Current authenticated user (X profile)
-- `loading` - Auth loading state
-- `isAuthenticated` - Boolean check
-- `signInWithX()` - Initiate OAuth flow
-- `signOut()` - Clear session
+### Step 2: Core Identity
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| projectName | string | Yes | Display name |
+| description | string | No | Short tagline (max 140 chars) |
+| category | enum | Yes | DeFi, NFT, Infrastructure, etc. |
+| websiteUrl | string | No | Project website |
+| programId | string | No | Solana program address |
+| walletAddress | string | No | Developer wallet |
 
-### 2. `src/pages/XCallback.tsx`
-X OAuth callback handler:
-- Receive authorization code from X
-- Exchange for token (mock in Phase 0)
-- Create/update user session in localStorage
-- Redirect to `/claim-profile` or `/dashboard`
+### Step 3: Socials
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| githubOrg | string | Yes | GitHub organization/repo URL |
+| xHandle | string | No | X/Twitter handle (auto-filled from auth) |
+| discordUrl | string | No | Discord invite link |
+| telegramUrl | string | No | Telegram group link |
 
-### 3. `src/pages/Dashboard.tsx`
-Authenticated user dashboard:
-- Display X profile (avatar, username)
-- List verified projects
-- Quick actions: Claim Protocol, Explore
+### Step 4: Media
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| mediaAssets | array | No | Up to 5 items |
+| mediaAssets[].type | enum | - | 'image' | 'youtube' | 'video' |
+| mediaAssets[].url | string | - | URL to asset |
+| mediaAssets[].order | number | - | Display order (0-4) |
+
+### Step 5: Roadmap
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| milestones | array | No | Project milestones |
+| milestones[].title | string | - | Milestone name |
+| milestones[].targetDate | string | - | Target completion date |
+| milestones[].isLocked | boolean | - | Once set, locked = true |
+| milestones[].status | enum | - | 'upcoming' | 'completed' | 'overdue' |
 
 ---
 
 ## Files to Modify
 
-### 1. `src/App.tsx`
-- Wrap app with `AuthProvider`
-- Add `/x-callback` and `/dashboard` routes
-- Add protected route wrapper for authenticated pages
+### 1. `src/types/index.ts`
+Add comprehensive profile types:
+```typescript
+export interface MediaAsset {
+  id: string;
+  type: 'image' | 'youtube' | 'video';
+  url: string;
+  thumbnailUrl?: string;
+  order: number;
+}
+
+export interface Milestone {
+  id: string;
+  title: string;
+  targetDate: string;
+  isLocked: boolean;
+  status: 'upcoming' | 'completed' | 'overdue';
+  varianceRequested?: boolean; // True if user requested date change
+}
+
+export interface SocialLinks {
+  xHandle?: string;
+  discordUrl?: string;
+  telegramUrl?: string;
+}
+
+export interface ClaimedProfile {
+  id: string;
+  
+  // Core Identity (Step 2)
+  projectName: string;
+  description?: string;
+  category: string;
+  websiteUrl?: string;
+  logoUrl?: string;
+  programId?: string;
+  walletAddress?: string;
+  
+  // Auth (Step 1)
+  xUserId: string;
+  xUsername: string;
+  
+  // GitHub (Step 3)
+  githubOrgUrl: string;
+  githubUsername?: string;
+  
+  // Socials (Step 3)
+  socials: SocialLinks;
+  
+  // Media (Step 4)
+  mediaAssets: MediaAsset[];
+  
+  // Roadmap (Step 5)
+  milestones: Milestone[];
+  
+  // Verification
+  verified: boolean;
+  verifiedAt: string;
+  score: number;
+  livenessStatus: 'active' | 'dormant' | 'degraded';
+}
+```
 
 ### 2. `src/pages/ClaimProfile.tsx`
-Complete redesign:
-- Check auth state first - redirect to sign in if not authenticated
-- Show 3 cards: Program ID (optional), Wallet (optional), GitHub (required)
-- Wallet uses existing `useWallet()` from Solana adapter
-- "OPTIONAL" and "REQUIRED" badges on cards
-- GitHub always visible (not gated behind program verification)
+Complete redesign with multi-step form:
 
-### 3. `src/pages/GitHubCallback.tsx`
-- Handle claims with or without Program ID
-- Handle claims with or without Wallet address
-- Store X user ID with claimed profile
+**UI Structure:**
+```text
+┌─────────────────────────────────────────────────────────┐
+│ CLAIM YOUR PROTOCOL                                     │
+│ Step 2 of 5: Core Identity                              │
+│ [═══════════░░░░░░░░░░░░░░░░░] 40%                     │
+└─────────────────────────────────────────────────────────┘
 
-### 4. `src/components/layout/Navigation.tsx`
-- Show user avatar + username when authenticated
-- "Sign Out" button for authenticated users
-- "SIGN IN" button for unauthenticated users
-- Conditional nav links based on auth state
+┌─────────────────────────────────────────────────────────┐
+│ PROJECT INFORMATION                         [REQUIRED]  │
+├─────────────────────────────────────────────────────────┤
+│ Project Name*       [________________________]          │
+│ Description         [________________________] 0/140    │
+│ Category*           [Select category... ▼]              │
+└─────────────────────────────────────────────────────────┘
 
-### 5. `src/types/index.ts`
-Add new types:
-- `XUser` interface (id, username, avatar_url)
-- `AuthState` interface
-- Update `ClaimedProfile` to include `xUserId` and make `programId` optional
+┌─────────────────────────────────────────────────────────┐
+│ THE DIGITAL OFFICE                                      │
+├─────────────────────────────────────────────────────────┤
+│ Website URL         [https://...]                       │
+│ ┌─────────────────────────────────────────────────────┐│
+│ │ 🖼️  Live Preview                    [Launch Site ↗]││
+│ │     (Preview loads when URL is entered)             ││
+│ └─────────────────────────────────────────────────────┘│
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────┐ ┌─────────────────┐
+│ Program ID      │ │ Wallet          │
+│ [OPTIONAL]      │ │ [OPTIONAL]      │
+└─────────────────┘ └─────────────────┘
+
+[← BACK]                                    [NEXT: SOCIALS →]
+```
+
+**Step Navigation:**
+- Step 1: X Auth (auto-complete if authenticated)
+- Step 2: Core Identity (project info, website)
+- Step 3: Pulse Connection (GitHub + socials)
+- Step 4: Media Showcase (upload assets)
+- Step 5: Roadmap (milestones)
+
+### 3. Create `src/components/claim/` directory
+New components for the claim flow:
+
+| Component | Purpose |
+|-----------|---------|
+| `StepIndicator.tsx` | Shows current step in 5-step flow |
+| `CoreIdentityForm.tsx` | Step 2: Project info + website preview |
+| `SocialsForm.tsx` | Step 3: GitHub (required) + social links |
+| `MediaUploader.tsx` | Step 4: Media assets with drag-drop carousel |
+| `RoadmapForm.tsx` | Step 5: Milestones with commitment lock |
+| `WebsitePreview.tsx` | Iframe preview of website URL |
+| `ReputationBar.tsx` | Progress bar showing linked socials |
+
+### 4. Create `src/pages/ProfileDetail.tsx`
+The "Heartbeat Dashboard" for viewing claimed profiles:
+
+**Layout:**
+```text
+┌─────────────────────────────────────────────────────────┐
+│ [← Back to Explorer]                                    │
+│                                                         │
+│ ┌─────────┐  PROJECT NAME             [VERIFIED TITAN] │
+│ │  Logo   │  DeFi • @xhandle                           │
+│ └─────────┘  ★★★★☆ 87/100 Resilience Score             │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ MEDIA GALLERY                                           │
+│ ┌───────────────────────────────────────────────────┐  │
+│ │         [HD Carousel - Video/Images]              │  │
+│ └───────────────────────────────────────────────────┘  │
+│ [•] [○] [○] [○] [○] (carousel dots)                    │
+└─────────────────────────────────────────────────────────┘
+
+┌─────────────────┐ ┌─────────────────────────────────────┐
+│ WEBSITE SNIPPET │ │ SOCIAL PULSE                        │
+│ ┌─────────────┐│ │ [𝕏] @handle  [Discord]  [Telegram] │
+│ │   iframe    ││ │                                     │
+│ │   preview   ││ ├─────────────────────────────────────┤
+│ └─────────────┘│ │ VERIFIED TIMELINE                   │
+│ [View Site ↗] │ │ ✓ Mainnet Launch      Jan 15, 2026  │
+│                │ │ ○ V2 Release          Mar 01, 2026  │
+│                │ │ ⚠ Audit Complete [OVERDUE]          │
+└─────────────────┘ └─────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────┐
+│ DEVELOPMENT STATS                                       │
+│ Resilience Score │ Heartbeat Graph │ Survival Rate      │
+│      87/100      │  [Graph]        │    94%             │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 5. `src/pages/GitHubCallback.tsx`
+Update to handle all new profile data:
+- Fetch stored claiming data for all 5 steps
+- Generate unique profile ID
+- Redirect to `/profile/:id`
+
+### 6. `src/App.tsx`
+Add new route:
+```tsx
+<Route path="/profile/:id" element={<ProfileDetail />} />
+```
 
 ---
 
-## Technical Implementation
+## Special Features
 
-### AuthContext Structure
+### Website Live Preview
+When user enters a website URL:
+1. Show iframe preview (sandboxed)
+2. "Launch External Site" button opens in new tab
+3. Handle loading/error states gracefully
+
 ```tsx
-interface XUser {
-  id: string;
-  username: string;
-  avatarUrl: string;
-}
-
-interface AuthContextType {
-  user: XUser | null;
-  loading: boolean;
-  isAuthenticated: boolean;
-  signInWithX: () => void;
-  signOut: () => void;
-}
-
-// Check localStorage for existing session on mount
-useEffect(() => {
-  const storedUser = localStorage.getItem('x_user');
-  if (storedUser) {
-    setUser(JSON.parse(storedUser));
-  }
-  setLoading(false);
-}, []);
-```
-
-### X OAuth Flow (Mock for Phase 0)
-```tsx
-const signInWithX = () => {
-  // Phase 0: Mock OAuth - go directly to callback
-  // In production: redirect to X OAuth URL
-  window.location.href = '/x-callback?code=mock_x_auth_code';
-};
-```
-
-### ClaimProfile UI Structure
-```tsx
-{/* Auth Check */}
-{!isAuthenticated && <SignInPrompt />}
-
-{isAuthenticated && (
-  <>
-    {/* Optional Identifiers */}
-    <div className="grid md:grid-cols-2 gap-4 mb-6">
-      {/* Program ID Card */}
-      <Card>
-        <Badge>OPTIONAL</Badge>
-        <Input placeholder="Solana Program ID..." />
-        <Button>VERIFY PROGRAM</Button>
-        <p>Skip if you're not claiming a specific program</p>
-      </Card>
-      
-      {/* Wallet Card */}
-      <Card>
-        <Badge>OPTIONAL</Badge>
-        <WalletMultiButton />
-        <p>Link your wallet for on-chain identity</p>
-      </Card>
-    </div>
-
-    {/* Required: GitHub */}
-    <Card className="border-primary">
-      <Badge variant="primary">REQUIRED</Badge>
-      <Quote>"IN AN OPEN-SOURCE WORLD, PRIVACY IS ROT."</Quote>
-      <TrustMessage>Read-Only Access...</TrustMessage>
-      <Button>CONNECT GITHUB</Button>
-    </Card>
-  </>
-)}
-```
-
-### Navigation Auth Display
-```tsx
-{isAuthenticated ? (
-  <div className="flex items-center gap-3">
-    <img src={user.avatarUrl} className="h-8 w-8 rounded-full" />
-    <span>@{user.username}</span>
-    <Button variant="ghost" onClick={signOut}>
-      <LogOut className="h-4 w-4" />
-    </Button>
-  </div>
-) : (
-  <Button asChild>
-    <Link to="/claim-profile">SIGN IN</Link>
+<WebsitePreview url={websiteUrl}>
+  {url && (
+    <iframe 
+      src={url} 
+      className="h-48 w-full border rounded"
+      sandbox="allow-scripts allow-same-origin"
+    />
+  )}
+  <Button variant="outline" onClick={() => window.open(url, '_blank')}>
+    <ExternalLink className="mr-2 h-4 w-4" />
+    Launch External Site
   </Button>
-)}
+</WebsitePreview>
 ```
 
----
+### Reputation Progress Bar
+Shows completion based on linked socials:
+- 0%: No socials linked
+- 25%: GitHub connected
+- 50%: GitHub + 1 social
+- 75%: GitHub + 2 socials
+- 100%: GitHub + all 3 socials (X, Discord, Telegram)
 
-## Verification Steps Update
+### Media Carousel with Drag-and-Drop
+Using `embla-carousel-react` (already installed):
+- Accept: Images, YouTube URLs, video URLs
+- Max 5 assets
+- Drag to reorder
+- Preview thumbnails
 
-Old flow (4 steps):
-1. Program Claimed
-2. GitHub Connected
-3. Data Indexed
-4. Score Calculated
-
-New flow (4 steps):
-1. X Authenticated (auto-complete on page load)
-2. Identity Linked (optional - program or wallet)
-3. GitHub Connected (required)
-4. Score Calculated
-
----
-
-## UX Improvements to Keep
-
-From previous plan, these will be maintained:
-- "OPTIONAL" and "REQUIRED" badges with distinct styling
-- Trust messaging with "Read-Only Access" indicator
-- Quote: "IN AN OPEN-SOURCE WORLD, PRIVACY IS ROT."
-- Progress bar showing verification status
-- Data Provenance notice at bottom
-- "VERIFIED TITAN" badge on successful verification
-
----
-
-## Design Details
-
-### Badge Styling
-```tsx
-// Optional badge (muted)
-<span className="rounded-sm bg-muted px-2 py-0.5 text-[10px] font-mono uppercase text-muted-foreground">
-  OPTIONAL
-</span>
-
-// Required badge (primary)
-<span className="rounded-sm bg-primary/20 px-2 py-0.5 text-[10px] font-mono uppercase text-primary">
-  REQUIRED
-</span>
-```
-
-### X Sign-In Button
-```tsx
-<Button className="w-full bg-black text-white hover:bg-black/90">
-  <span className="mr-2 text-xl">𝕏</span>
-  SIGN IN WITH X
-</Button>
-```
-
-### User Avatar in Nav
-```tsx
-<div className="flex items-center gap-2">
-  <img 
-    src={user.avatarUrl} 
-    alt={user.username}
-    className="h-7 w-7 rounded-full border border-primary/30"
-  />
-  <span className="font-mono text-sm text-muted-foreground">
-    @{user.username}
-  </span>
-</div>
-```
-
----
-
-## Mock Data for Phase 0
-
-Since no backend yet, X authentication will use mock data:
+### Milestone Commitment Lock
+Once milestones are submitted:
+1. Dates are "locked" (cannot be changed directly)
+2. To change, user must click "Request Update"
+3. This triggers a "Timeline Variance" badge on public profile
+4. Shows transparency about changed deadlines
 
 ```tsx
-// Mock X user on successful "OAuth"
-const mockXUser: XUser = {
-  id: 'x_mock_' + Date.now(),
-  username: 'verified_builder',
-  avatarUrl: 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png',
+const handleRequestUpdate = (milestoneId: string) => {
+  // Mark milestone as having variance requested
+  setMilestones(prev => prev.map(m => 
+    m.id === milestoneId ? { ...m, varianceRequested: true } : m
+  ));
+  // Show edit modal
+  setEditingMilestone(milestoneId);
 };
+```
 
-// Store in localStorage
-localStorage.setItem('x_user', JSON.stringify(mockXUser));
+---
+
+## Category Options
+
+```typescript
+const categories = [
+  { value: 'defi', label: 'DeFi' },
+  { value: 'nft', label: 'NFT / Digital Collectibles' },
+  { value: 'infrastructure', label: 'Infrastructure' },
+  { value: 'gaming', label: 'Gaming' },
+  { value: 'social', label: 'Social' },
+  { value: 'dao', label: 'DAO / Governance' },
+  { value: 'payments', label: 'Payments' },
+  { value: 'developer-tools', label: 'Developer Tools' },
+  { value: 'other', label: 'Other' },
+];
 ```
 
 ---
 
 ## Implementation Order
 
-1. **Types**: Add `XUser` and update `ClaimedProfile`
-2. **AuthContext**: Create auth context with mock X OAuth
-3. **XCallback**: Create callback page (mock success)
-4. **Update App.tsx**: Add AuthProvider and new routes
-5. **Update Navigation**: Add auth-aware UI
-6. **Redesign ClaimProfile**: X auth check + optional/required cards
-7. **Update GitHubCallback**: Handle flexible claim data
-8. **Dashboard**: Create authenticated user dashboard (optional)
+1. **Types** - Add all new interfaces to `src/types/index.ts`
+2. **Claim Components** - Create `src/components/claim/` with step forms
+3. **ClaimProfile Redesign** - Multi-step wizard with all 5 steps
+4. **ProfileDetail Page** - Create Heartbeat Dashboard layout
+5. **GitHubCallback Update** - Handle new profile data
+6. **App Routes** - Add `/profile/:id` route
+7. **ProgramDetail Update** - Link to ProfileDetail for verified programs
 
 ---
 
-## Secrets Required (Future)
+## Technical Notes
 
-When connecting real X OAuth:
-- `X_CLIENT_ID` - OAuth App Client ID from X Developer Portal
-- `X_CLIENT_SECRET` - OAuth App Client Secret
+### Storing Claiming Data (Phase 0)
+Since we're using localStorage for Phase 0:
+```typescript
+// Store all claiming data before GitHub redirect
+localStorage.setItem('claimingProfile', JSON.stringify({
+  projectName,
+  description,
+  category,
+  websiteUrl,
+  programId,
+  walletAddress,
+  socials: { xHandle, discordUrl, telegramUrl },
+  mediaAssets,
+  milestones,
+}));
+```
 
-For Phase 0, these are not needed as we use mock authentication.
+### Media Asset Handling (Phase 0)
+For Phase 0 without backend storage:
+- Accept URLs only (no file uploads yet)
+- Image URLs, YouTube embed URLs, video URLs
+- Store as URL strings in localStorage
+
+### Fixing `/program/undefined` Bug
+The current issue: When no programId exists, `internalId` is undefined.
+
+Fix in `GitHubCallback.tsx`:
+```typescript
+// Generate unique profile ID
+const profileId = `profile_${Date.now()}_${xUserId}`;
+
+// Always redirect to profile page (not program page)
+navigate(`/profile/${profileId}?verified=true`);
+```
 
 ---
 
-## Acceptance Criteria
+## Design Consistency
 
-| Requirement | Implementation |
-|-------------|----------------|
-| X sign-in required first | Auth check on ClaimProfile page |
-| Mock X OAuth for Phase 0 | Direct redirect to /x-callback with mock code |
-| Program ID is optional | Card with "OPTIONAL" badge, skip allowed |
-| Wallet is optional | Card with "OPTIONAL" badge, uses existing adapter |
-| GitHub is required | Card with "REQUIRED" badge, highlighted styling |
-| User displayed in nav | Avatar + @username when authenticated |
-| Sign out functionality | Clear localStorage, redirect to home |
-| Trust messaging preserved | Quote + Read-Only Access indicator |
-| Progress bar updated | 4-step flow with new labels |
+All components follow Bloomberg Terminal aesthetic:
+- Cards: `border-border bg-card`
+- Headers: `font-display uppercase tracking-tight`
+- Required badges: `bg-primary/20 text-primary`
+- Optional badges: `bg-muted text-muted-foreground`
+- Overdue milestones: `text-destructive` (Terminal Red)
+- Progress bars: `bg-primary` fill on `bg-muted` track
 
