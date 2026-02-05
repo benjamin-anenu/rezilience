@@ -1,105 +1,155 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
-
-    --radius: 0.5rem;
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-  }
-}
+ @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+ 
+ @tailwind base;
+ @tailwind components;
+ @tailwind utilities;
+ 
+ /* Resilience Design System - Bloomberg Terminal Aesthetic */
+ 
+ @layer base {
+   :root {
+     /* Core palette - dark terminal theme */
+     --background: 216 20% 7%;          /* #0F1216 Abyss */
+     --foreground: 216 33% 94%;         /* #EBEFF5 Foundation */
+ 
+     --card: 214 18% 19%;               /* #2D333B Concrete */
+     --card-foreground: 216 33% 94%;    /* #EBEFF5 */
+ 
+     --popover: 214 18% 19%;
+     --popover-foreground: 216 33% 94%;
+ 
+     --primary: 174 100% 38%;           /* #00C2B6 Signal/Teal */
+     --primary-foreground: 216 20% 7%;  /* Dark text on teal */
+ 
+     --secondary: 214 18% 19%;          /* #2D333B Concrete */
+     --secondary-foreground: 216 33% 94%;
+ 
+     --muted: 214 18% 19%;
+     --muted-foreground: 212 11% 58%;   /* #8B949E Steel */
+ 
+     --accent: 174 100% 38%;            /* Signal teal */
+     --accent-foreground: 216 20% 7%;
+ 
+     --destructive: 24 100% 38%;        /* #C24E00 Rot/Warning */
+     --destructive-foreground: 216 33% 94%;
+ 
+     --border: 214 18% 25%;
+     --input: 214 18% 19%;
+     --ring: 174 100% 38%;
+ 
+     --radius: 0.125rem;                /* 2px subtle radius */
+ 
+     /* Chart colors */
+     --chart-1: 174 100% 38%;           /* Signal teal */
+     --chart-2: 24 100% 38%;            /* Warning orange */
+     --chart-3: 212 11% 58%;            /* Steel gray */
+     --chart-4: 216 33% 94%;            /* Light */
+     --chart-5: 214 18% 35%;            /* Lighter concrete */
+ 
+     /* Sidebar */
+     --sidebar-background: 216 20% 7%;
+     --sidebar-foreground: 216 33% 94%;
+     --sidebar-primary: 174 100% 38%;
+     --sidebar-primary-foreground: 216 20% 7%;
+     --sidebar-accent: 214 18% 19%;
+     --sidebar-accent-foreground: 216 33% 94%;
+     --sidebar-border: 214 18% 25%;
+     --sidebar-ring: 174 100% 38%;
+   }
+ }
+ 
+ @layer base {
+   * {
+     @apply border-border;
+   }
+ 
+   html {
+     scroll-behavior: smooth;
+   }
+ 
+   body {
+     @apply bg-background text-foreground antialiased;
+     font-family: 'Inter', sans-serif;
+   }
+ 
+   h1, h2, h3, h4, h5, h6 {
+     font-family: 'Space Grotesk', sans-serif;
+   }
+ 
+   code, pre, .font-mono {
+     font-family: 'JetBrains Mono', monospace;
+   }
+ }
+ 
+ @layer utilities {
+   .font-display {
+     font-family: 'Space Grotesk', sans-serif;
+   }
+ 
+   .font-body {
+     font-family: 'Inter', sans-serif;
+   }
+ 
+   .font-code {
+     font-family: 'JetBrains Mono', monospace;
+   }
+ 
+   .text-signal {
+     color: hsl(var(--primary));
+   }
+ 
+   .bg-abyss {
+     background-color: hsl(var(--background));
+   }
+ 
+   .bg-concrete {
+     background-color: hsl(var(--card));
+   }
+ 
+   .border-steel {
+     border-color: hsl(var(--border));
+   }
+ 
+   .text-steel {
+     color: hsl(var(--muted-foreground));
+   }
+ 
+   /* Terminal-style glow effects */
+   .glow-signal {
+     box-shadow: 0 0 20px hsl(174 100% 38% / 0.2);
+   }
+ 
+   .glow-signal-strong {
+     box-shadow: 0 0 30px hsl(174 100% 38% / 0.3);
+   }
+ 
+   /* High-density data table styles */
+   .data-table {
+     @apply text-sm;
+   }
+ 
+   .data-table th {
+     @apply text-xs uppercase tracking-wider text-muted-foreground font-medium;
+   }
+ 
+   .data-table td {
+     @apply py-3;
+   }
+ }
+ 
+ /* Solana Wallet Adapter Styles Override */
+ .wallet-adapter-button {
+   @apply !bg-primary !text-primary-foreground !rounded-sm !font-display !font-medium !h-10 !px-4;
+ }
+ 
+ .wallet-adapter-button:hover {
+   @apply !bg-primary/90;
+ }
+ 
+ .wallet-adapter-modal-wrapper {
+   @apply !bg-card !border !border-border;
+ }
+ 
+ .wallet-adapter-modal-title {
+   @apply !font-display !text-foreground;
+ }
