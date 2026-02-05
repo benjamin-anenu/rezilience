@@ -1,96 +1,71 @@
 
-# Add "My Bonds" Portfolio Page
+# Hero Section Content Update
 
 ## Overview
-Add the "My Bonds" page to complete the staking user flow. This page allows users to manage their staked bonds, view yield earnings, and claim/unstake based on protocol health (Resilience Score must be >= 70 to claim yield).
+Update the hero section copy and buttons to reflect the new brand messaging, with a disabled "STAKE NOW" button showing "COMING SOON" and replacing the wallet button text with "CLAIM MY PROFILE".
 
 ---
 
-## Features to Implement
+## Content Changes
 
-### 1. My Bonds Page (`src/pages/MyBonds.tsx`)
-A complete bond portfolio management dashboard featuring:
+### Headline
+**Current:** `MAINTENANCE IS RESILIENCE`
 
-**Portfolio Overview (4 stat cards):**
-- Total Staked SOL (sum across all bonds)
-- Total Yield Earned (accumulated rewards)
-- Claimable Now (yield available when score >= 70)
-- Active Bonds count
+**New:** `REPUTATION CAN'T BE FORKED.`
 
-**Smart Yield Claiming Logic:**
-- "CLAIM YIELD" button enabled when Resilience Score >= 70
-- "CLAIM LOCKED" button disabled when score < 70
-- Red warning banner explains why claiming is blocked for low-score protocols
+### Subhead
+**Current:** "Quantified trust metrics for Solana programs. Track upgrade frequency, verify bytecode originality, and stake on program integrity."
 
-**Lockup Management:**
-- Lock-up end date for each bond
-- "UNSTAKE" button enabled only after lockup expires
-- "LOCKED" button shows when still in lockup period
+**New:** "Any dev can copy a repo. You can't fake a heartbeat. We turn your development velocity into an immutable Resilience score that investors can bank on. Don't just launch. Outlast."
 
-**Bonds Table with columns:**
-- Program name (clickable to program detail)
-- Program ID (truncated, monospace)
-- Staked amount
-- Lock-up end date
-- Current Resilience Score (color-coded)
-- Accumulated yield
-- Estimated APY
-- Action buttons (Claim/Unstake)
+### Buttons
 
-### 2. Navigation Update
-Add "MY BONDS" link to the navigation bar between "STAKING" and wallet button
-
-### 3. Staking Page Enhancement
-Add "VIEW MY BONDS" button in the staking page header for easy navigation
+| Button | Current | New |
+|--------|---------|-----|
+| Primary | "EXPLORE PROGRAMS" with arrow | "CHECK PROGRAM VITALS" with arrow |
+| Secondary | "STAKE NOW" (active link) | "STAKE NOW" with Lock icon, disabled, tooltip "COMING SOON" |
+| Nav Wallet | "Select Wallet" (WalletMultiButton) | "CLAIM MY PROFILE" button |
 
 ---
 
 ## Technical Details
 
-### Files to Create
-1. **`src/pages/MyBonds.tsx`** - New portfolio page adapted to use existing UI components (Card, Button, Alert, Table) and Tailwind classes from the project's design system
-
 ### Files to Modify
-1. **`src/App.tsx`** - Add route for `/my-bonds`
-2. **`src/components/layout/Navigation.tsx`** - Add "MY BONDS" nav link
-3. **`src/pages/Staking.tsx`** - Add "VIEW MY BONDS" button in header
 
-### Mock Data
-Three sample bonds with different states:
-- Bond 1: Score 94 (can claim, locked for unstake)
-- Bond 2: Score 91 (can claim, locked for unstake)  
-- Bond 3: Score 65 (can't claim due to low score - demonstrates the enforcement mechanism)
+1. **`src/components/landing/HeroSection.tsx`**
+   - Update headline text
+   - Update subhead paragraph
+   - Change primary button text from "EXPLORE PROGRAMS" to "CHECK PROGRAM VITALS"
+   - Replace secondary button: remove Link wrapper, add `Lock` icon, add `disabled` prop, add "COMING SOON" tooltip/badge
 
-### Design Consistency
-- Use existing UI components: Card, Button, Alert, Badge, Table
-- Match the Bloomberg Terminal aesthetic with existing Tailwind CSS variables
-- Use `font-display` for headers, `font-mono` for data values
-- Color-coded scores: `text-primary` (teal) for healthy >= 70, `text-destructive` (orange) for low < 70
+2. **`src/components/layout/Navigation.tsx`**
+   - Replace `WalletMultiButton` with a custom "CLAIM MY PROFILE" button
+   - Use `User` icon from lucide-react for visual consistency
 
----
+### New Icon Import
+```tsx
+import { Lock } from 'lucide-react';
+```
 
-## User Flow Diagram
-
-```text
-Explorer → Program Detail → "STAKE" button
-                               ↓
-                        Staking Page
-                         ↓        ↑
-            "VIEW MY BONDS"      "CREATE NEW BOND"
-                         ↓        ↑
-                      My Bonds Page
-                         ↓
-              Claim Yield (if score >= 70)
-              Unstake (if lockup expired)
+### Disabled Button with Coming Soon
+```tsx
+<Button 
+  variant="outline" 
+  size="lg" 
+  disabled 
+  className="font-display font-semibold uppercase tracking-wider cursor-not-allowed"
+>
+  <Lock className="mr-2 h-4 w-4" />
+  STAKE NOW
+  <span className="ml-2 text-xs text-muted-foreground">(COMING SOON)</span>
+</Button>
 ```
 
 ---
 
-## Acceptance Criteria (User Story 4.2: Yield Distribution)
-
-| Requirement | Implementation |
-|------------|---------------|
-| Contract calculates yield based on time-weighted stake | Mock data shows accumulated yield per bond |
-| Claim function enables withdrawal only if Score > 70 | `canClaim` logic based on `currentScore >= 70` |
-| Visual feedback on bond health | Color-coded scores + warning banners |
-| Clear messaging on requirements | Info banner explains yield claiming rules |
+## Expected Result
+- Bold new headline that emphasizes the unique value proposition
+- Compelling subhead that speaks to developers and investors
+- "CHECK PROGRAM VITALS" as the primary CTA
+- Disabled staking button with padlock showing it's coming soon
+- "CLAIM MY PROFILE" replacing the wallet connection button
