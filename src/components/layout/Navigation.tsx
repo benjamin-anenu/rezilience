@@ -4,6 +4,7 @@
  import { useState } from 'react';
  import { Button } from '@/components/ui/button';
  import { cn } from '@/lib/utils';
+import logo from '@/assets/logo.png';
  
  const navLinks = [
    { href: 'https://docs.resilience.dev', label: 'DOCS', external: true },
@@ -22,9 +23,7 @@
          <div className="flex h-16 items-center justify-between">
            {/* Logo */}
            <Link to="/" className="flex items-center gap-2">
-             <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary">
-               <span className="font-display text-lg font-bold text-primary-foreground">R</span>
-             </div>
+            <img src={logo} alt="Resilience" className="h-8 w-8 object-contain" />
              <span className="font-display text-xl font-bold tracking-tight text-foreground">
                RESILIENCE
              </span>
