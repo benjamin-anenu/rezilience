@@ -1,7 +1,26 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Activity, Fingerprint, Lock } from 'lucide-react';
- import { Button } from '@/components/ui/button';
- import heroBg from '@/assets/hero-bg.png';
+import { ArrowRight, Shield, Activity, Fingerprint, Lock, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import heroBg from '@/assets/hero-bg.png';
+
+const stats = [
+  {
+    value: '2,847',
+    label: 'Initial Cohort',
+    tooltip: 'Curated registry of active Solana programs identified via on-chain history and public GitHub repositories.'
+  },
+  {
+    value: '12K+',
+    label: 'Est. Weekly Heartbeats',
+    tooltip: 'Rolling 30-day average from a verified sample of the top 50 protocols in our registry.'
+  },
+  {
+    value: '73.4',
+    label: 'Beta Benchmark',
+    tooltip: 'Ecosystem average calculated from our Phase 0 audit. Claim your profile to see where you stand.'
+  }
+];
  
  export function HeroSection() {
    return (
@@ -50,21 +69,27 @@ import { ArrowRight, Shield, Activity, Fingerprint, Lock } from 'lucide-react';
                 </Button>
               </div>
  
-             {/* Stats */}
-             <div className="mt-12 grid grid-cols-3 gap-8">
-               <div>
-                 <p className="font-mono text-2xl font-bold text-primary">2,847</p>
-                 <p className="text-sm text-muted-foreground">Programs Indexed</p>
-               </div>
-               <div>
-                 <p className="font-mono text-2xl font-bold text-primary">$1.28M</p>
-                 <p className="text-sm text-muted-foreground">Total Staked</p>
-               </div>
-               <div>
-                 <p className="font-mono text-2xl font-bold text-primary">73.4</p>
-                 <p className="text-sm text-muted-foreground">Avg. Score</p>
-               </div>
-             </div>
+            {/* Stats */}
+            <TooltipProvider>
+              <div className="mt-12 grid grid-cols-3 gap-8">
+                {stats.map((stat) => (
+                  <div key={stat.label}>
+                    <p className="font-mono text-2xl font-bold text-primary">{stat.value}</p>
+                    <div className="flex items-center gap-1">
+                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs border-primary/20">
+                          <p className="text-xs">{stat.tooltip}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TooltipProvider>
            </div>
  
            {/* Right content - Abstract geometric illustration */}
