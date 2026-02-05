@@ -40,10 +40,49 @@
    lockupMonths: number;
  }
  
- export interface BondSummary {
-   currentScore: number;
-   projectedScore: number;
-   scoreIncrease: number;
-   estimatedAPY: number;
-   unlockDate: string;
- }
+export interface BondSummary {
+  currentScore: number;
+  projectedScore: number;
+  scoreIncrease: number;
+  estimatedAPY: number;
+  unlockDate: string;
+}
+
+// Claim Profile Types
+export interface VerificationStep {
+  step: number;
+  label: string;
+  status: 'pending' | 'in-progress' | 'complete' | 'error';
+}
+
+export interface GitHubData {
+  repoUrl: string;
+  stars: number;
+  forks: number;
+  activeContributors: number;
+  commitVelocity: number; // commits per day (30-day average)
+  lastCommitDate: string;
+  openIssues: number;
+  releases: number;
+}
+
+export interface ResilienceScoreResult {
+  score: number;
+  livenessStatus: 'active' | 'dormant' | 'degraded';
+  breakdown: {
+    liveness: number;
+    originality: number;
+    assurance: number;
+  };
+}
+
+export interface ClaimedProfile {
+  programId: string;
+  programName: string;
+  githubUsername: string;
+  githubRepoUrl: string;
+  verified: boolean;
+  verifiedAt: string;
+  score: number;
+  livenessStatus: 'active' | 'dormant' | 'degraded';
+}
