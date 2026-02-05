@@ -1,14 +1,15 @@
  import { Link, useLocation } from 'react-router-dom';
- import { Menu, X, ArrowRight } from 'lucide-react';
+ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+ import { Menu, X } from 'lucide-react';
  import { useState } from 'react';
  import { Button } from '@/components/ui/button';
  import { cn } from '@/lib/utils';
- import resilienceLogo from '@/assets/resilience-logo.png';
  
  const navLinks = [
-   { href: 'https://docs.resilience.dev', label: 'Docs', external: true },
-   { href: '/explorer', label: 'Explorer', external: false },
-   { href: 'https://grants.resilience.dev', label: 'Grants', external: true },
+   { href: 'https://docs.resilience.dev', label: 'DOCS', external: true },
+   { href: '/explorer', label: 'EXPLORER', external: false },
+   { href: 'https://grants.resilience.dev', label: 'GRANTS', external: true },
+   { href: '/staking', label: 'STAKING', external: false },
  ];
  
  export function Navigation() {
@@ -20,8 +21,10 @@
        <div className="container mx-auto px-4 lg:px-8">
          <div className="flex h-16 items-center justify-between">
            {/* Logo */}
-           <Link to="/" className="flex items-center gap-3">
-             <img src={resilienceLogo} alt="Resilience" className="h-8 w-8" />
+           <Link to="/" className="flex items-center gap-2">
+             <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary">
+               <span className="font-display text-lg font-bold text-primary-foreground">R</span>
+             </div>
              <span className="font-display text-xl font-bold tracking-tight text-foreground">
                RESILIENCE
              </span>
@@ -36,7 +39,7 @@
                    href={link.href}
                    target="_blank"
                    rel="noopener noreferrer"
-                   className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+                   className="font-display text-sm font-medium tracking-wider text-muted-foreground transition-colors hover:text-foreground"
                  >
                    {link.label}
                  </a>
@@ -45,7 +48,7 @@
                    key={link.label}
                    to={link.href}
                    className={cn(
-                     'text-sm font-medium transition-colors hover:text-foreground',
+                     'font-display text-sm font-medium tracking-wider transition-colors hover:text-foreground',
                      location.pathname === link.href
                        ? 'text-primary'
                        : 'text-muted-foreground'
@@ -57,14 +60,9 @@
              )}
            </div>
  
-           {/* Launch App Button */}
+           {/* Wallet Button */}
            <div className="hidden md:block">
-             <Button asChild className="font-medium">
-               <Link to="/explorer">
-                 Launch App
-                 <ArrowRight className="ml-2 h-4 w-4" />
-               </Link>
-             </Button>
+             <WalletMultiButton />
            </div>
  
            {/* Mobile Menu Button */}
@@ -89,7 +87,7 @@
                      href={link.href}
                      target="_blank"
                      rel="noopener noreferrer"
-                     className="text-sm font-medium text-muted-foreground"
+                     className="font-display text-sm font-medium tracking-wider text-muted-foreground"
                      onClick={() => setMobileMenuOpen(false)}
                    >
                      {link.label}
@@ -99,7 +97,7 @@
                      key={link.label}
                      to={link.href}
                      className={cn(
-                       'text-sm font-medium',
+                       'font-display text-sm font-medium tracking-wider',
                        location.pathname === link.href
                          ? 'text-primary'
                          : 'text-muted-foreground'
@@ -111,12 +109,7 @@
                  )
                )}
                <div className="pt-2">
-                 <Button asChild className="w-full font-medium">
-                   <Link to="/explorer">
-                     Launch App
-                     <ArrowRight className="ml-2 h-4 w-4" />
-                   </Link>
-                 </Button>
+                 <WalletMultiButton />
                </div>
              </div>
            </div>

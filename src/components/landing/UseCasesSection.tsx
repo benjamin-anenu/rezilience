@@ -1,22 +1,28 @@
  import { Link } from 'react-router-dom';
- import { ArrowRight } from 'lucide-react';
+ import { TrendingUp, Users, FileCheck, ArrowRight } from 'lucide-react';
  import { Button } from '@/components/ui/button';
  
  const useCases = [
    {
+     icon: TrendingUp,
      title: 'PROTOCOL RISK',
      description:
-       'Eliminate counterparty risk via real-time upgrade monitoring and institutional-grade reports.',
+       'DeFi protocols need to assess counterparty risk before integrating with external programs. Resilience scores provide instant, quantified risk assessment.',
+     cta: 'For DeFi Teams',
    },
    {
+     icon: Users,
      title: 'DAO DILIGENCE',
      description:
-       'Scalable due diligence for treasury decisions with on-chain evidence and compliance trails.',
+       'DAOs making treasury decisions need transparent program health data. Our indexer provides the on-chain evidence for informed governance.',
+     cta: 'For DAOs',
    },
    {
-     title: 'COMPLIANCE REPORTING',
+     icon: FileCheck,
+     title: 'COMPLIANCE',
      description:
-       'Continuous monitoring provides evaluators with immutable data for audits and DAO governance.',
+       'Institutional players require audit trails and risk documentation. Resilience reports satisfy regulatory requirements for program assessment.',
+     cta: 'For Institutions',
    },
  ];
  
@@ -26,24 +32,32 @@
        <div className="container mx-auto px-4 lg:px-8">
          <div className="mb-12 text-center">
            <h2 className="mb-4 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
-             USE CASES: INSTITUTIONAL GRADE.
+             USE CASES
            </h2>
+           <p className="mx-auto max-w-2xl text-muted-foreground">
+             Built for everyone who needs to trust the programs they interact with.
+           </p>
          </div>
  
-         <div className="mx-auto max-w-3xl space-y-4">
+         <div className="grid gap-8 md:grid-cols-3">
            {useCases.map((useCase) => (
              <div
                key={useCase.title}
-               className="flex gap-4 rounded-sm border border-border bg-card p-6"
+               className="group flex flex-col rounded-sm border border-border bg-card p-6 transition-all hover:border-primary/50"
              >
-               {/* Teal accent line */}
-               <div className="w-1 shrink-0 rounded-full bg-primary" />
-               
-               <div>
-                 <h3 className="mb-2 font-display text-lg font-bold uppercase tracking-tight text-foreground">
-                   {useCase.title}
-                 </h3>
-                 <p className="text-sm text-muted-foreground">{useCase.description}</p>
+               <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-sm bg-muted">
+                 <useCase.icon className="h-6 w-6 text-primary" />
+               </div>
+ 
+               <h3 className="mb-2 font-display text-xl font-bold uppercase tracking-tight text-foreground">
+                 {useCase.title}
+               </h3>
+ 
+               <p className="mb-6 flex-1 text-sm text-muted-foreground">{useCase.description}</p>
+ 
+               <div className="flex items-center gap-2 text-sm text-primary">
+                 <span className="font-medium">{useCase.cta}</span>
+                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                </div>
              </div>
            ))}

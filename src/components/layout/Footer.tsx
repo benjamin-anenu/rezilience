@@ -1,19 +1,25 @@
  import { Link } from 'react-router-dom';
  import { Github, Twitter, FileText } from 'lucide-react';
- import resilienceLogo from '@/assets/resilience-logo.png';
  
  export function Footer() {
    return (
      <footer className="border-t border-border bg-background">
        <div className="container mx-auto px-4 py-12 lg:px-8">
          <div className="flex flex-col items-center justify-between gap-8 md:flex-row">
-           {/* Logo */}
-           <Link to="/" className="flex items-center gap-3">
-             <img src={resilienceLogo} alt="Resilience" className="h-8 w-8" />
-             <span className="font-display text-xl font-bold tracking-tight text-foreground">
-               RESILIENCE
-             </span>
-           </Link>
+           {/* Logo & Tagline */}
+           <div className="flex flex-col items-center gap-2 md:items-start">
+             <Link to="/" className="flex items-center gap-2">
+               <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary">
+                 <span className="font-display text-lg font-bold text-primary-foreground">R</span>
+               </div>
+               <span className="font-display text-xl font-bold tracking-tight text-foreground">
+                 RESILIENCE
+               </span>
+             </Link>
+             <p className="text-sm text-muted-foreground">
+               On-Chain Assurance Layer for Solana
+             </p>
+           </div>
  
            {/* Links */}
            <div className="flex items-center gap-6">
