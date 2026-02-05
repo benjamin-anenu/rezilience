@@ -104,7 +104,7 @@ export function Navigation() {
               <Button asChild className="font-display font-semibold uppercase tracking-wider">
                 <Link to="/claim-profile">
                   <User className="mr-2 h-4 w-4" />
-                  CLAIM MY PROFILE
+                  JOIN THE REGISTRY
                 </Link>
               </Button>
             )}
@@ -196,7 +196,7 @@ export function Navigation() {
                   <Button asChild className="font-display font-semibold uppercase tracking-wider w-full">
                     <Link to="/claim-profile" onClick={() => setMobileMenuOpen(false)}>
                       <User className="mr-2 h-4 w-4" />
-                      CLAIM MY PROFILE
+                      JOIN THE REGISTRY
                     </Link>
                   </Button>
                 )}

@@ -53,7 +53,7 @@ const stats = [
               <div className="flex flex-wrap gap-4">
                 <Button asChild size="lg" className="font-display font-semibold uppercase tracking-wider">
                   <Link to="/explorer">
-                    CHECK PROGRAM VITALS
+                    SOLANA PROJECT VITALS
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>
