@@ -6,12 +6,13 @@
  import { cn } from '@/lib/utils';
 import logo from '@/assets/logo.png';
  
- const navLinks = [
-   { href: 'https://docs.resilience.dev', label: 'DOCS', external: true },
-   { href: '/explorer', label: 'EXPLORER', external: false },
-   { href: 'https://grants.resilience.dev', label: 'GRANTS', external: true },
-   { href: '/staking', label: 'STAKING', external: false },
- ];
+const navLinks = [
+  { href: 'https://docs.resilience.dev', label: 'DOCS', external: true },
+  { href: '/explorer', label: 'EXPLORER', external: false },
+  { href: 'https://grants.resilience.dev', label: 'GRANTS', external: true },
+  { href: '/staking', label: 'STAKING', external: false },
+  { href: '/my-bonds', label: 'MY BONDS', external: false },
+];
  
  export function Navigation() {
    const location = useLocation();
