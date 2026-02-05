@@ -7,6 +7,8 @@
 import Index from "./pages/Index";
 import Explorer from "./pages/Explorer";
 import ProgramDetail from "./pages/ProgramDetail";
+import ClaimProfile from "./pages/ClaimProfile";
+import GitHubCallback from "./pages/GitHubCallback";
 import Staking from "./pages/Staking";
 import MyBonds from "./pages/MyBonds";
 import NotFound from "./pages/NotFound";
@@ -20,15 +22,17 @@ import NotFound from "./pages/NotFound";
          <Toaster />
          <Sonner />
          <BrowserRouter>
-           <Routes>
-             <Route path="/" element={<Index />} />
-             <Route path="/explorer" element={<Explorer />} />
-             <Route path="/program/:id" element={<ProgramDetail />} />
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/explorer" element={<Explorer />} />
+              <Route path="/program/:id" element={<ProgramDetail />} />
+              <Route path="/claim-profile" element={<ClaimProfile />} />
+              <Route path="/github-callback" element={<GitHubCallback />} />
               <Route path="/staking" element={<Staking />} />
               <Route path="/my-bonds" element={<MyBonds />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-             <Route path="*" element={<NotFound />} />
-           </Routes>
+              <Route path="*" element={<NotFound />} />
+            </Routes>
          </BrowserRouter>
        </TooltipProvider>
      </WalletProvider>

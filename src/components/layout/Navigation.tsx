@@ -61,9 +61,11 @@ const navLinks = [
  
             {/* Claim Profile Button */}
             <div className="hidden md:block">
-              <Button className="font-display font-semibold uppercase tracking-wider">
-                <User className="mr-2 h-4 w-4" />
-                CLAIM MY PROFILE
+              <Button asChild className="font-display font-semibold uppercase tracking-wider">
+                <Link to="/claim-profile">
+                  <User className="mr-2 h-4 w-4" />
+                  CLAIM MY PROFILE
+                </Link>
               </Button>
             </div>
  
@@ -111,9 +113,11 @@ const navLinks = [
                  )
                )}
                 <div className="pt-2">
-                  <Button className="font-display font-semibold uppercase tracking-wider w-full">
-                    <User className="mr-2 h-4 w-4" />
-                    CLAIM MY PROFILE
+                  <Button asChild className="font-display font-semibold uppercase tracking-wider w-full">
+                    <Link to="/claim-profile" onClick={() => setMobileMenuOpen(false)}>
+                      <User className="mr-2 h-4 w-4" />
+                      CLAIM MY PROFILE
+                    </Link>
                   </Button>
                 </div>
              </div>
