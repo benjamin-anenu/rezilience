@@ -215,73 +215,93 @@ const ProgramDetail = () => {
             </div>
           )}
 
-          {/* Media Gallery - only show when verified and has media */}
-          {isVerified && claimedProfile?.mediaAssets && claimedProfile.mediaAssets.length > 0 && (
+          {/* Website Preview - Large for interaction */}
+          {isVerified && claimedProfile?.websiteUrl && (
             <div className="mb-6">
               <Card className="border-border bg-card">
                 <CardHeader className="pb-2">
                   <CardTitle className="font-display text-sm uppercase tracking-wider text-muted-foreground">
-                    Media Gallery
+                    Website
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <Carousel className="w-full">
-                    <CarouselContent>
-                      {claimedProfile.mediaAssets
-                        .sort((a, b) => a.order - b.order)
-                        .map((asset) => (
-                          <CarouselItem key={asset.id}>
-                            <div className="aspect-video overflow-hidden rounded-sm border border-border bg-muted">
-                              {asset.type === 'image' ? (
-                                <img
-                                  src={asset.url}
-                                  alt="Project media"
-                                  className="h-full w-full object-cover"
-                                />
-                              ) : asset.type === 'youtube' ? (
-                                <iframe
-                                  src={getEmbedUrl(asset.url, 'youtube')}
-                                  className="h-full w-full"
-                                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                  allowFullScreen
-                                  title="YouTube video"
-                                />
-                              ) : (
-                                <video
-                                  src={asset.url}
-                                  controls
-                                  className="h-full w-full object-cover"
-                                />
-                              )}
-                            </div>
-                          </CarouselItem>
-                        ))}
-                    </CarouselContent>
-                    {claimedProfile.mediaAssets.length > 1 && (
-                      <>
-                        <CarouselPrevious className="-left-4" />
-                        <CarouselNext className="-right-4" />
-                      </>
-                    )}
-                  </Carousel>
+                  <div className="aspect-[16/10] overflow-hidden rounded-sm border border-border">
+                    <iframe
+                      src={claimedProfile.websiteUrl}
+                      className="h-full w-full"
+                      title="Website preview"
+                      sandbox="allow-scripts allow-same-origin"
+                    />
+                  </div>
+                  <div className="mt-3 flex justify-end">
+                    <Button asChild variant="outline" size="sm">
+                      <a
+                        href={claimedProfile.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Launch Site
+                      </a>
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </div>
           )}
 
-          {/* Website Snippet & Social Pulse - only show when verified */}
+          {/* Media Gallery & Social Pulse - side by side */}
           {isVerified && claimedProfile && (
             <div className="mb-6 grid gap-6 lg:grid-cols-2">
-              {/* Website Snippet */}
-              {claimedProfile.websiteUrl && (
+              {/* Media Gallery */}
+              {claimedProfile.mediaAssets && claimedProfile.mediaAssets.length > 0 && (
                 <Card className="border-border bg-card">
                   <CardHeader className="pb-2">
                     <CardTitle className="font-display text-sm uppercase tracking-wider text-muted-foreground">
-                      Website
+                      Media Gallery
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <WebsitePreview url={claimedProfile.websiteUrl} />
+                    <Carousel className="w-full">
+                      <CarouselContent>
+                        {claimedProfile.mediaAssets
+                          .sort((a, b) => a.order - b.order)
+                          .map((asset) => (
+                            <CarouselItem key={asset.id}>
+                              <div className="aspect-video overflow-hidden rounded-sm border border-border bg-muted">
+                                {asset.type === 'image' ? (
+                                  <img
+                                    src={asset.url}
+                                    alt="Project media"
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : asset.type === 'youtube' ? (
+                                  <iframe
+                                    src={getEmbedUrl(asset.url, 'youtube')}
+                                    className="h-full w-full"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                    allowFullScreen
+                                    title="YouTube video"
+                                  />
+                                ) : (
+                                  <video
+                                    src={asset.url}
+                                    controls
+                                    className="h-full w-full object-cover"
+                                  />
+                                )}
+                              </div>
+                            </CarouselItem>
+                          ))}
+                      </CarouselContent>
+                      {claimedProfile.mediaAssets.length > 1 && (
+                        <>
+                          <CarouselPrevious className="-left-4" />
+                          <CarouselNext className="-right-4" />
+                        </>
+                      )}
+                    </Carousel>
                   </CardContent>
                 </Card>
               )}
