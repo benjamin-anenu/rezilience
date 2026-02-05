@@ -1,116 +1,146 @@
- # Resilience - On-Chain Assurance Layer
- 
- ## Overview
- Building the **Resilience** frontend - a Bloomberg Terminal-styled application that provides trust metrics for Solana programs. This phase focuses on the core public pages with real wallet integration, interactive charts, and responsive design.
- 
- ## ✅ PHASE 1 COMPLETE
+
+# Redesign: Premium Trust Gap Section with Slanted Stamps
+
+## Overview
+Enhance the Problem/Solution section with a sophisticated, icon-centric design featuring slanted stamps (like the reference image), premium icons, and bullet points explaining each ocean concept.
 
 ---
 
-## Design System
+## Visual Design
 
-**Colors:**
-- Background: `#0F1216` (Abyss)
-- Text: `#EBEFF5` (Foundation)  
-- Accent: `#00C2B6` (Signal/Teal)
-- Secondary: `#2D333B` (Concrete)
-- Muted: `#8B949E` (Steel)
-- Warning: `#C24E00` (Rot)
-
-**Typography:**
-- Headlines: Space Grotesk (bold, uppercase)
-- Body: Inter
-- Code/Data: JetBrains Mono
-
-**Style:**
-- Subtle border radius (2-4px)
-- High data density
-- Dark terminal aesthetic
-- Sharp, professional feel
-
----
-
-## Pages to Build (Phase 1)
-
-### 1. Landing Page
-- **Hero section** with "MAINTENANCE IS RESILIENCE" headline
-- **Abstract geometric illustration** with connected nodes
-- **Problem/Solution comparison** (Red Ocean vs Blue Ocean)
-- **How It Works diagram** showing data flow pipeline
-- **Three pillars:** Liveness Indexer, Bytecode Originality, Staked Assurance
-- **Use Cases section** for Protocol Risk, DAO Diligence, Compliance
-
-### 2. Explorer Page
-- **Ecosystem Overview** stats bar (programs indexed, average score, total staked)
-- **Search bar** with filter options
-- **Program Leaderboard** table with columns:
-  - Rank, Program Name, Program ID
-  - Resilience Score, Liveness status
-  - Originality badge, Staked Assurance, Last Upgrade
-- Rows clickable to navigate to Program Detail
-
-### 3. Program Detail Page
-- **Header card** with program name, ID, score, and liveness indicator
-- **Interactive line chart** (Recharts) showing upgrade frequency over 12 months
-- **Recent Events** timeline sidebar
-- **Three metric cards:**
-  - Bytecode Originality (fingerprint icon)
-  - Staked Assurance (shield icon)  
-  - Admin Constraints (lock icon)
-
-### 4. Staking Page
-- **3-step form flow:**
-  1. Select Program (paste ID + verify)
-  2. Define Stake Amount (with Max button)
-  3. Set Lockup Period (slider: 6mo - 2yr)
-- **Bond Summary panel** with score impact visualization
-- **Financial Details** breakdown
-- **Risk Disclosure** warning box
-- **Solana wallet integration** (Phantom, Solflare, etc.)
-- **CREATE BOND** button with wallet signature requirement
+### Layout Structure
+```text
++------------------------------------------------------------------+
+|            THE PROBLEM: VANITY METRICS FAIL.                      |
++------------------------------------------------------------------+
+|                                                                   |
+|  +-----------------------------+  +-----------------------------+ |
+|  |      THE RED OCEAN          |  |    THE BLUE OCEAN           | |
+|  |    What Exists Today        |  |   What Resilience Unlocks   | |
+|  |                             |  |                             | |
+|  |    [Star]     [Utensils]    |  | [Heart] [Fingerprint] [Lock]| |
+|  |   GitHub         TVL        |  | Liveness Originality Staked | |
+|  |   Stars                     |  |  Score     Index   Assurance| |
+|  |                             |  |                             | |
+|  |  • Opaque upgrade history   |  | • Transparent liveness      | |
+|  |  • No standardized health   |  | • Quantified resilience     | |
+|  |  • Forks erode integrity    |  | • Bytecode verification     | |
+|  |  • Manual diligence         |  | • Automated risk assessment | |
+|  |                             |  |                             | |
+|  |      ╱‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾╲      |  |     ╱‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾╲     | |
+|  |     ╱ DECAY DETECTED  ╲     |  |    ╱ VERIFIED ACTIVE   ╲    | |
+|  |     ╲________________╱      |  |    ╲_________________╱     | |
+|  |        (rotated -6deg)      |  |       (rotated 6deg)        | |
+|  +-----------------------------+  +-----------------------------+ |
++------------------------------------------------------------------+
+```
 
 ---
 
-## Shared Components
+## Component Details
 
-### Navigation
-- Resilience logo (stylized R icon)
-- Links: Docs, Explorer, Grants, Staking/Dashboard
-- Wallet connect button (shows truncated address + balance when connected)
+### Section Header
+- Title: "THE PROBLEM: VANITY METRICS FAIL."
+- Left-aligned, uppercase, bold Space Grotesk
+- Optional subtitle about Solana's trust gap
 
-### Footer
-- Logo + tagline
-- Documentation, GitHub, Twitter links
+### Red Ocean Panel (Left)
+**Visual Style:**
+- Background: `bg-destructive/5` with subtle red tint
+- Border: `border-destructive/20`
+- Muted, faded aesthetic
+
+**Icons (Large, ~48px):**
+- `Star` - GitHub Stars (vanity metric)
+- `Utensils` - TVL / Fork metaphor
+- Icons rendered in muted gray color (`text-muted-foreground`)
+
+**Bullet Points:**
+- Opaque upgrade history creates trust vacuum
+- No standardized way to assess program health
+- Forks and clones erode ecosystem integrity
+- Manual due diligence doesn't scale
+
+**Slanted Stamp:**
+- "DECAY DETECTED" text
+- Dashed border in orange/rot color
+- Rotated `-6deg` for that authentic stamp look
+- Uppercase, monospace font
+
+### Blue Ocean Panel (Right)
+**Visual Style:**
+- Background: `bg-card` with teal accent
+- Border: `border-primary/30` with subtle glow
+- Premium, vibrant aesthetic
+
+**Icons (Large, ~48px, with glow):**
+- `HeartPulse` - Liveness Score
+- `Fingerprint` - Originality Index
+- `Shield` - Staked Assurance
+- Icons in teal with drop-shadow glow effect
+
+**Bullet Points:**
+- Transparent liveness indexing on every program
+- Quantified resilience scores across ecosystem
+- Bytecode originality verification and fingerprinting
+- Automated, real-time program risk assessment
+
+**Slanted Stamp:**
+- "VERIFIED ACTIVE" text
+- Solid teal border with glow effect
+- Rotated `6deg` (opposite direction)
+- Uppercase, monospace font
 
 ---
 
 ## Technical Implementation
 
-### Wallet Integration
-- Use `@solana/wallet-adapter-react` for Solana wallet connections
-- Support Phantom, Solflare, and other popular wallets
-- Display connected wallet address and SOL balance
+### File Changes
+1. **`src/components/landing/ProblemSolutionSection.tsx`** - Complete redesign
 
-### Charts
-- Recharts for the upgrade frequency graph
-- Interactive tooltips, smooth animations
-- Teal color scheme matching brand
+### Icons from lucide-react
+- `Star` - GitHub stars
+- `Utensils` - TVL/forks
+- `HeartPulse` - Liveness
+- `Fingerprint` - Originality
+- `Shield` - Staked assurance
 
-### Data
-- Mock data for all program information
-- Realistic Solana program IDs and scores
-- Static but convincing for grant demos
+### Stamp Styling (Tailwind + inline)
+```tsx
+// Red Ocean stamp - rotated left
+<div className="inline-block -rotate-6 border-2 border-dashed border-destructive px-4 py-2">
+  <span className="font-mono text-sm uppercase tracking-wider text-destructive">
+    DECAY DETECTED
+  </span>
+</div>
 
-### Responsive Design
-- Desktop-optimized layout (1280px+)
-- Graceful degradation for tablet/mobile
-- Key content remains accessible on smaller screens
+// Blue Ocean stamp - rotated right, with glow
+<div className="inline-block rotate-6 border-2 border-primary px-4 py-2 shadow-[0_0_15px_hsl(174,100%,38%,0.4)]">
+  <span className="font-mono text-sm uppercase tracking-wider text-primary">
+    VERIFIED ACTIVE
+  </span>
+</div>
+```
 
- ---
- 
- ## What's Coming Later (Phase 2)
-- Enterprise Dashboard (Overview, API Keys, Webhooks, Reports, Billing)
-- Alert Rules configuration
-- Real backend integration with Supabase
-- Actual on-chain data fetching
+### Icon Glow Effect
+```tsx
+// Teal icons with glow
+<HeartPulse 
+  className="h-12 w-12 text-primary" 
+  style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} 
+/>
+```
 
+### Responsive Behavior
+- Desktop: Side-by-side panels
+- Mobile: Stacked vertically, icons in a row
+
+---
+
+## Expected Result
+A premium, sophisticated comparison section that:
+- Uses large, meaningful icons to represent metrics
+- Features authentic-looking slanted stamps
+- Includes explanatory bullet points
+- Maintains the Bloomberg Terminal aesthetic
+- Creates clear visual contrast between problems and solutions
