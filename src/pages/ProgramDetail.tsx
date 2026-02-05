@@ -147,6 +147,74 @@ const ProgramDetail = () => {
             </div>
           )}
 
+          {/* Upgrade Chart + Recent Events - Operational Health */}
+          <div className="mb-6 grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <UpgradeChart />
+            </div>
+            <div>
+              <RecentEvents />
+            </div>
+          </div>
+
+          {/* Metric Cards - Key Stats */}
+          <div className="mb-6">
+            <MetricCards program={program} />
+          </div>
+
+          {/* Verified Timeline - only show when verified and has milestones */}
+          {isVerified && claimedProfile?.milestones && claimedProfile.milestones.length > 0 && (
+            <div className="mb-6">
+              <Card className="border-border bg-card">
+                <CardHeader className="pb-2">
+                  <CardTitle className="font-display text-sm uppercase tracking-wider text-muted-foreground">
+                    Verified Timeline
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                    {claimedProfile.milestones.map((milestone) => (
+                      <div
+                        key={milestone.id}
+                        className={`rounded-sm border p-4 ${
+                          milestone.status === 'completed'
+                            ? 'border-primary/30 bg-primary/10'
+                            : milestone.status === 'overdue'
+                            ? 'border-destructive/30 bg-destructive/10'
+                            : 'border-border bg-muted/30'
+                        }`}
+                      >
+                        <div className="mb-2 flex items-center gap-2">
+                          {milestone.status === 'completed' ? (
+                            <CheckCircle className="h-4 w-4 text-primary" />
+                          ) : milestone.status === 'overdue' ? (
+                            <AlertTriangle className="h-4 w-4 text-destructive" />
+                          ) : (
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                          )}
+                          <span className="font-display text-sm font-semibold uppercase">
+                            {milestone.title}
+                          </span>
+                          {milestone.isLocked && (
+                            <Lock className="ml-auto h-3 w-3 text-muted-foreground" />
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <span>{new Date(milestone.targetDate).toLocaleDateString()}</span>
+                          {milestone.varianceRequested && (
+                            <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-500">
+                              Update Requested
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+
           {/* Media Gallery - only show when verified and has media */}
           {isVerified && claimedProfile?.mediaAssets && claimedProfile.mediaAssets.length > 0 && (
             <div className="mb-6">
@@ -278,77 +346,6 @@ const ProgramDetail = () => {
               </Card>
             </div>
           )}
-
-          {/* Verified Timeline - only show when verified and has milestones */}
-          {isVerified && claimedProfile?.milestones && claimedProfile.milestones.length > 0 && (
-            <div className="mb-6">
-              <Card className="border-border bg-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="font-display text-sm uppercase tracking-wider text-muted-foreground">
-                    Verified Timeline
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {claimedProfile.milestones.map((milestone) => (
-                      <div
-                        key={milestone.id}
-                        className={`rounded-sm border p-4 ${
-                          milestone.status === 'completed'
-                            ? 'border-primary/30 bg-primary/10'
-                            : milestone.status === 'overdue'
-                            ? 'border-destructive/30 bg-destructive/10'
-                            : 'border-border bg-muted/30'
-                        }`}
-                      >
-                        <div className="mb-2 flex items-center gap-2">
-                          {milestone.status === 'completed' ? (
-                            <CheckCircle className="h-4 w-4 text-primary" />
-                          ) : milestone.status === 'overdue' ? (
-                            <AlertTriangle className="h-4 w-4 text-destructive" />
-                          ) : (
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <span className="font-display text-sm font-semibold uppercase">
-                            {milestone.title}
-                          </span>
-                          {milestone.isLocked && (
-                            <Lock className="ml-auto h-3 w-3 text-muted-foreground" />
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          <span>{new Date(milestone.targetDate).toLocaleDateString()}</span>
-                          {milestone.varianceRequested && (
-                            <Badge variant="outline" className="text-xs border-amber-500/30 text-amber-500">
-                              Update Requested
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Main content grid */}
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Chart - takes 2 columns */}
-            <div className="lg:col-span-2">
-              <UpgradeChart />
-            </div>
-
-            {/* Recent Events - takes 1 column */}
-            <div>
-              <RecentEvents />
-            </div>
-          </div>
-
-          {/* Metric Cards */}
-          <div className="mt-6">
-            <MetricCards program={program} />
-          </div>
 
           {/* Stake CTA */}
           <div className="mt-8 rounded-sm border border-primary/30 bg-primary/5 p-6 text-center">
