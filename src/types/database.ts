@@ -109,6 +109,8 @@ export interface DBClaimedProfile {
   wallet_address: string | null;
   github_org_url: string | null;
   github_username: string | null;
+  github_access_token: string | null;
+  github_token_scope: string | null;
   x_user_id: string | null;
   x_username: string | null;
   discord_url: string | null;
