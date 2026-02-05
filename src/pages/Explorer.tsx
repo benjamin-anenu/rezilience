@@ -1,8 +1,11 @@
 import { useState, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout';
 import { EcosystemStats, SearchBar, ProgramLeaderboard } from '@/components/explorer';
 import { useProjects } from '@/hooks/useProjects';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
 const Explorer = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,13 +34,21 @@ const Explorer = () => {
       <div className="py-8">
         <div className="container mx-auto px-4 lg:px-8">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="mb-2 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
-              PROGRAM EXPLORER
-            </h1>
-            <p className="text-muted-foreground">
-              Browse and analyze trust metrics for Solana programs across the ecosystem.
-            </p>
+          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h1 className="mb-2 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
+                PROGRAM EXPLORER
+              </h1>
+              <p className="text-muted-foreground">
+                Browse and analyze trust metrics for Solana programs across the ecosystem.
+              </p>
+            </div>
+            <Button asChild className="font-display uppercase tracking-wider">
+              <Link to="/submit">
+                <Plus className="mr-2 h-4 w-4" />
+                Submit Project
+              </Link>
+            </Button>
           </div>
 
           {/* Ecosystem Stats */}
@@ -87,11 +98,24 @@ const Explorer = () => {
           {/* Empty State */}
           {!isLoading && !error && filteredPrograms.length === 0 && (
             <div className="rounded-sm border border-border bg-card p-12 text-center">
-              <p className="text-muted-foreground">
-                {searchQuery || statusFilter !== 'all'
-                  ? 'No programs match your search criteria.'
-                  : 'No programs indexed yet. Check back soon.'}
-              </p>
+              <div className="mx-auto max-w-md">
+                <h3 className="mb-2 font-display text-lg font-semibold uppercase text-foreground">
+                  {searchQuery || statusFilter !== 'all' ? 'No Matches Found' : 'No Programs Yet'}
+                </h3>
+                <p className="mb-6 text-muted-foreground">
+                  {searchQuery || statusFilter !== 'all'
+                    ? 'No programs match your search criteria. Try adjusting your filters.'
+                    : 'Be the first to add a Solana program to the Resilience Registry.'}
+                </p>
+                {!searchQuery && statusFilter === 'all' && (
+                  <Button asChild>
+                    <Link to="/submit">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Submit a Project
+                    </Link>
+                  </Button>
+                )}
+              </div>
             </div>
           )}
 

@@ -96,6 +96,51 @@ export interface DBEcosystemStats {
   activePrograms: number;
 }
 
+// Claimed profile (verified project profile)
+export interface DBClaimedProfile {
+  id: string;
+  project_id: string | null;
+  project_name: string;
+  description: string | null;
+  category: string | null;
+  website_url: string | null;
+  logo_url: string | null;
+  program_id: string | null;
+  wallet_address: string | null;
+  github_org_url: string | null;
+  github_username: string | null;
+  x_user_id: string | null;
+  x_username: string | null;
+  discord_url: string | null;
+  telegram_url: string | null;
+  media_assets: MediaAsset[];
+  milestones: Milestone[];
+  verified: boolean;
+  verified_at: string | null;
+  claimer_wallet: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MediaAsset {
+  id: string;
+  type: 'image' | 'video' | 'youtube';
+  url: string;
+  order: number;
+  title?: string;
+}
+
+export interface Milestone {
+  id: string;
+  title: string;
+  targetDate: string;
+  isLocked: boolean;
+  status: 'completed' | 'upcoming' | 'overdue';
+  varianceRequested?: boolean;
+}
+
 // Insert/Update types
 export type ProjectInsert = Omit<DBProject, 'id' | 'created_at' | 'updated_at'>;
 export type ProjectUpdate = Partial<ProjectInsert>;
+export type ClaimedProfileInsert = Omit<DBClaimedProfile, 'id' | 'created_at' | 'updated_at'>;
+export type ClaimedProfileUpdate = Partial<ClaimedProfileInsert>;
