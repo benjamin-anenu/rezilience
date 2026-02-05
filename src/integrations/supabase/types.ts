@@ -14,7 +14,167 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bonds: {
+        Row: {
+          created_at: string
+          id: string
+          locked_until: string
+          project_id: string
+          staked_amount: number
+          user_wallet: string
+          yield_earned: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          locked_until: string
+          project_id: string
+          staked_amount: number
+          user_wallet: string
+          yield_earned?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          locked_until?: string
+          project_id?: string
+          staked_amount?: number
+          user_wallet?: string
+          yield_earned?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonds_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          github_commit_velocity: number | null
+          github_contributors: number | null
+          github_forks: number | null
+          github_language: string | null
+          github_last_commit: string | null
+          github_stars: number | null
+          github_url: string | null
+          id: string
+          is_fork: boolean | null
+          is_multisig: boolean | null
+          last_onchain_activity: string | null
+          liveness_status: Database["public"]["Enums"]["liveness_status"] | null
+          logo_url: string | null
+          originality_score: number | null
+          program_authority: string | null
+          program_id: string
+          program_name: string
+          resilience_score: number | null
+          total_staked: number | null
+          updated_at: string
+          verified: boolean
+          website_url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          github_commit_velocity?: number | null
+          github_contributors?: number | null
+          github_forks?: number | null
+          github_language?: string | null
+          github_last_commit?: string | null
+          github_stars?: number | null
+          github_url?: string | null
+          id?: string
+          is_fork?: boolean | null
+          is_multisig?: boolean | null
+          last_onchain_activity?: string | null
+          liveness_status?:
+            | Database["public"]["Enums"]["liveness_status"]
+            | null
+          logo_url?: string | null
+          originality_score?: number | null
+          program_authority?: string | null
+          program_id: string
+          program_name: string
+          resilience_score?: number | null
+          total_staked?: number | null
+          updated_at?: string
+          verified?: boolean
+          website_url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          github_commit_velocity?: number | null
+          github_contributors?: number | null
+          github_forks?: number | null
+          github_language?: string | null
+          github_last_commit?: string | null
+          github_stars?: number | null
+          github_url?: string | null
+          id?: string
+          is_fork?: boolean | null
+          is_multisig?: boolean | null
+          last_onchain_activity?: string | null
+          liveness_status?:
+            | Database["public"]["Enums"]["liveness_status"]
+            | null
+          logo_url?: string | null
+          originality_score?: number | null
+          program_authority?: string | null
+          program_id?: string
+          program_name?: string
+          resilience_score?: number | null
+          total_staked?: number | null
+          updated_at?: string
+          verified?: boolean
+          website_url?: string | null
+        }
+        Relationships: []
+      }
+      score_history: {
+        Row: {
+          breakdown: Json | null
+          commit_velocity: number | null
+          days_last_commit: number | null
+          id: string
+          project_id: string
+          score: number
+          snapshot_date: string
+        }
+        Insert: {
+          breakdown?: Json | null
+          commit_velocity?: number | null
+          days_last_commit?: number | null
+          id?: string
+          project_id: string
+          score: number
+          snapshot_date?: string
+        }
+        Update: {
+          breakdown?: Json | null
+          commit_velocity?: number | null
+          days_last_commit?: number | null
+          id?: string
+          project_id?: string
+          score?: number
+          snapshot_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "score_history_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +183,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      liveness_status: "ACTIVE" | "STALE" | "DECAYING"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +310,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      liveness_status: ["ACTIVE", "STALE", "DECAYING"],
+    },
   },
 } as const
