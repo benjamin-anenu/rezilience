@@ -1,5 +1,6 @@
  import { Link } from 'react-router-dom';
  import { Github, Twitter, FileText } from 'lucide-react';
+import logo from '@/assets/logo.png';
  
  export function Footer() {
    return (
@@ -9,9 +10,7 @@
            {/* Logo & Tagline */}
            <div className="flex flex-col items-center gap-2 md:items-start">
              <Link to="/" className="flex items-center gap-2">
-               <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary">
-                 <span className="font-display text-lg font-bold text-primary-foreground">R</span>
-               </div>
+              <img src={logo} alt="Resilience" className="h-8 w-8 object-contain" />
                <span className="font-display text-xl font-bold tracking-tight text-foreground">
                  RESILIENCE
                </span>
