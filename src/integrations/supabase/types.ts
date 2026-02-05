@@ -52,6 +52,89 @@ export type Database = {
           },
         ]
       }
+      claimed_profiles: {
+        Row: {
+          category: string | null
+          claimer_wallet: string | null
+          created_at: string
+          description: string | null
+          discord_url: string | null
+          github_org_url: string | null
+          github_username: string | null
+          id: string
+          logo_url: string | null
+          media_assets: Json | null
+          milestones: Json | null
+          program_id: string | null
+          project_id: string | null
+          project_name: string
+          telegram_url: string | null
+          updated_at: string
+          verified: boolean
+          verified_at: string | null
+          wallet_address: string | null
+          website_url: string | null
+          x_user_id: string | null
+          x_username: string | null
+        }
+        Insert: {
+          category?: string | null
+          claimer_wallet?: string | null
+          created_at?: string
+          description?: string | null
+          discord_url?: string | null
+          github_org_url?: string | null
+          github_username?: string | null
+          id?: string
+          logo_url?: string | null
+          media_assets?: Json | null
+          milestones?: Json | null
+          program_id?: string | null
+          project_id?: string | null
+          project_name: string
+          telegram_url?: string | null
+          updated_at?: string
+          verified?: boolean
+          verified_at?: string | null
+          wallet_address?: string | null
+          website_url?: string | null
+          x_user_id?: string | null
+          x_username?: string | null
+        }
+        Update: {
+          category?: string | null
+          claimer_wallet?: string | null
+          created_at?: string
+          description?: string | null
+          discord_url?: string | null
+          github_org_url?: string | null
+          github_username?: string | null
+          id?: string
+          logo_url?: string | null
+          media_assets?: Json | null
+          milestones?: Json | null
+          program_id?: string | null
+          project_id?: string | null
+          project_name?: string
+          telegram_url?: string | null
+          updated_at?: string
+          verified?: boolean
+          verified_at?: string | null
+          wallet_address?: string | null
+          website_url?: string | null
+          x_user_id?: string | null
+          x_username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claimed_profiles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
