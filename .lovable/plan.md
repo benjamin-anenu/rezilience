@@ -1,138 +1,134 @@
-# Phase 0 Data Infrastructure: Implementation Status
 
-## ✅ COMPLETED (Phase 0.1 - 0.5)
+# Phase 1.5: Real GitHub OAuth Integration
 
-### Step 1: Supabase Schema ✅
-- `projects` table with all fields (program_id, github data, resilience score, etc.)
-- `score_history` table for time-series tracking
-- `bonds` table for Phase 1 staking prep
-- `liveness_status` enum (ACTIVE, STALE, DECAYING)
-- All indexes and RLS policies deployed
-- `update_updated_at_column()` trigger function
+## Overview
+Implement proper GitHub OAuth so users authenticate with their own GitHub accounts. The scoring engine will then use the user's access token to fetch repository data from their connected repos.
 
-### Step 2: Type Definitions ✅
-- Created `src/types/database.ts` with DB-aligned types:
-  - `DBProject`, `DBScoreHistory`, `DBBond`
-  - `LivenessStatus`, `ExtendedGitHubData`, `ScoringResult`
-  - `DBEcosystemStats`
-- Extended `GitHubData` in `src/types/index.ts` with new fields
+## Current Problem
+- GitHub flow is completely mocked - no real OAuth
+- Users enter a GitHub URL manually without verification
+- `fetch-github` edge function uses a global token (not user-specific)
+- Can't verify the user actually owns/controls the repository
 
-### Step 3: Scoring Algorithm ✅
-- Created `src/lib/resilience-scoring.ts` with exponential decay formula:
-  - `R(P,t) = (O × I) × e^(-λ * t) + S`
-  - `calculateResilienceScore()` - main scoring function
-  - `calculateScoreFromProject()` - convenience wrapper
-  - `getScoreTier()` - tier labeling
+## Architecture
 
-### Step 4: Data Hooks ✅
-- `src/hooks/useProjects.ts`:
-  - `useProjects()` - fetch all projects
-  - `useProject(programId)` - single project by on-chain ID
-  - `useProjectById(id)` - single project by UUID
-  - `useEcosystemStats()` - aggregated stats
-  - `useSearchProjects()` - search functionality
-- `src/hooks/useScoreHistory.ts`:
-  - `useScoreHistory()` - fetch history for project
-  - `useScoreHistoryChart()` - chart-formatted data
-- `src/hooks/useBonds.ts`:
-  - `useProjectBonds()` - bonds for a project
-  - `useWalletBonds()` - bonds for a wallet
-  - `useWalletBondStats()` - aggregated bond stats
+### OAuth Flow Diagram
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                     GitHub OAuth Flow                            │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  User clicks "Connect GitHub"                                    │
+│         │                                                        │
+│         ▼                                                        │
+│  ┌──────────────┐     Redirect with      ┌──────────────────┐   │
+│  │   Frontend   │ ──────────────────────▶│  GitHub OAuth    │   │
+│  │  /claim-profile │  client_id +        │  Authorization   │   │
+│  └──────────────┘    redirect_uri        └──────────────────┘   │
+│         ▲                                        │               │
+│         │                                        │ User approves │
+│         │                                        ▼               │
+│         │                                ┌──────────────────┐   │
+│  Redirect to profile                     │  GitHub Callback │   │
+│  with verified status                    │  with ?code=xxx  │   │
+│         │                                └──────────────────┘   │
+│         │                                        │               │
+│         │     ┌──────────────────────────────────┘               │
+│         │     │  POST code to edge function                      │
+│         │     ▼                                                  │
+│         │  ┌────────────────────────────┐                        │
+│         │  │  Edge Function             │                        │
+│         │  │  github-oauth-callback     │                        │
+│         │  │  ─────────────────────     │                        │
+│         │  │  1. Exchange code for      │                        │
+│         │  │     access_token           │                        │
+│         │  │  2. Fetch user repos       │                        │
+│         │  │  3. Calculate score        │                        │
+│         │  │  4. Save to claimed_profiles│                       │
+│         │  └────────────────────────────┘                        │
+│         │              │                                         │
+│         └──────────────┘                                         │
+└─────────────────────────────────────────────────────────────────┘
+```
 
-### Step 5: Components Migrated ✅
-- `Explorer.tsx` - now uses `useProjects()` hook
-- `EcosystemStats.tsx` - now uses `useEcosystemStats()` hook  
-- `ProgramLeaderboard.tsx` - updated to use `DBProject` type
-- `ProgramDetail.tsx` - now uses `useProject()` hook
-- `StakingForm.tsx` - now uses `useProject()` for verification
-- `ClaimProfile.tsx` - now uses `useProject()` for validation
-- `UpgradeChart.tsx` - now uses `useScoreHistoryChart()` hook
-- `RecentEvents.tsx` - now uses `useScoreHistory()` hook
+## Implementation Steps
 
-### Step 6: Edge Functions ✅
-- `supabase/functions/fetch-github/index.ts`:
-  - Fetches real GitHub data (stars, forks, contributors, velocity)
-  - Calculates resilience score using exponential decay
-  - Updates liveness status based on last commit
-  - Records score history snapshots
-- `supabase/functions/add-project/index.ts`:
-  - Adds new projects to database
-  - Validates required fields
-  - Triggers GitHub fetch on creation
+### Step 1: Database Migration
+Add column to store encrypted GitHub access tokens:
+- `github_access_token` (TEXT, encrypted) on `claimed_profiles` table
+- Consider whether to also add `github_token_expires_at` for token refresh
 
----
+### Step 2: Create GitHub OAuth Edge Function
+New edge function: `supabase/functions/github-oauth-callback/index.ts`
+- Receives the authorization `code` from GitHub callback
+- Exchanges code for access token using `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`
+- Fetches user's GitHub profile and organization repos
+- Calculates resilience score from their repos
+- Stores access token and profile data in `claimed_profiles`
+- Returns success with profile data
 
-## 🧹 Cleanup Completed
+### Step 3: Request GitHub OAuth Credentials
+You need to create a GitHub OAuth App:
+1. Go to GitHub → Settings → Developer Settings → OAuth Apps
+2. Create new OAuth App with:
+   - **Application name**: Resilience Platform
+   - **Homepage URL**: Your app URL
+   - **Authorization callback URL**: `https://id-preview--620e3ac9-b8b9-47de-a2e2-0ff41af4217f.lovable.app/github-callback`
+3. Save the **Client ID** and **Client Secret**
 
-- Removed all dummy/mock data from database
-- Database is now clean and ready for real project submissions
-- Explorer shows empty state when no projects exist
+Required secrets:
+- `GITHUB_CLIENT_ID` - OAuth App Client ID
+- `GITHUB_CLIENT_SECRET` - OAuth App Client Secret
 
----
+### Step 4: Update Frontend OAuth Flow
+Modify `src/pages/ClaimProfile.tsx`:
+- Change `handleGitHubConnect` to redirect to real GitHub OAuth URL:
+  ```
+  https://github.com/login/oauth/authorize?
+    client_id=YOUR_CLIENT_ID&
+    redirect_uri=.../github-callback&
+    scope=read:user,read:org,repo&
+    state=random_csrf_token
+  ```
 
-## 📋 Next Steps (Phase 1)
+### Step 5: Update GitHub Callback Page
+Modify `src/pages/GitHubCallback.tsx`:
+- Remove mock data generation
+- Send authorization code to new edge function
+- Handle success/error responses
+- Store session and redirect to profile
 
-### Project Submission Flow
-- [ ] Create UI for submitting new projects (program ID + GitHub URL)
-- [ ] Add validation for Solana program IDs
-- [ ] Display submission confirmation
+### Step 6: Update Scoring Engine
+Modify `fetch-github` edge function:
+- When refreshing scores for claimed profiles, use stored `github_access_token`
+- Fall back to global `GITHUB_TOKEN` for unclaimed projects
+- This allows higher rate limits and access to private repo stats
 
-### GitHub Token Setup
-- [ ] Add `GITHUB_TOKEN` secret for increased API rate limits
-- [ ] Set up daily cron job for score updates
+## Files to Create/Modify
 
-### Claim Profile Enhancement
-- [ ] Create `claimed_profiles` table in database
-- [ ] Persist verified profiles to Supabase
-- [ ] Remove localStorage dependency
+| File | Action | Description |
+|------|--------|-------------|
+| `supabase/functions/github-oauth-callback/index.ts` | Create | Exchange code for token, fetch repos, save profile |
+| `src/pages/ClaimProfile.tsx` | Modify | Real OAuth redirect URL |
+| `src/pages/GitHubCallback.tsx` | Modify | Call edge function instead of mock |
+| `src/lib/github.ts` | Modify | Remove mock, add OAuth URL builder |
+| Migration | Create | Add `github_access_token` column |
 
-### UI Polish
-- [ ] Empty state improvements on Explorer
-- [ ] Add "Submit a Project" CTA
-- [ ] Loading skeleton refinements
+## Security Considerations
+- GitHub access tokens are sensitive - store encrypted or use Vault
+- Implement CSRF protection with `state` parameter
+- Access tokens should only be readable by the profile owner
+- Never expose tokens to frontend - all GitHub API calls via edge functions
 
----
+## Benefits
+- Verify user actually has access to the repository
+- Access private repo statistics if user grants permission
+- Higher API rate limits (5,000/hour per user vs shared)
+- No need for global `GITHUB_TOKEN` for user-connected repos
+- Enables future features like automatic repo discovery
 
-## 🔮 Future (Phase 2+)
-
-- On-chain staking smart contracts
-- Bytecode fingerprinting
-- Multisig authority verification
-- Real-time Supabase subscriptions
-- Daily cron job for automated score updates
-
----
-
-## Files Created
-
-| File | Purpose |
-|------|---------|
-| `src/types/database.ts` | DB-aligned TypeScript types |
-| `src/lib/resilience-scoring.ts` | Exponential decay scoring formula |
-| `src/hooks/useProjects.ts` | Project data fetching hooks |
-| `src/hooks/useScoreHistory.ts` | Score history hooks |
-| `src/hooks/useBonds.ts` | Bond data hooks |
-| `supabase/functions/fetch-github/index.ts` | GitHub data fetching |
-| `supabase/functions/add-project/index.ts` | Project submission API |
-
-## Files Modified
-
-| File | Change |
-|------|--------|
-| `src/types/index.ts` | Added re-exports and extended GitHubData |
-| `src/pages/Explorer.tsx` | Migrated to Supabase hooks |
-| `src/pages/ProgramDetail.tsx` | Migrated to Supabase hooks, passes projectId to charts |
-| `src/pages/ClaimProfile.tsx` | Migrated to Supabase hooks |
-| `src/components/explorer/EcosystemStats.tsx` | Migrated to Supabase hooks |
-| `src/components/explorer/ProgramLeaderboard.tsx` | Updated to DBProject type |
-| `src/components/staking/StakingForm.tsx` | Migrated to Supabase hooks |
-| `src/components/program/UpgradeChart.tsx` | Uses real score_history data |
-| `src/components/program/RecentEvents.tsx` | Uses real score_history data |
-
-## Legacy Files (Can be removed)
-
-| File | Status |
-|------|--------|
-| `src/data/mockData.ts` | No longer used by core components |
-| `src/lib/scoring.ts` | Replaced by resilience-scoring.ts |
-| `src/lib/github.ts` | Replaced by edge function |
+## Technical Notes
+- GitHub OAuth tokens don't expire by default (unless user revokes)
+- The `repo` scope gives read access to public and private repos
+- Consider using `public_repo` scope only if you don't need private repo access
+- Edge function handles all token exchange server-side (never expose client secret)
