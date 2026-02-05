@@ -112,14 +112,14 @@ const Dashboard = () => {
             <div className="grid gap-4">
               {verifiedProjects.map((project) => (
                 <Card
-                  key={project.programId}
+                  key={project.id}
                   className="cursor-pointer border-border bg-card transition-colors hover:border-primary/50"
-                  onClick={() => navigate(`/program/${project.programId}`)}
+                  onClick={() => navigate(`/profile/${project.id}`)}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
                       <CardTitle className="font-display text-lg uppercase tracking-tight">
-                        {project.programName || 'Unknown Program'}
+                        {project.projectName || 'Unknown Project'}
                       </CardTitle>
                       <div className="flex items-center gap-3">
                         <span className="font-mono text-2xl font-bold text-primary">
@@ -141,7 +141,7 @@ const Dashboard = () => {
                   </CardHeader>
                   <CardContent>
                     <p className="font-mono text-xs text-muted-foreground">
-                      {project.programId}
+                      {project.programId || project.id}
                     </p>
                     {project.verifiedAt && (
                       <p className="mt-1 text-xs text-muted-foreground">

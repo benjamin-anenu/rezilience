@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { fetchGitHubData } from '@/lib/github';
 import { calculateResilienceScore } from '@/lib/scoring';
-import type { ClaimedProfile } from '@/types';
+import type { ClaimedProfile, ClaimProfileFormData } from '@/types';
 
 const GitHubCallback = () => {
   const navigate = useNavigate();
@@ -32,11 +32,21 @@ const GitHubCallback = () => {
           throw new Error('X authentication required. Please sign in with X first.');
         }
 
-        // Get optional identifiers
-        const programId = localStorage.getItem('claimingProgramId');
-        const programName = localStorage.getItem('claimingProgramName');
+        // Get stored claiming profile data
+        const storedProfile = localStorage.getItem('claimingProfile');
+        let profileData: Partial<ClaimProfileFormData> = {};
+        if (storedProfile) {
+          try {
+            profileData = JSON.parse(storedProfile);
+          } catch {
+            // Ignore parse errors
+          }
+        }
+
+        // Get optional identifiers from direct storage (legacy support)
+        const programId = localStorage.getItem('claimingProgramId') || profileData.programId;
         const internalId = localStorage.getItem('claimingProgramInternalId');
-        const walletAddress = localStorage.getItem('claimingWalletAddress');
+        const walletAddress = localStorage.getItem('claimingWalletAddress') || profileData.walletAddress;
 
         // Step 2: Simulate token exchange
         setCurrentStep('Verifying GitHub authorization...');
@@ -44,9 +54,10 @@ const GitHubCallback = () => {
 
         // Step 3: Fetch GitHub data (mock)
         setCurrentStep('Indexing repository data...');
-        const mockRepoUrl = programName 
-          ? `https://github.com/mock-org/${programName.toLowerCase().replace(/\s+/g, '-')}`
-          : `https://github.com/${xUsername}/main-project`;
+        const mockRepoUrl = profileData.githubOrgUrl 
+          || (profileData.projectName 
+            ? `https://github.com/mock-org/${profileData.projectName.toLowerCase().replace(/\s+/g, '-')}`
+            : `https://github.com/${xUsername}/main-project`);
         const githubData = await fetchGitHubData(mockRepoUrl);
 
         // Step 4: Calculate score
@@ -54,45 +65,69 @@ const GitHubCallback = () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
         const scoreResult = calculateResilienceScore(githubData, { stakedSOL: 0 });
 
-        // Store claimed profile in localStorage (Phase 0)
+        // Generate unique profile ID
+        const profileId = programId || `profile_${Date.now()}_${xUserId}`;
+
+        // Build complete claimed profile
         const claimedProfile: ClaimedProfile = {
+          id: profileId,
+          
+          // Core Identity
+          projectName: profileData.projectName || `${xUsername}'s Project`,
+          description: profileData.description,
+          category: profileData.category || 'other',
+          websiteUrl: profileData.websiteUrl,
           programId: programId || undefined,
-          programName: programName || undefined,
           walletAddress: walletAddress || undefined,
+          
+          // Auth
           xUserId,
           xUsername,
+          
+          // GitHub
+          githubOrgUrl: mockRepoUrl,
           githubUsername: 'verified-builder',
-          githubRepoUrl: mockRepoUrl,
+          
+          // Socials
+          socials: {
+            xHandle: xUsername,
+            discordUrl: profileData.discordUrl,
+            telegramUrl: profileData.telegramUrl,
+          },
+          
+          // Media
+          mediaAssets: profileData.mediaAssets || [],
+          
+          // Roadmap
+          milestones: profileData.milestones || [],
+          
+          // Verification
           verified: true,
           verifiedAt: new Date().toISOString(),
           score: scoreResult.score,
           livenessStatus: scoreResult.livenessStatus,
         };
 
-        // Store verified programs list (keyed by X user ID if no program)
+        // Store verified profiles list
         const verifiedPrograms = JSON.parse(localStorage.getItem('verifiedPrograms') || '{}');
-        const key = programId || `x_${xUserId}`;
-        verifiedPrograms[key] = claimedProfile;
+        verifiedPrograms[profileId] = claimedProfile;
         localStorage.setItem('verifiedPrograms', JSON.stringify(verifiedPrograms));
 
         // Clean up temp storage
         localStorage.removeItem('claimingProgramId');
-        localStorage.removeItem('claimingProgramName');
         localStorage.removeItem('claimingProgramInternalId');
         localStorage.removeItem('claimingWalletAddress');
         localStorage.removeItem('claimingXUserId');
         localStorage.removeItem('claimingXUsername');
+        localStorage.removeItem('claimingProfile');
 
         setStatus('success');
         setCurrentStep('Verification complete!');
 
         // Redirect after brief success message
         setTimeout(() => {
-          if (internalId) {
-            navigate(`/program/${internalId}?verified=true`);
-          } else {
-            navigate('/dashboard');
-          }
+          // Redirect to profile page (using the new profile ID)
+          navigate(`/profile/${profileId}?verified=true`);
         }, 2000);
 
       } catch (err) {
@@ -147,7 +182,7 @@ const GitHubCallback = () => {
                     Your profile has been verified successfully.
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Redirecting to your dashboard...
+                    Redirecting to your profile...
                   </p>
                 </div>
               )}

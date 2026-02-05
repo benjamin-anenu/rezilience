@@ -1,47 +1,58 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Github, Lock, CheckCircle, AlertCircle, Loader2, Shield, Wallet } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, Shield, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { useAuth } from '@/context/AuthContext';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { programs } from '@/data/mockData';
-import type { VerificationStep } from '@/types';
+import {
+  StepIndicator,
+  CoreIdentityForm,
+  SocialsForm,
+  MediaUploader,
+  RoadmapForm,
+} from '@/components/claim';
+import type { MediaAsset, Milestone, ProjectCategory } from '@/types';
 
 const ClaimProfile = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading, signInWithX } = useAuth();
   const { publicKey, connected } = useWallet();
-  
+
+  // Current step (1-5)
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // Step 2: Core Identity
+  const [projectName, setProjectName] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState<ProjectCategory | ''>('');
+  const [websiteUrl, setWebsiteUrl] = useState('');
   const [programId, setProgramId] = useState('');
   const [programLoading, setProgramLoading] = useState(false);
   const [programVerified, setProgramVerified] = useState(false);
   const [programError, setProgramError] = useState<string | null>(null);
-  
-  const [verificationSteps, setVerificationSteps] = useState<VerificationStep[]>([
-    { step: 1, label: 'X Authenticated', status: 'pending' },
-    { step: 2, label: 'Identity Linked', status: 'pending' },
-    { step: 3, label: 'GitHub Connected', status: 'pending' },
-    { step: 4, label: 'Score Calculated', status: 'pending' },
-  ]);
+
+  // Step 3: Socials
+  const [githubOrgUrl, setGithubOrgUrl] = useState('');
+  const [discordUrl, setDiscordUrl] = useState('');
+  const [telegramUrl, setTelegramUrl] = useState('');
+
+  // Step 4: Media
+  const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
+
+  // Step 5: Roadmap
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
 
   // Update step 1 when authenticated
   useEffect(() => {
-    if (isAuthenticated) {
-      updateStep(1, 'complete');
+    if (isAuthenticated && currentStep === 1) {
+      setCurrentStep(2);
     }
-  }, [isAuthenticated]);
-
-  // Update step 2 when program or wallet is linked
-  useEffect(() => {
-    if (programVerified || connected) {
-      updateStep(2, 'complete');
-    }
-  }, [programVerified, connected]);
+  }, [isAuthenticated, currentStep]);
 
   // Store wallet address when connected
   useEffect(() => {
@@ -50,14 +61,13 @@ const ClaimProfile = () => {
     }
   }, [connected, publicKey]);
 
-  const updateStep = (stepNum: number, status: VerificationStep['status']) => {
-    setVerificationSteps(prev =>
-      prev.map(s => (s.step === stepNum ? { ...s, status } : s))
-    );
-  };
-
-  const completedSteps = verificationSteps.filter(s => s.status === 'complete').length;
-  const progressValue = (completedSteps / verificationSteps.length) * 100;
+  const steps = [
+    { number: 1, label: 'X Auth', isComplete: isAuthenticated, isCurrent: currentStep === 1 },
+    { number: 2, label: 'Identity', isComplete: currentStep > 2, isCurrent: currentStep === 2 },
+    { number: 3, label: 'Socials', isComplete: currentStep > 3, isCurrent: currentStep === 3 },
+    { number: 4, label: 'Media', isComplete: currentStep > 4, isCurrent: currentStep === 4 },
+    { number: 5, label: 'Roadmap', isComplete: false, isCurrent: currentStep === 5 },
+  ];
 
   const handleVerifyProgram = async () => {
     if (!programId.trim()) return;
@@ -65,23 +75,18 @@ const ClaimProfile = () => {
     setProgramLoading(true);
     setProgramError(null);
 
-    // Simulate on-chain verification delay
     await new Promise(resolve => setTimeout(resolve, 1500));
 
-    // Check against mock data OR accept any valid-looking program ID
     const existingProgram = programs.find(
       p => p.programId.toLowerCase() === programId.toLowerCase()
     );
 
-    // Accept existing programs OR any 32+ character base58 string
     const isValidProgramId = existingProgram || programId.length >= 32;
 
     if (isValidProgramId) {
       setProgramVerified(true);
-      // Store the claiming program info
       localStorage.setItem('claimingProgramId', programId);
       if (existingProgram) {
-        localStorage.setItem('claimingProgramName', existingProgram.name);
         localStorage.setItem('claimingProgramInternalId', existingProgram.id);
       }
     } else {
@@ -92,16 +97,50 @@ const ClaimProfile = () => {
   };
 
   const handleGitHubConnect = () => {
-    // Store X user info for the callback
+    // Store all claiming data before redirect
     if (user) {
       localStorage.setItem('claimingXUserId', user.id);
       localStorage.setItem('claimingXUsername', user.username);
     }
-    // Go to GitHub callback (mock flow)
+
+    // Store form data
+    const claimingProfile = {
+      projectName,
+      description,
+      category,
+      websiteUrl,
+      programId: programId || undefined,
+      walletAddress: connected && publicKey ? publicKey.toBase58() : undefined,
+      socials: {
+        xHandle: user?.username,
+        discordUrl: discordUrl || undefined,
+        telegramUrl: telegramUrl || undefined,
+      },
+      mediaAssets,
+      milestones,
+      githubOrgUrl,
+    };
+
+    localStorage.setItem('claimingProfile', JSON.stringify(claimingProfile));
+
     navigate('/github-callback?code=mock_auth_code_12345');
   };
 
-  // Show loading state
+  const canProceedFromStep2 = projectName.trim() && category;
+  const canProceedFromStep3 = githubOrgUrl.trim();
+
+  const handleNext = () => {
+    if (currentStep < 5) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handleBack = () => {
+    if (currentStep > 2) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
   if (authLoading) {
     return (
       <Layout>
@@ -117,7 +156,7 @@ const ClaimProfile = () => {
       <div className="py-12">
         <div className="container mx-auto max-w-2xl px-4 lg:px-8">
           {/* Header */}
-          <div className="mb-10 text-center">
+          <div className="mb-8 text-center">
             <h1 className="mb-3 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
               CLAIM YOUR PROTOCOL
             </h1>
@@ -126,7 +165,12 @@ const ClaimProfile = () => {
             </p>
           </div>
 
-          {/* Step 1: X Authentication (if not authenticated) */}
+          {/* Step Indicator */}
+          <div className="mb-8">
+            <StepIndicator steps={steps} />
+          </div>
+
+          {/* Step 1: X Authentication */}
           {!isAuthenticated && (
             <Card className="mb-6 border-primary/30 bg-card">
               <CardHeader className="pb-3">
@@ -182,17 +226,25 @@ const ClaimProfile = () => {
             </Card>
           )}
 
-          {/* Optional Identifiers Section (only show when authenticated) */}
-          {isAuthenticated && (
+          {/* Step 2: Core Identity */}
+          {isAuthenticated && currentStep === 2 && (
             <>
-              <div className="mb-6">
-                <h3 className="mb-2 font-display text-sm uppercase tracking-wider text-muted-foreground">
-                  OPTIONAL: LINK YOUR IDENTITY
-                </h3>
-                <p className="mb-4 text-xs text-muted-foreground">
-                  Add context to your profile. You can skip these steps.
-                </p>
+              <CoreIdentityForm
+                projectName={projectName}
+                setProjectName={setProjectName}
+                description={description}
+                setDescription={setDescription}
+                category={category}
+                setCategory={setCategory}
+                websiteUrl={websiteUrl}
+                setWebsiteUrl={setWebsiteUrl}
+              />
 
+              {/* Optional Identifiers */}
+              <div className="mt-6">
+                <h3 className="mb-4 font-display text-sm uppercase tracking-wider text-muted-foreground">
+                  OPTIONAL IDENTIFIERS
+                </h3>
                 <div className="grid gap-4 md:grid-cols-2">
                   {/* Program ID Card */}
                   <Card className={`border ${programVerified ? 'border-primary/50 bg-primary/5' : 'border-border'}`}>
@@ -236,15 +288,11 @@ const ClaimProfile = () => {
                               {programError}
                             </p>
                           )}
-                          <p className="text-[10px] text-muted-foreground">
-                            Skip if not claiming a specific program
-                          </p>
                         </>
                       ) : (
                         <div className="flex items-center gap-2 text-xs text-primary">
                           <CheckCircle className="h-4 w-4" />
                           <span className="font-mono">{programId.slice(0, 12)}...</span>
-                          <span className="text-muted-foreground">verified</span>
                         </div>
                       )}
                     </CardContent>
@@ -262,14 +310,9 @@ const ClaimProfile = () => {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {!connected ? (
-                        <>
-                          <div className="flex justify-center">
-                            <WalletMultiButton className="!bg-muted !text-foreground hover:!bg-muted/80 !font-display !text-xs !uppercase !tracking-wider !rounded-md !h-9" />
-                          </div>
-                          <p className="text-[10px] text-muted-foreground text-center">
-                            Link wallet for on-chain identity
-                          </p>
-                        </>
+                        <div className="flex justify-center">
+                          <WalletMultiButton className="!bg-muted !text-foreground hover:!bg-muted/80 !font-display !text-xs !uppercase !tracking-wider !rounded-md !h-9" />
+                        </div>
                       ) : (
                         <div className="flex items-center gap-2 text-xs text-primary">
                           <CheckCircle className="h-4 w-4" />
@@ -284,95 +327,123 @@ const ClaimProfile = () => {
                 </div>
               </div>
 
-              {/* Required: GitHub Section */}
-              <Card className="mb-6 border-primary/30 bg-card">
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-3">
-                    <Github className="h-5 w-5 text-primary" />
-                    <span className="font-display text-lg uppercase tracking-tight">
-                      Connect GitHub
-                    </span>
-                    <span className="ml-auto rounded-sm bg-primary/20 px-2 py-0.5 text-[10px] font-mono uppercase text-primary">
-                      REQUIRED
-                    </span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Quote */}
-                  <blockquote className="border-l-2 border-primary/50 pl-4 italic text-muted-foreground">
-                    "IN AN OPEN-SOURCE WORLD, PRIVACY IS ROT."
-                  </blockquote>
+              {/* Navigation */}
+              <div className="mt-8 flex justify-end">
+                <Button
+                  onClick={handleNext}
+                  disabled={!canProceedFromStep2}
+                  className="font-display font-semibold uppercase tracking-wider"
+                >
+                  NEXT: SOCIALS
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          )}
 
-                  <p className="text-sm text-muted-foreground">
-                    Projects that hide their activity are the first to be forgotten. 
-                    Linking your GitHub gives your investors{' '}
-                    <span className="font-semibold text-primary">Proof of Life</span>.
+          {/* Step 3: Socials */}
+          {isAuthenticated && currentStep === 3 && (
+            <>
+              <SocialsForm
+                githubOrgUrl={githubOrgUrl}
+                setGithubOrgUrl={setGithubOrgUrl}
+                xHandle={user?.username || ''}
+                discordUrl={discordUrl}
+                setDiscordUrl={setDiscordUrl}
+                telegramUrl={telegramUrl}
+                setTelegramUrl={setTelegramUrl}
+                onGitHubConnect={handleGitHubConnect}
+                githubConnected={false}
+              />
+
+              {/* Navigation */}
+              <div className="mt-8 flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={handleBack}
+                  className="font-display font-semibold uppercase tracking-wider"
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  BACK
+                </Button>
+                <Button
+                  onClick={handleNext}
+                  disabled={!canProceedFromStep3}
+                  className="font-display font-semibold uppercase tracking-wider"
+                >
+                  NEXT: MEDIA
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* Step 4: Media */}
+          {isAuthenticated && currentStep === 4 && (
+            <>
+              <MediaUploader
+                mediaAssets={mediaAssets}
+                setMediaAssets={setMediaAssets}
+              />
+
+              {/* Navigation */}
+              <div className="mt-8 flex justify-between">
+                <Button
+                  variant="outline"
+                  onClick={handleBack}
+                  className="font-display font-semibold uppercase tracking-wider"
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  BACK
+                </Button>
+                <Button
+                  onClick={handleNext}
+                  className="font-display font-semibold uppercase tracking-wider"
+                >
+                  NEXT: ROADMAP
+                  <ChevronRight className="ml-2 h-4 w-4" />
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* Step 5: Roadmap */}
+          {isAuthenticated && currentStep === 5 && (
+            <>
+              <RoadmapForm
+                milestones={milestones}
+                setMilestones={setMilestones}
+              />
+
+              {/* Final Submit */}
+              <Card className="mt-6 border-primary/30 bg-card">
+                <CardContent className="py-6">
+                  <p className="mb-4 text-center text-sm text-muted-foreground">
+                    Ready to verify? Clicking below will connect your GitHub and finalize your profile.
                   </p>
-
-                  {/* Trust Badge */}
-                  <div className="rounded-sm border border-primary/20 bg-primary/5 p-4">
-                    <div className="flex items-start gap-3">
-                      <Lock className="mt-0.5 h-4 w-4 text-primary" />
-                      <div className="text-sm">
-                        <span className="font-semibold text-foreground">Read-Only Access: </span>
-                        <span className="text-muted-foreground">
-                          We only read commit history, releases, and contributor data. 
-                          Your code remains yours. We never ask for Write access.
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
                   <Button
                     onClick={handleGitHubConnect}
                     className="w-full font-display font-semibold uppercase tracking-wider"
                     size="lg"
                   >
-                    <Github className="mr-2 h-5 w-5" />
-                    CONNECT GITHUB
+                    COMPLETE VERIFICATION
                   </Button>
                 </CardContent>
               </Card>
+
+              {/* Navigation */}
+              <div className="mt-8 flex justify-start">
+                <Button
+                  variant="outline"
+                  onClick={handleBack}
+                  className="font-display font-semibold uppercase tracking-wider"
+                >
+                  <ChevronLeft className="mr-2 h-4 w-4" />
+                  BACK
+                </Button>
+              </div>
             </>
           )}
-
-          {/* Progress Bar */}
-          <Card className="border-border bg-card">
-            <CardContent className="pt-6">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="font-display text-xs uppercase tracking-wider text-muted-foreground">
-                  VERIFICATION PROGRESS
-                </span>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {completedSteps} of {verificationSteps.length} steps
-                </span>
-              </div>
-              <Progress value={progressValue} className="h-2" />
-              
-              {/* Step indicators */}
-              <div className="mt-4 grid grid-cols-4 gap-2">
-                {verificationSteps.map((step) => (
-                  <div
-                    key={step.step}
-                    className={`text-center text-xs ${
-                      step.status === 'complete' ? 'text-primary' :
-                      step.status === 'in-progress' ? 'text-foreground' :
-                      step.status === 'error' ? 'text-destructive' :
-                      'text-muted-foreground'
-                    }`}
-                  >
-                    <div className={`mx-auto mb-1 h-2 w-2 rounded-full ${
-                      step.status === 'complete' ? 'bg-primary' :
-                      step.status === 'in-progress' ? 'bg-foreground animate-pulse' :
-                      step.status === 'error' ? 'bg-destructive' :
-                      'bg-muted'
-                    }`} />
-                    <span className="hidden sm:inline">{step.label}</span>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Data Provenance Notice */}
           <div className="mt-8 flex items-start gap-2 text-xs text-muted-foreground">
