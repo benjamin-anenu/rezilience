@@ -46,6 +46,18 @@ function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
   return { owner: match[1], repo: match[2].replace(/\.git$/, "") };
 }
 
+// Fetch stored GitHub token for a project from claimed_profiles
+async function getStoredGitHubToken(supabase: ReturnType<typeof createClient>, projectId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("claimed_profiles")
+    .select("github_access_token")
+    .eq("project_id", projectId)
+    .eq("verified", true)
+    .maybeSingle();
+  
+  return data?.github_access_token || null;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -54,7 +66,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const githubToken = Deno.env.get("GITHUB_TOKEN");
+    const fallbackGithubToken = Deno.env.get("GITHUB_TOKEN");
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -85,14 +97,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    const headers: HeadersInit = {
-      Accept: "application/vnd.github.v3+json",
-      "User-Agent": "Resilience-Platform",
-    };
-    if (githubToken) headers.Authorization = `Bearer ${githubToken}`;
-
     let updatedCount = 0;
-    const results: Array<{ project: string; status: string; score?: number }> = [];
+    const results: Array<{ project: string; status: string; score?: number; tokenSource?: string }> = [];
 
     for (const project of projects) {
       try {
@@ -103,6 +109,17 @@ Deno.serve(async (req) => {
           results.push({ project: project.program_name, status: "invalid_url" });
           continue;
         }
+
+        // Try to get stored token from claimed_profiles, fallback to env GITHUB_TOKEN
+        const storedToken = await getStoredGitHubToken(supabase, project.id);
+        const githubToken = storedToken || fallbackGithubToken;
+        const tokenSource = storedToken ? "claimed_profile" : (fallbackGithubToken ? "env" : "none");
+
+        const headers: HeadersInit = {
+          Accept: "application/vnd.github.v3+json",
+          "User-Agent": "Resilience-Platform",
+        };
+        if (githubToken) headers.Authorization = `Bearer ${githubToken}`;
 
         const { owner, repo } = parsed;
         const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
@@ -176,7 +193,7 @@ Deno.serve(async (req) => {
         });
 
         updatedCount++;
-        results.push({ project: project.program_name, status: "updated", score: resilienceScore });
+        results.push({ project: project.program_name, status: "updated", score: resilienceScore, tokenSource });
       } catch (err) {
         results.push({ project: project.program_name, status: `error: ${err}` });
       }

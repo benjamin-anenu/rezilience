@@ -9,19 +9,23 @@
    SelectValue,
  } from '@/components/ui/select';
  
- interface SearchBarProps {
-   searchQuery: string;
-   onSearchChange: (value: string) => void;
-   statusFilter: string;
-   onStatusFilterChange: (value: string) => void;
- }
+interface SearchBarProps {
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (value: string) => void;
+  verificationFilter: string;
+  onVerificationFilterChange: (value: string) => void;
+}
  
- export function SearchBar({
-   searchQuery,
-   onSearchChange,
-   statusFilter,
-   onStatusFilterChange,
- }: SearchBarProps) {
+export function SearchBar({
+  searchQuery,
+  onSearchChange,
+  statusFilter,
+  onStatusFilterChange,
+  verificationFilter,
+  onVerificationFilterChange,
+}: SearchBarProps) {
    return (
      <div className="flex flex-col gap-4 sm:flex-row">
        <div className="relative flex-1">
@@ -33,20 +37,30 @@
            className="pl-10 font-mono text-sm"
          />
        </div>
-       <div className="flex gap-2">
-         <Select value={statusFilter} onValueChange={onStatusFilterChange}>
-           <SelectTrigger className="w-[140px]">
-             <Filter className="mr-2 h-4 w-4" />
-             <SelectValue placeholder="Status" />
-           </SelectTrigger>
-           <SelectContent>
-             <SelectItem value="all">All Status</SelectItem>
-             <SelectItem value="active">Active</SelectItem>
-             <SelectItem value="dormant">Dormant</SelectItem>
-             <SelectItem value="degraded">Degraded</SelectItem>
-           </SelectContent>
-         </Select>
-       </div>
-     </div>
-   );
- }
+        <div className="flex gap-2">
+          <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+            <SelectTrigger className="w-[140px]">
+              <Filter className="mr-2 h-4 w-4" />
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="decaying">Decaying</SelectItem>
+              <SelectItem value="stale">Stale</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={verificationFilter} onValueChange={onVerificationFilterChange}>
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="Verification" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Projects</SelectItem>
+              <SelectItem value="verified">Verified Only</SelectItem>
+              <SelectItem value="unverified">Unverified</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+    );
+  }

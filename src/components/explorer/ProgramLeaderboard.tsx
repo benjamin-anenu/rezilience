@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Activity, CheckCircle, AlertCircle, Copy } from 'lucide-react';
+import { Activity, CheckCircle, AlertCircle, Copy, ShieldCheck } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import type { DBProject, LivenessStatus } from '@/types/database';
 
@@ -125,6 +126,16 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
                     </span>
                   </div>
                   <span className="font-medium text-foreground">{project.program_name}</span>
+                  {project.verified && (
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <ShieldCheck className="h-4 w-4 text-primary" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Verified Project</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               </TableCell>
               <TableCell className="hidden lg:table-cell">

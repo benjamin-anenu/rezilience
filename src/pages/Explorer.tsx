@@ -10,6 +10,7 @@ import { Plus } from 'lucide-react';
 const Explorer = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [verificationFilter, setVerificationFilter] = useState('all');
 
   const { data: projects, isLoading, error } = useProjects();
 
@@ -25,9 +26,14 @@ const Explorer = () => {
       const matchesStatus =
         statusFilter === 'all' || project.liveness_status === statusFilter.toUpperCase();
 
-      return matchesSearch && matchesStatus;
+      const matchesVerification =
+        verificationFilter === 'all' ||
+        (verificationFilter === 'verified' && project.verified) ||
+        (verificationFilter === 'unverified' && !project.verified);
+
+      return matchesSearch && matchesStatus && matchesVerification;
     });
-  }, [projects, searchQuery, statusFilter]);
+  }, [projects, searchQuery, statusFilter, verificationFilter]);
 
   return (
     <Layout>
@@ -63,6 +69,8 @@ const Explorer = () => {
               onSearchChange={setSearchQuery}
               statusFilter={statusFilter}
               onStatusFilterChange={setStatusFilter}
+              verificationFilter={verificationFilter}
+              onVerificationFilterChange={setVerificationFilter}
             />
           </div>
 
