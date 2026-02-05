@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
-import { programs } from '@/data/mockData';
+import { useProject } from '@/hooks/useProjects';
 import {
   StepIndicator,
   CoreIdentityForm,
@@ -47,6 +47,9 @@ const ClaimProfile = () => {
   // Step 5: Roadmap
   const [milestones, setMilestones] = useState<Milestone[]>([]);
 
+  // Project lookup hook
+  const { data: existingProject, refetch: refetchProject } = useProject(programId);
+
   // Update step 1 when authenticated
   useEffect(() => {
     if (isAuthenticated && currentStep === 1) {
@@ -75,19 +78,17 @@ const ClaimProfile = () => {
     setProgramLoading(true);
     setProgramError(null);
 
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // Check database for existing program
+    const result = await refetchProject();
 
-    const existingProgram = programs.find(
-      p => p.programId.toLowerCase() === programId.toLowerCase()
-    );
-
-    const isValidProgramId = existingProgram || programId.length >= 32;
+    // Allow valid program IDs (either in DB or valid format)
+    const isValidProgramId = result.data || programId.length >= 32;
 
     if (isValidProgramId) {
       setProgramVerified(true);
       localStorage.setItem('claimingProgramId', programId);
-      if (existingProgram) {
-        localStorage.setItem('claimingProgramInternalId', existingProgram.id);
+      if (result.data) {
+        localStorage.setItem('claimingProgramDbId', result.data.id);
       }
     } else {
       setProgramError('Invalid Program ID. Please check and try again.');

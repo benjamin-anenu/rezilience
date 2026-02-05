@@ -1,43 +1,70 @@
 import { Database, TrendingUp, Coins, Activity, Info } from 'lucide-react';
-import { ecosystemStats } from '@/data/mockData';
+import { useEcosystemStats } from '@/hooks/useProjects';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Skeleton } from '@/components/ui/skeleton';
 
-const stats = [
-  {
-    icon: Database,
-    label: 'Initial Registry',
-    value: ecosystemStats.programsIndexed.toLocaleString(),
-    tooltip: 'Curated cohort of active Solana programs identified via on-chain history and public GitHub repositories.',
-    showBadge: true,
-  },
-  {
-    icon: TrendingUp,
-    label: 'Beta Benchmark',
-    value: ecosystemStats.averageScore.toFixed(1),
-    tooltip: 'Mean average Resilience Score from our Phase 0 audit across the initial registry cohort.',
-    showBadge: true,
-  },
-  {
-    icon: Coins,
-    label: 'Projected TVL',
-    value: `$${(ecosystemStats.totalStaked / 1000).toFixed(0)}K`,
-    tooltip: 'Estimated total value locked based on current staking commitments from early partners.',
-    showBadge: true,
-  },
-  {
-    icon: Activity,
-    label: 'Verified Active',
-    value: ecosystemStats.activePrograms.toLocaleString(),
-    tooltip: 'Programs with verified on-chain activity within the last 30 days.',
-    showBadge: false,
-  },
-];
- 
 export function EcosystemStats() {
+  const { data: stats, isLoading, error } = useEcosystemStats();
+
+  const statItems = [
+    {
+      icon: Database,
+      label: 'Initial Registry',
+      value: stats?.programsIndexed.toLocaleString() ?? '—',
+      tooltip: 'Curated cohort of active Solana programs identified via on-chain history and public GitHub repositories.',
+      showBadge: true,
+    },
+    {
+      icon: TrendingUp,
+      label: 'Beta Benchmark',
+      value: stats?.averageScore.toFixed(1) ?? '—',
+      tooltip: 'Mean average Resilience Score from our Phase 0 audit across the initial registry cohort.',
+      showBadge: true,
+    },
+    {
+      icon: Coins,
+      label: 'Projected TVL',
+      value: stats ? `$${(stats.totalStaked / 1000).toFixed(0)}K` : '—',
+      tooltip: 'Estimated total value locked based on current staking commitments from early partners.',
+      showBadge: true,
+    },
+    {
+      icon: Activity,
+      label: 'Verified Active',
+      value: stats?.activePrograms.toLocaleString() ?? '—',
+      tooltip: 'Programs with verified on-chain activity within the last 30 days.',
+      showBadge: false,
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="flex items-center gap-4 rounded-sm border border-border bg-card p-4">
+            <Skeleton className="h-10 w-10 rounded-sm" />
+            <div className="space-y-2">
+              <Skeleton className="h-6 w-16" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-sm border border-destructive/30 bg-destructive/10 p-4 text-center">
+        <p className="text-sm text-destructive">Failed to load ecosystem stats</p>
+      </div>
+    );
+  }
+ 
   return (
     <TooltipProvider>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
+        {statItems.map((stat) => (
           <div
             key={stat.label}
             className="flex items-center gap-4 rounded-sm border border-border bg-card p-4"

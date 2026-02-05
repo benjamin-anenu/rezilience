@@ -1,13 +1,13 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, AlertCircle, ExternalLink, Github, MessageCircle, Send, Calendar, Lock, AlertTriangle, Youtube, Image as ImageIcon, Video } from 'lucide-react';
+import { ArrowLeft, CheckCircle, AlertCircle, ExternalLink, Github, MessageCircle, Send, Calendar, Lock, AlertTriangle, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { ProgramHeader, UpgradeChart, RecentEvents, MetricCards } from '@/components/program';
-import { WebsitePreview } from '@/components/claim';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { getProgramById, mockVerifiedProfiles } from '@/data/mockData';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useProject } from '@/hooks/useProjects';
 import { useEffect, useState } from 'react';
 import type { ClaimedProfile } from '@/types';
 import { PROJECT_CATEGORIES } from '@/types';
@@ -23,45 +23,63 @@ const getEmbedUrl = (url: string, type: string) => {
 const ProgramDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
-  const program = getProgramById(id || '1');
+  
+  // Fetch project from database by program_id
+  const { data: project, isLoading, error } = useProject(id || '');
+  
   const [isVerified, setIsVerified] = useState(false);
   const [claimedProfile, setClaimedProfile] = useState<ClaimedProfile | null>(null);
 
   useEffect(() => {
-    if (program) {
+    if (project) {
+      // Check localStorage for claimed profile data
       const verifiedPrograms = JSON.parse(localStorage.getItem('verifiedPrograms') || '{}');
       
-      // Direct lookup by programId
-      let profile = verifiedPrograms[program.programId];
+      let profile = verifiedPrograms[project.program_id];
       
-      // Fallback: search all profiles for matching programId
       if (!profile) {
         Object.values(verifiedPrograms).forEach((p: unknown) => {
           const prof = p as ClaimedProfile;
-          if (prof.programId === program.programId) {
+          if (prof.programId === project.program_id) {
             profile = prof;
           }
         });
       }
       
-      // Fallback: check mock verified profiles
-      if (!profile && mockVerifiedProfiles[program.programId]) {
-        profile = mockVerifiedProfiles[program.programId];
-      }
-      
       if (profile) {
         setIsVerified(true);
         setClaimedProfile(profile);
+      } else if (project.verified) {
+        // Project is verified in database
+        setIsVerified(true);
       }
     }
 
-    // Check if just verified via URL param
     if (searchParams.get('verified') === 'true') {
       setIsVerified(true);
     }
-  }, [program, searchParams]);
+  }, [project, searchParams]);
 
-  if (!program) {
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="py-8">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="mb-6">
+              <Skeleton className="h-10 w-32" />
+            </div>
+            <Skeleton className="mb-8 h-32 w-full" />
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Skeleton className="h-64 lg:col-span-2" />
+              <Skeleton className="h-64" />
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  if (error || !project) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-20 text-center lg:px-8">
@@ -69,14 +87,21 @@ const ProgramDetail = () => {
             PROGRAM NOT FOUND
           </h1>
           <p className="mb-8 text-muted-foreground">
-            The program you're looking for doesn't exist.
+            The program you're looking for doesn't exist in the registry.
           </p>
-          <Button asChild>
-            <Link to="/explorer">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Explorer
-            </Link>
-          </Button>
+          <div className="flex justify-center gap-4">
+            <Button asChild>
+              <Link to="/explorer">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Explorer
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              <Link to="/claim">
+                Claim This Program
+              </Link>
+            </Button>
+          </div>
         </div>
       </Layout>
     );
@@ -85,6 +110,20 @@ const ProgramDetail = () => {
   const getCategoryLabel = (value: string) => {
     const category = PROJECT_CATEGORIES.find(c => c.value === value);
     return category?.label || value;
+  };
+
+  // Transform DBProject to the format expected by existing components
+  const programForComponents = {
+    id: project.id,
+    name: project.program_name,
+    programId: project.program_id,
+    score: Math.round(project.resilience_score),
+    livenessStatus: project.liveness_status.toLowerCase() as 'active' | 'dormant' | 'degraded',
+    originalityStatus: project.is_fork ? 'fork' as const : project.verified ? 'verified' as const : 'unverified' as const,
+    stakedAmount: project.total_staked,
+    lastUpgrade: project.github_last_commit || project.updated_at,
+    upgradeCount: 0,
+    rank: 0,
   };
 
   return (
@@ -101,7 +140,7 @@ const ProgramDetail = () => {
             </Button>
           </div>
 
-          {/* Verification Badge Banner - Only show when verified */}
+          {/* Verification Badge Banner */}
           {isVerified && (
             <div className="mb-6 flex items-center gap-3 rounded-sm border border-primary/30 bg-primary/10 px-4 py-3">
               <CheckCircle className="h-5 w-5 text-primary" />
@@ -123,11 +162,11 @@ const ProgramDetail = () => {
 
           {/* Header */}
           <div className="mb-8">
-            <ProgramHeader program={program} />
+            <ProgramHeader program={programForComponents} />
           </div>
 
-          {/* Description - only show when verified and has description */}
-          {isVerified && claimedProfile?.description && (
+          {/* Description */}
+          {(isVerified && claimedProfile?.description) || project.description ? (
             <div className="mb-6">
               <Card className="border-border bg-card">
                 <CardHeader className="pb-2">
@@ -136,8 +175,10 @@ const ProgramDetail = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-foreground">{claimedProfile.description}</p>
-                  {claimedProfile.category && (
+                  <p className="text-foreground">
+                    {claimedProfile?.description || project.description}
+                  </p>
+                  {claimedProfile?.category && (
                     <Badge variant="outline" className="mt-2">
                       {getCategoryLabel(claimedProfile.category)}
                     </Badge>
@@ -145,9 +186,9 @@ const ProgramDetail = () => {
                 </CardContent>
               </Card>
             </div>
-          )}
+          ) : null}
 
-          {/* Upgrade Chart + Recent Events - Operational Health */}
+          {/* Upgrade Chart + Recent Events */}
           <div className="mb-6 grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
               <UpgradeChart />
@@ -157,12 +198,12 @@ const ProgramDetail = () => {
             </div>
           </div>
 
-          {/* Metric Cards - Key Stats */}
+          {/* Metric Cards */}
           <div className="mb-6">
-            <MetricCards program={program} />
+            <MetricCards program={programForComponents} />
           </div>
 
-          {/* Verified Timeline - only show when verified and has milestones */}
+          {/* Verified Timeline */}
           {isVerified && claimedProfile?.milestones && claimedProfile.milestones.length > 0 && (
             <div className="mb-6">
               <Card className="border-border bg-card">
@@ -215,8 +256,8 @@ const ProgramDetail = () => {
             </div>
           )}
 
-          {/* Website Preview - Large for interaction */}
-          {isVerified && claimedProfile?.websiteUrl && (
+          {/* Website Preview */}
+          {isVerified && (claimedProfile?.websiteUrl || project.website_url) && (
             <div className="mb-6">
               <Card className="border-border bg-card">
                 <CardHeader className="pb-2">
@@ -227,7 +268,7 @@ const ProgramDetail = () => {
                 <CardContent>
                   <div className="aspect-[16/10] overflow-hidden rounded-sm border border-border">
                     <iframe
-                      src={claimedProfile.websiteUrl}
+                      src={claimedProfile?.websiteUrl || project.website_url || ''}
                       className="h-full w-full"
                       title="Website preview"
                       sandbox="allow-scripts allow-same-origin"
@@ -236,7 +277,7 @@ const ProgramDetail = () => {
                   <div className="mt-3 flex justify-end">
                     <Button asChild variant="outline" size="sm">
                       <a
-                        href={claimedProfile.websiteUrl}
+                        href={claimedProfile?.websiteUrl || project.website_url || ''}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="gap-2"
@@ -251,7 +292,7 @@ const ProgramDetail = () => {
             </div>
           )}
 
-          {/* Media Gallery & Social Pulse - side by side */}
+          {/* Media Gallery & Social Pulse */}
           {isVerified && claimedProfile && (
             <div className="mb-6 grid gap-6 lg:grid-cols-2">
               {/* Media Gallery */}
@@ -350,9 +391,9 @@ const ProgramDetail = () => {
                       <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
                     </a>
                   )}
-                  {claimedProfile.githubOrgUrl && (
+                  {(claimedProfile.githubOrgUrl || project.github_url) && (
                     <a
-                      href={claimedProfile.githubOrgUrl}
+                      href={claimedProfile.githubOrgUrl || project.github_url || ''}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 rounded-sm border border-primary/30 bg-primary/10 px-4 py-3 transition-colors hover:bg-primary/20"
@@ -376,8 +417,8 @@ const ProgramDetail = () => {
               Stake SOL to increase the resilience score and earn rewards.
             </p>
             <Button asChild className="font-display font-semibold uppercase tracking-wider">
-              <Link to={`/staking?program=${program.programId}`}>
-                STAKE ON {program.name.toUpperCase()}
+              <Link to={`/staking?program=${project.program_id}`}>
+                STAKE ON {project.program_name.toUpperCase()}
               </Link>
             </Button>
           </div>
