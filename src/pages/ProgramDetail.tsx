@@ -153,7 +153,14 @@ const ProgramDetail = () => {
 
           {/* Header */}
           <div className="mb-8">
-            <ProgramHeader program={programForComponents} />
+            <ProgramHeader 
+              program={programForComponents}
+              websiteUrl={displayWebsiteUrl}
+              xUsername={claimedProfile?.xUsername}
+              discordUrl={claimedProfile?.socials?.discordUrl}
+              telegramUrl={claimedProfile?.socials?.telegramUrl}
+              githubUrl={displayGithubUrl}
+            />
           </div>
 
           {/* Description */}

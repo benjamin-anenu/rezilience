@@ -1,14 +1,20 @@
- import { Copy, ExternalLink, Activity, AlertCircle, CheckCircle } from 'lucide-react';
- import { Button } from '@/components/ui/button';
- import { Badge } from '@/components/ui/badge';
- import { cn } from '@/lib/utils';
- import type { Program } from '@/types';
+import { Copy, ExternalLink, Activity, AlertCircle, Globe, Github, MessageCircle, Send } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import type { Program } from '@/types';
+
+interface ProgramHeaderProps {
+  program: Program;
+  websiteUrl?: string;
+  xUsername?: string;
+  discordUrl?: string;
+  telegramUrl?: string;
+  githubUrl?: string;
+}
  
- interface ProgramHeaderProps {
-   program: Program;
- }
- 
- export function ProgramHeader({ program }: ProgramHeaderProps) {
+ export function ProgramHeader({ program, websiteUrl, xUsername, discordUrl, telegramUrl, githubUrl }: ProgramHeaderProps) {
    const copyToClipboard = (text: string) => {
      navigator.clipboard.writeText(text);
    };
@@ -61,35 +67,147 @@
                </h1>
                {getStatusBadge(program.livenessStatus)}
              </div>
-             <div className="flex items-center gap-2">
-               <code className="font-mono text-sm text-muted-foreground">
-                 {program.programId}
-               </code>
-               <Button
-                 variant="ghost"
-                 size="icon"
-                 className="h-6 w-6"
-                 onClick={() => copyToClipboard(program.programId)}
-               >
-                 <Copy className="h-3 w-3" />
-               </Button>
-               <Button
-                 variant="ghost"
-                 size="icon"
-                 className="h-6 w-6"
-                 asChild
-               >
-                 <a
-                   href={`https://explorer.solana.com/address/${program.programId}`}
-                   target="_blank"
-                   rel="noopener noreferrer"
-                 >
-                   <ExternalLink className="h-3 w-3" />
-                 </a>
-               </Button>
-             </div>
-           </div>
-         </div>
+              <div className="flex items-center gap-2">
+                {program.programId && (
+                  <>
+                    <code className="font-mono text-sm text-muted-foreground">
+                      {program.programId.length > 20 
+                        ? `${program.programId.slice(0, 8)}...${program.programId.slice(-6)}`
+                        : program.programId}
+                    </code>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={() => copyToClipboard(program.programId)}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      asChild
+                    >
+                      <a
+                        href={`https://explorer.solana.com/address/${program.programId}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </Button>
+                    <div className="mx-2 h-4 w-px bg-border" />
+                  </>
+                )}
+                
+                {/* Social Icons Row */}
+                <TooltipProvider delayDuration={200}>
+                  <div className="flex items-center gap-1">
+                    {/* Website */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {websiteUrl ? (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                            <a href={websiteUrl} target="_blank" rel="noopener noreferrer">
+                              <Globe className="h-4 w-4 text-foreground" />
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="h-7 w-7 cursor-not-allowed opacity-40" disabled>
+                            <Globe className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{websiteUrl ? 'Website' : 'No website linked'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* X/Twitter */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {xUsername ? (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                            <a href={`https://x.com/${xUsername}`} target="_blank" rel="noopener noreferrer">
+                              <span className="text-sm font-bold">𝕏</span>
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="h-7 w-7 cursor-not-allowed opacity-40" disabled>
+                            <span className="text-sm font-bold">𝕏</span>
+                          </Button>
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{xUsername ? `@${xUsername}` : 'No X account linked'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* Discord */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {discordUrl ? (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                            <a href={discordUrl} target="_blank" rel="noopener noreferrer">
+                              <MessageCircle className="h-4 w-4 text-[#5865F2]" />
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="h-7 w-7 cursor-not-allowed opacity-40" disabled>
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{discordUrl ? 'Discord' : 'No Discord linked'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* Telegram */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {telegramUrl ? (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                            <a href={telegramUrl} target="_blank" rel="noopener noreferrer">
+                              <Send className="h-4 w-4 text-[#0088cc]" />
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="h-7 w-7 cursor-not-allowed opacity-40" disabled>
+                            <Send className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{telegramUrl ? 'Telegram' : 'No Telegram linked'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    {/* GitHub */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        {githubUrl ? (
+                          <Button variant="ghost" size="icon" className="h-7 w-7" asChild>
+                            <a href={githubUrl} target="_blank" rel="noopener noreferrer">
+                              <Github className="h-4 w-4 text-primary" />
+                            </a>
+                          </Button>
+                        ) : (
+                          <Button variant="ghost" size="icon" className="h-7 w-7 cursor-not-allowed opacity-40" disabled>
+                            <Github className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{githubUrl ? 'GitHub' : 'No GitHub linked'}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
+              </div>
+            </div>
+          </div>
  
          {/* Right side - Score */}
          <div className="flex items-center gap-8">
