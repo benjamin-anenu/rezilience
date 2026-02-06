@@ -29,10 +29,24 @@ const ClaimProfile = () => {
   const isGitHubConfigured = !!import.meta.env.VITE_GITHUB_CLIENT_ID;
 
   // Current step (1-5)
-  // Initialize step based on auth state to avoid flash
+  // Initialize step based on auth state and saved progress to avoid flash
   const [currentStep, setCurrentStep] = useState(() => {
     const storedUser = localStorage.getItem('x_user');
-    return storedUser ? 2 : 1;
+    if (!storedUser) return 1;
+    
+    // Check for saved progress
+    const saved = localStorage.getItem('claimFormProgress');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.currentStep && data.currentStep >= 2 && data.currentStep <= 5) {
+          return data.currentStep;
+        }
+      } catch (e) {
+        // Invalid JSON, ignore
+      }
+    }
+    return 2;
   });
 
   // Step 2: Core Identity
@@ -79,9 +93,12 @@ const ClaimProfile = () => {
       githubOrgUrl,
       discordUrl,
       telegramUrl,
+      currentStep,
+      mediaAssets,
+      milestones,
     };
     localStorage.setItem('claimFormProgress', JSON.stringify(formData));
-  }, [projectName, description, category, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl]);
+  }, [projectName, description, category, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones]);
 
   // Restore form state on mount
   useEffect(() => {
@@ -97,6 +114,8 @@ const ClaimProfile = () => {
         if (data.githubOrgUrl) setGithubOrgUrl(data.githubOrgUrl);
         if (data.discordUrl) setDiscordUrl(data.discordUrl);
         if (data.telegramUrl) setTelegramUrl(data.telegramUrl);
+        if (data.mediaAssets) setMediaAssets(data.mediaAssets);
+        if (data.milestones) setMilestones(data.milestones);
       } catch (e) {
         // Invalid JSON, ignore
       }
