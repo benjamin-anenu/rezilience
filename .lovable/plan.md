@@ -1,155 +1,281 @@
 
+# Comprehensive Onboarding Flow Audit
 
-# Track Multi-Signal Activity for Accurate Liveness
-
-## Problem Analysis
-
-The current system uses **only commits to the default branch** to determine liveness:
-
-```typescript
-// Current logic (analyze-github-repo line 102):
-fetchWithAuth(`/repos/${owner}/${repo}/commits?since=${sinceDate}&per_page=100`, githubToken)
-```
-
-This misses active development happening on:
-- Feature branches (push events to non-main branches)
-- Pull requests (open PRs indicate active work)
-- Issues (bug fixes, feature planning)
-- Code reviews (collaborative development)
-
-**Your scenario**: Actively pushing to GitHub, but liveness shows "DECAYING" because no commits landed on main/default branch recently.
+After a thorough review of the entire codebase, I've identified **11 critical issues** across the onboarding flow. These range from security vulnerabilities to UX problems that can cause confusion and frustration.
 
 ---
 
-## Available GitHub Signals
+## Critical Issues Found
 
-| Signal | API Endpoint | What It Captures |
-|--------|--------------|------------------|
-| **PushEvents** | `/repos/{owner}/{repo}/events` | ALL pushes to ANY branch |
-| **Commits (default)** | `/repos/{owner}/{repo}/commits` | Only default branch commits |
-| **Pull Requests** | `/repos/{owner}/{repo}/pulls?state=all` | Open/merged PRs |
-| **Issues** | `/repos/{owner}/{repo}/issues?state=all` | Bug reports, features |
-| **Events Stream** | `/repos/{owner}/{repo}/events` | Last 90 days of ALL activity |
+### 1. Dashboard Shows ALL Verified Profiles (CRITICAL BUG)
 
-The **Events API** already captures push events to ALL branches - we just need to utilize it better!
+**Location:** `src/hooks/useClaimedProfiles.ts` (lines 182-201) + `src/pages/Dashboard.tsx`
+
+**Problem:** The `useVerifiedProfiles()` hook fetches ALL verified profiles from the database without filtering by the current user's `x_user_id`. This means every authenticated user sees every registered protocol in their dashboard!
+
+**Current Query:**
+```typescript
+.from('claimed_profiles')
+.select('*')
+.eq('verified', true)  // ← No user filter!
+```
+
+**Fix:** Create a new hook `useMyProfiles(xUserId)` that filters by the authenticated user's X ID:
+```typescript
+.from('claimed_profiles')
+.eq('x_user_id', xUserId)
+.eq('verified', true)
+```
 
 ---
 
-## Solution: Multi-Signal Activity Score
+### 2. No "Already Registered" Detection on Return Visits
 
-### Phase 1: Parse Existing Events Data
+**Location:** `src/pages/ClaimProfile.tsx` + `src/pages/XCallback.tsx`
 
-We already fetch `/events` - enhance parsing to extract activity signals:
+**Problem:** When an authenticated user who has already registered a protocol:
+- Goes to `/claim-profile` → They see the full onboarding flow again
+- Signs in via X → They're redirected to `/claim-profile`, not `/dashboard`
 
+There's no check to see if the user already has a verified profile and redirect them appropriately.
+
+**Fix:** On ClaimProfile mount and after X auth callback, query the database for existing profiles:
 ```typescript
-// Count different activity types from events
-const pushEvents = events.filter(e => e.type === 'PushEvent');
-const prEvents = events.filter(e => e.type === 'PullRequestEvent');
-const issueEvents = events.filter(e => e.type === 'IssuesEvent');
-const reviewEvents = events.filter(e => e.type === 'PullRequestReviewEvent');
+// Check if user already has a profile
+const { data: existingProfile } = await supabase
+  .from('claimed_profiles')
+  .select('id')
+  .eq('x_user_id', user.id)
+  .eq('verified', true)
+  .maybeSingle();
 
-// Get most recent activity of ANY type
-const latestActivity = events.length > 0 
-  ? new Date(events[0].created_at) 
-  : new Date(repoData.pushed_at);
-```
-
-### Phase 2: Add New Database Fields
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `github_push_events_30d` | integer | Push events (all branches) in last 30 days |
-| `github_pr_events_30d` | integer | PR open/merge/close events in last 30 days |
-| `github_issue_events_30d` | integer | Issue events in last 30 days |
-| `github_last_activity` | timestamp | Most recent activity of ANY type |
-
-### Phase 3: Update Liveness Calculation
-
-**Current** (Commits-only):
-```typescript
-if (daysSinceLastCommit < 30 && commitsLast30Days >= 5) {
-  return 'ACTIVE';
-} else if (daysSinceLastCommit < 90) {
-  return 'STALE';
+if (existingProfile) {
+  navigate('/dashboard'); // Or show "You already have a profile" message
 }
-return 'DECAYING';
 ```
 
-**Proposed** (Multi-signal):
+---
+
+### 3. Form Progress Not Cleared After Successful Registration
+
+**Location:** `src/pages/ClaimProfile.tsx` + `src/pages/GitHubCallback.tsx`
+
+**Problem:** `localStorage.removeItem('claimFormProgress')` is only called in one place - when clicking "VIEW MY PROFILE" button (line 589). If a user:
+1. Completes registration
+2. Navigates away before clicking that button
+3. Returns to `/claim-profile`
+
+They'll see old form data pre-filled, potentially causing confusion.
+
+**Fix:** Clear form progress in GitHubCallback.tsx after successful profile creation:
 ```typescript
-// Calculate days since ANY activity (pushes, PRs, issues, etc.)
-const daysSinceLastActivity = daysSince(latestActivityDate);
+// After successful save in GitHubCallback
+localStorage.removeItem('claimFormProgress');
+localStorage.removeItem('claimingProfile');
+```
 
-// Total activity score from all signals
-const totalActivity = pushEvents30d + (prEvents30d * 2) + issueEvents30d + commitsLast30Days;
+---
 
-if (daysSinceLastActivity < 14 && totalActivity >= 5) {
-  return 'ACTIVE';
-} else if (daysSinceLastActivity < 45) {
-  return 'STALE';
+### 4. Sign Out Doesn't Clear Form Progress
+
+**Location:** `src/context/AuthContext.tsx` (lines 79-85)
+
+**Problem:** When a user signs out, only X-related storage is cleared. Form progress remains:
+```typescript
+const signOut = () => {
+  localStorage.removeItem('x_user');
+  sessionStorage.removeItem('x_code_verifier');
+  sessionStorage.removeItem('x_oauth_state');
+  // ← Missing: claimFormProgress, verifiedProfileId
+};
+```
+
+**Fix:** Add cleanup for all onboarding-related localStorage items.
+
+---
+
+### 5. GitHubCallback Redirect Loop Risk
+
+**Location:** `src/pages/GitHubCallback.tsx` (lines 107-110)
+
+**Problem:** After GitHub verification, the callback redirects to:
+```typescript
+navigate('/claim-profile?step=4&verified=true');
+```
+
+But the ClaimProfile page has logic that checks `isVerified` from URL params (line 31) and sets `githubVerified` state. If the user refreshes the page, the `?verified=true` param is still there but the `verifiedProfileId` may be missing from localStorage, causing inconsistent state.
+
+**Fix:** Use a more robust approach - store verification status in the database and query it, rather than relying on URL params that persist across refreshes.
+
+---
+
+### 6. Missing Validation for Duplicate Registrations
+
+**Location:** `supabase/functions/github-oauth-callback/index.ts`
+
+**Problem:** There's no check to prevent the same X user from registering multiple profiles. The edge function uses `upsert` with `onConflict: "id"` (line 337-340), but the ID is randomly generated each time (`crypto.randomUUID()`), so upsert doesn't prevent duplicates.
+
+A malicious or confused user could create multiple profiles.
+
+**Fix:** Add unique constraint on `x_user_id` in the database OR check for existing profile before creating:
+```typescript
+// Check for existing profile by X user
+const { data: existing } = await supabase
+  .from('claimed_profiles')
+  .select('id')
+  .eq('x_user_id', profile_data?.xUserId)
+  .maybeSingle();
+
+if (existing) {
+  // Update existing instead of creating new
 }
-return 'DECAYING';
 ```
 
-**Weighted scoring**:
-- Push events: 1x (any branch activity counts)
-- PR events: 2x (PRs = significant work)
-- Issue events: 1x (planning/triage activity)
-- Commits (default branch): 1x (still valuable)
-
 ---
 
-## Implementation Files
+### 7. Step Navigation Allows Skipping Required Steps
 
-| File | Changes |
-|------|---------|
-| `supabase/functions/analyze-github-repo/index.ts` | Parse events for activity types, calculate `last_activity` |
-| Database migration | Add `github_push_events_30d`, `github_last_activity` columns |
-| `src/lib/resilience-scoring.ts` | Use multi-signal activity for liveness |
-| `src/components/program/PublicGitHubMetrics.tsx` | Display activity breakdown |
+**Location:** `src/pages/ClaimProfile.tsx`
 
----
+**Problem:** While there's validation for "can proceed from step" (`canProceedFromStep2`, `canProceedFromStep3`), users can manually navigate by:
+1. Typing URL: `/claim-profile?step=5`
+2. Manipulating localStorage `claimFormProgress.currentStep`
 
-## Visual Result
-
-After implementation, your profile would show:
-
-```text
-┌────────────────────────────────────────────────────────────────────────────────┐
-│ LIVENESS STATUS: ACTIVE                                                        │
-├────────────────────────────────────────────────────────────────────────────────┤
-│ Activity (Last 30 Days)                                                        │
-│                                                                                │
-│  Push Events (all branches)  ████████████████████████  12                      │
-│  Pull Requests               ██████████████░░░░░░░░░░   5                      │
-│  Commits (main)              ░░░░░░░░░░░░░░░░░░░░░░░░   0                      │
-│  Issues                      ████████░░░░░░░░░░░░░░░░   3                      │
-│                                                                                │
-│  Last Activity: 2 hours ago (PushEvent to feature/new-ui)                      │
-└────────────────────────────────────────────────────────────────────────────────┘
+**Fix:** Add step validation that checks all previous steps are complete:
+```typescript
+const stepFromUrl = searchParams.get('step');
+if (stepFromUrl) {
+  const step = parseInt(stepFromUrl, 10);
+  // Validate previous steps are complete
+  if (step >= 3 && !canProceedFromStep2) return 2;
+  if (step >= 4 && !canProceedFromStep3) return 3;
+  // etc.
+}
 ```
 
-Instead of "DECAYING" because no main branch commits, you'd correctly show "ACTIVE" based on real development activity!
+---
+
+### 8. Orphaned localStorage Keys on Error
+
+**Location:** `src/pages/GitHubCallback.tsx` (lines 93-98)
+
+**Problem:** On successful verification, several localStorage keys are removed. But on error (lines 112-116), they're NOT removed. If a user experiences an error and tries again, old stale data could cause issues.
+
+**Fix:** Clear temporary OAuth-related storage on both success and error paths.
 
 ---
 
-## Edge Cases
+### 9. Missing Loading State for Existing Profile Check
 
-1. **Private repos**: Events API respects repo visibility - works with OAuth token
-2. **Rate limits**: Events API shares GitHub's rate limit pool - already handled
-3. **90-day window**: GitHub Events API only returns last 90 days - sufficient for liveness
-4. **Empty repos**: Fall back to `pushed_at` timestamp if no events
+**Location:** `src/pages/Dashboard.tsx`
+
+**Problem:** The Dashboard checks `isAuthenticated` before rendering but doesn't show any transition state. If a user is authenticated but has no profiles, the redirect logic (line 27-29) could cause a flash of content.
+
+**Fix:** Add a more comprehensive loading state that waits for both auth AND profile fetch to complete.
+
+---
+
+### 10. Inconsistent Profile ID Storage
+
+**Location:** Multiple files
+
+**Problem:** There are multiple ways profile IDs are stored and retrieved:
+- `localStorage.setItem('verifiedProfileId', data.profile?.id || '')`
+- Form progress stores step but not profile ID
+- GitHubCallback uses `profileFormData.id` if present
+
+This creates confusion about which ID is "canonical."
+
+**Fix:** Use a single, consistent storage key and location for the profile ID throughout the flow.
+
+---
+
+### 11. No Rate Limiting on Repository Analysis
+
+**Location:** `supabase/functions/analyze-github-repo/index.ts`
+
+**Problem:** The GitHub analysis endpoint can be called repeatedly without any rate limiting. A user could:
+1. Spam the "ANALYZE" button
+2. Exhaust GitHub API rate limits
+3. Potentially cause abuse
+
+**Fix:** Add client-side debouncing AND server-side rate limiting per IP/user.
+
+---
+
+## Priority Order for Fixes
+
+| Priority | Issue | Impact | Effort |
+|----------|-------|--------|--------|
+| 🔴 P0 | #1 Dashboard shows all profiles | Security/Privacy | Medium |
+| 🔴 P0 | #6 Duplicate registrations | Data integrity | Medium |
+| 🟠 P1 | #2 No "already registered" check | UX confusion | Low |
+| 🟠 P1 | #4 Sign out doesn't clear form | Data leakage | Low |
+| 🟠 P1 | #3 Form not cleared after success | UX confusion | Low |
+| 🟡 P2 | #5 GitHubCallback redirect loop | UX confusion | Medium |
+| 🟡 P2 | #7 Step skipping possible | Flow integrity | Low |
+| 🟡 P2 | #8 Orphaned localStorage on error | Data cleanup | Low |
+| 🟢 P3 | #9 Missing loading state | Polish | Low |
+| 🟢 P3 | #10 Inconsistent ID storage | Code quality | Medium |
+| 🟢 P3 | #11 No rate limiting | Abuse prevention | Medium |
+
+---
+
+## Implementation Plan
+
+### Phase 1: Critical Fixes (P0)
+
+**File: `src/hooks/useClaimedProfiles.ts`**
+- Create new hook `useMyVerifiedProfiles(xUserId: string)`
+- Filter by `x_user_id` to only show user's own profiles
+
+**File: `src/pages/Dashboard.tsx`**
+- Use the new `useMyVerifiedProfiles` hook instead of `useVerifiedProfiles`
+- Pass `user?.id` to the hook
+
+**File: `supabase/functions/github-oauth-callback/index.ts`**
+- Add check for existing profile by `x_user_id`
+- If exists, update instead of create (or return error)
+
+### Phase 2: UX Fixes (P1)
+
+**File: `src/pages/ClaimProfile.tsx`**
+- Add useEffect to check for existing verified profile on mount
+- If found, show message + redirect option to Dashboard
+
+**File: `src/pages/XCallback.tsx`**
+- After successful auth, check if user has existing profile
+- Redirect to Dashboard if yes, ClaimProfile if no
+
+**File: `src/context/AuthContext.tsx`**
+- Extend signOut to clear all onboarding localStorage keys
+
+**File: `src/pages/GitHubCallback.tsx`**
+- Move `localStorage.removeItem('claimFormProgress')` to success path
+
+### Phase 3: Robustness (P2)
+
+**File: `src/pages/ClaimProfile.tsx`**
+- Add step validation to prevent skipping
+- Handle `?verified=true` param more robustly
+
+**File: `src/pages/GitHubCallback.tsx`**
+- Clear temporary storage on error path as well
+
+### Phase 4: Polish (P3)
+
+**File: `src/pages/Dashboard.tsx`**
+- Add comprehensive loading state
+
+**Various Files:**
+- Consolidate profile ID storage pattern
 
 ---
 
 ## Summary
 
-| Current Approach | Proposed Approach |
-|------------------|-------------------|
-| Commits to default branch only | All push events + PRs + Issues |
-| `github_last_commit` for decay | `github_last_activity` (any event) |
-| 5+ commits/30d = ACTIVE | 5+ total activities/30d = ACTIVE |
-| Misses feature branch work | Captures ALL repository activity |
+The most critical issue is **#1 (Dashboard shows all profiles)** - this is a privacy violation where users can see other users' registered protocols. This should be fixed immediately.
 
-This accurately reflects real development patterns - builders working on feature branches, opening PRs, and triaging issues should NOT show as "DECAYING"!
+The second critical issue is **#2 (no existing profile check)** - this is causing the specific problem you mentioned about returning to onboarding after registration.
 
+Both of these can be fixed with relatively small code changes but have significant impact on the user experience and data privacy.
