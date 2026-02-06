@@ -1,3 +1,4 @@
+import { forwardRef } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -13,12 +14,13 @@ interface StepIndicatorProps {
   className?: string;
 }
 
-export const StepIndicator = ({ steps, className }: StepIndicatorProps) => {
+export const StepIndicator = forwardRef<HTMLDivElement, StepIndicatorProps>(
+  ({ steps, className }, ref) => {
   const completedCount = steps.filter(s => s.isComplete).length;
   const progressPercent = (completedCount / steps.length) * 100;
 
-  return (
-    <div className={cn('space-y-4', className)}>
+    return (
+      <div ref={ref} className={cn('space-y-4', className)}>
       {/* Progress bar */}
       <div className="flex items-center justify-between text-xs">
         <span className="font-display uppercase tracking-wider text-muted-foreground">
@@ -65,8 +67,11 @@ export const StepIndicator = ({ steps, className }: StepIndicatorProps) => {
               {step.label}
             </span>
           </div>
-        ))}
+          ))}
+        </div>
       </div>
-    </div>
-  );
-};
+    );
+  }
+);
+
+StepIndicator.displayName = 'StepIndicator';
