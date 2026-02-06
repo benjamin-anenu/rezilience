@@ -1,18 +1,27 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Compass, LogOut, Loader2 } from 'lucide-react';
+import { Plus, Compass, LogOut, Loader2, Trash2 } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { useVerifiedProfiles } from '@/hooks/useClaimedProfiles';
+import { useDeleteProfile } from '@/hooks/useDeleteProfile';
+import { DeleteProfileDialog } from '@/components/dashboard/DeleteProfileDialog';
+
+interface ProfileToDelete {
+  id: string;
+  projectName: string;
+}
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, isAuthenticated, loading: authLoading, signOut } = useAuth();
+  const [profileToDelete, setProfileToDelete] = useState<ProfileToDelete | null>(null);
   
   // Fetch verified profiles from database
   const { data: verifiedProjects = [], isLoading: profilesLoading } = useVerifiedProfiles();
+  const deleteProfile = useDeleteProfile();
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -21,6 +30,19 @@ const Dashboard = () => {
   }, [authLoading, isAuthenticated, navigate]);
 
   const loading = authLoading || profilesLoading;
+
+  const handleDeleteConfirm = () => {
+    if (profileToDelete && user?.id) {
+      deleteProfile.mutate(
+        { profileId: profileToDelete.id, xUserId: user.id },
+        {
+          onSuccess: () => {
+            setProfileToDelete(null);
+          },
+        }
+      );
+    }
+  };
 
   if (loading) {
     return (
@@ -128,6 +150,20 @@ const Dashboard = () => {
                         >
                           {project.livenessStatus}
                         </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setProfileToDelete({
+                              id: project.id,
+                              projectName: project.projectName || 'Unknown Project',
+                            });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </CardHeader>
@@ -147,6 +183,15 @@ const Dashboard = () => {
           )}
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <DeleteProfileDialog
+        open={!!profileToDelete}
+        onOpenChange={(open) => !open && setProfileToDelete(null)}
+        protocolName={profileToDelete?.projectName || ''}
+        onConfirm={handleDeleteConfirm}
+        isDeleting={deleteProfile.isPending}
+      />
     </Layout>
   );
 };
