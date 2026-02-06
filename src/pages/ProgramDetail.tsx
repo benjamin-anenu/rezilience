@@ -207,7 +207,10 @@ const ProgramDetail = () => {
               />
             </div>
             <div>
-              <RecentEvents projectId={project?.id || claimedProfile?.id || ''} />
+              <RecentEvents 
+                projectId={project?.id || claimedProfile?.id || ''} 
+                githubEvents={claimedProfile?.githubAnalytics?.github_recent_events}
+              />
             </div>
           </div>
 

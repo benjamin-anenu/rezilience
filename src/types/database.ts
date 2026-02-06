@@ -142,6 +142,20 @@ export interface Milestone {
   varianceRequested?: boolean;
 }
 
+// GitHub event from the Events API
+export interface GitHubEvent {
+  type: 'PushEvent' | 'PullRequestEvent' | 'IssuesEvent' | 'IssueCommentEvent' | 'ReleaseEvent' | 'CreateEvent' | 'DeleteEvent' | 'ForkEvent' | 'WatchEvent' | 'MemberEvent' | 'PublicEvent';
+  actor: string;
+  date: string;
+  payload?: {
+    action?: string;
+    ref?: string;
+    ref_type?: string;
+    size?: number;
+    commits?: { message: string }[];
+  };
+}
+
 // Insert/Update types
 export type ProjectInsert = Omit<DBProject, 'id' | 'created_at' | 'updated_at'>;
 export type ProjectUpdate = Partial<ProjectInsert>;
