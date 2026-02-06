@@ -1,167 +1,135 @@
 
-# Rich Text Description Editor
 
-## Summary
-Replace the simple textarea description field with a full-featured rich text editor using Tiptap, allowing users to format their project descriptions with headings, lists, links, bold, italic, code blocks, and more.
+# Enhanced Auto-Save for Registry Flow
+
+## Current State
+Auto-save **is already implemented** for the basic form fields. When you type in any of these fields, they automatically save to localStorage:
+- Project Name
+- Description  
+- Category
+- Website URL
+- Program ID
+- GitHub Org URL
+- Discord URL
+- Telegram URL
+
+## What's Missing
+Three things are NOT being persisted:
+
+1. **Current Step** - If you refresh, you start at Step 2 (Identity) instead of where you left off
+2. **Media Assets** - Uploaded images in Step 4 are lost on refresh
+3. **Milestones** - Roadmap items in Step 5 are lost on refresh
 
 ---
 
-## Technical Approach
+## Implementation Plan
 
-### Library Choice: Tiptap
-Tiptap is a headless, extensible rich text editor built on ProseMirror. It integrates seamlessly with React and provides:
-- Modular architecture (only include features you need)
-- Full TypeScript support
-- Headless design (you control the UI)
-- Built-in extensions for common formatting
+### Fix 1: Persist Current Step
 
-### New Dependencies
-```bash
-npm install @tiptap/react @tiptap/pm @tiptap/starter-kit @tiptap/extension-link @tiptap/extension-placeholder
-```
+Save the current step to localStorage whenever it changes, and restore it on mount:
+
+**File:** `src/pages/ClaimProfile.tsx`
+
+Add `currentStep` to the persistence logic:
+- Save step when it changes
+- Restore step from localStorage on mount (already partially done for auth check)
+
+### Fix 2: Persist Media Assets
+
+Add `mediaAssets` to the localStorage save/restore:
+- Media assets are objects with `id`, `type`, `url`, `name` properties
+- Store the array as JSON
+
+### Fix 3: Persist Milestones
+
+Add `milestones` to the localStorage save/restore:
+- Milestones have `id`, `title`, `description`, `targetDate`, `status` properties  
+- Store the array as JSON
 
 ---
 
-## Implementation Steps
+## Technical Changes
 
-### Step 1: Create the RichTextEditor Component
-
-Create a new reusable component at `src/components/ui/rich-text-editor.tsx`:
-
-```text
-+------------------------------------------+
-|  B  I  U  S  |  H1  H2  |  - * 1. |  <>  |  <- Toolbar
-+------------------------------------------+
-|                                          |
-|  Your project description here...        |  <- Editor area
-|  - **Bold** and *italic* text            |
-|  - Bullet lists                          |
-|  - Code snippets                         |
-|                                          |
-+------------------------------------------+
-```
-
-Features included:
-- **Text formatting**: Bold, Italic, Strikethrough, Code
-- **Headings**: H1, H2, H3
-- **Lists**: Bullet list, Ordered list
-- **Links**: Insert/edit hyperlinks
-- **Code blocks**: For technical content
-- **Character count**: Display remaining characters (optional limit)
-
-### Step 2: Update CoreIdentityForm
-
-Replace the `<Textarea>` with the new `<RichTextEditor>`:
-
-**Before (line 75-81)**:
-```tsx
-<Textarea
-  id="description"
-  placeholder="A short tagline for your project..."
-  value={description}
-  onChange={(e) => setDescription(e.target.value.slice(0, maxDescriptionLength))}
-  className="min-h-[80px] font-mono text-sm"
-/>
-```
-
-**After**:
-```tsx
-<RichTextEditor
-  content={description}
-  onChange={setDescription}
-  placeholder="Describe your project in detail..."
-  className="min-h-[200px]"
-/>
-```
-
-Also remove the 140-character limit since rich text allows more content.
-
-### Step 3: Update Profile Display
-
-Modify `ProfileDetail.tsx` to render HTML content safely:
-
-**Before (line 185-187)**:
-```tsx
-{profile.description && (
-  <p className="mt-4 text-sm text-muted-foreground">{profile.description}</p>
-)}
-```
-
-**After**:
-```tsx
-{profile.description && (
-  <div 
-    className="mt-4 prose prose-sm prose-invert max-w-none"
-    dangerouslySetInnerHTML={{ __html: profile.description }}
-  />
-)}
-```
-
-### Step 4: Enable Tailwind Typography Plugin
-
-Update `tailwind.config.ts` to include the typography plugin (already installed):
-
+### Update Save Effect (lines 71-84)
 ```typescript
-plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+useEffect(() => {
+  const formData = {
+    projectName,
+    description,
+    category,
+    websiteUrl,
+    programId,
+    githubOrgUrl,
+    discordUrl,
+    telegramUrl,
+    currentStep,           // ADD
+    mediaAssets,           // ADD
+    milestones,            // ADD
+  };
+  localStorage.setItem('claimFormProgress', JSON.stringify(formData));
+}, [projectName, description, category, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones]);
 ```
 
-### Step 5: Update Form Persistence
-
-The localStorage persistence in `ClaimProfile.tsx` already handles the description field, so no changes needed there. The HTML content will be stored as a string.
-
----
-
-## RichTextEditor Component Design
-
-### Toolbar Buttons
-| Button | Action | Icon |
-|--------|--------|------|
-| Bold | Toggle bold | Bold icon |
-| Italic | Toggle italic | Italic icon |
-| Strikethrough | Toggle strikethrough | Strikethrough icon |
-| H1 | Heading 1 | Heading1 icon |
-| H2 | Heading 2 | Heading2 icon |
-| Bullet List | Unordered list | List icon |
-| Ordered List | Numbered list | ListOrdered icon |
-| Code | Inline code | Code icon |
-| Code Block | Code block | CodeBlock icon |
-| Link | Insert link | Link icon |
-| Undo | Undo action | Undo icon |
-| Redo | Redo action | Redo icon |
-
-### Styling
-- Dark theme compatible using existing color variables
-- Toolbar uses toggle buttons with active state highlighting
-- Editor area has subtle border matching the design system
-- Placeholder text in muted color
-
----
-
-## Files to Create/Modify
-
-| File | Action | Description |
-|------|--------|-------------|
-| `src/components/ui/rich-text-editor.tsx` | CREATE | New Tiptap editor component with toolbar |
-| `src/components/claim/CoreIdentityForm.tsx` | MODIFY | Replace Textarea with RichTextEditor |
-| `src/pages/ProfileDetail.tsx` | MODIFY | Render HTML description with prose styling |
-| `tailwind.config.ts` | MODIFY | Add typography plugin |
-| `package.json` | AUTO | Dependencies added via npm install |
-
----
-
-## Security Considerations
-
-The Tiptap editor produces sanitized HTML output by default. The StarterKit extension only allows specific safe HTML elements (p, strong, em, ul, ol, li, h1-h6, code, pre, etc.). No script tags or event handlers are permitted, making it safe to render with `dangerouslySetInnerHTML`.
-
----
-
-## Character/Word Limit (Optional)
-
-If you want to maintain some limit on description length, we can add a word count indicator instead of character count:
-
-```tsx
-const wordCount = editor.storage.characterCount.words();
-// Display: "124 words"
+### Update Restore Effect (lines 86-104)
+```typescript
+useEffect(() => {
+  const saved = localStorage.getItem('claimFormProgress');
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      if (data.projectName) setProjectName(data.projectName);
+      if (data.description) setDescription(data.description);
+      if (data.category) setCategory(data.category);
+      if (data.websiteUrl) setWebsiteUrl(data.websiteUrl);
+      if (data.programId) setProgramId(data.programId);
+      if (data.githubOrgUrl) setGithubOrgUrl(data.githubOrgUrl);
+      if (data.discordUrl) setDiscordUrl(data.discordUrl);
+      if (data.telegramUrl) setTelegramUrl(data.telegramUrl);
+      if (data.mediaAssets) setMediaAssets(data.mediaAssets);      // ADD
+      if (data.milestones) setMilestones(data.milestones);          // ADD
+      // Step is handled by initialization
+    } catch (e) {
+      // Invalid JSON, ignore
+    }
+  }
+}, []);
 ```
 
-This allows rich formatting while still providing guidance on length.
+### Update Step Initialization (line 32)
+```typescript
+const [currentStep, setCurrentStep] = useState(() => {
+  const storedUser = localStorage.getItem('x_user');
+  if (!storedUser) return 1;
+  
+  // Check for saved progress
+  const saved = localStorage.getItem('claimFormProgress');
+  if (saved) {
+    try {
+      const data = JSON.parse(saved);
+      if (data.currentStep && data.currentStep >= 2 && data.currentStep <= 5) {
+        return data.currentStep;
+      }
+    } catch (e) {}
+  }
+  return 2;
+});
+```
+
+---
+
+## Bonus: Add Visual Feedback
+
+Add a subtle toast or indicator when form auto-saves:
+```typescript
+// Optional: Show "Saved" indicator briefly
+<span className="text-xs text-muted-foreground animate-pulse">Auto-saved</span>
+```
+
+---
+
+## Files Modified
+
+| File | Changes |
+|------|---------|
+| `src/pages/ClaimProfile.tsx` | Add currentStep, mediaAssets, and milestones to persistence |
+
