@@ -12,7 +12,7 @@ export function useScoreHistory(projectId: string, limit = 12) {
       const { data, error } = await supabase
         .from('score_history')
         .select('*')
-        .eq('project_id', projectId)
+        .or(`project_id.eq.${projectId},claimed_profile_id.eq.${projectId}`)
         .order('snapshot_date', { ascending: false })
         .limit(limit);
 
