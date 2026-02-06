@@ -29,8 +29,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signInWithX = () => {
-    // Phase 0: Mock OAuth - go directly to callback
-    // In production: redirect to X OAuth URL with proper client_id, redirect_uri, scope, etc.
+    /**
+     * PHASE 0 MOCK: X (Twitter) OAuth is simulated
+     * 
+     * This redirects to a mock callback that creates a fake user session.
+     * Real X OAuth implementation requires:
+     * 1. Register app at developer.twitter.com
+     * 2. Configure OAuth 2.0 with PKCE
+     * 3. Set up edge function to exchange code for tokens
+     * 4. Store tokens securely in database
+     * 
+     * TODO Phase 2: Implement real X OAuth similar to GitHub OAuth flow
+     */
     window.location.href = '/x-callback?code=mock_x_auth_code';
   };
 

@@ -62,12 +62,8 @@ const ClaimProfile = () => {
     }
   }, [isAuthenticated, currentStep]);
 
-  // Store wallet address when connected
-  useEffect(() => {
-    if (connected && publicKey) {
-      localStorage.setItem('claimingWalletAddress', publicKey.toBase58());
-    }
-  }, [connected, publicKey]);
+  // Wallet address is included in claimingProfile object during GitHub OAuth redirect
+  // No separate localStorage needed here
 
   const steps = [
     { number: 1, label: 'X Auth', isComplete: isAuthenticated, isCurrent: currentStep === 1 },
@@ -91,10 +87,8 @@ const ClaimProfile = () => {
 
     if (isValidProgramId) {
       setProgramVerified(true);
-      localStorage.setItem('claimingProgramId', programId);
-      if (result.data) {
-        localStorage.setItem('claimingProgramDbId', result.data.id);
-      }
+      // Program ID is included in claimingProfile object during GitHub OAuth redirect
+      // No separate localStorage needed here
     } else {
       setProgramError('Invalid Program ID. Please check and try again.');
     }
@@ -103,11 +97,8 @@ const ClaimProfile = () => {
   };
 
   const handleGitHubConnect = () => {
-    // Store all claiming data before redirect
-    if (user) {
-      localStorage.setItem('claimingXUserId', user.id);
-      localStorage.setItem('claimingXUsername', user.username);
-    }
+    // All user data is stored in the claimingProfile object below
+    // No separate localStorage entries needed for individual fields
 
     // Store form data for retrieval after OAuth callback
     const claimingProfile = {

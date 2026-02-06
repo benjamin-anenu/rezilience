@@ -33,13 +33,17 @@ export function generateOAuthState(): string {
 }
 
 /**
- * Fetch GitHub repository data
- * In Phase 0, this returns mock data. When connected to backend,
- * this will make actual GitHub API calls.
+ * @deprecated This function is NOT USED in production.
+ * Real GitHub data is fetched via the `fetch-github` and `github-oauth-callback` edge functions.
+ * This function only exists as a client-side fallback/reference and returns simulated data.
+ * 
+ * For actual GitHub metrics, see:
+ * - supabase/functions/fetch-github/index.ts
+ * - supabase/functions/github-oauth-callback/index.ts
  */
 export async function fetchGitHubData(repoUrl: string): Promise<GitHubData> {
-  // Phase 0: Return mock data based on repo URL
-  // In production, this would use the GitHub API with the OAuth token
+  // MOCK DATA: This function is not used in production
+  // Real GitHub data comes from edge functions with proper OAuth tokens
   
   // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 1500));

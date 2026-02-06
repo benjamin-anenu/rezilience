@@ -35,8 +35,9 @@ export function StakingForm({ onFormChange }: StakingFormProps) {
   // Use the project hook for verification
   const { data: projectData, refetch } = useProject(programId);
 
-  // Mock wallet balance
-  const walletBalance = 1250.45;
+  // TODO Phase 2: Fetch real wallet balance from connected wallet
+  // For now, show 0 until real wallet integration
+  const walletBalance = 0;
 
   const verifyProgram = async () => {
     if (!programId.trim()) return;
