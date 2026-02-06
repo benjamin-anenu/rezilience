@@ -44,6 +44,11 @@ interface DBClaimedProfile {
   github_is_fork: boolean | null;
   github_homepage: string | null;
   github_analyzed_at: string | null;
+  // Multi-signal activity fields
+  github_push_events_30d: number | null;
+  github_pr_events_30d: number | null;
+  github_issue_events_30d: number | null;
+  github_last_activity: string | null;
 }
 
 // Transform database format to frontend ClaimedProfile format
@@ -89,6 +94,11 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
       github_recent_events: (Array.isArray(db.github_recent_events) ? db.github_recent_events : []).map((e: any) => ({ ...e, createdAt: e.date || e.createdAt })) as Array<{ type: string; actor: string; date: string; createdAt: string; message?: string }>,
       github_analyzed_at: db.github_analyzed_at || undefined,
       github_is_fork: db.github_is_fork ?? undefined,
+      // Multi-signal activity fields
+      github_push_events_30d: db.github_push_events_30d ?? undefined,
+      github_pr_events_30d: db.github_pr_events_30d ?? undefined,
+      github_issue_events_30d: db.github_issue_events_30d ?? undefined,
+      github_last_activity: db.github_last_activity || undefined,
     },
   };
 }

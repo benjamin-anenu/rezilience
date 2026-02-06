@@ -1,4 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { LivenessStatus } from '@/types/database';
 
@@ -23,9 +24,37 @@ export interface ExplorerProject {
 
 /**
  * Fetches verified registered protocols from claimed_profiles for the Explorer.
- * This replaces the old useProjects hook that queried the empty projects table.
+ * Includes real-time subscription to automatically refresh when profiles change.
  */
 export function useExplorerProjects() {
+  const queryClient = useQueryClient();
+
+  // Set up real-time subscription to claimed_profiles changes
+  useEffect(() => {
+    const channel = supabase
+      .channel('explorer-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'claimed_profiles',
+        },
+        (payload) => {
+          console.log('Explorer: Detected claimed_profiles change', payload.eventType);
+          // Invalidate the query to trigger a refetch
+          queryClient.invalidateQueries({ queryKey: ['explorer-projects'] });
+        }
+      )
+      .subscribe((status) => {
+        console.log('Explorer realtime subscription:', status);
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
+
   return useQuery({
     queryKey: ['explorer-projects'],
     queryFn: async (): Promise<ExplorerProject[]> => {
@@ -50,10 +79,10 @@ export function useExplorerProjects() {
         logo_url: profile.logo_url,
         verified: profile.verified,
         github_org_url: profile.github_org_url,
-        github_last_commit: null, // Not tracked in claimed_profiles currently
+        github_last_commit: profile.github_last_commit,
         resilience_score: profile.resilience_score || 0,
         liveness_status: (profile.liveness_status as LivenessStatus) || 'STALE',
-        is_fork: false, // Registered protocols are originals
+        is_fork: profile.github_is_fork || false,
         total_staked: 0, // Phase 2 feature
         isRegisteredProtocol: true as const,
       }));

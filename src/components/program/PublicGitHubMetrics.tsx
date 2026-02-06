@@ -58,23 +58,18 @@ const getHealthStatus = (
 
 const getVelocityInfo = (velocity?: number): { percent: number; label: string; color: string } => {
   const v = velocity || 0;
-  // Normalize: 5 commits/day = 100%
-  const percent = Math.min(v * 20, 100);
+  // Normalize: 2 commits/day = 100% (realistic for solo/small teams)
+  const percent = Math.min(v * 50, 100);
   
-  if (percent > 60) return { percent, label: 'High', color: 'bg-primary' };
-  if (percent > 30) return { percent, label: 'Moderate', color: 'bg-yellow-500' };
-  if (percent > 0) return { percent, label: 'Low', color: 'bg-orange-500' };
+  if (percent > 50) return { percent, label: 'High', color: 'bg-primary' };
+  if (percent > 20) return { percent, label: 'Moderate', color: 'bg-yellow-500' };
+  if (percent > 0) return { percent, label: 'Active', color: 'bg-green-500' };
   return { percent: 0, label: 'None', color: 'bg-muted' };
 };
 
 export function PublicGitHubMetrics({ analytics, githubUrl }: PublicGitHubMetricsProps) {
-  // Type assertion for extended analytics with multi-signal fields
-  const extendedAnalytics = analytics as GitHubAnalytics & {
-    github_push_events_30d?: number;
-    github_pr_events_30d?: number;
-    github_issue_events_30d?: number;
-    github_last_activity?: string;
-  };
+  // Use the analytics directly - multi-signal fields now included in GitHubAnalytics type
+  const extendedAnalytics = analytics;
   
   const healthStatus = getHealthStatus(
     extendedAnalytics?.github_last_activity || analytics?.github_last_commit,
@@ -241,7 +236,7 @@ export function PublicGitHubMetrics({ analytics, githubUrl }: PublicGitHubMetric
               <span className={`text-[10px] font-medium ${
                 velocityInfo.label === 'High' ? 'text-primary' :
                 velocityInfo.label === 'Moderate' ? 'text-yellow-500' :
-                velocityInfo.label === 'Low' ? 'text-orange-500' : 'text-muted-foreground'
+                velocityInfo.label === 'Active' ? 'text-green-500' : 'text-muted-foreground'
               }`}>
                 {velocityInfo.label} Activity
               </span>
