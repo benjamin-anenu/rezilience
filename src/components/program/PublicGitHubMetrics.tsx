@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import type { GitHubAnalytics } from '@/types';
+import type { GitHubAnalytics, TopContributor } from '@/types';
 
 interface PublicGitHubMetricsProps {
   analytics?: GitHubAnalytics;
@@ -224,6 +224,52 @@ export function PublicGitHubMetrics({ analytics, githubUrl }: PublicGitHubMetric
             </div>
           </div>
         </div>
+
+        {/* Top Contributors */}
+        {analytics?.github_top_contributors && analytics.github_top_contributors.length > 0 && (
+          <div className="space-y-2">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Top Contributors
+            </span>
+            <div className="space-y-2 rounded-sm border border-border bg-muted/30 p-3">
+              {(analytics.github_top_contributors as TopContributor[]).slice(0, 5).map((contributor, index) => {
+                const maxContributions = (analytics.github_top_contributors as TopContributor[])?.[0]?.contributions || 1;
+                const percentage = (contributor.contributions / maxContributions) * 100;
+                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : null;
+
+                return (
+                  <div key={contributor.login} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {medal && <span className="text-sm">{medal}</span>}
+                        <a
+                          href={`https://github.com/${contributor.login}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 hover:text-primary transition-colors"
+                        >
+                          <img
+                            src={contributor.avatar}
+                            alt={contributor.login}
+                            className="h-5 w-5 rounded-full"
+                            onError={(e) => {
+                              e.currentTarget.src = 'https://github.com/ghost.png';
+                            }}
+                          />
+                          <span className="font-mono text-xs">@{contributor.login}</span>
+                        </a>
+                      </div>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {contributor.contributions} {contributor.contributions === 1 ? 'commit' : 'commits'}
+                      </span>
+                    </div>
+                    <Progress value={percentage} className="h-1" />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Topics */}
         {topics && topics.length > 0 && (
