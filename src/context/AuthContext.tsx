@@ -1,15 +1,19 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { generateCodeVerifier, generateCodeChallenge, generateState } from '@/lib/pkce';
 import type { XUser } from '@/types';
 
 interface AuthContextType {
   user: XUser | null;
   loading: boolean;
   isAuthenticated: boolean;
-  signInWithX: () => void;
+  signInWithX: () => Promise<void>;
   signOut: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+// X OAuth Client ID (public, safe to expose in frontend)
+const X_CLIENT_ID = import.meta.env.VITE_X_CLIENT_ID;
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<XUser | null>(null);
@@ -28,24 +32,54 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setLoading(false);
   }, []);
 
-  const signInWithX = () => {
+  const signInWithX = async () => {
     /**
-     * PHASE 0 MOCK: X (Twitter) OAuth is simulated
+     * X (Twitter) OAuth 2.0 with PKCE
      * 
-     * This redirects to a mock callback that creates a fake user session.
-     * Real X OAuth implementation requires:
-     * 1. Register app at developer.twitter.com
-     * 2. Configure OAuth 2.0 with PKCE
-     * 3. Set up edge function to exchange code for tokens
-     * 4. Store tokens securely in database
-     * 
-     * TODO Phase 2: Implement real X OAuth similar to GitHub OAuth flow
+     * 1. Generate PKCE code verifier and challenge
+     * 2. Generate state for CSRF protection
+     * 3. Redirect to X authorization URL
+     * 4. X redirects back to /x-callback with code
+     * 5. XCallback.tsx exchanges code for user data via edge function
      */
-    window.location.href = '/x-callback?code=mock_x_auth_code';
+
+    if (!X_CLIENT_ID) {
+      console.error('VITE_X_CLIENT_ID is not configured');
+      throw new Error('X OAuth is not configured. Please add VITE_X_CLIENT_ID to environment.');
+    }
+
+    // Generate PKCE code verifier and challenge
+    const codeVerifier = generateCodeVerifier();
+    const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+    // Store code verifier in sessionStorage (cleared on tab close, more secure)
+    sessionStorage.setItem('x_code_verifier', codeVerifier);
+
+    // Generate state for CSRF protection
+    const state = generateState();
+    sessionStorage.setItem('x_oauth_state', state);
+
+    // Build authorization URL
+    const redirectUri = `${window.location.origin}/x-callback`;
+    
+    const params = new URLSearchParams({
+      response_type: 'code',
+      client_id: X_CLIENT_ID,
+      redirect_uri: redirectUri,
+      scope: 'tweet.read users.read offline.access',
+      state,
+      code_challenge: codeChallenge,
+      code_challenge_method: 'S256',
+    });
+
+    // Redirect to X authorization page
+    window.location.href = `https://x.com/i/oauth2/authorize?${params.toString()}`;
   };
 
   const signOut = () => {
     localStorage.removeItem('x_user');
+    sessionStorage.removeItem('x_code_verifier');
+    sessionStorage.removeItem('x_oauth_state');
     setUser(null);
     window.location.href = '/';
   };
