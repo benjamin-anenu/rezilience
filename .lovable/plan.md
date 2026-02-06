@@ -1,67 +1,134 @@
 
+# Add Top Contributors Display to Public GitHub Metrics
 
-# Fix Bytecode Originality Display for Non-On-Chain Projects
+## Problem
 
-## Problem Identified
+The public `PublicGitHubMetrics` component only displays a contributor **count** (e.g., "3 Contributors"), but the data for individual contributor profiles is already available in the database:
 
-You're absolutely right! The current display is inaccurate:
-
-| Card | Current Display | Actual Data | Correct Display |
-|------|----------------|-------------|-----------------|
-| **Bytecode Originality** | "Verified Original" (100%) | No `program_id` - not on-chain | **"N/A"** or "Not Deployed" |
-| **GitHub Originality** | "Original Repository" (100%) | `github_is_fork: false` | ✅ **Correct!** |
-
-The GitHub API confirms `"fork": false` for this repository, so that card is accurate. However, the Bytecode Originality card shows "Verified Original" which is wrong because:
-- `program_id` is `null` (no Solana program deployed)
-- There's no bytecode to verify since the project isn't on-chain
-
----
-
-## Root Cause
-
-In `ProgramDetail.tsx` line 113:
-```typescript
-originalityStatus: project?.is_fork ? 'fork' : isVerified ? 'verified' : 'unverified'
+```json
+{
+  "github_top_contributors": [
+    {
+      "login": "benjamin-anenu",
+      "contributions": 1,
+      "avatar": "https://avatars.githubusercontent.com/u/219320147?v=4"
+    }
+  ]
+}
 ```
 
-This incorrectly derives bytecode status from `isVerified` (GitHub verification), not actual on-chain deployment status.
+The owner dashboard (`GitHubAnalyticsCard`) shows this rich data, but public visitors cannot see it.
 
 ---
 
 ## Solution
 
-### 1. Add "N/A" State for Bytecode Originality
+Add a **Top Contributors** section to `PublicGitHubMetrics.tsx` that displays:
+- Contributor avatars (clickable to GitHub profile)
+- GitHub usernames
+- Contribution counts with progress bars
+- Ranking medals (gold, silver, bronze)
 
-Update `MetricCards.tsx` to handle a new `'not-deployed'` status:
+---
 
-| Status | Subtitle | Progress | Color |
-|--------|----------|----------|-------|
-| `verified` | "Verified Original" | 100% | Green |
-| `fork` | "Known Fork" | 45% | Amber |
-| `unverified` | "Unverified" | 60% | Muted |
-| `not-deployed` | "Not On-Chain" | 0% | Muted/Gray |
+## Visual Design
 
-### 2. Update ProgramDetail.tsx Logic
-
-Determine bytecode status based on whether a valid Solana program ID exists:
-
-```typescript
-// Check if project has a valid on-chain program ID
-const hasOnChainProgram = displayProgramId && 
-  displayProgramId.length >= 32 && 
-  displayProgramId !== id; // Not just the UUID
-
-const getBytecodeStatus = () => {
-  if (!hasOnChainProgram) return 'not-deployed';
-  if (project?.is_fork) return 'fork';
-  if (isVerified) return 'verified';
-  return 'unverified';
-};
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ GITHUB METRICS                               [ACTIVE]     [View Repository] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│  ... existing metrics grid ...                                              │
+│                                                                             │
+│  ┌───────────────────────────────────────────────────────────────────────┐ │
+│  │ TOP CONTRIBUTORS                                                      │ │
+│  ├───────────────────────────────────────────────────────────────────────┤ │
+│  │ 🥇 [avatar] @benjamin-anenu         ████████████████████████  12 commits│
+│  │ 🥈 [avatar] @alice-dev              ███████████████░░░░░░░░░   8 commits│
+│  │ 🥉 [avatar] @bob-builder            ████████░░░░░░░░░░░░░░░░   5 commits│
+│  │    [avatar] @carol-coder            ███░░░░░░░░░░░░░░░░░░░░░   2 commits│
+│  │    [avatar] @david-designer         ██░░░░░░░░░░░░░░░░░░░░░░   1 commit │
+│  └───────────────────────────────────────────────────────────────────────┘ │
+│                                                                             │
+│  ... existing topics and footer ...                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 3. Update Types
+---
 
-Add `'not-deployed'` to the `originalityStatus` union type in `Program` interface.
+## Implementation Details
+
+### 1. Access Existing Data
+
+The `github_top_contributors` field is already in the `GitHubAnalytics` interface and passed to the component:
+
+```typescript
+interface GitHubAnalytics {
+  // ... existing fields
+  github_top_contributors?: Array<{
+    login: string;
+    contributions: number;
+    avatar: string;
+  }>;
+}
+```
+
+### 2. Add Contributors Section
+
+Add a new section after the velocity bar and before the topics section:
+
+```typescript
+{/* Top Contributors */}
+{analytics?.github_top_contributors && analytics.github_top_contributors.length > 0 && (
+  <div className="space-y-2">
+    <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+      Top Contributors
+    </span>
+    <div className="space-y-2 rounded-sm border border-border bg-muted/30 p-3">
+      {analytics.github_top_contributors.slice(0, 5).map((contributor, index) => {
+        const maxContributions = analytics.github_top_contributors?.[0]?.contributions || 1;
+        const percentage = (contributor.contributions / maxContributions) * 100;
+        const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : null;
+
+        return (
+          <div key={contributor.login} className="space-y-1">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {medal && <span className="text-sm">{medal}</span>}
+                <a
+                  href={`https://github.com/${contributor.login}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 hover:text-primary"
+                >
+                  <img
+                    src={contributor.avatar}
+                    alt={contributor.login}
+                    className="h-5 w-5 rounded-full"
+                  />
+                  <span className="font-mono text-xs">@{contributor.login}</span>
+                </a>
+              </div>
+              <span className="font-mono text-xs text-muted-foreground">
+                {contributor.contributions} {contributor.contributions === 1 ? 'commit' : 'commits'}
+              </span>
+            </div>
+            <Progress value={percentage} className="h-1" />
+          </div>
+        );
+      })}
+    </div>
+  </div>
+)}
+```
+
+### 3. Style Consistency
+
+The design will match the existing Bloomberg Terminal aesthetic:
+- Muted background container with border
+- Mono font for usernames and numbers
+- Progress bars showing relative contribution weight
+- Medal emojis for top 3 contributors
+- Clickable links to GitHub profiles
 
 ---
 
@@ -69,67 +136,23 @@ Add `'not-deployed'` to the `originalityStatus` union type in `Program` interfac
 
 | File | Changes |
 |------|---------|
-| `src/types/index.ts` | Add `'not-deployed'` to `originalityStatus` type |
-| `src/pages/ProgramDetail.tsx` | Add logic to detect if program is on-chain |
-| `src/components/program/MetricCards.tsx` | Handle `'not-deployed'` state with N/A display |
+| `src/components/program/PublicGitHubMetrics.tsx` | Add Top Contributors section after velocity bar |
 
 ---
 
-## Visual Result
+## Edge Cases Handled
 
-After the fix, the Metric Cards will show:
-
-```text
-┌─────────────────────┬─────────────────────┬──────────────────┬──────────────────┐
-│ BYTECODE ORIGINALITY│ GITHUB ORIGINALITY  │ STAKED ASSURANCE │ ADMIN CONSTRAINTS│
-├─────────────────────┼─────────────────────┼──────────────────┼──────────────────┤
-│ Not On-Chain        │ Original Repository │ 0K SOL Staked    │ Multisig Required│
-│ (gray/muted)        │ (green ✓)           │                  │                  │
-├─────────────────────┼─────────────────────┼──────────────────┼──────────────────┤
-│ ░░░░░░░░░░░░ 0%     │ ████████████ 100%   │ ░░░░░░░░░░░░ 0%  │ ████████░░░░ 85% │
-└─────────────────────┴─────────────────────┴──────────────────┴──────────────────┘
-```
+1. **No contributors data**: Section is hidden if `github_top_contributors` is empty or undefined
+2. **Single contributor**: Shows that contributor at 100% with gold medal
+3. **Many contributors**: Limits display to top 5 (already sliced in edge function)
+4. **Avatar loading errors**: Could add `onError` fallback to a default avatar
 
 ---
 
-## Implementation Details
+## Result
 
-### MetricCards Update
-
-```typescript
-const getBytecodeInfo = () => {
-  switch (program.originalityStatus) {
-    case 'verified':
-      return { subtitle: 'Verified Original', value: 100, isPositive: true };
-    case 'fork':
-      return { subtitle: 'Known Fork', value: 45, isPositive: false, isWarning: true };
-    case 'not-deployed':
-      return { subtitle: 'Not On-Chain', value: 0, isPositive: false, isNA: true };
-    default:
-      return { subtitle: 'Unverified', value: 60, isPositive: false };
-  }
-};
-```
-
-### ProgramDetail Logic
-
-```typescript
-// Determine if this is an on-chain Solana program
-const isValidSolanaProgramId = (id: string) => {
-  // Solana addresses are base58 encoded, typically 32-44 characters
-  // UUIDs have dashes and are exactly 36 characters
-  return id && id.length >= 32 && !id.includes('-');
-};
-
-const hasOnChainProgram = isValidSolanaProgramId(displayProgramId);
-
-const programForComponents = {
-  // ...existing fields
-  originalityStatus: hasOnChainProgram 
-    ? (project?.is_fork ? 'fork' : isVerified ? 'verified' : 'unverified')
-    : 'not-deployed',
-};
-```
-
-This ensures Bytecode Originality accurately reflects whether the project has on-chain presence, while GitHub Originality correctly shows the repository fork status.
-
+After implementation, public visitors will be able to see:
+- Who is actively building the project
+- Relative contribution levels
+- Direct links to contributor GitHub profiles
+- This provides transparency and trust signals for potential users/stakers
