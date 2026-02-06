@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.analyze-github-repo]
 verify_jwt = false
+
+[functions.refresh-all-profiles]
+verify_jwt = false
