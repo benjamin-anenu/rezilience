@@ -5,7 +5,7 @@ import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
-import { useVerifiedProfiles } from '@/hooks/useClaimedProfiles';
+import { useMyVerifiedProfiles } from '@/hooks/useClaimedProfiles';
 import { useDeleteProfile } from '@/hooks/useDeleteProfile';
 import { DeleteProfileDialog } from '@/components/dashboard/DeleteProfileDialog';
 
@@ -19,8 +19,8 @@ const Dashboard = () => {
   const { user, isAuthenticated, loading: authLoading, signOut } = useAuth();
   const [profileToDelete, setProfileToDelete] = useState<ProfileToDelete | null>(null);
   
-  // Fetch verified profiles from database
-  const { data: verifiedProjects = [], isLoading: profilesLoading } = useVerifiedProfiles();
+  // FIX #1: Use new hook that filters by the authenticated user's X ID
+  const { data: verifiedProjects = [], isLoading: profilesLoading } = useMyVerifiedProfiles(user?.id);
   const deleteProfile = useDeleteProfile();
 
   useEffect(() => {

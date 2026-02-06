@@ -24,6 +24,7 @@ const XCallback = () => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
+  const [checkingExisting, setCheckingExisting] = useState(false);
 
   useEffect(() => {
     const processCallback = async () => {
@@ -89,10 +90,29 @@ const XCallback = () => {
         setUsername(data.user.username);
         setStatus('success');
 
-        // Redirect to claim profile after brief success message
-        setTimeout(() => {
-          navigate('/claim-profile');
-        }, 1500);
+        // FIX #2: Check if user already has a verified profile
+        // If yes, redirect to Dashboard instead of onboarding
+        setCheckingExisting(true);
+        const { data: existingProfile } = await supabase
+          .from('claimed_profiles')
+          .select('id')
+          .eq('x_user_id', data.user.id)
+          .eq('verified', true)
+          .maybeSingle();
+        
+        setCheckingExisting(false);
+
+        if (existingProfile) {
+          // User already has a profile - go to Dashboard
+          setTimeout(() => {
+            navigate('/dashboard');
+          }, 1500);
+        } else {
+          // New user - go to claim profile
+          setTimeout(() => {
+            navigate('/claim-profile');
+          }, 1500);
+        }
 
       } catch (err) {
         console.error('X callback error:', err);
@@ -137,7 +157,7 @@ const XCallback = () => {
                     Welcome, @{username}!
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Redirecting to claim profile...
+                    {checkingExisting ? 'Checking your profile...' : 'Redirecting...'}
                   </p>
                 </div>
               )}
