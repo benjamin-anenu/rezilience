@@ -28,14 +28,20 @@ import {
 } from '@/components/ui/carousel';
 import { PROJECT_CATEGORIES } from '@/types';
 import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
+import { useAuth } from '@/context/AuthContext';
+import { GitHubAnalyticsCard } from '@/components/dashboard/GitHubAnalyticsCard';
 
 const ProfileDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { user } = useAuth();
 
-  const { data: profile, isLoading, error } = useClaimedProfile(id || '');
+  const { data: profile, isLoading, error, refetch } = useClaimedProfile(id || '');
   const justVerified = searchParams.get('verified') === 'true';
+
+  // Check if current user is the owner
+  const isOwner = user?.id && profile?.xUserId && user.id === profile.xUserId;
 
   if (isLoading) {
     return (
@@ -407,6 +413,17 @@ const ProfileDetail = () => {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* GitHub Analytics - Owner Only */}
+          {isOwner && profile.githubAnalytics && (
+            <div className="mt-6">
+              <GitHubAnalyticsCard
+                profileId={profile.id}
+                analytics={profile.githubAnalytics}
+                onRefresh={() => refetch()}
+              />
+            </div>
           )}
 
           {/* Development Stats */}

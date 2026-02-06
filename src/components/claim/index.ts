@@ -5,3 +5,5 @@ export { CoreIdentityForm } from './CoreIdentityForm';
 export { SocialsForm } from './SocialsForm';
 export { MediaUploader } from './MediaUploader';
 export { RoadmapForm } from './RoadmapForm';
+export { GitHubUrlAnalyzer } from './GitHubUrlAnalyzer';
+export { GitHubAnalysisResultCard } from './GitHubAnalysisResult';
