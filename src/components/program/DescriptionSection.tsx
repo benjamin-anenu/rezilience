@@ -20,27 +20,44 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 
-const MAX_DESCRIPTION_LENGTH = 150;
-
 interface DescriptionSectionProps {
   description: string;
   category?: string | null;
   getCategoryLabel: (value: string) => string;
 }
 
+// Extract first paragraph from HTML or plain text
+function extractFirstParagraph(content: string): { firstParagraph: string; hasMore: boolean } {
+  const isHtml = /<[^>]+>/.test(content);
+  
+  if (isHtml) {
+    // Match first <p>...</p> block or content before first </p>
+    const pMatch = content.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+    if (pMatch) {
+      const firstP = pMatch[0];
+      const remainingContent = content.slice(content.indexOf(firstP) + firstP.length).trim();
+      // Check if there's more content after the first paragraph
+      const hasMore = remainingContent.length > 0 && /<[^>]+>/.test(remainingContent);
+      return { firstParagraph: firstP, hasMore };
+    }
+    // Fallback: return full content if no <p> tags
+    return { firstParagraph: content, hasMore: false };
+  } else {
+    // Plain text: split by double newlines or single newlines
+    const paragraphs = content.split(/\n\n|\n/).filter(p => p.trim().length > 0);
+    if (paragraphs.length > 1) {
+      return { firstParagraph: paragraphs[0], hasMore: true };
+    }
+    return { firstParagraph: content, hasMore: false };
+  }
+}
+
 export function DescriptionSection({ description, category, getCategoryLabel }: DescriptionSectionProps) {
   const [isOpen, setIsOpen] = useState(false);
   const isMobile = useIsMobile();
   
-  // Strip HTML tags for length calculation but preserve for display
-  const plainText = description.replace(/<[^>]*>/g, '');
-  const shouldTruncate = plainText.length > MAX_DESCRIPTION_LENGTH;
-  
-  // For truncation, work with plain text to avoid cutting in the middle of HTML tags
-  const truncatedText = plainText.slice(0, MAX_DESCRIPTION_LENGTH) + '...';
-  
-  // Check if description contains HTML
   const isHtml = /<[^>]+>/.test(description);
+  const { firstParagraph, hasMore } = extractFirstParagraph(description);
 
   const FullDescription = () => (
     <>
@@ -72,11 +89,18 @@ export function DescriptionSection({ description, category, getCategoryLabel }: 
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-foreground">
-            {shouldTruncate ? truncatedText : plainText}
-          </p>
+          {isHtml ? (
+            <div 
+              className="prose prose-sm max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-a:text-primary prose-strong:text-foreground prose-ul:text-foreground prose-ol:text-foreground"
+              dangerouslySetInnerHTML={{ __html: firstParagraph }}
+            />
+          ) : (
+            <p className="text-foreground leading-relaxed">
+              {firstParagraph}
+            </p>
+          )}
           
-          {shouldTruncate && (
+          {hasMore && (
             <Button 
               variant="link" 
               className="mt-2 h-auto p-0 text-primary"
