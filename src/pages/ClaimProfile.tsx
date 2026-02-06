@@ -630,17 +630,19 @@ const ClaimProfile = () => {
                 </CardContent>
               </Card>
 
-              {/* Navigation */}
-              <div className="mt-8 flex justify-start">
-                <Button
-                  variant="outline"
-                  onClick={handleBack}
-                  className="font-display font-semibold uppercase tracking-wider"
-                >
-                  <ChevronLeft className="mr-2 h-4 w-4" />
-                  BACK
-                </Button>
-              </div>
+              {/* Navigation - hide back button after verification, show Explorer link instead */}
+              {!githubVerified && (
+                <div className="mt-8 flex justify-start">
+                  <Button
+                    variant="outline"
+                    onClick={handleBack}
+                    className="font-display font-semibold uppercase tracking-wider"
+                  >
+                    <ChevronLeft className="mr-2 h-4 w-4" />
+                    BACK
+                  </Button>
+                </div>
+              )}
             </>
           )}
 
