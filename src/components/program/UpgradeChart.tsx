@@ -33,8 +33,9 @@ function formatLastSynced(dateString: string | null): string {
   if (diffDays < 7) return `${diffDays}d ago`;
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
+
 export function UpgradeChart({ projectId }: UpgradeChartProps) {
-  const { data: chartData, isLoading } = useScoreHistoryChart(projectId);
+  const { data: chartData, lastSyncedAt, isLoading } = useScoreHistoryChart(projectId);
 
   if (isLoading) {
     return (
@@ -58,9 +59,23 @@ export function UpgradeChart({ projectId }: UpgradeChartProps) {
       <CardHeader>
         <CardTitle className="flex items-center justify-between font-display text-lg uppercase tracking-tight">
           <span>SCORE HISTORY</span>
-          <span className="font-mono text-sm font-normal text-muted-foreground">
-            {hasData ? 'Last 12 months' : 'No data yet'}
-          </span>
+          <TooltipProvider>
+            <TooltipUI>
+              <TooltipTrigger asChild>
+                <div className="flex items-center gap-1.5 cursor-help font-mono text-xs font-normal text-muted-foreground">
+                  <RefreshCw className="h-3 w-3" />
+                  <span>Synced {formatLastSynced(lastSyncedAt)}</span>
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">
+                  {lastSyncedAt 
+                    ? `Data captured on ${new Date(lastSyncedAt).toLocaleString()}`
+                    : 'No data captured yet. Use Refresh Data to sync.'}
+                </p>
+              </TooltipContent>
+            </TooltipUI>
+          </TooltipProvider>
         </CardTitle>
       </CardHeader>
       <CardContent>
