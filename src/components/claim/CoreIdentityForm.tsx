@@ -1,5 +1,4 @@
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -9,6 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { WebsitePreview } from './WebsitePreview';
 import { PROJECT_CATEGORIES, type ProjectCategory } from '@/types';
 
@@ -33,7 +33,6 @@ export const CoreIdentityForm = ({
   websiteUrl,
   setWebsiteUrl,
 }: CoreIdentityFormProps) => {
-  const maxDescriptionLength = 140;
 
   return (
     <div className="space-y-6">
@@ -64,20 +63,14 @@ export const CoreIdentityForm = ({
           </div>
 
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="description" className="font-display text-xs uppercase tracking-wider">
-                Description
-              </Label>
-              <span className="font-mono text-xs text-muted-foreground">
-                {description.length}/{maxDescriptionLength}
-              </span>
-            </div>
-            <Textarea
-              id="description"
-              placeholder="A short tagline for your project..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value.slice(0, maxDescriptionLength))}
-              className="min-h-[80px] font-mono text-sm"
+            <Label htmlFor="description" className="font-display text-xs uppercase tracking-wider">
+              Description
+            </Label>
+            <RichTextEditor
+              content={description}
+              onChange={setDescription}
+              placeholder="Describe your project in detail..."
+              className="min-h-[200px]"
             />
           </div>
 
