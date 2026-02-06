@@ -1,126 +1,196 @@
 
-# Cleanup Plan: Remove Unnecessary localStorage and Mock Data
 
-## Summary of Findings
+# Real X (Twitter) OAuth Implementation Plan
 
-After a thorough sweep of the codebase, I found the following issues that need cleaning:
+## Current State
 
----
-
-## 1. Mock Data File to DELETE
-
-### `src/data/mockData.ts`
-- **Status**: NOT IMPORTED ANYWHERE - can be safely deleted
-- Contains fake data for:
-  - `mockVerifiedProfiles` (Raydium demo data)
-  - `ecosystemStats` (fake stats)
-  - `programs[]` (10 fake programs with fake scores)
-  - `recentEvents[]` (fake upgrade events)
-  - `upgradeChartData[]` (fake chart data)
-  - `getProgramById()` and `searchPrograms()` helper functions
+The X (Twitter) authentication is currently a **mock implementation**:
+- `signInWithX()` in `AuthContext.tsx` redirects to `/x-callback?code=mock_x_auth_code`
+- `XCallback.tsx` creates a hardcoded fake user (`verified_builder`)
+- No edge function exists to handle real X OAuth token exchange
+- No X/Twitter API secrets are configured
 
 ---
 
-## 2. Mock Data in Page Components
+## What Needs to Be Built
 
-### `src/pages/MyBonds.tsx` (Lines 18-53)
-- **Issue**: Entire page uses hardcoded `mockBonds` array
-- **Fix**: Convert to use real data from database or show empty state with "Coming in Phase 2" message
+### 1. Edge Function: `x-oauth-callback`
 
-### `src/components/staking/StakingForm.tsx` (Line 39)
-- **Issue**: `const walletBalance = 1250.45;` - hardcoded mock balance
-- **Fix**: Either fetch real balance from wallet or show placeholder
+A new Supabase Edge Function to handle the OAuth 2.0 PKCE flow:
 
----
+```text
+Frontend                    X (Twitter) API              Edge Function
+   │                             │                            │
+   │──── Redirect to X ──────────▶                            │
+   │                             │                            │
+   │◀─── Auth code + state ──────│                            │
+   │                             │                            │
+   │──── POST code to edge fn ───────────────────────────────▶│
+   │                             │                            │
+   │                             │◀── Exchange code for token─│
+   │                             │                            │
+   │                             │──── Return access token ──▶│
+   │                             │                            │
+   │                             │◀── GET /2/users/me ────────│
+   │                             │                            │
+   │◀─── Return user data ────────────────────────────────────│
+```
 
-## 3. Mock X (Twitter) OAuth Flow
+**Edge function responsibilities:**
+- Receive authorization code from frontend
+- Exchange code for access token via `https://api.x.com/2/oauth2/token`
+- Fetch user profile via `https://api.x.com/2/users/me`
+- Return user data (id, username, avatar)
 
-### `src/pages/XCallback.tsx` (Lines 24-36)
-- **Issue**: Creates fake user `mockXUser` with hardcoded data
-- **Fix**: This is intentional Phase 0 behavior (X OAuth not implemented), but should add a clear comment or consider removing the mock delay
+### 2. Frontend Updates
 
-### `src/context/AuthContext.tsx` (Lines 31-35)
-- **Issue**: `signInWithX()` redirects to `/x-callback?code=mock_x_auth_code`
-- **Fix**: This is Phase 0 mock auth - either keep with clear comment or plan real X OAuth
+**AuthContext.tsx:**
+- Generate PKCE code verifier and challenge
+- Store code verifier in `sessionStorage` (more secure than localStorage)
+- Redirect to X's OAuth 2.0 authorization URL
 
----
+**XCallback.tsx:**
+- Retrieve authorization code from URL params
+- Call the new `x-oauth-callback` edge function
+- Store real user data in localStorage for session
 
-## 4. Unnecessary localStorage Usage
+### 3. Required Secrets
 
-### Necessary localStorage (KEEP):
-| Location | Key | Purpose | Status |
-|----------|-----|---------|--------|
-| `AuthContext.tsx` | `x_user` | Session persistence for X auth | KEEP (until real auth) |
-| `supabase/client.ts` | (internal) | Supabase session storage | KEEP (required) |
-| `ClaimProfile.tsx` | `github_oauth_state` | CSRF protection | KEEP (security) |
-| `ClaimProfile.tsx` | `claimingProfile` | OAuth redirect state | KEEP (needed for flow) |
-| `GitHubCallback.tsx` | Various claim keys | OAuth redirect cleanup | KEEP (handles cleanup) |
-
-### Unnecessary localStorage (REMOVE):
-
-| Location | Key | Issue |
-|----------|-----|-------|
-| `Dashboard.tsx` (L22) | `verifiedPrograms` | Should fetch from DB instead |
-| `ClaimProfile.tsx` (L68) | `claimingWalletAddress` | Not used after callback |
-| `ClaimProfile.tsx` (L94) | `claimingProgramId` | Not used after callback |
-| `ClaimProfile.tsx` (L96) | `claimingProgramDbId` | Not used after callback |
-| `ClaimProfile.tsx` (L108-109) | `claimingXUserId`, `claimingXUsername` | Part of claimingProfile object |
-
----
-
-## 5. Mock GitHub Data Function
-
-### `src/lib/github.ts` (Lines 40-59)
-- **Issue**: `fetchGitHubData()` returns fake data with hash-based random values
-- **Status**: Function is NOT USED - real GitHub data comes from edge functions
-- **Fix**: Either remove function or keep as fallback with clear "mock" comment
+| Secret | Description |
+|--------|-------------|
+| `X_CLIENT_ID` | OAuth 2.0 Client ID from X Developer Portal |
+| `X_CLIENT_SECRET` | OAuth 2.0 Client Secret from X Developer Portal |
 
 ---
 
-## Implementation Plan
+## Implementation Details
 
-### Phase 1: Delete Unused Files
-1. Delete `src/data/mockData.ts` (not imported anywhere)
+### Step 1: Add X OAuth Secrets
 
-### Phase 2: Fix Dashboard to Use Database
-1. Update `Dashboard.tsx` to use `useVerifiedProfiles()` hook instead of localStorage
+Before any code changes, you'll need to:
+1. Create an X Developer account at `developer.x.com`
+2. Create a new app with OAuth 2.0 enabled
+3. Set the callback URL to `https://[your-domain]/x-callback`
+4. Get the Client ID and Client Secret
+5. Add them as secrets in Lovable
 
-### Phase 3: Clean Up MyBonds Page
-1. Replace `mockBonds` with empty state + "Coming in Phase 2" message
-2. OR fetch from `bonds` table if any real data exists
+### Step 2: Create Edge Function
 
-### Phase 4: Clean Up StakingForm
-1. Replace hardcoded `walletBalance` with real wallet balance or "Connect wallet" message
+**File:** `supabase/functions/x-oauth-callback/index.ts`
 
-### Phase 5: Remove Unused localStorage Writes
-1. Remove `claimingWalletAddress` storage in ClaimProfile.tsx (not read anywhere)
-2. Remove `claimingProgramId` storage (already in claimingProfile object)
-3. Remove `claimingProgramDbId` storage (already in claimingProfile object)
-4. Remove `claimingXUserId/claimingXUsername` storage (already in claimingProfile object)
+```typescript
+// Handles X OAuth 2.0 PKCE token exchange
+// - Receives: { code, code_verifier, redirect_uri }
+// - Exchanges code for access token via api.x.com
+// - Fetches user profile
+// - Returns: { id, username, avatarUrl }
+```
 
-### Phase 6: Add Comments to Intentional Mock Code
-1. Add clear comments to X OAuth mock flow explaining Phase 0 status
-2. Add comment to `fetchGitHubData()` explaining it's unused/fallback only
+Key API endpoints:
+- Token exchange: `POST https://api.x.com/2/oauth2/token`
+- User profile: `GET https://api.x.com/2/users/me?user.fields=profile_image_url`
+
+### Step 3: Update AuthContext.tsx
+
+```typescript
+const signInWithX = async () => {
+  // Generate PKCE code verifier (random 43-128 chars)
+  const codeVerifier = generateCodeVerifier();
+  
+  // Generate code challenge (SHA-256 hash of verifier)
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+  
+  // Store for callback
+  sessionStorage.setItem('x_code_verifier', codeVerifier);
+  
+  // Generate state for CSRF protection
+  const state = crypto.randomUUID();
+  sessionStorage.setItem('x_oauth_state', state);
+  
+  // Redirect to X authorization
+  const params = new URLSearchParams({
+    response_type: 'code',
+    client_id: import.meta.env.VITE_X_CLIENT_ID,
+    redirect_uri: `${window.location.origin}/x-callback`,
+    scope: 'tweet.read users.read',
+    state,
+    code_challenge: codeChallenge,
+    code_challenge_method: 'S256',
+  });
+  
+  window.location.href = `https://x.com/i/oauth2/authorize?${params}`;
+};
+```
+
+### Step 4: Update XCallback.tsx
+
+```typescript
+// 1. Verify state matches (CSRF protection)
+// 2. Retrieve code verifier from sessionStorage
+// 3. Call edge function with code + code_verifier
+// 4. Store returned user in localStorage
+// 5. Redirect to /claim-profile
+```
+
+### Step 5: Update config.toml
+
+```toml
+[functions.x-oauth-callback]
+verify_jwt = false
+```
 
 ---
 
-## Files Modified
+## Configuration Requirements
+
+### X Developer Portal Setup
+
+1. Go to `developer.x.com` and create a project
+2. Enable OAuth 2.0 with PKCE
+3. Add callback URL: `https://id-preview--620e3ac9-b8b9-47de-a2e2-0ff41af4217f.lovable.app/x-callback`
+4. Request scopes: `tweet.read`, `users.read`
+5. Copy Client ID and Client Secret
+
+### Environment Variables
+
+| Variable | Location | Purpose |
+|----------|----------|---------|
+| `VITE_X_CLIENT_ID` | Frontend (.env) | Initiate OAuth redirect |
+| `X_CLIENT_ID` | Edge function secret | Token exchange |
+| `X_CLIENT_SECRET` | Edge function secret | Token exchange |
+
+---
+
+## Files to Create/Modify
 
 | File | Action |
 |------|--------|
-| `src/data/mockData.ts` | DELETE entirely |
-| `src/pages/Dashboard.tsx` | Replace localStorage with useVerifiedProfiles hook |
-| `src/pages/MyBonds.tsx` | Replace mockBonds with Phase 2 placeholder |
-| `src/components/staking/StakingForm.tsx` | Replace mock balance with real wallet query |
-| `src/pages/ClaimProfile.tsx` | Remove redundant localStorage writes |
-| `src/lib/github.ts` | Add comment that fetchGitHubData is unused |
-| `src/context/AuthContext.tsx` | Add comment about Phase 0 mock X auth |
-| `src/pages/XCallback.tsx` | Add comment about Phase 0 mock X auth |
+| `supabase/functions/x-oauth-callback/index.ts` | CREATE - Edge function for token exchange |
+| `supabase/config.toml` | MODIFY - Add x-oauth-callback config |
+| `src/context/AuthContext.tsx` | MODIFY - Real OAuth with PKCE |
+| `src/pages/XCallback.tsx` | MODIFY - Call edge function |
+| `src/lib/pkce.ts` | CREATE - PKCE helper functions |
 
 ---
 
-## Technical Notes
+## Security Considerations
 
-- **ProfileDetail.tsx** and **ProgramDetail.tsx** are already clean - they use `useClaimedProfile()` hook to fetch from database
-- **GitHubCallback.tsx** properly cleans up localStorage after OAuth completes
-- The localStorage used for OAuth CSRF state and redirect data is necessary and should be kept
+1. **PKCE Flow**: Required by X for public clients (SPAs)
+2. **State Parameter**: CSRF protection to prevent authorization code injection
+3. **Code Verifier**: Stored in sessionStorage (cleared on tab close)
+4. **Secret Storage**: Client secret only in edge function (never exposed to frontend)
+5. **Token Handling**: Access token returned to frontend for session, not stored server-side
+
+---
+
+## Testing Checklist
+
+After implementation:
+- [ ] "Sign in with X" redirects to X authorization page
+- [ ] After X approval, redirects back to `/x-callback`
+- [ ] Callback successfully exchanges code for user data
+- [ ] User appears as authenticated with real X username
+- [ ] Session persists after page refresh
+- [ ] Sign out clears session properly
+- [ ] Error states display correctly for cancelled/failed auth
+
