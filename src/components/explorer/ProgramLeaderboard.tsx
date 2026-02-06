@@ -12,6 +12,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
+import { MobileProgramCards } from './MobileProgramCard';
 import type { ExplorerProject } from '@/hooks/useExplorerProjects';
 import type { LivenessStatus } from '@/types/database';
 
@@ -21,6 +23,12 @@ interface ProgramLeaderboardProps {
 
 export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
+
+  // Render mobile cards on small screens
+  if (isMobile) {
+    return <MobileProgramCards projects={projects} />;
+  }
 
   const getScoreColor = (score: number) => {
     if (score >= 85) return 'text-primary';
