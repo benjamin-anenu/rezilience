@@ -292,32 +292,42 @@ export type Database = {
       score_history: {
         Row: {
           breakdown: Json | null
+          claimed_profile_id: string | null
           commit_velocity: number | null
           days_last_commit: number | null
           id: string
-          project_id: string
+          project_id: string | null
           score: number
           snapshot_date: string
         }
         Insert: {
           breakdown?: Json | null
+          claimed_profile_id?: string | null
           commit_velocity?: number | null
           days_last_commit?: number | null
           id?: string
-          project_id: string
+          project_id?: string | null
           score: number
           snapshot_date?: string
         }
         Update: {
           breakdown?: Json | null
+          claimed_profile_id?: string | null
           commit_velocity?: number | null
           days_last_commit?: number | null
           id?: string
-          project_id?: string
+          project_id?: string | null
           score?: number
           snapshot_date?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "score_history_claimed_profile_id_fkey"
+            columns: ["claimed_profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "score_history_project_id_fkey"
             columns: ["project_id"]

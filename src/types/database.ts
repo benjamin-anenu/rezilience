@@ -33,7 +33,8 @@ export interface DBProject {
 // Score history entry
 export interface DBScoreHistory {
   id: string;
-  project_id: string;
+  project_id: string | null;
+  claimed_profile_id: string | null;
   score: number;
   snapshot_date: string;
   commit_velocity: number | null;

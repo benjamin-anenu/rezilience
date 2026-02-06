@@ -362,7 +362,7 @@ Deno.serve(async (req) => {
         const { error: historyError } = await supabase
           .from("score_history")
           .insert({
-            project_id: profile_id,
+            claimed_profile_id: profile_id,
             score: result.resilienceScore,
             commit_velocity: result.commitVelocity,
             days_last_commit: result.daysSinceLastCommit,
