@@ -1,40 +1,32 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Compass, LogOut } from 'lucide-react';
+import { Plus, Compass, LogOut, Loader2 } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
-import type { ClaimedProfile } from '@/types';
+import { useVerifiedProfiles } from '@/hooks/useClaimedProfiles';
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user, isAuthenticated, loading, signOut } = useAuth();
-  const [verifiedProjects, setVerifiedProjects] = useState<ClaimedProfile[]>([]);
+  const { user, isAuthenticated, loading: authLoading, signOut } = useAuth();
+  
+  // Fetch verified profiles from database
+  const { data: verifiedProjects = [], isLoading: profilesLoading } = useVerifiedProfiles();
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    if (!authLoading && !isAuthenticated) {
       navigate('/claim-profile');
-      return;
     }
+  }, [authLoading, isAuthenticated, navigate]);
 
-    // Load verified projects from localStorage
-    const stored = localStorage.getItem('verifiedPrograms');
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setVerifiedProjects(Object.values(parsed));
-      } catch {
-        // Ignore parse errors
-      }
-    }
-  }, [loading, isAuthenticated, navigate]);
+  const loading = authLoading || profilesLoading;
 
   if (loading) {
     return (
       <Layout>
         <div className="flex min-h-[60vh] items-center justify-center">
-          <p className="text-muted-foreground">Loading...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       </Layout>
     );

@@ -2,93 +2,15 @@ import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Badge } from '@/components/ui/badge';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { Coins, TrendingUp, Unlock, Wallet, AlertTriangle, ExternalLink, Plus } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Coins, TrendingUp, Unlock, Wallet, Clock, ArrowRight } from 'lucide-react';
 
-// Mock bond data demonstrating different states
-const mockBonds = [
-  {
-    id: '1',
-    programId: 'JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4',
-    programName: 'Jupiter Aggregator',
-    stakedAmount: 250,
-    lockupEndDate: '2026-08-15',
-    currentScore: 94,
-    accumulatedYield: 12.5,
-    estimatedAPY: 8.2,
-    createdAt: '2025-08-15',
-  },
-  {
-    id: '2',
-    programId: 'whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc',
-    programName: 'Orca Whirlpools',
-    stakedAmount: 100,
-    lockupEndDate: '2026-06-01',
-    currentScore: 91,
-    accumulatedYield: 4.8,
-    estimatedAPY: 7.5,
-    createdAt: '2025-06-01',
-  },
-  {
-    id: '3',
-    programId: 'So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpAo',
-    programName: 'Solend Protocol',
-    stakedAmount: 75,
-    lockupEndDate: '2025-12-01',
-    currentScore: 65,
-    accumulatedYield: 2.1,
-    estimatedAPY: 5.8,
-    createdAt: '2024-12-01',
-  },
-];
-
+/**
+ * My Bonds Page - Phase 2 Placeholder
+ * 
+ * Bond staking and yield claiming will be implemented in Phase 2.
+ * This page serves as a placeholder showing the upcoming feature.
+ */
 const MyBonds = () => {
-  const today = new Date();
-  
-  // Calculate portfolio stats
-  const totalStaked = mockBonds.reduce((sum, bond) => sum + bond.stakedAmount, 0);
-  const totalYield = mockBonds.reduce((sum, bond) => sum + bond.accumulatedYield, 0);
-  const claimableNow = mockBonds
-    .filter((bond) => bond.currentScore >= 70)
-    .reduce((sum, bond) => sum + bond.accumulatedYield, 0);
-  const activeBonds = mockBonds.length;
-
-  // Check if any bond has low score
-  const hasLowScoreBond = mockBonds.some((bond) => bond.currentScore < 70);
-
-  const truncateProgramId = (id: string) => {
-    return `${id.slice(0, 4)}...${id.slice(-4)}`;
-  };
-
-  const isLockupExpired = (endDate: string) => {
-    return new Date(endDate) <= today;
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
-  };
-
-  const getDaysRemaining = (endDate: string) => {
-    const end = new Date(endDate);
-    const diffTime = end.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 0;
-  };
-
   return (
     <Layout>
       <div className="py-8">
@@ -103,15 +25,9 @@ const MyBonds = () => {
                 Manage your staked bonds and claim earned yield.
               </p>
             </div>
-            <Button asChild>
-              <Link to="/staking">
-                <Plus className="mr-2 h-4 w-4" />
-                CREATE NEW BOND
-              </Link>
-            </Button>
           </div>
 
-          {/* Portfolio Overview Cards */}
+          {/* Portfolio Overview Cards - Empty State */}
           <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -122,7 +38,7 @@ const MyBonds = () => {
               </CardHeader>
               <CardContent>
                 <div className="font-mono text-2xl font-bold text-foreground">
-                  {totalStaked.toLocaleString()} SOL
+                  0 SOL
                 </div>
               </CardContent>
             </Card>
@@ -135,8 +51,8 @@ const MyBonds = () => {
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="font-mono text-2xl font-bold text-primary">
-                  +{totalYield.toFixed(2)} SOL
+                <div className="font-mono text-2xl font-bold text-muted-foreground">
+                  0 SOL
                 </div>
               </CardContent>
             </Card>
@@ -149,8 +65,8 @@ const MyBonds = () => {
                 <Coins className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="font-mono text-2xl font-bold text-primary">
-                  {claimableNow.toFixed(2)} SOL
+                <div className="font-mono text-2xl font-bold text-muted-foreground">
+                  0 SOL
                 </div>
               </CardContent>
             </Card>
@@ -164,141 +80,86 @@ const MyBonds = () => {
               </CardHeader>
               <CardContent>
                 <div className="font-mono text-2xl font-bold text-foreground">
-                  {activeBonds}
+                  0
                 </div>
               </CardContent>
             </Card>
           </div>
 
-          {/* Info Alert */}
-          <Alert className="mb-6 border-primary/30 bg-primary/5">
-            <AlertDescription className="text-sm text-muted-foreground">
-              <strong className="text-foreground">Yield Claiming Rules:</strong> You can claim
-              accumulated yield when the program's Resilience Score is ≥ 70. This ensures you only
-              earn from actively maintained protocols.
-            </AlertDescription>
-          </Alert>
-
-          {/* Low Score Warning */}
-          {hasLowScoreBond && (
-            <Alert className="mb-6 border-destructive/50 bg-destructive/10">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
-              <AlertDescription className="text-sm text-destructive">
-                <strong>Yield Locked:</strong> One or more of your bonded programs has a Resilience
-                Score below 70. Yield claiming is disabled for these bonds until the program's health
-                improves.
-              </AlertDescription>
-            </Alert>
-          )}
-
-          {/* Bonds Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-display text-lg uppercase tracking-tight">
-                Your Bonds
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Program</TableHead>
-                    <TableHead>Program ID</TableHead>
-                    <TableHead className="text-right">Staked</TableHead>
-                    <TableHead>Lock-up End</TableHead>
-                    <TableHead className="text-center">Score</TableHead>
-                    <TableHead className="text-right">Yield</TableHead>
-                    <TableHead className="text-right">APY</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {mockBonds.map((bond) => {
-                    const canClaim = bond.currentScore >= 70;
-                    const canUnstake = isLockupExpired(bond.lockupEndDate);
-                    const daysRemaining = getDaysRemaining(bond.lockupEndDate);
-
-                    return (
-                      <TableRow key={bond.id}>
-                        <TableCell>
-                          <Link
-                            to={`/program/${bond.programId}`}
-                            className="flex items-center gap-1 font-medium text-foreground transition-colors hover:text-primary"
-                          >
-                            {bond.programName}
-                            <ExternalLink className="h-3 w-3" />
-                          </Link>
-                        </TableCell>
-                        <TableCell>
-                          <code className="font-mono text-xs text-muted-foreground">
-                            {truncateProgramId(bond.programId)}
-                          </code>
-                        </TableCell>
-                        <TableCell className="text-right font-mono">
-                          {bond.stakedAmount} SOL
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {formatDate(bond.lockupEndDate)}
-                            {!canUnstake && (
-                              <div className="text-xs text-muted-foreground">
-                                {daysRemaining} days left
-                              </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={canClaim ? 'default' : 'destructive'}
-                            className={cn(
-                              'font-mono',
-                              canClaim
-                                ? 'bg-primary/20 text-primary hover:bg-primary/30'
-                                : 'bg-destructive/20 text-destructive hover:bg-destructive/30'
-                            )}
-                          >
-                            {bond.currentScore}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-primary">
-                          +{bond.accumulatedYield.toFixed(2)} SOL
-                        </TableCell>
-                        <TableCell className="text-right font-mono text-muted-foreground">
-                          {bond.estimatedAPY}%
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Button
-                              size="sm"
-                              variant={canClaim ? 'default' : 'outline'}
-                              disabled={!canClaim}
-                              className={cn(
-                                'text-xs',
-                                !canClaim && 'cursor-not-allowed opacity-50'
-                              )}
-                            >
-                              {canClaim ? 'CLAIM YIELD' : 'CLAIM LOCKED'}
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              disabled={!canUnstake}
-                              className={cn(
-                                'text-xs',
-                                !canUnstake && 'cursor-not-allowed opacity-50'
-                              )}
-                            >
-                              {canUnstake ? 'UNSTAKE' : 'LOCKED'}
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+          {/* Phase 2 Coming Soon */}
+          <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
+            <CardContent className="py-12 text-center">
+              <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                <Clock className="h-8 w-8 text-primary" />
+              </div>
+              <h2 className="mb-3 font-display text-2xl font-bold uppercase tracking-tight text-foreground">
+                COMING IN PHASE 2
+              </h2>
+              <p className="mx-auto mb-6 max-w-md text-muted-foreground">
+                Bond staking and yield mechanisms are under development. Stake SOL on verified 
+                programs to earn yield based on their Resilience Score.
+              </p>
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+                <Button asChild variant="outline">
+                  <Link to="/explorer">
+                    EXPLORE PROGRAMS
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild>
+                  <Link to="/claim-profile">
+                    JOIN THE REGISTRY
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
             </CardContent>
           </Card>
+
+          {/* Feature Preview */}
+          <div className="mt-8 grid gap-6 md:grid-cols-3">
+            <Card className="border-border bg-card/50">
+              <CardContent className="pt-6">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10">
+                  <Wallet className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="mb-2 font-display text-sm uppercase tracking-tight text-foreground">
+                  STAKE SOL
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Bond SOL to programs you believe in. Longer lockups earn higher yields.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-card/50">
+              <CardContent className="pt-6">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="mb-2 font-display text-sm uppercase tracking-tight text-foreground">
+                  EARN YIELD
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Yield unlocks when program Resilience Score stays above 70.
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="border-border bg-card/50">
+              <CardContent className="pt-6">
+                <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10">
+                  <Coins className="h-5 w-5 text-primary" />
+                </div>
+                <h3 className="mb-2 font-display text-sm uppercase tracking-tight text-foreground">
+                  CLAIM REWARDS
+                </h3>
+                <p className="text-xs text-muted-foreground">
+                  Withdraw earned yield anytime. Principal unlocks after lockup ends.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </Layout>

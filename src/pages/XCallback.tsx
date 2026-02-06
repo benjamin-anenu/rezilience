@@ -21,11 +21,20 @@ const XCallback = () => {
           throw new Error('No authorization code received from X');
         }
 
-        // Phase 0: Mock token exchange
-        // In production: call edge function to exchange code for token
+        /**
+         * PHASE 0 MOCK: X (Twitter) OAuth token exchange is simulated
+         * 
+         * In production, this would:
+         * 1. Call an edge function with the authorization code
+         * 2. Edge function exchanges code for access token via X API
+         * 3. Edge function fetches user profile from X API
+         * 4. Return real user data to store in session
+         * 
+         * TODO Phase 2: Implement real X OAuth edge function
+         */
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        // Mock X user data
+        // MOCK USER DATA - Replace with real X API response in Phase 2
         const mockXUser: XUser = {
           id: 'x_mock_' + Date.now(),
           username: 'verified_builder',
