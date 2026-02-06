@@ -7,8 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useProject } from '@/hooks/useProjects';
-import { useClaimedProfileByProgramId, useClaimedProfileByProjectId } from '@/hooks/useClaimedProfiles';
+import { useProject, useProjectById } from '@/hooks/useProjects';
+import { useClaimedProfileByProgramId, useClaimedProfileByProjectId, useClaimedProfile } from '@/hooks/useClaimedProfiles';
 import type { ClaimedProfile } from '@/types';
 import { PROJECT_CATEGORIES } from '@/types';
 
@@ -24,15 +24,23 @@ const ProgramDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   
-  // Fetch project from database by program_id
-  const { data: project, isLoading, error } = useProject(id || '');
+  // Try to fetch project from projects table by program_id first
+  const { data: projectByProgramId, isLoading: loadingByProgramId } = useProject(id || '');
   
-  // Fetch claimed profile from database
+  // Also try to fetch claimed profile directly by UUID (for registry entries)
+  const { data: claimedProfileById, isLoading: loadingClaimedById } = useClaimedProfile(id || '');
+  
+  // Fetch claimed profile by program_id if we have one
   const { data: claimedProfileByProgram } = useClaimedProfileByProgramId(id || '');
-  const { data: claimedProfileByProject } = useClaimedProfileByProjectId(project?.id || '');
+  const { data: claimedProfileByProject } = useClaimedProfileByProjectId(projectByProgramId?.id || '');
   
-  // Use whichever claimed profile we found
-  const claimedProfile = claimedProfileByProgram || claimedProfileByProject;
+  // Determine the best data source: project table OR claimed profile as fallback
+  const project = projectByProgramId;
+  const claimedProfile = claimedProfileByProgram || claimedProfileByProject || claimedProfileById;
+  
+  // Use claimed profile data if no project found (for registry-only entries)
+  const hasData = project || claimedProfile;
+  const isLoading = loadingByProgramId && loadingClaimedById;
   const isVerified = project?.verified || claimedProfile?.verified || searchParams.get('verified') === 'true';
 
   if (isLoading) {
@@ -54,26 +62,26 @@ const ProgramDetail = () => {
     );
   }
 
-  if (error || !project) {
+  if (!hasData) {
     return (
       <Layout>
         <div className="container mx-auto px-4 py-20 text-center lg:px-8">
           <h1 className="mb-4 font-display text-3xl font-bold text-foreground">
-            PROGRAM NOT FOUND
+            PROTOCOL NOT FOUND
           </h1>
           <p className="mb-8 text-muted-foreground">
-            The program you're looking for doesn't exist in the registry.
+            The protocol you're looking for doesn't exist in the registry.
           </p>
           <div className="flex justify-center gap-4">
             <Button asChild>
               <Link to="/explorer">
                 <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Explorer
+                Back to Registry
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/claim">
-                Claim This Program
+              <Link to="/claim-profile">
+                Register Protocol
               </Link>
             </Button>
           </div>
@@ -81,22 +89,30 @@ const ProgramDetail = () => {
       </Layout>
     );
   }
+  
+  // Build display data from either project or claimed profile
+  const displayName = project?.program_name || claimedProfile?.projectName || 'Unknown Protocol';
+  const displayProgramId = project?.program_id || claimedProfile?.programId || id || '';
+  const displayScore = project?.resilience_score || claimedProfile?.score || 0;
+  const displayDescription = claimedProfile?.description || project?.description;
+  const displayWebsiteUrl = claimedProfile?.websiteUrl || project?.website_url;
+  const displayGithubUrl = claimedProfile?.githubOrgUrl || project?.github_url;
 
   const getCategoryLabel = (value: string) => {
     const category = PROJECT_CATEGORIES.find(c => c.value === value);
     return category?.label || value;
   };
 
-  // Transform DBProject to the format expected by existing components
+  // Transform data to the format expected by existing components
   const programForComponents = {
-    id: project.id,
-    name: project.program_name,
-    programId: project.program_id,
-    score: Math.round(project.resilience_score),
-    livenessStatus: project.liveness_status.toLowerCase() as 'active' | 'dormant' | 'degraded',
-    originalityStatus: project.is_fork ? 'fork' as const : project.verified ? 'verified' as const : 'unverified' as const,
-    stakedAmount: project.total_staked,
-    lastUpgrade: project.github_last_commit || project.updated_at,
+    id: project?.id || claimedProfile?.id || '',
+    name: displayName,
+    programId: displayProgramId,
+    score: Math.round(displayScore),
+    livenessStatus: (project?.liveness_status?.toLowerCase() || claimedProfile?.livenessStatus || 'active') as 'active' | 'dormant' | 'degraded',
+    originalityStatus: project?.is_fork ? 'fork' as const : isVerified ? 'verified' as const : 'unverified' as const,
+    stakedAmount: project?.total_staked || 0,
+    lastUpgrade: project?.github_last_commit || project?.updated_at || new Date().toISOString(),
     upgradeCount: 0,
     rank: 0,
   };
@@ -141,7 +157,7 @@ const ProgramDetail = () => {
           </div>
 
           {/* Description */}
-          {(isVerified && claimedProfile?.description) || project.description ? (
+          {displayDescription && (
             <div className="mb-6">
               <Card className="border-border bg-card">
                 <CardHeader className="pb-2">
@@ -151,7 +167,7 @@ const ProgramDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-foreground">
-                    {claimedProfile?.description || project.description}
+                    {displayDescription}
                   </p>
                   {claimedProfile?.category && (
                     <Badge variant="outline" className="mt-2">
@@ -161,17 +177,19 @@ const ProgramDetail = () => {
                 </CardContent>
               </Card>
             </div>
-          ) : null}
+          )}
 
-          {/* Upgrade Chart + Recent Events */}
-          <div className="mb-6 grid gap-6 lg:grid-cols-3">
-            <div className="lg:col-span-2">
-              <UpgradeChart projectId={project.id} />
+          {/* Upgrade Chart + Recent Events - only show if we have a project in the projects table */}
+          {project && (
+            <div className="mb-6 grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-2">
+                <UpgradeChart projectId={project.id} />
+              </div>
+              <div>
+                <RecentEvents projectId={project.id} />
+              </div>
             </div>
-            <div>
-              <RecentEvents projectId={project.id} />
-            </div>
-          </div>
+          )}
 
           {/* Metric Cards */}
           <div className="mb-6">
@@ -232,7 +250,7 @@ const ProgramDetail = () => {
           )}
 
           {/* Website Preview */}
-          {isVerified && (claimedProfile?.websiteUrl || project.website_url) && (
+          {isVerified && displayWebsiteUrl && (
             <div className="mb-6">
               <Card className="border-border bg-card">
                 <CardHeader className="pb-2">
@@ -243,7 +261,7 @@ const ProgramDetail = () => {
                 <CardContent>
                   <div className="aspect-[16/10] overflow-hidden rounded-sm border border-border">
                     <iframe
-                      src={claimedProfile?.websiteUrl || project.website_url || ''}
+                      src={displayWebsiteUrl}
                       className="h-full w-full"
                       title="Website preview"
                       sandbox="allow-scripts allow-same-origin"
@@ -252,7 +270,7 @@ const ProgramDetail = () => {
                   <div className="mt-3 flex justify-end">
                     <Button asChild variant="outline" size="sm">
                       <a
-                        href={claimedProfile?.websiteUrl || project.website_url || ''}
+                        href={displayWebsiteUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="gap-2"
@@ -366,9 +384,9 @@ const ProgramDetail = () => {
                       <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
                     </a>
                   )}
-                  {(claimedProfile.githubOrgUrl || project.github_url) && (
+                  {displayGithubUrl && (
                     <a
-                      href={claimedProfile.githubOrgUrl || project.github_url || ''}
+                      href={displayGithubUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="flex items-center gap-3 rounded-sm border border-primary/30 bg-primary/10 px-4 py-3 transition-colors hover:bg-primary/20"
@@ -386,14 +404,14 @@ const ProgramDetail = () => {
           {/* Stake CTA */}
           <div className="mt-8 rounded-sm border border-primary/30 bg-primary/5 p-6 text-center">
             <h3 className="mb-2 font-display text-xl font-bold uppercase text-foreground">
-              SUPPORT THIS PROGRAM
+              SUPPORT THIS PROTOCOL
             </h3>
             <p className="mb-4 text-sm text-muted-foreground">
               Stake SOL to increase the resilience score and earn rewards.
             </p>
             <Button asChild className="font-display font-semibold uppercase tracking-wider">
-              <Link to={`/staking?program=${project.program_id}`}>
-                STAKE ON {project.program_name.toUpperCase()}
+              <Link to={`/staking?program=${displayProgramId}`}>
+                STAKE ON {displayName.toUpperCase()}
               </Link>
             </Button>
           </div>

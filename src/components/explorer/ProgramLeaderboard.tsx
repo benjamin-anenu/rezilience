@@ -96,8 +96,12 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
   };
 
   const handleRowClick = (project: ExplorerProject) => {
-    // All explorer entries are registered protocols, navigate to profile view
-    navigate(`/profile/${project.id}`);
+    // Navigate to full program detail view
+    // Use program_id if it's a real Solana address, otherwise use claimed profile id
+    const routeId = project.program_id && project.program_id !== project.id 
+      ? project.program_id 
+      : project.id;
+    navigate(`/program/${routeId}`);
   };
 
   return (
