@@ -1,135 +1,66 @@
 
 
-# Enhanced Auto-Save for Registry Flow
+# Fix GitHub OAuth UUID Error
 
-## Current State
-Auto-save **is already implemented** for the basic form fields. When you type in any of these fields, they automatically save to localStorage:
-- Project Name
-- Description  
-- Category
-- Website URL
-- Program ID
-- GitHub Org URL
-- Discord URL
-- Telegram URL
-
-## What's Missing
-Three things are NOT being persisted:
-
-1. **Current Step** - If you refresh, you start at Step 2 (Identity) instead of where you left off
-2. **Media Assets** - Uploaded images in Step 4 are lost on refresh
-3. **Milestones** - Roadmap items in Step 5 are lost on refresh
-
----
-
-## Implementation Plan
-
-### Fix 1: Persist Current Step
-
-Save the current step to localStorage whenever it changes, and restore it on mount:
-
-**File:** `src/pages/ClaimProfile.tsx`
-
-Add `currentStep` to the persistence logic:
-- Save step when it changes
-- Restore step from localStorage on mount (already partially done for auth check)
-
-### Fix 2: Persist Media Assets
-
-Add `mediaAssets` to the localStorage save/restore:
-- Media assets are objects with `id`, `type`, `url`, `name` properties
-- Store the array as JSON
-
-### Fix 3: Persist Milestones
-
-Add `milestones` to the localStorage save/restore:
-- Milestones have `id`, `title`, `description`, `targetDate`, `status` properties  
-- Store the array as JSON
-
----
-
-## Technical Changes
-
-### Update Save Effect (lines 71-84)
-```typescript
-useEffect(() => {
-  const formData = {
-    projectName,
-    description,
-    category,
-    websiteUrl,
-    programId,
-    githubOrgUrl,
-    discordUrl,
-    telegramUrl,
-    currentStep,           // ADD
-    mediaAssets,           // ADD
-    milestones,            // ADD
-  };
-  localStorage.setItem('claimFormProgress', JSON.stringify(formData));
-}, [projectName, description, category, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones]);
+## Problem Identified
+The `github-oauth-callback` edge function is failing with error:
+```
+invalid input syntax for type uuid: "profile_1770362052773_219320147"
 ```
 
-### Update Restore Effect (lines 86-104)
-```typescript
-useEffect(() => {
-  const saved = localStorage.getItem('claimFormProgress');
-  if (saved) {
-    try {
-      const data = JSON.parse(saved);
-      if (data.projectName) setProjectName(data.projectName);
-      if (data.description) setDescription(data.description);
-      if (data.category) setCategory(data.category);
-      if (data.websiteUrl) setWebsiteUrl(data.websiteUrl);
-      if (data.programId) setProgramId(data.programId);
-      if (data.githubOrgUrl) setGithubOrgUrl(data.githubOrgUrl);
-      if (data.discordUrl) setDiscordUrl(data.discordUrl);
-      if (data.telegramUrl) setTelegramUrl(data.telegramUrl);
-      if (data.mediaAssets) setMediaAssets(data.mediaAssets);      // ADD
-      if (data.milestones) setMilestones(data.milestones);          // ADD
-      // Step is handled by initialization
-    } catch (e) {
-      // Invalid JSON, ignore
-    }
-  }
-}, []);
-```
+**Root Cause:** The `claimed_profiles.id` column is defined as `UUID` type in the database, but the edge function generates a string ID like `profile_${Date.now()}_${githubUser.id}` which is not a valid UUID.
 
-### Update Step Initialization (line 32)
+**Line 298** in the edge function:
 ```typescript
-const [currentStep, setCurrentStep] = useState(() => {
-  const storedUser = localStorage.getItem('x_user');
-  if (!storedUser) return 1;
-  
-  // Check for saved progress
-  const saved = localStorage.getItem('claimFormProgress');
-  if (saved) {
-    try {
-      const data = JSON.parse(saved);
-      if (data.currentStep && data.currentStep >= 2 && data.currentStep <= 5) {
-        return data.currentStep;
-      }
-    } catch (e) {}
-  }
-  return 2;
-});
+const profileId = profile_data?.id || `profile_${Date.now()}_${githubUser.id}`;
 ```
 
 ---
 
-## Bonus: Add Visual Feedback
+## Solution
 
-Add a subtle toast or indicator when form auto-saves:
+Change the ID generation to use a proper UUID format using `crypto.randomUUID()` which is available in Deno:
+
+**File:** `supabase/functions/github-oauth-callback/index.ts`
+
+### Change at Line 298
+
+**Before:**
 ```typescript
-// Optional: Show "Saved" indicator briefly
-<span className="text-xs text-muted-foreground animate-pulse">Auto-saved</span>
+const profileId = profile_data?.id || `profile_${Date.now()}_${githubUser.id}`;
 ```
+
+**After:**
+```typescript
+const profileId = profile_data?.id || crypto.randomUUID();
+```
+
+This ensures a valid UUID is generated when no profile ID is provided, matching the database column type.
 
 ---
 
-## Files Modified
+## Why This Works
 
-| File | Changes |
-|------|---------|
-| `src/pages/ClaimProfile.tsx` | Add currentStep, mediaAssets, and milestones to persistence |
+- `crypto.randomUUID()` is a built-in Deno/Web API that generates RFC 4122 compliant UUIDs
+- Example output: `"550e8400-e29b-41d4-a716-446655440000"`
+- This format is compatible with PostgreSQL's `uuid` type
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `supabase/functions/github-oauth-callback/index.ts` | Use `crypto.randomUUID()` instead of string concatenation for profile ID |
+
+---
+
+## After the Fix
+
+Once deployed, the GitHub OAuth flow will:
+1. Exchange the authorization code for an access token
+2. Fetch GitHub user profile and repository data
+3. Calculate resilience score
+4. Successfully insert into `claimed_profiles` with a valid UUID
+5. Redirect to the profile page with "Verified Titan" status
 
