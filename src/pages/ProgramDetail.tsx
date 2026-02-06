@@ -1,7 +1,7 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, CheckCircle, AlertCircle, ExternalLink, Github, MessageCircle, Send, Calendar, Lock, AlertTriangle, Loader2 } from 'lucide-react';
+import { ArrowLeft, CheckCircle, ExternalLink, Calendar, Lock, AlertTriangle } from 'lucide-react';
 import { Layout } from '@/components/layout';
-import { ProgramHeader, UpgradeChart, RecentEvents, MetricCards } from '@/components/program';
+import { ProgramHeader, UpgradeChart, RecentEvents, MetricCards, DescriptionSection, SocialPulseSection } from '@/components/program';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -158,38 +158,22 @@ const ProgramDetail = () => {
 
           {/* Description */}
           {displayDescription && (
-            <div className="mb-6">
-              <Card className="border-border bg-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="font-display text-sm uppercase tracking-wider text-muted-foreground">
-                    About
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-foreground">
-                    {displayDescription}
-                  </p>
-                  {claimedProfile?.category && (
-                    <Badge variant="outline" className="mt-2">
-                      {getCategoryLabel(claimedProfile.category)}
-                    </Badge>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            <DescriptionSection 
+              description={displayDescription} 
+              category={claimedProfile?.category}
+              getCategoryLabel={getCategoryLabel}
+            />
           )}
 
-          {/* Upgrade Chart + Recent Events - only show if we have a project in the projects table */}
-          {project && (
-            <div className="mb-6 grid gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-2">
-                <UpgradeChart projectId={project.id} />
-              </div>
-              <div>
-                <RecentEvents projectId={project.id} />
-              </div>
+          {/* Upgrade Chart + Recent Events - always show, empty states handled by components */}
+          <div className="mb-6 grid gap-6 lg:grid-cols-3">
+            <div className="lg:col-span-2">
+              <UpgradeChart projectId={project?.id || claimedProfile?.id || ''} />
             </div>
-          )}
+            <div>
+              <RecentEvents projectId={project?.id || claimedProfile?.id || ''} />
+            </div>
+          </div>
 
           {/* Metric Cards */}
           <div className="mb-6">
@@ -341,63 +325,15 @@ const ProgramDetail = () => {
               )}
 
               {/* Social Pulse */}
-              <Card className="border-border bg-card">
-                <CardHeader className="pb-2">
-                  <CardTitle className="font-display text-sm uppercase tracking-wider text-muted-foreground">
-                    Social Pulse
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {claimedProfile.xUsername && (
-                    <a
-                      href={`https://x.com/${claimedProfile.xUsername}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-sm border border-border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50"
-                    >
-                      <span className="text-lg font-bold">𝕏</span>
-                      <span className="text-sm">@{claimedProfile.xUsername}</span>
-                      <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
-                    </a>
-                  )}
-                  {claimedProfile.socials?.discordUrl && (
-                    <a
-                      href={claimedProfile.socials.discordUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-sm border border-border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50"
-                    >
-                      <MessageCircle className="h-5 w-5 text-[#5865F2]" />
-                      <span className="text-sm">Discord</span>
-                      <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
-                    </a>
-                  )}
-                  {claimedProfile.socials?.telegramUrl && (
-                    <a
-                      href={claimedProfile.socials.telegramUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-sm border border-border bg-muted/30 px-4 py-3 transition-colors hover:bg-muted/50"
-                    >
-                      <Send className="h-5 w-5 text-[#0088cc]" />
-                      <span className="text-sm">Telegram</span>
-                      <ExternalLink className="ml-auto h-4 w-4 text-muted-foreground" />
-                    </a>
-                  )}
-                  {displayGithubUrl && (
-                    <a
-                      href={displayGithubUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 rounded-sm border border-primary/30 bg-primary/10 px-4 py-3 transition-colors hover:bg-primary/20"
-                    >
-                      <Github className="h-5 w-5 text-primary" />
-                      <span className="text-sm font-medium text-primary">GitHub Connected</span>
-                      <ExternalLink className="ml-auto h-4 w-4 text-primary" />
-                    </a>
-                  )}
-                </CardContent>
-              </Card>
+              <SocialPulseSection 
+                programId={displayProgramId}
+                websiteUrl={displayWebsiteUrl}
+                xUsername={claimedProfile.xUsername}
+                discordUrl={claimedProfile.socials?.discordUrl}
+                telegramUrl={claimedProfile.socials?.telegramUrl}
+                githubUrl={displayGithubUrl}
+                isVerified={isVerified}
+              />
             </div>
           )}
 
