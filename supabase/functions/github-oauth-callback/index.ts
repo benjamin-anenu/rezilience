@@ -295,7 +295,7 @@ Deno.serve(async (req) => {
     }
 
     // Step 5: Create or update claimed_profile
-    const profileId = profile_data?.id || `profile_${Date.now()}_${githubUser.id}`;
+    const profileId = profile_data?.id || crypto.randomUUID();
     
     const claimedProfile = {
       id: profileId,
