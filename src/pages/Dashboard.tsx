@@ -66,10 +66,10 @@ const Dashboard = () => {
           <div className="mb-10 flex items-center justify-between">
             <div>
               <h1 className="mb-2 font-display text-3xl font-bold uppercase tracking-tight text-foreground">
-                YOUR PROTOCOLS
+                BUILDER DASHBOARD
               </h1>
               <p className="text-muted-foreground">
-                Manage your verified projects and monitor Resilience Scores
+                Manage your registered protocols and monitor Resilience Scores
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -96,13 +96,13 @@ const Dashboard = () => {
             <Button asChild className="font-display font-semibold uppercase tracking-wider">
               <Link to="/claim-profile">
                 <Plus className="mr-2 h-4 w-4" />
-                CLAIM NEW PROTOCOL
+                REGISTER PROTOCOL
               </Link>
             </Button>
             <Button variant="outline" asChild className="font-display font-semibold uppercase tracking-wider">
               <Link to="/explorer">
                 <Compass className="mr-2 h-4 w-4" />
-                EXPLORE PROJECTS
+                EXPLORE REGISTRY
               </Link>
             </Button>
           </div>
@@ -112,13 +112,13 @@ const Dashboard = () => {
             <Card className="border-border bg-card">
               <CardContent className="py-12 text-center">
                 <p className="mb-2 font-display text-lg uppercase tracking-tight text-muted-foreground">
-                  No Verified Projects
+                  No Registered Protocols
                 </p>
                 <p className="mb-6 text-sm text-muted-foreground">
-                  Claim your first protocol to get started
+                  Register your first protocol to get started
                 </p>
                 <Button asChild className="font-display font-semibold uppercase tracking-wider">
-                  <Link to="/claim-profile">CLAIM NOW</Link>
+                  <Link to="/claim-profile">REGISTER NOW</Link>
                 </Button>
               </CardContent>
             </Card>

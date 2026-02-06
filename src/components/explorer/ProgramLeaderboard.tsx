@@ -12,10 +12,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { DBProject, LivenessStatus } from '@/types/database';
+import type { ExplorerProject } from '@/hooks/useExplorerProjects';
+import type { LivenessStatus } from '@/types/database';
 
 interface ProgramLeaderboardProps {
-  projects: DBProject[];
+  projects: ExplorerProject[];
 }
 
 export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
@@ -81,6 +82,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
   };
 
   const truncateProgramId = (id: string) => {
+    if (!id || id.length < 8) return id || '—';
     return `${id.slice(0, 4)}...${id.slice(-4)}`;
   };
 
@@ -93,19 +95,24 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
     });
   };
 
+  const handleRowClick = (project: ExplorerProject) => {
+    // All explorer entries are registered protocols, navigate to profile view
+    navigate(`/profile/${project.id}`);
+  };
+
   return (
     <div className="rounded-sm border border-border">
       <Table className="data-table">
         <TableHeader>
           <TableRow className="border-border hover:bg-transparent">
             <TableHead className="w-16">RANK</TableHead>
-            <TableHead>PROGRAM</TableHead>
+            <TableHead>PROTOCOL</TableHead>
             <TableHead className="hidden lg:table-cell">PROGRAM ID</TableHead>
             <TableHead className="text-right">SCORE</TableHead>
             <TableHead className="hidden md:table-cell">LIVENESS</TableHead>
-            <TableHead className="hidden lg:table-cell">ORIGINALITY</TableHead>
+            <TableHead className="hidden lg:table-cell">STATUS</TableHead>
             <TableHead className="hidden md:table-cell text-right">STAKED</TableHead>
-            <TableHead className="hidden lg:table-cell">LAST COMMIT</TableHead>
+            <TableHead className="hidden lg:table-cell">LAST ACTIVITY</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -113,7 +120,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
             <TableRow
               key={project.id}
               className="cursor-pointer border-border transition-colors hover:bg-muted/50"
-              onClick={() => navigate(`/program/${project.program_id}`)}
+              onClick={() => handleRowClick(project)}
             >
               <TableCell className="font-mono text-muted-foreground">
                 #{index + 1}
@@ -132,7 +139,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
                         <ShieldCheck className="h-4 w-4 text-primary" />
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Verified Project</p>
+                        <p>Verified Protocol</p>
                       </TooltipContent>
                     </Tooltip>
                   )}
@@ -143,14 +150,16 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
                   <code className="font-mono text-xs text-muted-foreground">
                     {truncateProgramId(project.program_id)}
                   </code>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6"
-                    onClick={(e) => copyToClipboard(project.program_id, e)}
-                  >
-                    <Copy className="h-3 w-3" />
-                  </Button>
+                  {project.program_id && project.program_id !== project.id && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      onClick={(e) => copyToClipboard(project.program_id, e)}
+                    >
+                      <Copy className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </TableCell>
               <TableCell className="text-right">

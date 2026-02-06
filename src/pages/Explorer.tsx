@@ -1,18 +1,15 @@
 import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout';
 import { EcosystemStats, SearchBar, ProgramLeaderboard } from '@/components/explorer';
-import { useProjects } from '@/hooks/useProjects';
+import { useExplorerProjects } from '@/hooks/useExplorerProjects';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
 
 const Explorer = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [verificationFilter, setVerificationFilter] = useState('all');
 
-  const { data: projects, isLoading, error } = useProjects();
+  const { data: projects, isLoading, error } = useExplorerProjects();
 
   const filteredPrograms = useMemo(() => {
     if (!projects) return [];
@@ -40,21 +37,15 @@ const Explorer = () => {
       <div className="py-8">
         <div className="container mx-auto px-4 lg:px-8">
           {/* Header */}
-          <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mb-8">
             <div>
               <h1 className="mb-2 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
-                PROGRAM EXPLORER
+                RESILIENCE REGISTRY
               </h1>
               <p className="text-muted-foreground">
-                Browse and analyze trust metrics for Solana programs across the ecosystem.
+                Browse verified protocols and their trust metrics across the Solana ecosystem.
               </p>
             </div>
-            <Button asChild className="font-display uppercase tracking-wider">
-              <Link to="/submit">
-                <Plus className="mr-2 h-4 w-4" />
-                Submit Project
-              </Link>
-            </Button>
           </div>
 
           {/* Ecosystem Stats */}
@@ -80,7 +71,7 @@ const Explorer = () => {
               <Skeleton className="h-5 w-32" />
             ) : (
               <p className="text-sm text-muted-foreground">
-                Showing <span className="font-mono text-foreground">{filteredPrograms.length}</span> programs
+                Showing <span className="font-mono text-foreground">{filteredPrograms.length}</span> registered protocols
               </p>
             )}
           </div>
@@ -108,21 +99,13 @@ const Explorer = () => {
             <div className="rounded-sm border border-border bg-card p-12 text-center">
               <div className="mx-auto max-w-md">
                 <h3 className="mb-2 font-display text-lg font-semibold uppercase text-foreground">
-                  {searchQuery || statusFilter !== 'all' ? 'No Matches Found' : 'No Programs Yet'}
+                  {searchQuery || statusFilter !== 'all' ? 'No Matches Found' : 'No Registered Protocols Yet'}
                 </h3>
-                <p className="mb-6 text-muted-foreground">
+                <p className="text-muted-foreground">
                   {searchQuery || statusFilter !== 'all'
-                    ? 'No programs match your search criteria. Try adjusting your filters.'
-                    : 'Be the first to add a Solana program to the Resilience Registry.'}
+                    ? 'No protocols match your search criteria. Try adjusting your filters.'
+                    : 'Be among the first builders to register your protocol in the Resilience Registry.'}
                 </p>
-                {!searchQuery && statusFilter === 'all' && (
-                  <Button asChild>
-                    <Link to="/submit">
-                      <Plus className="mr-2 h-4 w-4" />
-                      Submit a Project
-                    </Link>
-                  </Button>
-                )}
               </div>
             </div>
           )}

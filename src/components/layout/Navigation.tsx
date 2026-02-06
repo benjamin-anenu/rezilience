@@ -69,7 +69,7 @@ export function Navigation() {
                     : 'text-muted-foreground'
                 )}
               >
-                DASHBOARD
+                MY REGISTRY
               </Link>
             )}
           </div>
@@ -164,7 +164,7 @@ export function Navigation() {
                   )}
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  DASHBOARD
+                  MY REGISTRY
                 </Link>
               )}
               <div className="pt-2">
