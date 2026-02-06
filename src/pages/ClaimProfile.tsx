@@ -29,7 +29,11 @@ const ClaimProfile = () => {
   const isGitHubConfigured = !!import.meta.env.VITE_GITHUB_CLIENT_ID;
 
   // Current step (1-5)
-  const [currentStep, setCurrentStep] = useState(1);
+  // Initialize step based on auth state to avoid flash
+  const [currentStep, setCurrentStep] = useState(() => {
+    const storedUser = localStorage.getItem('x_user');
+    return storedUser ? 2 : 1;
+  });
 
   // Step 2: Core Identity
   const [projectName, setProjectName] = useState('');
@@ -55,12 +59,49 @@ const ClaimProfile = () => {
   // Project lookup hook
   const { data: existingProject, refetch: refetchProject } = useProject(programId);
 
-  // Update step 1 when authenticated
+  // Sync step with auth state
   useEffect(() => {
     if (isAuthenticated && currentStep === 1) {
       setCurrentStep(2);
+    } else if (!isAuthenticated && currentStep > 1) {
+      setCurrentStep(1);
     }
   }, [isAuthenticated, currentStep]);
+
+  // Persist form state to localStorage to survive wallet redirects
+  useEffect(() => {
+    const formData = {
+      projectName,
+      description,
+      category,
+      websiteUrl,
+      programId,
+      githubOrgUrl,
+      discordUrl,
+      telegramUrl,
+    };
+    localStorage.setItem('claimFormProgress', JSON.stringify(formData));
+  }, [projectName, description, category, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl]);
+
+  // Restore form state on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('claimFormProgress');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.projectName) setProjectName(data.projectName);
+        if (data.description) setDescription(data.description);
+        if (data.category) setCategory(data.category);
+        if (data.websiteUrl) setWebsiteUrl(data.websiteUrl);
+        if (data.programId) setProgramId(data.programId);
+        if (data.githubOrgUrl) setGithubOrgUrl(data.githubOrgUrl);
+        if (data.discordUrl) setDiscordUrl(data.discordUrl);
+        if (data.telegramUrl) setTelegramUrl(data.telegramUrl);
+      } catch (e) {
+        // Invalid JSON, ignore
+      }
+    }
+  }, []);
 
   // Wallet address is included in claimingProfile object during GitHub OAuth redirect
   // No separate localStorage needed here
@@ -70,7 +111,7 @@ const ClaimProfile = () => {
     { number: 2, label: 'Identity', isComplete: currentStep > 2, isCurrent: currentStep === 2 },
     { number: 3, label: 'Socials', isComplete: currentStep > 3, isCurrent: currentStep === 3 },
     { number: 4, label: 'Media', isComplete: currentStep > 4, isCurrent: currentStep === 4 },
-    { number: 5, label: 'Roadmap', isComplete: false, isCurrent: currentStep === 5 },
+    { number: 5, label: 'Roadmap', isComplete: currentStep === 5 && milestones.length > 0, isCurrent: currentStep === 5 },
   ];
 
   const handleVerifyProgram = async () => {
@@ -334,9 +375,14 @@ const ClaimProfile = () => {
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {!connected ? (
-                        <div className="flex justify-center">
-                          <WalletMultiButton className="!bg-muted !text-foreground hover:!bg-muted/80 !font-display !text-xs !uppercase !tracking-wider !rounded-md !h-9" />
-                        </div>
+                        <>
+                          <div className="flex justify-center">
+                            <WalletMultiButton className="!bg-muted !text-foreground hover:!bg-muted/80 !font-display !text-xs !uppercase !tracking-wider !rounded-md !h-9" />
+                          </div>
+                          <p className="text-[10px] text-muted-foreground text-center">
+                            Your form data is auto-saved.
+                          </p>
+                        </>
                       ) : (
                         <div className="flex items-center gap-2 text-xs text-primary">
                           <CheckCircle className="h-4 w-4" />
