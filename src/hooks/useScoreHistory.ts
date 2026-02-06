@@ -49,8 +49,14 @@ export function useScoreHistoryChart(projectId: string) {
       };
     });
 
+  // Get the most recent snapshot date for "last synced" indicator
+  const lastSyncedAt = history && history.length > 0 
+    ? history[0].snapshot_date 
+    : null;
+
   return {
     data: chartData,
+    lastSyncedAt,
     ...rest,
   };
 }
