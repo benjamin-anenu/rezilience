@@ -89,21 +89,24 @@ const GitHubCallback = () => {
         setCurrentStep('Calculating Resilience Score...');
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Clean up temp storage
+        // Clean up temp storage but keep form progress
         localStorage.removeItem('claimingProgramId');
         localStorage.removeItem('claimingProgramDbId');
         localStorage.removeItem('claimingWalletAddress');
         localStorage.removeItem('claimingXUserId');
         localStorage.removeItem('claimingXUsername');
         localStorage.removeItem('claimingProfile');
+        
+        // Store verified profile ID for final navigation
+        localStorage.setItem('verifiedProfileId', data.profile?.id || '');
 
         setProfileData(data.profile);
         setStatus('success');
         setCurrentStep('Verification complete!');
 
-        // Redirect after brief success message
+        // Redirect back to claim flow at Step 4 (Media) to complete onboarding
         setTimeout(() => {
-          navigate(`/profile/${data.profile?.id}?verified=true`);
+          navigate('/claim-profile?step=4&verified=true');
         }, 2000);
 
       } catch (err) {

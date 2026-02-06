@@ -199,28 +199,38 @@ Deno.serve(async (req) => {
       livenessStatus = calculateLivenessStatus(daysSinceCommit);
 
       // Get commit velocity (simplified - last 4 weeks average)
+      // GitHub Stats API returns 202 while computing, so retry up to 3 times
       let commitVelocity = 0;
       try {
         const parsed = parseGitHubUrl(primaryRepo.html_url);
         if (parsed) {
-          const activityRes = await fetch(
-            `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/stats/commit_activity`,
-            {
-              headers: {
-                Authorization: `Bearer ${accessToken}`,
-                Accept: "application/vnd.github.v3+json",
-                "User-Agent": "Resilience-Platform",
-              },
+          let activityData: { total: number }[] = [];
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const activityRes = await fetch(
+              `https://api.github.com/repos/${parsed.owner}/${parsed.repo}/stats/commit_activity`,
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  Accept: "application/vnd.github.v3+json",
+                  "User-Agent": "Resilience-Platform",
+                },
+              }
+            );
+            if (activityRes.status === 200) {
+              activityData = await activityRes.json();
+              break;
+            } else if (activityRes.status === 202) {
+              // Stats being computed, wait and retry
+              await new Promise(r => setTimeout(r, 1000));
+            } else {
+              break;
             }
-          );
-          if (activityRes.ok) {
-            const activityData = await activityRes.json();
-            if (Array.isArray(activityData) && activityData.length >= 4) {
-              const recentWeeks = activityData.slice(-4);
-              commitVelocity = Math.round(
-                (recentWeeks.reduce((sum: number, w: { total: number }) => sum + w.total, 0) / 4) * 10
-              ) / 10;
-            }
+          }
+          if (Array.isArray(activityData) && activityData.length >= 4) {
+            const recentWeeks = activityData.slice(-4);
+            commitVelocity = Math.round(
+              (recentWeeks.reduce((sum: number, w: { total: number }) => sum + w.total, 0) / 4) * 10
+            ) / 10;
           }
         }
       } catch { /* ignore */ }
@@ -319,6 +329,8 @@ Deno.serve(async (req) => {
       milestones: profile_data?.milestones || [],
       verified: true,
       verified_at: new Date().toISOString(),
+      resilience_score: resilienceScore,
+      liveness_status: livenessStatus,
     };
 
     const { data: savedProfile, error: saveError } = await supabase
