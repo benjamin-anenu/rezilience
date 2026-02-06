@@ -1,26 +1,23 @@
 
-
-# GitHub Repository Submission & Enhanced Dashboard Implementation
+# Enhanced Program Detail Page with Public GitHub Analytics & Chart Switcher
 
 ## Overview
 
-This plan implements a dual-path GitHub integration for the "Join the Registry" onboarding flow:
-1. **Primary Path**: Submit a GitHub repository URL (no OAuth required) - validates and fetches all metrics via public API
-2. **Secondary Path**: Connect GitHub account via OAuth (existing flow) - provides private repo access
+This plan adds two key features to the Program Detail page (Explorer → project details):
 
-Additionally, auto-populates form fields from GitHub data and creates a rich dashboard view showing detailed GitHub analytics for project owners.
+1. **Public GitHub Analytics Display** - Show the same rich GitHub data from the owner dashboard to all public visitors
+2. **Chart Type Switcher** - Allow users to toggle between different chart visualizations (Score History, Contributors Breakdown, Activity Heatmap)
 
 ---
 
 ## Current State
 
-| Component | Status |
-|-----------|--------|
-| GitHub OAuth flow | Working - exchanges code, fetches metrics, stores token |
-| `fetch-github` edge function | Working - updates scores for existing projects |
-| `SocialsForm.tsx` | Single path - only OAuth connect button |
-| `claimed_profiles` table | Has columns for GitHub data but limited fields |
-| Dashboard/Profile pages | Shows basic score, missing detailed GitHub stats |
+| Feature | Status |
+|---------|--------|
+| `GitHubAnalyticsCard` | Exists in `src/components/dashboard/` - only shown to owners |
+| `UpgradeChart` | Shows Score + Velocity as ComposedChart (bar + line) |
+| Public Program Detail | Missing GitHub metrics (stars, forks, contributors, commits) |
+| Chart options | Single static view, no switcher |
 
 ---
 
@@ -28,40 +25,33 @@ Additionally, auto-populates form fields from GitHub data and creates a rich das
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                        ONBOARDING STEP 3: GITHUB                            │
+│                        PROGRAM DETAIL PAGE                                  │
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                             │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                    OPTION A: SUBMIT REPO URL                          │  │
-│  │                      (PRIMARY - RECOMMENDED)                          │  │
-│  │                                                                       │  │
-│  │  [https://github.com/solana-labs/solana________________] [ANALYZE]   │  │
-│  │                                                                       │  │
-│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░  Analyzing...                    │  │
-│  │  ✓ Repository validated                                               │  │
-│  │  ✓ Fetching commits...                                                │  │
-│  │  ✓ Counting contributors...                                           │  │
-│  │  ✓ Calculating score...                                               │  │
-│  │                                                                       │  │
-│  │  ┌───────────────────────────────────────────────────────────────┐   │  │
-│  │  │  ANALYSIS RESULT                                               │   │  │
-│  │  │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │   │  │
-│  │  │  Score: 87/100          Status: ACTIVE                         │   │  │
-│  │  │  Stars: 14,239          Forks: 4,123                          │   │  │
-│  │  │  Contributors: 156      Commits (30d): 234                     │   │  │
-│  │  │  Language: Rust         Last Push: 2 hours ago                 │   │  │
-│  │  └───────────────────────────────────────────────────────────────┘   │  │
+│  │                     PUBLIC GITHUB METRICS                             │  │
+│  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐   │  │
+│  │  │ 14.2k  │ │  4.1k  │ │  156   │ │  234   │ │   3    │ │  Rust  │   │  │
+│  │  │ Stars  │ │ Forks  │ │Contrib.│ │Commits │ │Releases│ │Language│   │  │
+│  │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘   │  │
 │  └───────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
-│                            ─── OR ───                                       │
-│                                                                             │
 │  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                    OPTION B: CONNECT GITHUB                           │  │
-│  │                  (For Private Repos & Better Rate Limits)             │  │
+│  │  ANALYTICS                                                            │  │
+│  │  ┌────────────────────────────────────────────────────────────────┐   │  │
+│  │  │ [Score History] [Contributors] [Activity] [Releases]           │   │  │
+│  │  └────────────────────────────────────────────────────────────────┘   │  │
 │  │                                                                       │  │
-│  │  [🔒 CONNECT GITHUB ACCOUNT]                                          │  │
-│  │                                                                       │  │
-│  │  "Grants read access to private repositories for enhanced metrics"   │  │
+│  │  ┌────────────────────────────────────────────────────────────────┐   │  │
+│  │  │                                                                │   │  │
+│  │  │              [SELECTED CHART VISUALIZATION]                    │   │  │
+│  │  │                                                                │   │  │
+│  │  │    - Score History: Line + Bar (existing)                      │   │  │
+│  │  │    - Contributors: Pie Chart with top 5                        │   │  │
+│  │  │    - Activity: Stacked Area by event type                      │   │  │
+│  │  │    - Releases: Timeline bar chart                              │   │  │
+│  │  │                                                                │   │  │
+│  │  └────────────────────────────────────────────────────────────────┘   │  │
 │  └───────────────────────────────────────────────────────────────────────┘  │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
@@ -71,189 +61,68 @@ Additionally, auto-populates form fields from GitHub data and creates a rich das
 
 ## Implementation Plan
 
-### Phase 1: New Edge Function - `analyze-github-repo`
+### Phase 1: Public GitHub Metrics Bar Component
 
-Create a new edge function that analyzes a GitHub repository URL without requiring OAuth:
+Create a new component `PublicGitHubMetrics.tsx` that displays key stats in a horizontal bar:
 
-**Endpoint**: `POST /functions/v1/analyze-github-repo`
+**New Component**: `src/components/program/PublicGitHubMetrics.tsx`
 
-**Request Body**:
-```json
-{
-  "github_url": "https://github.com/solana-labs/solana"
-}
-```
+| Metric | Icon | Data Source |
+|--------|------|-------------|
+| Stars | Star | `github_stars` |
+| Forks | GitFork | `github_forks` |
+| Contributors | Users | `github_contributors` |
+| Commits (30d) | Activity | `github_commits_30d` |
+| Releases (30d) | Package | `github_releases_30d` |
+| Language | Code | `github_language` |
 
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "name": "solana",
-    "fullName": "solana-labs/solana",
-    "description": "Web-Scale Blockchain for fast, secure...",
-    "htmlUrl": "https://github.com/solana-labs/solana",
-    "homepage": "https://solana.com",
-    "language": "Rust",
-    "stars": 14239,
-    "forks": 4123,
-    "contributors": 156,
-    "openIssues": 892,
-    "createdAt": "2017-11-16T19:01:44Z",
-    "pushedAt": "2026-02-05T12:34:56Z",
-    "isFork": false,
-    "topics": ["blockchain", "solana", "cryptocurrency"],
-    "commitVelocity": 8.5,
-    "commitsLast30Days": 234,
-    "releasesLast30Days": 3,
-    "latestRelease": { "tag": "v1.18.5", "date": "2026-02-01T10:30:00Z" },
-    "topContributors": [
-      { "login": "alice-dev", "contributions": 234, "avatar": "..." },
-      { "login": "bob-dev", "contributions": 156, "avatar": "..." }
-    ],
-    "recentEvents": [
-      { "type": "PushEvent", "actor": "alice-dev", "date": "2026-02-05T10:30:00Z" }
-    ],
-    "resilienceScore": 87.5,
-    "livenessStatus": "ACTIVE",
-    "daysSinceLastCommit": 0
-  }
-}
-```
-
-**APIs Called**:
-1. `GET /repos/{owner}/{repo}` - Basic repo info
-2. `GET /repos/{owner}/{repo}/commits` - Commit history (last 30 days)
-3. `GET /repos/{owner}/{repo}/contributors` - Contributor list (top 10)
-4. `GET /repos/{owner}/{repo}/releases` - Release history
-5. `GET /repos/{owner}/{repo}/stats/commit_activity` - Weekly commit stats
-6. `GET /repos/{owner}/{repo}/events` - Recent activity (last 10)
+This component will:
+- Accept `ClaimedProfile['githubAnalytics']` as props
+- Display metrics in a responsive 6-column grid (stacks to 3x2 on mobile)
+- Show "—" for missing data
+- Include GitHub link icon with external link to repository
 
 ---
 
-### Phase 2: Database Schema Updates
+### Phase 2: Multi-Chart Component with Tabs
 
-Add new columns to `claimed_profiles` table to store extended GitHub analytics:
+Create an enhanced analytics section with chart type switching:
 
-```sql
-ALTER TABLE claimed_profiles
-ADD COLUMN IF NOT EXISTS github_stars integer DEFAULT 0,
-ADD COLUMN IF NOT EXISTS github_forks integer DEFAULT 0,
-ADD COLUMN IF NOT EXISTS github_contributors integer DEFAULT 0,
-ADD COLUMN IF NOT EXISTS github_language varchar,
-ADD COLUMN IF NOT EXISTS github_last_commit timestamptz,
-ADD COLUMN IF NOT EXISTS github_commit_velocity numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS github_commits_30d integer DEFAULT 0,
-ADD COLUMN IF NOT EXISTS github_releases_30d integer DEFAULT 0,
-ADD COLUMN IF NOT EXISTS github_open_issues integer DEFAULT 0,
-ADD COLUMN IF NOT EXISTS github_topics jsonb DEFAULT '[]',
-ADD COLUMN IF NOT EXISTS github_top_contributors jsonb DEFAULT '[]',
-ADD COLUMN IF NOT EXISTS github_recent_events jsonb DEFAULT '[]',
-ADD COLUMN IF NOT EXISTS github_is_fork boolean DEFAULT false,
-ADD COLUMN IF NOT EXISTS github_homepage varchar;
-```
+**New Component**: `src/components/program/AnalyticsCharts.tsx`
 
----
+**Chart Types**:
 
-### Phase 3: Updated SocialsForm Component
+1. **Score History** (default) - Existing ComposedChart (bar + line)
+   - X-axis: Months
+   - Left Y-axis: Commit velocity (bars)
+   - Right Y-axis: Resilience score (line)
 
-Replace the current single-path GitHub integration with a dual-option interface:
+2. **Contributors** - Pie Chart
+   - Shows top 5 contributors by commit count
+   - Data from `github_top_contributors`
+   - Legend with percentages
 
-**New Component Structure**:
+3. **Activity** - Stacked Area Chart
+   - Shows event distribution over time
+   - Event types: PushEvent, IssuesEvent, PullRequestEvent, ReleaseEvent
+   - Data from `github_recent_events`
 
-```text
-src/components/claim/
-├── SocialsForm.tsx          (Updated - orchestrates both paths)
-├── GitHubUrlAnalyzer.tsx    (New - handles URL submission + analysis UI)
-├── GitHubConnectButton.tsx  (New - OAuth connect with explanation)
-└── GitHubAnalysisResult.tsx (New - displays analysis results)
-```
+4. **Releases** - Bar Chart
+   - Shows release frequency over last 6 months
+   - Data derived from score_history or releases data
 
-**Key Features**:
-- Premium Bloomberg Terminal aesthetic with analysis progress steps
-- Real-time progress indicators during API fetching
-- Auto-populate project name & description if not already set
-- Display comprehensive analysis results before proceeding
+**UI Pattern**: Use `Tabs` component from shadcn/ui for switching
 
 ---
 
-### Phase 4: Auto-Population Logic
+### Phase 3: Update ProgramDetail Page
 
-When GitHub data is fetched, automatically populate these form fields if empty:
+Modify `src/pages/ProgramDetail.tsx` to:
 
-| GitHub Field | Form Field |
-|--------------|------------|
-| `name` or `full_name` | `projectName` (if empty) |
-| `description` | `description` (if empty) |
-| `homepage` | `websiteUrl` (if empty) |
-| `language` → category mapping | `category` (if empty) |
-| `topics` | Suggest category |
-
-**Language to Category Mapping**:
-```javascript
-const languageCategoryMap = {
-  'Rust': 'infrastructure',
-  'Solidity': 'defi',
-  'TypeScript': 'developer-tools',
-  'JavaScript': 'developer-tools',
-  'Python': 'developer-tools',
-  'Move': 'infrastructure',
-  // Default: 'other'
-};
-```
-
----
-
-### Phase 5: Enhanced Dashboard - GitHub Analytics View
-
-When a project owner clicks on their project in the Dashboard, show comprehensive GitHub analytics:
-
-**New Component**: `src/components/dashboard/GitHubAnalyticsCard.tsx`
-
-```text
-┌─────────────────────────────────────────────────────────────────────┐
-│ GITHUB ANALYTICS                                    [↻ Refresh]     │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                     │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────┐│
-│  │    14,239    │  │    4,123     │  │     156      │  │   234    ││
-│  │    Stars     │  │    Forks     │  │ Contributors │  │ Commits  ││
-│  │              │  │              │  │              │  │  (30d)   ││
-│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────┘│
-│                                                                     │
-│  COMMIT VELOCITY                                                    │
-│  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░  8.5 commits/week                  │
-│                                                                     │
-│  TOP CONTRIBUTORS                                                   │
-│  ┌─────────────────────────────────────────────────────────────────┐│
-│  │ 🥇 @alice-dev     234 commits  ████████████████████             ││
-│  │ 🥈 @bob-dev       156 commits  █████████████                    ││
-│  │ 🥉 @charlie-dev    89 commits  ███████                          ││
-│  └─────────────────────────────────────────────────────────────────┘│
-│                                                                     │
-│  RECENT ACTIVITY                                                    │
-│  ┌─────────────────────────────────────────────────────────────────┐│
-│  │ ● PushEvent     @alice-dev      "Fix: reduce RPC latency"   2h  ││
-│  │ ● IssuesEvent   @bob-dev        Opened #1234                5h  ││
-│  │ ● PushEvent     @charlie-dev    "Feature: validator..."    12h  ││
-│  └─────────────────────────────────────────────────────────────────┘│
-│                                                                     │
-│  RELEASES (Last 30 Days)                                            │
-│  v1.18.5 (Feb 1)  •  v1.18.4 (Jan 25)  •  v1.18.3 (Jan 15)        │
-│                                                                     │
-│  Last synced: 2 hours ago                                           │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-### Phase 6: Profile Detail Page Enhancements
-
-Extend `ProfileDetail.tsx` and `ProgramDetail.tsx` to show GitHub analytics to owners:
-
-**Owner Detection**: Check if `user.id === profile.xUserId`
-
-**Owner-Only Section**: "GitHub Insights" card visible only to the profile owner
+1. Add `PublicGitHubMetrics` component after the description section
+2. Replace current `UpgradeChart` with new `AnalyticsCharts` component
+3. Pass `claimedProfile?.githubAnalytics` to new components
+4. Show empty states when no GitHub data is available
 
 ---
 
@@ -261,118 +130,117 @@ Extend `ProfileDetail.tsx` and `ProgramDetail.tsx` to show GitHub analytics to o
 
 | File | Purpose |
 |------|---------|
-| `supabase/functions/analyze-github-repo/index.ts` | Edge function for public repo analysis |
-| `src/components/claim/GitHubUrlAnalyzer.tsx` | URL input + analysis UI with progress steps |
-| `src/components/claim/GitHubAnalysisResult.tsx` | Display analysis results card |
-| `src/components/dashboard/GitHubAnalyticsCard.tsx` | Detailed GitHub stats for owners |
-| `src/hooks/useGitHubAnalysis.ts` | React hook for calling analyze endpoint |
+| `src/components/program/PublicGitHubMetrics.tsx` | Horizontal metrics bar for public view |
+| `src/components/program/AnalyticsCharts.tsx` | Multi-chart component with tab switcher |
+| `src/components/program/ContributorsPieChart.tsx` | Pie chart for contributor breakdown |
+| `src/components/program/ActivityAreaChart.tsx` | Stacked area chart for event activity |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/claim/SocialsForm.tsx` | Dual-path UI (URL submit primary, OAuth secondary) |
-| `src/pages/ClaimProfile.tsx` | Handle analysis result, auto-populate fields |
-| `src/pages/ProfileDetail.tsx` | Show GitHub analytics to owners |
-| `src/hooks/useClaimedProfiles.ts` | Add GitHub fields to transform function |
-| `src/types/index.ts` | Extended GitHubData interface |
-| `supabase/config.toml` | Add config for new edge function |
+| `src/pages/ProgramDetail.tsx` | Add PublicGitHubMetrics, replace UpgradeChart with AnalyticsCharts |
+| `src/components/program/index.ts` | Export new components |
 
 ---
 
 ## Technical Details
 
-### Edge Function: `analyze-github-repo`
-
-```typescript
-// Key implementation points:
-
-// 1. Parse and validate GitHub URL
-function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
-  const patterns = [
-    /github\.com\/([^\/]+)\/([^\/]+)/,
-    /github\.com\/([^\/]+)\/([^\/]+)\.git$/,
-  ];
-  // ... validation
-}
-
-// 2. Parallel API fetching for speed
-const [repoInfo, commits, contributors, releases, activity] = await Promise.all([
-  fetchRepoInfo(owner, repo, token),
-  fetchCommits(owner, repo, token),
-  fetchContributors(owner, repo, token),
-  fetchReleases(owner, repo, token),
-  fetchActivity(owner, repo, token),
-]);
-
-// 3. Use fallback GITHUB_TOKEN from secrets for rate limits
-const githubToken = Deno.env.get("GITHUB_TOKEN"); // 5000 req/hr vs 60/hr
-
-// 4. Handle 404 gracefully for private repos
-if (repoResponse.status === 404) {
-  return { error: "Repository not found. It may be private - try connecting your GitHub account instead." };
-}
-```
-
-### Analysis Progress UI
+### PublicGitHubMetrics Component
 
 ```tsx
-const steps = [
-  { label: 'Validating Repository', status: 'complete' },
-  { label: 'Fetching Commits', status: 'in-progress' },
-  { label: 'Counting Contributors', status: 'pending' },
-  { label: 'Checking Releases', status: 'pending' },
-  { label: 'Calculating Score', status: 'pending' },
+interface PublicGitHubMetricsProps {
+  analytics?: GitHubAnalytics;
+  githubUrl?: string;
+}
+
+// Responsive grid: 6 columns on desktop, 3 on tablet, 2 on mobile
+<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+  {metrics.map(metric => (
+    <div className="text-center p-3 rounded-sm border bg-muted/30">
+      <Icon className="mx-auto h-4 w-4" />
+      <div className="font-mono text-xl font-bold">{value}</div>
+      <div className="text-[10px] text-muted-foreground">{label}</div>
+    </div>
+  ))}
+</div>
+```
+
+### AnalyticsCharts Tab Configuration
+
+```tsx
+const chartTabs = [
+  { value: 'score', label: 'Score History', icon: TrendingUp },
+  { value: 'contributors', label: 'Contributors', icon: Users },
+  { value: 'activity', label: 'Activity', icon: Activity },
+  { value: 'releases', label: 'Releases', icon: Package },
 ];
+
+<Tabs defaultValue="score">
+  <TabsList className="w-full justify-start">
+    {chartTabs.map(tab => (
+      <TabsTrigger key={tab.value} value={tab.value}>
+        <tab.icon className="h-4 w-4 mr-2" />
+        {tab.label}
+      </TabsTrigger>
+    ))}
+  </TabsList>
+  <TabsContent value="score">
+    <UpgradeChart projectId={projectId} />
+  </TabsContent>
+  <TabsContent value="contributors">
+    <ContributorsPieChart data={topContributors} />
+  </TabsContent>
+  {/* ... */}
+</Tabs>
 ```
 
-### Auto-Population Flow
+### ContributorsPieChart Data Transform
 
 ```tsx
-// In ClaimProfile.tsx
-const handleAnalysisComplete = (data: GitHubAnalysisResult) => {
-  // Auto-populate empty fields
-  if (!projectName && data.name) {
-    setProjectName(data.name);
-  }
-  if (!description && data.description) {
-    setDescription(data.description);
-  }
-  if (!websiteUrl && data.homepage) {
-    setWebsiteUrl(data.homepage);
-  }
-  if (!category && data.language) {
-    const suggestedCategory = languageCategoryMap[data.language] || 'other';
-    setCategory(suggestedCategory);
-  }
-  
-  // Store full analysis data for later use
-  setGithubAnalysis(data);
-};
+// Transform github_top_contributors to Recharts pie format
+const pieData = topContributors.slice(0, 5).map(c => ({
+  name: c.login,
+  value: c.contributions,
+  avatar: c.avatar,
+}));
+
+// Add "Others" if more than 5 contributors
+if (topContributors.length > 5) {
+  const othersTotal = topContributors
+    .slice(5)
+    .reduce((sum, c) => sum + c.contributions, 0);
+  pieData.push({ name: 'Others', value: othersTotal });
+}
 ```
 
 ---
 
-## User Flow Summary
+## Visual Hierarchy (Updated ProgramDetail Layout)
 
-1. User reaches Step 3 (Verify/Socials)
-2. **Primary Option**: Paste GitHub repo URL → Click "ANALYZE"
-3. System shows progress steps while fetching data
-4. Analysis results displayed in premium card format
-5. Form fields auto-populated from GitHub data
-6. User can proceed to Step 4 (or optionally use OAuth for private repos)
-7. On final submit, all GitHub data saved to `claimed_profiles`
-8. In Dashboard, owner sees full GitHub analytics for their projects
+```text
+1. Back to Explorer link
+2. Verification Banner (if verified)
+3. Program Header (name, score, status, social links)
+4. Description Section
+5. PUBLIC GITHUB METRICS BAR ← NEW
+6. ANALYTICS CHARTS with TAB SWITCHER ← ENHANCED
+7. Recent Events (existing)
+8. Metric Cards (Originality, Staked, Constraints)
+9. Verified Timeline (if verified)
+10. Website Preview (if verified)
+11. Media Gallery & Social Pulse (if verified)
+12. Stake CTA
+```
 
 ---
 
-## Rate Limit Considerations
+## Chart Styling Guidelines
 
-| Scenario | Rate Limit | Mitigation |
-|----------|------------|------------|
-| Unauthenticated | 60/hr | Use `GITHUB_TOKEN` secret |
-| With `GITHUB_TOKEN` | 5,000/hr | Sufficient for ~1000 analyses/hr |
-| User OAuth token | 5,000/hr per user | Best for private repos |
-
-The system uses the `GITHUB_TOKEN` secret (already configured) as fallback for all public repo analyses, ensuring consistent rate limits.
-
+All charts will follow the existing Bloomberg Terminal aesthetic:
+- Dark theme with `hsl(var(--card))` backgrounds
+- Primary teal color for active data
+- Muted foreground for axis labels
+- JetBrains Mono font for tooltips and values
+- Consistent 300px chart height
+- Empty states with centered messages
