@@ -13,7 +13,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // X OAuth Client ID (public, safe to expose in frontend)
-const X_CLIENT_ID = 'ZZfXbSqg03wCPXO2hCoIZHZUH';
+const X_CLIENT_ID = 'VmVzd2xOelNXOUZ2TFNCLUZqalQ6MTpjaQ';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<XUser | null>(null);
