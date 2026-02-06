@@ -196,7 +196,10 @@ const ProgramDetail = () => {
 
           {/* Metric Cards */}
           <div className="mb-6">
-            <MetricCards program={programForComponents} />
+            <MetricCards 
+              program={programForComponents} 
+              githubIsFork={claimedProfile?.githubAnalytics?.github_is_fork}
+            />
           </div>
 
           {/* Verified Timeline */}

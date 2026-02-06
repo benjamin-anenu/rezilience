@@ -88,6 +88,7 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
       github_top_contributors: (Array.isArray(db.github_top_contributors) ? db.github_top_contributors : []) as Array<{ login: string; contributions: number; avatar: string }>,
       github_recent_events: (Array.isArray(db.github_recent_events) ? db.github_recent_events : []).map((e: any) => ({ ...e, createdAt: e.date || e.createdAt })) as Array<{ type: string; actor: string; date: string; createdAt: string; message?: string }>,
       github_analyzed_at: db.github_analyzed_at || undefined,
+      github_is_fork: db.github_is_fork ?? undefined,
     },
   };
 }

@@ -172,6 +172,7 @@ export interface GitHubAnalytics {
   github_top_contributors?: TopContributor[];
   github_recent_events?: RecentEvent[];
   github_analyzed_at?: string;
+  github_is_fork?: boolean;
 }
 
 // Complete Claimed Profile
