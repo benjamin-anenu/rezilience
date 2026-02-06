@@ -15,7 +15,6 @@ import XCallback from "./pages/XCallback";
 import Dashboard from "./pages/Dashboard";
 import Staking from "./pages/Staking";
 import MyBonds from "./pages/MyBonds";
-import SubmitProject from "./pages/SubmitProject";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,7 +38,6 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/staking" element={<Staking />} />
               <Route path="/my-bonds" element={<MyBonds />} />
-              <Route path="/submit" element={<SubmitProject />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

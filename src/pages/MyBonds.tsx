@@ -102,7 +102,7 @@ const MyBonds = () => {
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
                 <Button asChild variant="outline">
                   <Link to="/explorer">
-                    EXPLORE PROGRAMS
+                    EXPLORE REGISTRY
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Link>
                 </Button>

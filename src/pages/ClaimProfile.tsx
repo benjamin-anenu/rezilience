@@ -142,7 +142,7 @@ const ClaimProfile = () => {
   const steps = [
     { number: 1, label: 'X Auth', isComplete: isAuthenticated, isCurrent: currentStep === 1 },
     { number: 2, label: 'Identity', isComplete: currentStep > 2, isCurrent: currentStep === 2 },
-    { number: 3, label: 'Socials', isComplete: currentStep > 3, isCurrent: currentStep === 3 },
+    { number: 3, label: 'Verify', isComplete: currentStep > 3, isCurrent: currentStep === 3 },
     { number: 4, label: 'Media', isComplete: currentStep > 4, isCurrent: currentStep === 4 },
     { number: 5, label: 'Roadmap', isComplete: currentStep === 5 && milestones.length > 0, isCurrent: currentStep === 5 },
   ];
@@ -256,10 +256,10 @@ const ClaimProfile = () => {
           {/* Header */}
           <div className="mb-8 text-center">
             <h1 className="mb-3 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
-              CLAIM YOUR PROTOCOL
+              SECURE YOUR STANDING
             </h1>
             <p className="text-muted-foreground">
-              Prove your development velocity. Unlock your heartbeat.
+              Register your protocol. Prove your development velocity. Unlock your heartbeat.
             </p>
           </div>
 

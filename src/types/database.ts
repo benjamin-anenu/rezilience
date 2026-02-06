@@ -96,7 +96,7 @@ export interface DBEcosystemStats {
   activePrograms: number;
 }
 
-// Claimed profile (verified project profile)
+// Registered protocol (verified builder profile in the registry)
 export interface DBClaimedProfile {
   id: string;
   project_id: string | null;
