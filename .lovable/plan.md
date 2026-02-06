@@ -1,220 +1,166 @@
 
-# Add Protocol Delete/Delist Feature with Confirmation Dialog
 
-## Overview
-Add the ability to remove/delist claimed protocols from the Dashboard with a secure confirmation dialog that requires typing the protocol name to confirm deletion. This prevents accidental deletions and provides a clear destructive action flow.
+# Terminology Alignment & Unified Registration Flow
 
----
+## Analysis & Recommendation
 
-## Current State Analysis
+I completely agree with your assessment. The current terminology creates confusion and doesn't align with Resilience's core mission:
 
-### Database Status
-- There are 3 orphaned profiles in `claimed_profiles` table that need removal
-- Current RLS policies **do not allow DELETE operations** on `claimed_profiles`
-- Profiles are linked to users via `x_user_id` (Twitter/X user ID from OAuth)
+**Problems with Current Approach:**
+1. "Submitted Projects" and "Claimed Profiles" are two disconnected paths to the same goal
+2. "Claimed Profile" is passive and person-centric, not protocol-centric
+3. "Submit Project" goes to the `projects` table (currently empty), while "Claim Profile" goes to `claimed_profiles` (where verified builders live)
+4. This creates the Explorer disconnect we identified earlier
 
-### Auth Flow
-- Users authenticate via X (Twitter) OAuth
-- User data stored in `localStorage` with their `x_user_id`
-- This ID can be used to verify ownership of claimed profiles
+**Recommended Terminology (from your vision doc):**
+
+| Current Term | New Term | Rationale |
+|--------------|----------|-----------|
+| "Claim Profile" | **"SECURE MY STANDING"** | Active, builder-centric language |
+| "Claimed Profile" | **"Registered Protocol"** | Protocol-first focus |
+| "Submit Project" | Remove entirely | Creates confusion; should be one unified path |
+| "Claim New Protocol" | **"REGISTER PROTOCOL"** | Clearer action |
+| "Your Protocols" | **"BUILDER DASHBOARD"** | Emphasizes builder identity |
+| "Verified Projects" | **"MY REGISTRY"** | Aligns with "Proof of Life" registry concept |
+| "Dashboard" nav link | **"MY REGISTRY"** | Consistency |
 
 ---
 
 ## Implementation Plan
 
-### Step 1: Add RLS Policy for Delete Operations
+### Phase 1: Remove Submit Project Flow
 
-Create a database migration to allow users to delete their own profiles:
+**Delete entirely:**
+- `src/pages/SubmitProject.tsx` - Remove the file
+- `supabase/functions/add-project/index.ts` - Remove the edge function
+- Route `/submit` from `App.tsx`
 
-```sql
--- Allow profile owners to delete their profiles
-CREATE POLICY "Profile owners can delete their profiles" 
-ON public.claimed_profiles
-FOR DELETE
-TO anon
-USING (true);
-```
+**Rationale:** The `projects` table should only be populated by:
+1. Verified registrations (from the "Secure My Standing" flow)
+2. Automated indexing (Phase 2 feature for the 2,847 Initial Cohort)
 
-Note: Since we're using X OAuth (not Supabase Auth), we cannot use `auth.uid()`. Instead, we'll implement ownership verification in an edge function.
+There's no need for anonymous project submission that bypasses verification.
 
-### Step 2: Create Delete Profile Edge Function
+### Phase 2: Update Terminology Throughout Codebase
 
-Create `supabase/functions/delete-profile/index.ts`:
+#### File: `src/components/layout/Navigation.tsx`
+- Line 107: "JOIN THE REGISTRY" → Already good, keep it
+- Line 72: "DASHBOARD" → "MY REGISTRY"
 
-**Purpose:** Securely delete a claimed profile after verifying ownership
+#### File: `src/pages/Dashboard.tsx`
+- Line 68: "YOUR PROTOCOLS" → "BUILDER DASHBOARD"
+- Line 72: "Manage your verified projects..." → "Manage your registered protocols and monitor Resilience Scores"
+- Line 99: "CLAIM NEW PROTOCOL" → "REGISTER PROTOCOL"
+- Line 105: "EXPLORE PROJECTS" → "EXPLORE REGISTRY"
+- Line 115: "No Verified Projects" → "No Registered Protocols"
+- Line 118: "Claim your first protocol..." → "Register your first protocol..."
+- Line 121: "CLAIM NOW" → "REGISTER NOW"
 
-**Logic:**
-1. Accept `profile_id` and `x_user_id` from the frontend
-2. Verify that the profile's `x_user_id` matches the requester's `x_user_id`
-3. Use service role key to delete the profile (bypasses RLS)
-4. Return success/error response
+#### File: `src/pages/ClaimProfile.tsx`
+- Page title updates to match "SECURE MY STANDING" terminology
+- Step labels to use "Register" instead of "Claim"
 
-```typescript
-// Key verification logic:
-const { data: profile } = await supabase
-  .from('claimed_profiles')
-  .select('x_user_id, project_name')
-  .eq('id', profileId)
-  .single();
+#### File: `src/pages/Explorer.tsx`
+- Lines 52-56: Remove "Submit Project" button entirely
+- Lines 118-124: Remove empty state "Submit a Project" button
+- Update text to reference "Registry" not "Projects"
 
-if (profile.x_user_id !== requestingUserId) {
-  throw new Error('Unauthorized: You can only delete your own profiles');
-}
+#### File: `src/types/database.ts`
+- Line 99: Comment "Claimed profile" → "Registered protocol"
+- Type name changes (optional, for code clarity)
 
-// Delete with service role
-await supabaseAdmin
-  .from('claimed_profiles')
-  .delete()
-  .eq('id', profileId);
-```
+### Phase 3: Fix Explorer Data Source
 
-### Step 3: Create Delete Confirmation Dialog Component
+Update the Explorer to show **verified registered protocols** from `claimed_profiles`:
 
-Create `src/components/dashboard/DeleteProfileDialog.tsx`:
+#### Create: `src/hooks/useExplorerProjects.ts`
 
-**Features:**
-- Modal dialog using existing AlertDialog components
-- Displays protocol name prominently
-- Input field requiring exact protocol name to enable delete button
-- Case-insensitive matching for better UX
-- Clear warning about irreversibility
-- Red destructive styling for delete button
-
-**UI Design:**
-```text
-+-----------------------------------------------+
-|  [!] DELETE PROTOCOL                          |
-+-----------------------------------------------+
-|                                               |
-|  You are about to permanently delete:         |
-|                                               |
-|     "Benjamin Anenu"                          |
-|                                               |
-|  This action cannot be undone. All data       |
-|  including verification status will be lost.  |
-|                                               |
-|  Type "Benjamin Anenu" to confirm:            |
-|  +------------------------------------------+ |
-|  |                                          | |
-|  +------------------------------------------+ |
-|                                               |
-|  [Cancel]                    [Delete Protocol]|
-+-----------------------------------------------+
-```
-
-### Step 4: Add Delete Hook
-
-Create `src/hooks/useDeleteProfile.ts`:
-
-**Features:**
-- Uses React Query mutation
-- Calls the delete-profile edge function
-- Invalidates the verified-profiles query on success
-- Handles loading and error states
-- Shows success/error toast notifications
+Unified hook that:
+1. Fetches verified profiles from `claimed_profiles` where `verified = true`
+2. Transforms them to match the Explorer's expected data structure
+3. Sorts by `resilience_score` descending
 
 ```typescript
-export function useDeleteProfile() {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: async ({ profileId, xUserId }) => {
-      const response = await supabase.functions.invoke('delete-profile', {
-        body: { profile_id: profileId, x_user_id: xUserId }
-      });
-      if (response.error) throw response.error;
-      return response.data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['verified-profiles']);
-      toast.success('Protocol deleted successfully');
-    },
-    onError: (error) => {
-      toast.error(`Failed to delete: ${error.message}`);
-    }
-  });
-}
+// Query claimed_profiles for verified entries
+const { data } = await supabase
+  .from('claimed_profiles')
+  .select('*')
+  .eq('verified', true)
+  .order('resilience_score', { ascending: false });
 ```
 
-### Step 5: Update Dashboard UI
+#### Update: `src/pages/Explorer.tsx`
+- Use `useExplorerProjects` instead of `useProjects`
+- Route clicks to `/profile/:id` (not `/program/:id`)
 
-Modify `src/pages/Dashboard.tsx`:
+#### Update: `src/components/explorer/ProgramLeaderboard.tsx`
+- Handle the transformed data from claimed_profiles
+- Update navigation to use profile routes
 
-**Changes:**
-1. Add Trash2 icon import from lucide-react
-2. Add delete button to each protocol card
-3. Integrate DeleteProfileDialog component
-4. Track which profile is selected for deletion
-5. Pass user's x_user_id to the delete function
+### Phase 4: Update Related Pages
 
-**Card Update:**
-```tsx
-<Card>
-  <CardHeader>
-    <div className="flex items-center justify-between">
-      <CardTitle>{project.projectName}</CardTitle>
-      <div className="flex items-center gap-3">
-        {/* Score and status badges */}
-        <Button 
-          variant="ghost" 
-          size="icon"
-          onClick={(e) => {
-            e.stopPropagation();
-            setProfileToDelete(project);
-          }}
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </Button>
-      </div>
-    </div>
-  </CardHeader>
-</Card>
-```
+#### File: `src/pages/MyBonds.tsx`
+- Line 110: "claim-profile" route reference (keep, but ensure terminology matches)
+- "JOIN THE REGISTRY" - Already correct
+
+#### File: `src/components/landing/HeroSection.tsx`
+- Keep "SOLANA PROJECT VITALS" as the Explorer CTA - Already good
 
 ---
 
-## Files to Create/Modify
+## Route Changes
 
-| File | Action | Description |
-|------|--------|-------------|
-| `supabase/functions/delete-profile/index.ts` | Create | Edge function for secure deletion |
-| `src/components/dashboard/DeleteProfileDialog.tsx` | Create | Confirmation dialog with type-to-confirm |
-| `src/hooks/useDeleteProfile.ts` | Create | React Query mutation hook |
-| `src/pages/Dashboard.tsx` | Modify | Add delete buttons and dialog integration |
+| Current Route | New Route | Action |
+|---------------|-----------|--------|
+| `/submit` | Remove | Delete entirely |
+| `/claim-profile` | `/register` | Rename for clarity (optional) |
+| `/dashboard` | `/my-registry` | Rename for clarity (optional) |
 
----
-
-## Security Considerations
-
-1. **Ownership Verification:** Edge function verifies `x_user_id` matches before deletion
-2. **Type-to-Confirm:** Prevents accidental clicks by requiring exact name match
-3. **Service Role Usage:** Only the edge function (server-side) can perform the actual delete
-4. **No Direct RLS Delete:** Frontend cannot directly delete - must go through edge function
+**Note:** Route renames are optional but would improve URL clarity. Can keep existing routes with updated UI terminology.
 
 ---
 
-## User Flow
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/pages/SubmitProject.tsx` | Delete |
+| `supabase/functions/add-project/index.ts` | Delete |
+| `src/App.tsx` | Remove SubmitProject route and import |
+| `src/components/layout/Navigation.tsx` | Update "DASHBOARD" → "MY REGISTRY" |
+| `src/pages/Dashboard.tsx` | Update all terminology |
+| `src/pages/Explorer.tsx` | Remove Submit buttons, use new hook |
+| `src/pages/ClaimProfile.tsx` | Update terminology to "Register" |
+| `src/hooks/useExplorerProjects.ts` | Create new unified hook |
+| `src/components/explorer/ProgramLeaderboard.tsx` | Update for claimed_profiles data |
+| `src/types/database.ts` | Update comments/terminology |
+
+---
+
+## User Flow After Changes
 
 ```text
-1. User views Dashboard with their protocols
-2. User clicks trash icon on a protocol card
-3. Confirmation dialog appears with protocol name
-4. User must type the exact protocol name
-5. Delete button becomes enabled when name matches
-6. On confirm: Edge function verifies ownership and deletes
-7. Dashboard refreshes, protocol is removed
-8. Success toast notification appears
+LANDING PAGE
+     ↓
+[SOLANA PROJECT VITALS] → Explorer (shows verified registered protocols)
+     OR
+[JOIN THE REGISTRY] → Registration Flow
+     ↓
+Step 1: X Auth → Step 2: Identity → Step 3: Socials/GitHub → Step 4: Media → Step 5: Roadmap
+     ↓
+Protocol appears in Explorer immediately
+     ↓
+User can manage via "MY REGISTRY" dashboard
 ```
 
 ---
 
-## Technical Notes
+## Summary
 
-### Edge Function Environment
-- Uses `SUPABASE_SERVICE_ROLE_KEY` for admin operations
-- CORS headers for browser requests
-- JSON request/response format
+This plan:
+1. Eliminates the "Submit Project" parallel path that caused the disconnect
+2. Unifies everything around the Registry concept from your vision
+3. Uses active, builder-centric language ("Secure My Standing", "Register Protocol")
+4. Fixes the Explorer to show verified registered protocols
+5. Aligns with "Proof of Life" and "reputation can't be forked" messaging
 
-### Type-to-Confirm Matching
-- Case-insensitive comparison: `input.toLowerCase().trim() === name.toLowerCase().trim()`
-- Allows for minor whitespace differences
