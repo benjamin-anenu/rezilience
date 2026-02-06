@@ -1,4 +1,4 @@
-import { Star, GitFork, Users, Activity, Package, Code, ExternalLink, AlertCircle, Clock, Zap } from 'lucide-react';
+import { Star, GitFork, Users, Activity, Package, Code, ExternalLink, AlertCircle, Clock, Zap, GitPullRequest, MessageSquare, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,15 +32,25 @@ const formatRelativeTime = (dateString?: string): string => {
   return date.toLocaleDateString();
 };
 
-const getHealthStatus = (lastCommit?: string, commitVelocity?: number): { status: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } => {
-  if (!lastCommit) return { status: 'UNKNOWN', variant: 'outline' };
+const getHealthStatus = (
+  lastActivity?: string, 
+  pushEvents30d?: number,
+  prEvents30d?: number,
+  issueEvents30d?: number,
+  commitsLast30d?: number
+): { status: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' } => {
+  // Calculate days since last activity (any type)
+  const daysSinceLastActivity = lastActivity 
+    ? Math.floor((Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24))
+    : 999;
   
-  const daysSince = Math.floor((Date.now() - new Date(lastCommit).getTime()) / (1000 * 60 * 60 * 24));
+  // Multi-signal weighted activity: pushes 1x, PRs 2x, issues 1x, commits 1x
+  const totalActivity = (pushEvents30d || 0) + ((prEvents30d || 0) * 2) + (issueEvents30d || 0) + (commitsLast30d || 0);
   
-  if (daysSince <= 30 && (commitVelocity || 0) > 0.5) {
+  if (daysSinceLastActivity <= 14 && totalActivity >= 5) {
     return { status: 'ACTIVE', variant: 'default' };
   }
-  if (daysSince <= 90) {
+  if (daysSinceLastActivity <= 45) {
     return { status: 'STALE', variant: 'secondary' };
   }
   return { status: 'DECAYING', variant: 'destructive' };
@@ -58,7 +68,21 @@ const getVelocityInfo = (velocity?: number): { percent: number; label: string; c
 };
 
 export function PublicGitHubMetrics({ analytics, githubUrl }: PublicGitHubMetricsProps) {
-  const healthStatus = getHealthStatus(analytics?.github_last_commit, analytics?.github_commit_velocity);
+  // Type assertion for extended analytics with multi-signal fields
+  const extendedAnalytics = analytics as GitHubAnalytics & {
+    github_push_events_30d?: number;
+    github_pr_events_30d?: number;
+    github_issue_events_30d?: number;
+    github_last_activity?: string;
+  };
+  
+  const healthStatus = getHealthStatus(
+    extendedAnalytics?.github_last_activity || analytics?.github_last_commit,
+    extendedAnalytics?.github_push_events_30d,
+    extendedAnalytics?.github_pr_events_30d,
+    extendedAnalytics?.github_issue_events_30d,
+    analytics?.github_commits_30d
+  );
   const velocityInfo = getVelocityInfo(analytics?.github_commit_velocity);
   
   const coreMetrics = [
@@ -224,6 +248,60 @@ export function PublicGitHubMetrics({ analytics, githubUrl }: PublicGitHubMetric
             </div>
           </div>
         </div>
+
+        {/* Multi-Signal Activity Breakdown */}
+        {(extendedAnalytics?.github_push_events_30d !== undefined || 
+          extendedAnalytics?.github_pr_events_30d !== undefined || 
+          extendedAnalytics?.github_issue_events_30d !== undefined) && (
+          <div className="space-y-2">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Activity Signals (Last 30 Days)
+            </span>
+            <div className="rounded-sm border border-border bg-muted/30 p-3 space-y-3">
+              {/* Calculate max for relative bars */}
+              {(() => {
+                const pushEvents = extendedAnalytics?.github_push_events_30d || 0;
+                const prEvents = extendedAnalytics?.github_pr_events_30d || 0;
+                const issueEvents = extendedAnalytics?.github_issue_events_30d || 0;
+                const commits = analytics?.github_commits_30d || 0;
+                const maxActivity = Math.max(pushEvents, prEvents, issueEvents, commits, 1);
+
+                const signals = [
+                  { icon: Upload, label: 'Push Events (all branches)', value: pushEvents, color: 'bg-primary' },
+                  { icon: GitPullRequest, label: 'Pull Requests', value: prEvents, color: 'bg-blue-500' },
+                  { icon: MessageSquare, label: 'Issue Activity', value: issueEvents, color: 'bg-amber-500' },
+                  { icon: Activity, label: 'Commits (main)', value: commits, color: 'bg-green-500' },
+                ];
+
+                return signals.map((signal) => (
+                  <div key={signal.label} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <signal.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground">{signal.label}</span>
+                      </div>
+                      <span className="font-mono text-xs font-medium text-foreground">{signal.value}</span>
+                    </div>
+                    <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div 
+                        className={`h-full transition-all ${signal.color}`}
+                        style={{ width: `${(signal.value / maxActivity) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ));
+              })()}
+              
+              {/* Last Activity */}
+              {extendedAnalytics?.github_last_activity && (
+                <div className="pt-2 border-t border-border/50 flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                  <Clock className="h-3 w-3" />
+                  <span>Last activity: {formatRelativeTime(extendedAnalytics.github_last_activity)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Top Contributors */}
         {analytics?.github_top_contributors && analytics.github_top_contributors.length > 0 && (
