@@ -103,6 +103,23 @@ const ProgramDetail = () => {
     return category?.label || value;
   };
 
+  // Determine if this is an on-chain Solana program
+  // Solana addresses are base58 encoded, typically 32-44 characters
+  // UUIDs have dashes and are exactly 36 characters
+  const isValidSolanaProgramId = (programId: string) => {
+    return programId && programId.length >= 32 && !programId.includes('-');
+  };
+
+  const hasOnChainProgram = isValidSolanaProgramId(displayProgramId);
+
+  // Determine bytecode originality status based on on-chain presence
+  const getBytecodeStatus = (): 'verified' | 'unverified' | 'fork' | 'not-deployed' => {
+    if (!hasOnChainProgram) return 'not-deployed';
+    if (project?.is_fork) return 'fork';
+    if (isVerified) return 'verified';
+    return 'unverified';
+  };
+
   // Transform data to the format expected by existing components
   const programForComponents = {
     id: project?.id || claimedProfile?.id || '',
@@ -110,7 +127,7 @@ const ProgramDetail = () => {
     programId: displayProgramId,
     score: Math.round(displayScore),
     livenessStatus: (project?.liveness_status?.toLowerCase() || claimedProfile?.livenessStatus || 'active') as 'active' | 'dormant' | 'degraded',
-    originalityStatus: project?.is_fork ? 'fork' as const : isVerified ? 'verified' as const : 'unverified' as const,
+    originalityStatus: getBytecodeStatus(),
     stakedAmount: project?.total_staked || 0,
     lastUpgrade: project?.github_last_commit || project?.updated_at || new Date().toISOString(),
     upgradeCount: 0,
