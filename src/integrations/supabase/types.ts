@@ -64,12 +64,14 @@ export type Database = {
           github_token_scope: string | null
           github_username: string | null
           id: string
+          liveness_status: string | null
           logo_url: string | null
           media_assets: Json | null
           milestones: Json | null
           program_id: string | null
           project_id: string | null
           project_name: string
+          resilience_score: number | null
           telegram_url: string | null
           updated_at: string
           verified: boolean
@@ -90,12 +92,14 @@ export type Database = {
           github_token_scope?: string | null
           github_username?: string | null
           id?: string
+          liveness_status?: string | null
           logo_url?: string | null
           media_assets?: Json | null
           milestones?: Json | null
           program_id?: string | null
           project_id?: string | null
           project_name: string
+          resilience_score?: number | null
           telegram_url?: string | null
           updated_at?: string
           verified?: boolean
@@ -116,12 +120,14 @@ export type Database = {
           github_token_scope?: string | null
           github_username?: string | null
           id?: string
+          liveness_status?: string | null
           logo_url?: string | null
           media_assets?: Json | null
           milestones?: Json | null
           program_id?: string | null
           project_id?: string | null
           project_name?: string
+          resilience_score?: number | null
           telegram_url?: string | null
           updated_at?: string
           verified?: boolean

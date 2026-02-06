@@ -26,6 +26,8 @@ interface DBClaimedProfile {
   verified_at: string | null;
   created_at: string;
   updated_at: string;
+  resilience_score: number | null;
+  liveness_status: string | null;
 }
 
 // Transform database format to frontend ClaimedProfile format
@@ -52,8 +54,8 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
     milestones: (Array.isArray(db.milestones) ? db.milestones : []) as unknown as Milestone[],
     verified: db.verified,
     verifiedAt: db.verified_at || db.created_at,
-    score: 0, // Will be populated from projects table if linked
-    livenessStatus: 'active',
+    score: db.resilience_score ?? 0,
+    livenessStatus: (db.liveness_status?.toLowerCase() as 'active' | 'dormant' | 'degraded') || 'active',
   };
 }
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, AlertCircle, Loader2, Shield, Wallet, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
@@ -21,16 +21,30 @@ import type { MediaAsset, Milestone, ProjectCategory } from '@/types';
 
 const ClaimProfile = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user, isAuthenticated, loading: authLoading, signInWithX } = useAuth();
   const { publicKey, connected } = useWallet();
   const { toast } = useToast();
+  
+  // Check if returning from GitHub OAuth with verification
+  const isVerified = searchParams.get('verified') === 'true';
+  const stepFromUrl = searchParams.get('step');
   
   // Check if GitHub OAuth is configured
   const isGitHubConfigured = !!import.meta.env.VITE_GITHUB_CLIENT_ID;
 
   // Current step (1-5)
-  // Initialize step based on auth state and saved progress to avoid flash
+  // Track if GitHub verification is complete
+  const [githubVerified, setGithubVerified] = useState(isVerified);
+  
+  // Initialize step based on auth state, URL params, and saved progress
   const [currentStep, setCurrentStep] = useState(() => {
+    // If returning from OAuth with step param, use that
+    if (stepFromUrl) {
+      const step = parseInt(stepFromUrl, 10);
+      if (step >= 2 && step <= 5) return step;
+    }
+    
     const storedUser = localStorage.getItem('x_user');
     if (!storedUser) return 1;
     
@@ -526,16 +540,42 @@ const ClaimProfile = () => {
               {/* Final Submit */}
               <Card className="mt-6 border-primary/30 bg-card">
                 <CardContent className="py-6">
-                  <p className="mb-4 text-center text-sm text-muted-foreground">
-                    Ready to verify? Clicking below will connect your GitHub and finalize your profile.
-                  </p>
-                  <Button
-                    onClick={handleGitHubConnect}
-                    className="w-full font-display font-semibold uppercase tracking-wider"
-                    size="lg"
-                  >
-                    COMPLETE VERIFICATION
-                  </Button>
+                  {githubVerified ? (
+                    <>
+                      <div className="mb-4 flex items-center justify-center gap-2 text-primary">
+                        <CheckCircle className="h-5 w-5" />
+                        <span className="font-display text-sm uppercase">GitHub Verified</span>
+                      </div>
+                      <p className="mb-4 text-center text-sm text-muted-foreground">
+                        Your profile is verified! Click below to view your Heartbeat Dashboard.
+                      </p>
+                      <Button
+                        onClick={() => {
+                          const profileId = localStorage.getItem('verifiedProfileId');
+                          localStorage.removeItem('claimFormProgress');
+                          localStorage.removeItem('verifiedProfileId');
+                          navigate(`/profile/${profileId}`);
+                        }}
+                        className="w-full font-display font-semibold uppercase tracking-wider"
+                        size="lg"
+                      >
+                        VIEW MY PROFILE
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="mb-4 text-center text-sm text-muted-foreground">
+                        Ready to verify? Clicking below will connect your GitHub and finalize your profile.
+                      </p>
+                      <Button
+                        onClick={handleGitHubConnect}
+                        className="w-full font-display font-semibold uppercase tracking-wider"
+                        size="lg"
+                      >
+                        COMPLETE VERIFICATION
+                      </Button>
+                    </>
+                  )}
                 </CardContent>
               </Card>
 
