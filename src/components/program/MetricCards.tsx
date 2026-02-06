@@ -37,15 +37,32 @@ export function MetricCards({ program, githubIsFork }: MetricCardsProps) {
 
   const githubOriginality = getGithubOriginalityInfo();
 
+  // Get bytecode originality status and styling
+  const getBytecodeOriginalityInfo = () => {
+    switch (program.originalityStatus) {
+      case 'verified':
+        return { subtitle: 'Verified Original', value: 100, isPositive: true, isWarning: false, isNA: false };
+      case 'fork':
+        return { subtitle: 'Known Fork', value: 45, isPositive: false, isWarning: true, isNA: false };
+      case 'not-deployed':
+        return { subtitle: 'Not On-Chain', value: 0, isPositive: false, isWarning: false, isNA: true };
+      default:
+        return { subtitle: 'Unverified', value: 60, isPositive: false, isWarning: false, isNA: false };
+    }
+  };
+
+  const bytecodeOriginality = getBytecodeOriginalityInfo();
+
   const metrics = [
     {
       icon: Fingerprint,
       title: 'BYTECODE ORIGINALITY',
-      subtitle: program.originalityStatus === 'verified' ? 'Verified Original' : program.originalityStatus === 'fork' ? 'Known Fork' : 'Unverified',
-      value: program.originalityStatus === 'verified' ? 100 : program.originalityStatus === 'fork' ? 45 : 60,
+      subtitle: bytecodeOriginality.subtitle,
+      value: bytecodeOriginality.value,
       description: 'Cryptographic fingerprint comparison against known program database.',
-      isPositive: program.originalityStatus === 'verified',
-      isWarning: false,
+      isPositive: bytecodeOriginality.isPositive,
+      isWarning: bytecodeOriginality.isWarning,
+      isNA: bytecodeOriginality.isNA,
     },
     {
       icon: GitBranch,
@@ -64,6 +81,7 @@ export function MetricCards({ program, githubIsFork }: MetricCardsProps) {
       description: 'Economic security layer providing stake-backed guarantees.',
       isPositive: program.stakedAmount > 100000,
       isWarning: false,
+      isNA: false,
     },
     {
       icon: Lock,
@@ -73,6 +91,7 @@ export function MetricCards({ program, githubIsFork }: MetricCardsProps) {
       description: 'Upgrade authority is controlled by a 3/5 multisig wallet.',
       isPositive: true,
       isWarning: false,
+      isNA: false,
     },
   ];
 
@@ -90,7 +109,9 @@ export function MetricCards({ program, githubIsFork }: MetricCardsProps) {
                   {metric.title}
                 </CardTitle>
                 <CardDescription className={
-                  metric.isWarning 
+                  metric.isNA
+                    ? 'text-muted-foreground/50'
+                    : metric.isWarning 
                     ? 'text-amber-500' 
                     : metric.isPositive 
                     ? 'text-primary' 

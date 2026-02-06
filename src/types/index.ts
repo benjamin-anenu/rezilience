@@ -9,7 +9,7 @@ export interface Program {
   programId: string;
   score: number;
   livenessStatus: 'active' | 'dormant' | 'degraded';
-  originalityStatus: 'verified' | 'unverified' | 'fork';
+  originalityStatus: 'verified' | 'unverified' | 'fork' | 'not-deployed';
   stakedAmount: number;
   lastUpgrade: string;
   upgradeCount: number;
