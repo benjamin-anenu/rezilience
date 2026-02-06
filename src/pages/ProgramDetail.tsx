@@ -1,7 +1,7 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, ExternalLink, Calendar, Lock, AlertTriangle } from 'lucide-react';
 import { Layout } from '@/components/layout';
-import { ProgramHeader, UpgradeChart, RecentEvents, MetricCards, DescriptionSection, SocialPulseSection } from '@/components/program';
+import { ProgramHeader, UpgradeChart, RecentEvents, MetricCards, DescriptionSection, SocialPulseSection, PublicGitHubMetrics, AnalyticsCharts } from '@/components/program';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -172,10 +172,22 @@ const ProgramDetail = () => {
             />
           )}
 
-          {/* Upgrade Chart + Recent Events - always show, empty states handled by components */}
+          {/* Public GitHub Metrics */}
+          <div className="mb-6">
+            <PublicGitHubMetrics 
+              analytics={claimedProfile?.githubAnalytics}
+              githubUrl={displayGithubUrl}
+            />
+          </div>
+
+          {/* Analytics Charts + Recent Events */}
           <div className="mb-6 grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2">
-              <UpgradeChart projectId={project?.id || claimedProfile?.id || ''} />
+              <AnalyticsCharts 
+                projectId={project?.id || claimedProfile?.id || ''}
+                topContributors={claimedProfile?.githubAnalytics?.github_top_contributors}
+                recentEvents={claimedProfile?.githubAnalytics?.github_recent_events}
+              />
             </div>
             <div>
               <RecentEvents projectId={project?.id || claimedProfile?.id || ''} />
