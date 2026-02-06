@@ -1,28 +1,25 @@
 
 
-# Fix: Add X Client ID to Frontend
+# Update X Client ID
 
-## Problem
-The frontend cannot access `VITE_X_CLIENT_ID` because it was only added as a Supabase secret for edge functions. Frontend environment variables need to be bundled at build time.
-
-## Solution
-Hardcode the X Client ID directly in `AuthContext.tsx`. This is safe because:
-- Client IDs are public identifiers (visible in OAuth redirect URLs)
-- Only the Client **Secret** must remain hidden (which stays in edge function)
+## Summary
+Replace the current hardcoded X OAuth Client ID with the new value provided.
 
 ## Change Required
 
 **File:** `src/context/AuthContext.tsx`
 
-**Current code (line 17):**
-```typescript
-const X_CLIENT_ID = import.meta.env.VITE_X_CLIENT_ID;
-```
-
-**Updated code:**
+**Line 17 - Current:**
 ```typescript
 const X_CLIENT_ID = 'ZZfXbSqg03wCPXO2hCoIZHZUH';
 ```
 
-This single-line change will resolve the "VITE_X_CLIENT_ID is not configured" error and allow the OAuth flow to redirect to X properly.
+**Updated:**
+```typescript
+const X_CLIENT_ID = 'VmVzd2xOelNXOUZ2TFNCLUZqalQ6MTpjaQ';
+```
+
+## Important Reminder
+After updating the Client ID in the code, make sure the X Developer Portal is also configured with the matching Client ID and has the correct callback URI:
+- **Callback URI:** `https://id-preview--620e3ac9-b8b9-47de-a2e2-0ff41af4217f.lovable.app/x-callback`
 
