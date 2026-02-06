@@ -157,7 +157,31 @@ Deno.serve(async (req) => {
     }
 
     // Calculate metrics
-    const commitsLast30Days = commits.length;
+    // Note: commits.length only counts default branch commits - we'll augment with push events
+    const defaultBranchCommits = commits.length;
+    
+    // === MULTI-SIGNAL ACTIVITY TRACKING ===
+    // Filter events from last 30 days
+    const eventsLast30Days = events.filter((e: any) => {
+      const eventDate = new Date(e.created_at);
+      return eventDate > thirtyDaysAgo;
+    });
+
+    // Count different activity types
+    const pushEvents30d = eventsLast30Days.filter((e: any) => e.type === 'PushEvent').length;
+    const prEvents30d = eventsLast30Days.filter((e: any) => e.type === 'PullRequestEvent').length;
+    const issueEvents30d = eventsLast30Days.filter((e: any) => 
+      e.type === 'IssuesEvent' || e.type === 'IssueCommentEvent'
+    ).length;
+
+    // Count actual commits from PushEvents (includes all branches)
+    // Each PushEvent can contain multiple commits
+    const pushEventCommits = eventsLast30Days
+      .filter((e: any) => e.type === 'PushEvent')
+      .reduce((sum: number, e: any) => sum + (e.payload?.size || 1), 0);
+
+    // Use the higher of: default branch commits OR push event commits (captures all branches)
+    const commitsLast30Days = Math.max(defaultBranchCommits, pushEventCommits);
     const commitVelocity = commitsLast30Days / 30; // commits per day
 
     const pushedAt = new Date(repoData.pushed_at);
@@ -180,20 +204,6 @@ Deno.serve(async (req) => {
       contributions: c.contributions,
       avatar: c.avatar_url,
     }));
-
-    // === MULTI-SIGNAL ACTIVITY TRACKING ===
-    // Filter events from last 30 days
-    const eventsLast30Days = events.filter((e: any) => {
-      const eventDate = new Date(e.created_at);
-      return eventDate > thirtyDaysAgo;
-    });
-
-    // Count different activity types
-    const pushEvents30d = eventsLast30Days.filter((e: any) => e.type === 'PushEvent').length;
-    const prEvents30d = eventsLast30Days.filter((e: any) => e.type === 'PullRequestEvent').length;
-    const issueEvents30d = eventsLast30Days.filter((e: any) => 
-      e.type === 'IssuesEvent' || e.type === 'IssueCommentEvent'
-    ).length;
 
     // Get most recent activity of ANY type (events are sorted by date desc)
     const lastActivity = events.length > 0 
@@ -218,14 +228,18 @@ Deno.serve(async (req) => {
       return event;
     });
 
-    // Calculate Resilience Score
+    // Calculate Resilience Score using MULTI-SIGNAL approach
     let resilienceScore = 0;
 
-    // Commit velocity (0-30 points)
-    if (commitVelocity > 2) resilienceScore += 30;
-    else if (commitVelocity > 1) resilienceScore += 25;
-    else if (commitVelocity > 0.5) resilienceScore += 15;
-    else if (commitVelocity > 0.1) resilienceScore += 8;
+    // === WEIGHTED ACTIVITY SCORE (0-30 points) ===
+    // Combines all activity signals: pushes, PRs (2x weight), issues, commits
+    const totalActivity = pushEvents30d + (prEvents30d * 2) + issueEvents30d + commitsLast30Days;
+    
+    if (totalActivity > 50) resilienceScore += 30;
+    else if (totalActivity > 30) resilienceScore += 25;
+    else if (totalActivity > 15) resilienceScore += 20;
+    else if (totalActivity > 5) resilienceScore += 12;
+    else if (totalActivity > 0) resilienceScore += 5;
 
     // Contributors (0-25 points)
     const contributorCount = contributors.length;
@@ -254,9 +268,6 @@ Deno.serve(async (req) => {
     else if (daysActive > 90) resilienceScore += 5;
 
     // Determine liveness status using MULTI-SIGNAL activity
-    // Weighted scoring: pushes 1x, PRs 2x (significant work), issues 1x, commits 1x
-    const totalActivity = pushEvents30d + (prEvents30d * 2) + issueEvents30d + commitsLast30Days;
-    
     let livenessStatus: "ACTIVE" | "STALE" | "DECAYING";
     if (daysSinceLastActivity <= 14 && totalActivity >= 5) {
       livenessStatus = "ACTIVE";
@@ -266,7 +277,7 @@ Deno.serve(async (req) => {
       livenessStatus = "DECAYING";
     }
     
-    console.log(`Multi-signal activity: pushes=${pushEvents30d}, PRs=${prEvents30d}, issues=${issueEvents30d}, commits=${commitsLast30Days}, total=${totalActivity}, daysSinceLastActivity=${daysSinceLastActivity}, status=${livenessStatus}`);
+    console.log(`Multi-signal activity: pushes=${pushEvents30d}, PRs=${prEvents30d}, issues=${issueEvents30d}, defaultBranchCommits=${defaultBranchCommits}, pushEventCommits=${pushEventCommits}, commitsLast30Days=${commitsLast30Days}, totalActivity=${totalActivity}, daysSinceLastActivity=${daysSinceLastActivity}, status=${livenessStatus}`);
 
     resilienceScore = Math.min(Math.round(resilienceScore), 100);
 
