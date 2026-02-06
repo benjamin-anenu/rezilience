@@ -67,10 +67,14 @@ export type Database = {
           github_forks: number | null
           github_homepage: string | null
           github_is_fork: boolean | null
+          github_issue_events_30d: number | null
           github_language: string | null
+          github_last_activity: string | null
           github_last_commit: string | null
           github_open_issues: number | null
           github_org_url: string | null
+          github_pr_events_30d: number | null
+          github_push_events_30d: number | null
           github_recent_events: Json | null
           github_releases_30d: number | null
           github_stars: number | null
@@ -110,10 +114,14 @@ export type Database = {
           github_forks?: number | null
           github_homepage?: string | null
           github_is_fork?: boolean | null
+          github_issue_events_30d?: number | null
           github_language?: string | null
+          github_last_activity?: string | null
           github_last_commit?: string | null
           github_open_issues?: number | null
           github_org_url?: string | null
+          github_pr_events_30d?: number | null
+          github_push_events_30d?: number | null
           github_recent_events?: Json | null
           github_releases_30d?: number | null
           github_stars?: number | null
@@ -153,10 +161,14 @@ export type Database = {
           github_forks?: number | null
           github_homepage?: string | null
           github_is_fork?: boolean | null
+          github_issue_events_30d?: number | null
           github_language?: string | null
+          github_last_activity?: string | null
           github_last_commit?: string | null
           github_open_issues?: number | null
           github_org_url?: string | null
+          github_pr_events_30d?: number | null
+          github_push_events_30d?: number | null
           github_recent_events?: Json | null
           github_releases_30d?: number | null
           github_stars?: number | null

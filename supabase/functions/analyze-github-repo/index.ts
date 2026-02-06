@@ -30,6 +30,12 @@ interface GitHubAnalysisResult {
   resilienceScore: number;
   livenessStatus: "ACTIVE" | "STALE" | "DECAYING";
   daysSinceLastCommit: number;
+  // Multi-signal activity tracking
+  pushEvents30d: number;
+  prEvents30d: number;
+  issueEvents30d: number;
+  lastActivity: string;
+  daysSinceLastActivity: number;
 }
 
 function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
@@ -175,7 +181,28 @@ Deno.serve(async (req) => {
       avatar: c.avatar_url,
     }));
 
-    // Recent events
+    // === MULTI-SIGNAL ACTIVITY TRACKING ===
+    // Filter events from last 30 days
+    const eventsLast30Days = events.filter((e: any) => {
+      const eventDate = new Date(e.created_at);
+      return eventDate > thirtyDaysAgo;
+    });
+
+    // Count different activity types
+    const pushEvents30d = eventsLast30Days.filter((e: any) => e.type === 'PushEvent').length;
+    const prEvents30d = eventsLast30Days.filter((e: any) => e.type === 'PullRequestEvent').length;
+    const issueEvents30d = eventsLast30Days.filter((e: any) => 
+      e.type === 'IssuesEvent' || e.type === 'IssueCommentEvent'
+    ).length;
+
+    // Get most recent activity of ANY type (events are sorted by date desc)
+    const lastActivity = events.length > 0 
+      ? events[0].created_at 
+      : repoData.pushed_at;
+    const lastActivityDate = new Date(lastActivity);
+    const daysSinceLastActivity = Math.floor((now.getTime() - lastActivityDate.getTime()) / (1000 * 60 * 60 * 24));
+
+    // Recent events (keep existing parsing)
     const recentEvents = events.slice(0, 10).map((e: any) => {
       const event: any = {
         type: e.type,
@@ -226,15 +253,20 @@ Deno.serve(async (req) => {
     else if (daysActive > 180) resilienceScore += 8;
     else if (daysActive > 90) resilienceScore += 5;
 
-    // Determine liveness status
+    // Determine liveness status using MULTI-SIGNAL activity
+    // Weighted scoring: pushes 1x, PRs 2x (significant work), issues 1x, commits 1x
+    const totalActivity = pushEvents30d + (prEvents30d * 2) + issueEvents30d + commitsLast30Days;
+    
     let livenessStatus: "ACTIVE" | "STALE" | "DECAYING";
-    if (daysSinceLastCommit <= 7 && commitVelocity > 0.5) {
+    if (daysSinceLastActivity <= 14 && totalActivity >= 5) {
       livenessStatus = "ACTIVE";
-    } else if (daysSinceLastCommit <= 30) {
+    } else if (daysSinceLastActivity <= 45) {
       livenessStatus = "STALE";
     } else {
       livenessStatus = "DECAYING";
     }
+    
+    console.log(`Multi-signal activity: pushes=${pushEvents30d}, PRs=${prEvents30d}, issues=${issueEvents30d}, commits=${commitsLast30Days}, total=${totalActivity}, daysSinceLastActivity=${daysSinceLastActivity}, status=${livenessStatus}`);
 
     resilienceScore = Math.min(Math.round(resilienceScore), 100);
 
@@ -262,9 +294,15 @@ Deno.serve(async (req) => {
       resilienceScore,
       livenessStatus,
       daysSinceLastCommit,
+      // Multi-signal fields
+      pushEvents30d,
+      prEvents30d,
+      issueEvents30d,
+      lastActivity,
+      daysSinceLastActivity,
     };
 
-    console.log(`Analysis complete for ${owner}/${repo}: Score ${resilienceScore}, Status ${livenessStatus}`);
+    console.log(`Analysis complete for ${owner}/${repo}: Score ${resilienceScore}, Status ${livenessStatus}, Activity=${totalActivity}`);
 
     // If profile_id is provided, update the claimed_profiles table
     if (profile_id) {
@@ -295,6 +333,11 @@ Deno.serve(async (req) => {
             github_analyzed_at: new Date().toISOString(),
             resilience_score: result.resilienceScore,
             liveness_status: result.livenessStatus,
+            // Multi-signal activity fields
+            github_push_events_30d: result.pushEvents30d,
+            github_pr_events_30d: result.prEvents30d,
+            github_issue_events_30d: result.issueEvents30d,
+            github_last_activity: result.lastActivity,
             updated_at: new Date().toISOString(),
           })
           .eq("id", profile_id);
