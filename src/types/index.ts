@@ -173,6 +173,11 @@ export interface GitHubAnalytics {
   github_recent_events?: RecentEvent[];
   github_analyzed_at?: string;
   github_is_fork?: boolean;
+  // Multi-signal activity fields
+  github_push_events_30d?: number;
+  github_pr_events_30d?: number;
+  github_issue_events_30d?: number;
+  github_last_activity?: string;
 }
 
 // Complete Claimed Profile

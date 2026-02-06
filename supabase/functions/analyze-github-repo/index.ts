@@ -323,7 +323,8 @@ Deno.serve(async (req) => {
       if (supabaseUrl && supabaseKey) {
         const supabase = createClient(supabaseUrl, supabaseKey);
         
-        await supabase
+        // Update the claimed profile with latest metrics
+        const { error: updateError } = await supabase
           .from("claimed_profiles")
           .update({
             github_org_url: github_url,
@@ -352,6 +353,36 @@ Deno.serve(async (req) => {
             updated_at: new Date().toISOString(),
           })
           .eq("id", profile_id);
+
+        if (updateError) {
+          console.error("Error updating claimed_profiles:", updateError);
+        }
+
+        // Insert score history snapshot for tracking over time
+        const { error: historyError } = await supabase
+          .from("score_history")
+          .insert({
+            project_id: profile_id,
+            score: result.resilienceScore,
+            commit_velocity: result.commitVelocity,
+            days_last_commit: result.daysSinceLastCommit,
+            breakdown: {
+              activity: totalActivity,
+              contributors: contributorCount,
+              stars: result.stars,
+              releases: result.releasesLast30Days,
+              age: daysActive,
+              push_events: result.pushEvents30d,
+              pr_events: result.prEvents30d,
+              issue_events: result.issueEvents30d,
+            },
+          });
+
+        if (historyError) {
+          console.error("Error inserting score_history:", historyError);
+        } else {
+          console.log(`Score history snapshot saved for profile ${profile_id}`);
+        }
       }
     }
 
