@@ -4,46 +4,89 @@ import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import type { XUser } from '@/types';
+
+interface XOAuthResult {
+  success: boolean;
+  user?: {
+    id: string;
+    username: string;
+    name: string;
+    avatarUrl: string;
+  };
+  error?: string;
+}
 
 const XCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
+  const [username, setUsername] = useState<string | null>(null);
 
   useEffect(() => {
     const processCallback = async () => {
       try {
         const code = searchParams.get('code');
+        const state = searchParams.get('state');
+        const errorParam = searchParams.get('error');
+        const errorDescription = searchParams.get('error_description');
+
+        // Handle OAuth errors from X
+        if (errorParam) {
+          throw new Error(errorDescription || `X OAuth error: ${errorParam}`);
+        }
 
         if (!code) {
           throw new Error('No authorization code received from X');
         }
 
-        /**
-         * PHASE 0 MOCK: X (Twitter) OAuth token exchange is simulated
-         * 
-         * In production, this would:
-         * 1. Call an edge function with the authorization code
-         * 2. Edge function exchanges code for access token via X API
-         * 3. Edge function fetches user profile from X API
-         * 4. Return real user data to store in session
-         * 
-         * TODO Phase 2: Implement real X OAuth edge function
-         */
-        await new Promise(resolve => setTimeout(resolve, 1500));
+        // Verify CSRF state token
+        const storedState = sessionStorage.getItem('x_oauth_state');
+        if (!storedState || state !== storedState) {
+          throw new Error('Invalid state parameter. Please try signing in again.');
+        }
+        sessionStorage.removeItem('x_oauth_state');
 
-        // MOCK USER DATA - Replace with real X API response in Phase 2
-        const mockXUser: XUser = {
-          id: 'x_mock_' + Date.now(),
-          username: 'verified_builder',
-          avatarUrl: 'https://abs.twimg.com/sticky/default_profile_images/default_profile_normal.png',
+        // Get stored code verifier for PKCE
+        const codeVerifier = sessionStorage.getItem('x_code_verifier');
+        if (!codeVerifier) {
+          throw new Error('Missing code verifier. Please try signing in again.');
+        }
+        sessionStorage.removeItem('x_code_verifier');
+
+        // Call edge function to exchange code for user data
+        const redirectUri = `${window.location.origin}/x-callback`;
+        
+        const { data, error: fnError } = await supabase.functions.invoke<XOAuthResult>(
+          'x-oauth-callback',
+          {
+            body: {
+              code,
+              code_verifier: codeVerifier,
+              redirect_uri: redirectUri,
+            },
+          }
+        );
+
+        if (fnError) {
+          throw new Error(fnError.message || 'Failed to verify X authorization');
+        }
+
+        if (!data?.success || !data.user) {
+          throw new Error(data?.error || 'X verification failed');
+        }
+
+        // Store user in localStorage for session persistence
+        const xUser: XUser = {
+          id: data.user.id,
+          username: data.user.username,
+          avatarUrl: data.user.avatarUrl,
         };
+        localStorage.setItem('x_user', JSON.stringify(xUser));
 
-        // Store in localStorage
-        localStorage.setItem('x_user', JSON.stringify(mockXUser));
-
+        setUsername(data.user.username);
         setStatus('success');
 
         // Redirect to claim profile after brief success message
@@ -91,7 +134,10 @@ const XCallback = () => {
                     AUTHENTICATED
                   </h2>
                   <p className="mb-4 font-mono text-sm text-muted-foreground">
-                    Welcome! Redirecting to claim profile...
+                    Welcome, @{username}!
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Redirecting to claim profile...
                   </p>
                 </div>
               )}
