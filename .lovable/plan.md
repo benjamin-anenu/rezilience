@@ -1,238 +1,378 @@
 
 
-# Premium Mobile Experience Upgrade
+# GitHub Repository Submission & Enhanced Dashboard Implementation
 
-## Current State Analysis
+## Overview
 
-After reviewing the codebase, I identified several areas where the mobile experience can be elevated to match the premium Bloomberg Terminal aesthetic:
+This plan implements a dual-path GitHub integration for the "Join the Registry" onboarding flow:
+1. **Primary Path**: Submit a GitHub repository URL (no OAuth required) - validates and fetches all metrics via public API
+2. **Secondary Path**: Connect GitHub account via OAuth (existing flow) - provides private repo access
 
-### Current Issues
+Additionally, auto-populates form fields from GitHub data and creates a rich dashboard view showing detailed GitHub analytics for project owners.
 
-| Component | Issue |
-|-----------|-------|
-| Navigation | Basic dropdown menu, no slide-in drawer animation |
-| Program Leaderboard | Uses hidden columns approach - mobile users see minimal info |
-| Program Header | Social icons row wraps awkwardly on mobile |
-| Hero Stats | `grid-cols-3` cramped on mobile |
-| Metric Cards | Single column stacking lacks visual hierarchy |
-| Dashboard Header | User info + actions don't stack elegantly |
-| Cards | No touch-optimized spacing or gestures |
+---
+
+## Current State
+
+| Component | Status |
+|-----------|--------|
+| GitHub OAuth flow | Working - exchanges code, fetches metrics, stores token |
+| `fetch-github` edge function | Working - updates scores for existing projects |
+| `SocialsForm.tsx` | Single path - only OAuth connect button |
+| `claimed_profiles` table | Has columns for GitHub data but limited fields |
+| Dashboard/Profile pages | Shows basic score, missing detailed GitHub stats |
+
+---
+
+## Architecture Design
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        ONBOARDING STEP 3: GITHUB                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │                    OPTION A: SUBMIT REPO URL                          │  │
+│  │                      (PRIMARY - RECOMMENDED)                          │  │
+│  │                                                                       │  │
+│  │  [https://github.com/solana-labs/solana________________] [ANALYZE]   │  │
+│  │                                                                       │  │
+│  │  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░░░░░░░░░░░░  Analyzing...                    │  │
+│  │  ✓ Repository validated                                               │  │
+│  │  ✓ Fetching commits...                                                │  │
+│  │  ✓ Counting contributors...                                           │  │
+│  │  ✓ Calculating score...                                               │  │
+│  │                                                                       │  │
+│  │  ┌───────────────────────────────────────────────────────────────┐   │  │
+│  │  │  ANALYSIS RESULT                                               │   │  │
+│  │  │  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ │   │  │
+│  │  │  Score: 87/100          Status: ACTIVE                         │   │  │
+│  │  │  Stars: 14,239          Forks: 4,123                          │   │  │
+│  │  │  Contributors: 156      Commits (30d): 234                     │   │  │
+│  │  │  Language: Rust         Last Push: 2 hours ago                 │   │  │
+│  │  └───────────────────────────────────────────────────────────────┘   │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+│                            ─── OR ───                                       │
+│                                                                             │
+│  ┌───────────────────────────────────────────────────────────────────────┐  │
+│  │                    OPTION B: CONNECT GITHUB                           │  │
+│  │                  (For Private Repos & Better Rate Limits)             │  │
+│  │                                                                       │  │
+│  │  [🔒 CONNECT GITHUB ACCOUNT]                                          │  │
+│  │                                                                       │  │
+│  │  "Grants read access to private repositories for enhanced metrics"   │  │
+│  └───────────────────────────────────────────────────────────────────────┘  │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## Implementation Plan
 
-### 1. Premium Slide-Out Mobile Menu
+### Phase 1: New Edge Function - `analyze-github-repo`
 
-Replace the basic dropdown with a polished drawer using the `vaul` library (already installed):
+Create a new edge function that analyzes a GitHub repository URL without requiring OAuth:
 
-**Features:**
-- Slide-in from right with smooth animation
-- Dark overlay backdrop
-- User profile section at top
-- Full-height navigation links with large touch targets
-- Active route highlighting with teal accent bar
-- Separated sections: Navigation / Actions / Account
+**Endpoint**: `POST /functions/v1/analyze-github-repo`
 
-**Visual Layout:**
-```text
-┌──────────────────────────────────────┐
-│ [X Close]                            │
-├──────────────────────────────────────┤
-│  ┌─────────────────────────────────┐ │
-│  │ 👤 @username                    │ │
-│  │ Connected via X                  │ │
-│  └─────────────────────────────────┘ │
-├──────────────────────────────────────┤
-│                                      │
-│  NAVIGATION                          │
-│  ────────────────────────            │
-│  ┃ EXPLORER                         │ ← Active
-│  │ DOCS                              │
-│  │ GRANTS                            │
-│  │ STAKING                           │
-│  │ MY BONDS                          │
-│  │ MY REGISTRY                       │
-│                                      │
-├──────────────────────────────────────┤
-│  [████ JOIN THE REGISTRY ████]       │
-│                                      │
-│  [Sign Out]                          │
-└──────────────────────────────────────┘
+**Request Body**:
+```json
+{
+  "github_url": "https://github.com/solana-labs/solana"
+}
 ```
 
-### 2. Mobile-Optimized Program Cards
-
-Replace the table on mobile with touch-friendly cards:
-
-**Implementation:**
-- Detect mobile using `useIsMobile()` hook
-- Show cards on mobile, table on desktop
-- Each card shows: Rank, Name, Score, Status badge
-- Swipe-hint animation on first card
-- Larger touch target (min 48px height)
-
-**Mobile Card Layout:**
-```text
-┌────────────────────────────────────────┐
-│ #1                           ◀ ACTIVE  │
-│ ┌──┐                                   │
-│ │M │ MARINADE FINANCE                 │
-│ └──┘                                   │
-│                                        │
-│ RESILIENCE SCORE              89/100   │
-│ ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░ ← Progress bar  │
-│                                        │
-│ 150K SOL Staked  •  Verified ✓         │
-└────────────────────────────────────────┘
+**Response**:
+```json
+{
+  "success": true,
+  "data": {
+    "name": "solana",
+    "fullName": "solana-labs/solana",
+    "description": "Web-Scale Blockchain for fast, secure...",
+    "htmlUrl": "https://github.com/solana-labs/solana",
+    "homepage": "https://solana.com",
+    "language": "Rust",
+    "stars": 14239,
+    "forks": 4123,
+    "contributors": 156,
+    "openIssues": 892,
+    "createdAt": "2017-11-16T19:01:44Z",
+    "pushedAt": "2026-02-05T12:34:56Z",
+    "isFork": false,
+    "topics": ["blockchain", "solana", "cryptocurrency"],
+    "commitVelocity": 8.5,
+    "commitsLast30Days": 234,
+    "releasesLast30Days": 3,
+    "latestRelease": { "tag": "v1.18.5", "date": "2026-02-01T10:30:00Z" },
+    "topContributors": [
+      { "login": "alice-dev", "contributions": 234, "avatar": "..." },
+      { "login": "bob-dev", "contributions": 156, "avatar": "..." }
+    ],
+    "recentEvents": [
+      { "type": "PushEvent", "actor": "alice-dev", "date": "2026-02-05T10:30:00Z" }
+    ],
+    "resilienceScore": 87.5,
+    "livenessStatus": "ACTIVE",
+    "daysSinceLastCommit": 0
+  }
+}
 ```
 
-### 3. Hero Section Mobile Optimization
-
-**Changes:**
-- Stack stats vertically (1 column) on mobile
-- Larger touch-friendly CTA buttons
-- Reduce heading size for mobile
-- Add subtle fade-in animation
-
-**Mobile Stats Layout:**
-```text
-┌────────────────────────────┐
-│ 2,847                      │
-│ Initial Cohort         ℹ️   │
-├────────────────────────────┤
-│ 12K+                       │
-│ Est. Weekly Heartbeats ℹ️   │
-├────────────────────────────┤
-│ 73.4                       │
-│ Beta Benchmark         ℹ️   │
-└────────────────────────────┘
-```
-
-### 4. Program Detail Mobile Layout
-
-**Header Improvements:**
-- Stack logo + name vertically on mobile
-- Social icons in horizontal scrollable row
-- Score displayed prominently below name
-- Program ID with copy button on its own row
-
-**Mobile Header:**
-```text
-┌────────────────────────────────────────┐
-│ ← Back to Explorer                     │
-├────────────────────────────────────────┤
-│        ┌────────┐                      │
-│        │   M    │                      │
-│        └────────┘                      │
-│                                        │
-│    MARINADE FINANCE                    │
-│    ◀ Active                            │
-│                                        │
-│         89                             │
-│    Resilience Score                    │
-├────────────────────────────────────────┤
-│ Program ID: 8888...6666  [Copy] [↗]    │
-├────────────────────────────────────────┤
-│ 🌐  𝕏  💬  ✈️  🐙                       │ ← Scrollable social row
-└────────────────────────────────────────┘
-```
-
-### 5. Dashboard Mobile Improvements
-
-**Changes:**
-- Collapsible user info section
-- Full-width action buttons stacked
-- Project cards with larger touch targets
-- Bottom sheet for delete confirmation (better UX than modal)
-
-### 6. Touch-Optimized Spacing & Typography
-
-**Global Mobile Enhancements:**
-- Increase base tap target to 48px minimum
-- Add `active:scale-95` feedback on buttons
-- Larger fonts for data display (`text-lg` → `text-xl`)
-- More generous padding on cards (`p-4` → `p-5`)
-- Safe area insets for notched devices
+**APIs Called**:
+1. `GET /repos/{owner}/{repo}` - Basic repo info
+2. `GET /repos/{owner}/{repo}/commits` - Commit history (last 30 days)
+3. `GET /repos/{owner}/{repo}/contributors` - Contributor list (top 10)
+4. `GET /repos/{owner}/{repo}/releases` - Release history
+5. `GET /repos/{owner}/{repo}/stats/commit_activity` - Weekly commit stats
+6. `GET /repos/{owner}/{repo}/events` - Recent activity (last 10)
 
 ---
 
-## Files to Create/Modify
+### Phase 2: Database Schema Updates
 
-| File | Change Type | Description |
-|------|-------------|-------------|
-| `src/components/layout/Navigation.tsx` | Modify | Add Drawer-based mobile menu |
-| `src/components/explorer/MobileProgramCard.tsx` | Create | New mobile-optimized card component |
-| `src/components/explorer/ProgramLeaderboard.tsx` | Modify | Use mobile cards on small screens |
-| `src/components/program/ProgramHeader.tsx` | Modify | Mobile-first responsive layout |
-| `src/components/landing/HeroSection.tsx` | Modify | Stack stats vertically on mobile |
-| `src/pages/Dashboard.tsx` | Modify | Mobile-optimized layout |
-| `src/index.css` | Modify | Add mobile utility classes |
+Add new columns to `claimed_profiles` table to store extended GitHub analytics:
+
+```sql
+ALTER TABLE claimed_profiles
+ADD COLUMN IF NOT EXISTS github_stars integer DEFAULT 0,
+ADD COLUMN IF NOT EXISTS github_forks integer DEFAULT 0,
+ADD COLUMN IF NOT EXISTS github_contributors integer DEFAULT 0,
+ADD COLUMN IF NOT EXISTS github_language varchar,
+ADD COLUMN IF NOT EXISTS github_last_commit timestamptz,
+ADD COLUMN IF NOT EXISTS github_commit_velocity numeric DEFAULT 0,
+ADD COLUMN IF NOT EXISTS github_commits_30d integer DEFAULT 0,
+ADD COLUMN IF NOT EXISTS github_releases_30d integer DEFAULT 0,
+ADD COLUMN IF NOT EXISTS github_open_issues integer DEFAULT 0,
+ADD COLUMN IF NOT EXISTS github_topics jsonb DEFAULT '[]',
+ADD COLUMN IF NOT EXISTS github_top_contributors jsonb DEFAULT '[]',
+ADD COLUMN IF NOT EXISTS github_recent_events jsonb DEFAULT '[]',
+ADD COLUMN IF NOT EXISTS github_is_fork boolean DEFAULT false,
+ADD COLUMN IF NOT EXISTS github_homepage varchar;
+```
+
+---
+
+### Phase 3: Updated SocialsForm Component
+
+Replace the current single-path GitHub integration with a dual-option interface:
+
+**New Component Structure**:
+
+```text
+src/components/claim/
+├── SocialsForm.tsx          (Updated - orchestrates both paths)
+├── GitHubUrlAnalyzer.tsx    (New - handles URL submission + analysis UI)
+├── GitHubConnectButton.tsx  (New - OAuth connect with explanation)
+└── GitHubAnalysisResult.tsx (New - displays analysis results)
+```
+
+**Key Features**:
+- Premium Bloomberg Terminal aesthetic with analysis progress steps
+- Real-time progress indicators during API fetching
+- Auto-populate project name & description if not already set
+- Display comprehensive analysis results before proceeding
+
+---
+
+### Phase 4: Auto-Population Logic
+
+When GitHub data is fetched, automatically populate these form fields if empty:
+
+| GitHub Field | Form Field |
+|--------------|------------|
+| `name` or `full_name` | `projectName` (if empty) |
+| `description` | `description` (if empty) |
+| `homepage` | `websiteUrl` (if empty) |
+| `language` → category mapping | `category` (if empty) |
+| `topics` | Suggest category |
+
+**Language to Category Mapping**:
+```javascript
+const languageCategoryMap = {
+  'Rust': 'infrastructure',
+  'Solidity': 'defi',
+  'TypeScript': 'developer-tools',
+  'JavaScript': 'developer-tools',
+  'Python': 'developer-tools',
+  'Move': 'infrastructure',
+  // Default: 'other'
+};
+```
+
+---
+
+### Phase 5: Enhanced Dashboard - GitHub Analytics View
+
+When a project owner clicks on their project in the Dashboard, show comprehensive GitHub analytics:
+
+**New Component**: `src/components/dashboard/GitHubAnalyticsCard.tsx`
+
+```text
+┌─────────────────────────────────────────────────────────────────────┐
+│ GITHUB ANALYTICS                                    [↻ Refresh]     │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────┐│
+│  │    14,239    │  │    4,123     │  │     156      │  │   234    ││
+│  │    Stars     │  │    Forks     │  │ Contributors │  │ Commits  ││
+│  │              │  │              │  │              │  │  (30d)   ││
+│  └──────────────┘  └──────────────┘  └──────────────┘  └──────────┘│
+│                                                                     │
+│  COMMIT VELOCITY                                                    │
+│  ▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓░░░░░░░░░░  8.5 commits/week                  │
+│                                                                     │
+│  TOP CONTRIBUTORS                                                   │
+│  ┌─────────────────────────────────────────────────────────────────┐│
+│  │ 🥇 @alice-dev     234 commits  ████████████████████             ││
+│  │ 🥈 @bob-dev       156 commits  █████████████                    ││
+│  │ 🥉 @charlie-dev    89 commits  ███████                          ││
+│  └─────────────────────────────────────────────────────────────────┘│
+│                                                                     │
+│  RECENT ACTIVITY                                                    │
+│  ┌─────────────────────────────────────────────────────────────────┐│
+│  │ ● PushEvent     @alice-dev      "Fix: reduce RPC latency"   2h  ││
+│  │ ● IssuesEvent   @bob-dev        Opened #1234                5h  ││
+│  │ ● PushEvent     @charlie-dev    "Feature: validator..."    12h  ││
+│  └─────────────────────────────────────────────────────────────────┘│
+│                                                                     │
+│  RELEASES (Last 30 Days)                                            │
+│  v1.18.5 (Feb 1)  •  v1.18.4 (Jan 25)  •  v1.18.3 (Jan 15)        │
+│                                                                     │
+│  Last synced: 2 hours ago                                           │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### Phase 6: Profile Detail Page Enhancements
+
+Extend `ProfileDetail.tsx` and `ProgramDetail.tsx` to show GitHub analytics to owners:
+
+**Owner Detection**: Check if `user.id === profile.xUserId`
+
+**Owner-Only Section**: "GitHub Insights" card visible only to the profile owner
+
+---
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `supabase/functions/analyze-github-repo/index.ts` | Edge function for public repo analysis |
+| `src/components/claim/GitHubUrlAnalyzer.tsx` | URL input + analysis UI with progress steps |
+| `src/components/claim/GitHubAnalysisResult.tsx` | Display analysis results card |
+| `src/components/dashboard/GitHubAnalyticsCard.tsx` | Detailed GitHub stats for owners |
+| `src/hooks/useGitHubAnalysis.ts` | React hook for calling analyze endpoint |
+
+## Files to Modify
+
+| File | Changes |
+|------|---------|
+| `src/components/claim/SocialsForm.tsx` | Dual-path UI (URL submit primary, OAuth secondary) |
+| `src/pages/ClaimProfile.tsx` | Handle analysis result, auto-populate fields |
+| `src/pages/ProfileDetail.tsx` | Show GitHub analytics to owners |
+| `src/hooks/useClaimedProfiles.ts` | Add GitHub fields to transform function |
+| `src/types/index.ts` | Extended GitHubData interface |
+| `supabase/config.toml` | Add config for new edge function |
 
 ---
 
 ## Technical Details
 
-### Drawer Implementation (Navigation.tsx)
+### Edge Function: `analyze-github-repo`
 
-Uses the existing `vaul` Drawer component:
-```tsx
-import { Drawer, DrawerContent, DrawerTrigger } from '@/components/ui/drawer';
+```typescript
+// Key implementation points:
 
-// Mobile menu trigger
-<Drawer>
-  <DrawerTrigger asChild>
-    <Button variant="ghost" size="icon" className="md:hidden">
-      <Menu className="h-5 w-5" />
-    </Button>
-  </DrawerTrigger>
-  <DrawerContent className="h-full">
-    {/* Premium mobile menu content */}
-  </DrawerContent>
-</Drawer>
-```
+// 1. Parse and validate GitHub URL
+function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
+  const patterns = [
+    /github\.com\/([^\/]+)\/([^\/]+)/,
+    /github\.com\/([^\/]+)\/([^\/]+)\.git$/,
+  ];
+  // ... validation
+}
 
-### Mobile Card Detection
+// 2. Parallel API fetching for speed
+const [repoInfo, commits, contributors, releases, activity] = await Promise.all([
+  fetchRepoInfo(owner, repo, token),
+  fetchCommits(owner, repo, token),
+  fetchContributors(owner, repo, token),
+  fetchReleases(owner, repo, token),
+  fetchActivity(owner, repo, token),
+]);
 
-Uses the existing `useIsMobile()` hook:
-```tsx
-import { useIsMobile } from '@/hooks/use-mobile';
+// 3. Use fallback GITHUB_TOKEN from secrets for rate limits
+const githubToken = Deno.env.get("GITHUB_TOKEN"); // 5000 req/hr vs 60/hr
 
-export function ProgramLeaderboard({ projects }) {
-  const isMobile = useIsMobile();
-  
-  if (isMobile) {
-    return <MobileProgramCards projects={projects} />;
-  }
-  
-  return <Table>...</Table>;
+// 4. Handle 404 gracefully for private repos
+if (repoResponse.status === 404) {
+  return { error: "Repository not found. It may be private - try connecting your GitHub account instead." };
 }
 ```
 
-### Touch Feedback Utilities
+### Analysis Progress UI
 
-Add to `src/index.css`:
-```css
-@layer utilities {
-  .touch-feedback {
-    @apply transition-transform active:scale-[0.98];
+```tsx
+const steps = [
+  { label: 'Validating Repository', status: 'complete' },
+  { label: 'Fetching Commits', status: 'in-progress' },
+  { label: 'Counting Contributors', status: 'pending' },
+  { label: 'Checking Releases', status: 'pending' },
+  { label: 'Calculating Score', status: 'pending' },
+];
+```
+
+### Auto-Population Flow
+
+```tsx
+// In ClaimProfile.tsx
+const handleAnalysisComplete = (data: GitHubAnalysisResult) => {
+  // Auto-populate empty fields
+  if (!projectName && data.name) {
+    setProjectName(data.name);
+  }
+  if (!description && data.description) {
+    setDescription(data.description);
+  }
+  if (!websiteUrl && data.homepage) {
+    setWebsiteUrl(data.homepage);
+  }
+  if (!category && data.language) {
+    const suggestedCategory = languageCategoryMap[data.language] || 'other';
+    setCategory(suggestedCategory);
   }
   
-  .safe-bottom {
-    padding-bottom: env(safe-area-inset-bottom, 0);
-  }
-}
+  // Store full analysis data for later use
+  setGithubAnalysis(data);
+};
 ```
 
 ---
 
-## Visual Hierarchy on Mobile
+## User Flow Summary
 
-The premium mobile experience maintains the Bloomberg Terminal aesthetic through:
+1. User reaches Step 3 (Verify/Socials)
+2. **Primary Option**: Paste GitHub repo URL → Click "ANALYZE"
+3. System shows progress steps while fetching data
+4. Analysis results displayed in premium card format
+5. Form fields auto-populated from GitHub data
+6. User can proceed to Step 4 (or optionally use OAuth for private repos)
+7. On final submit, all GitHub data saved to `claimed_profiles`
+8. In Dashboard, owner sees full GitHub analytics for their projects
 
-1. **Information Density**: Showing key metrics prominently without clutter
-2. **Generous Touch Targets**: 48px minimum for all interactive elements
-3. **Progressive Disclosure**: "Read More" patterns, collapsible sections
-4. **Smooth Animations**: Drawer transitions, card press feedback
-5. **Brand Consistency**: Teal accents, Space Grotesk headlines, JetBrains Mono data
+---
+
+## Rate Limit Considerations
+
+| Scenario | Rate Limit | Mitigation |
+|----------|------------|------------|
+| Unauthenticated | 60/hr | Use `GITHUB_TOKEN` secret |
+| With `GITHUB_TOKEN` | 5,000/hr | Sufficient for ~1000 analyses/hr |
+| User OAuth token | 5,000/hr per user | Best for private repos |
+
+The system uses the `GITHUB_TOKEN` secret (already configured) as fallback for all public repo analyses, ensuring consistent rate limits.
 
