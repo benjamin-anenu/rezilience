@@ -304,8 +304,24 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Step 5: Create or update claimed_profile
-    const profileId = profile_data?.id || crypto.randomUUID();
+    // FIX #6: Check for existing profile by X user ID to prevent duplicates
+    const xUserId = profile_data?.xUserId;
+    let existingProfileId: string | null = null;
+    
+    if (xUserId) {
+      const { data: existingProfile } = await supabase
+        .from("claimed_profiles")
+        .select("id")
+        .eq("x_user_id", xUserId)
+        .maybeSingle();
+      
+      if (existingProfile) {
+        existingProfileId = existingProfile.id;
+      }
+    }
+
+    // Use existing profile ID if found, otherwise generate new one
+    const profileId = existingProfileId || profile_data?.id || crypto.randomUUID();
     
     const claimedProfile = {
       id: profileId,
@@ -321,7 +337,7 @@ Deno.serve(async (req) => {
       github_username: githubUser.login,
       github_access_token: accessToken,
       github_token_scope: tokenScope,
-      x_user_id: profile_data?.xUserId || null,
+      x_user_id: xUserId || null,
       x_username: profile_data?.xUsername || null,
       discord_url: profile_data?.socials?.discordUrl || null,
       telegram_url: profile_data?.socials?.telegramUrl || null,

@@ -77,9 +77,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signOut = () => {
+    // Clear X auth data
     localStorage.removeItem('x_user');
     sessionStorage.removeItem('x_code_verifier');
     sessionStorage.removeItem('x_oauth_state');
+    
+    // FIX #4: Clear ALL onboarding-related localStorage to prevent data leakage
+    localStorage.removeItem('claimFormProgress');
+    localStorage.removeItem('verifiedProfileId');
+    localStorage.removeItem('claimingProfile');
+    localStorage.removeItem('github_oauth_state');
+    localStorage.removeItem('claimingProgramId');
+    localStorage.removeItem('claimingProgramDbId');
+    localStorage.removeItem('claimingWalletAddress');
+    localStorage.removeItem('claimingXUserId');
+    localStorage.removeItem('claimingXUsername');
+    
     setUser(null);
     window.location.href = '/';
   };

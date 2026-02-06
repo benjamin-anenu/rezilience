@@ -10,6 +10,7 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useProject } from '@/hooks/useProjects';
 import { useToast } from '@/hooks/use-toast';
+import { useExistingProfile } from '@/hooks/useClaimedProfiles';
 import {
   StepIndicator,
   CoreIdentityForm,
@@ -33,6 +34,9 @@ const ClaimProfile = () => {
   
   // Check if GitHub OAuth is configured
   const isGitHubConfigured = !!import.meta.env.VITE_GITHUB_CLIENT_ID;
+
+  // FIX #2: Check if user already has a verified profile
+  const { data: existingProfileData, isLoading: checkingExisting } = useExistingProfile(user?.id);
 
   // Current step (1-5)
   // Track if GitHub verification is complete
@@ -90,6 +94,18 @@ const ClaimProfile = () => {
 
   // Project lookup hook
   const { data: existingProject, refetch: refetchProject } = useProject(programId);
+
+  // FIX #2: Redirect if user already has a verified profile
+  useEffect(() => {
+    if (!checkingExisting && existingProfileData?.hasProfile && existingProfileData.profileId) {
+      // User already has a profile - show toast and redirect
+      toast({
+        title: 'Profile Already Exists',
+        description: 'Redirecting to your dashboard...',
+      });
+      navigate('/dashboard');
+    }
+  }, [checkingExisting, existingProfileData, navigate, toast]);
 
   // Sync step with auth state
   useEffect(() => {
@@ -271,7 +287,8 @@ const ClaimProfile = () => {
     }
   };
 
-  if (authLoading) {
+  // Show loading while checking auth or existing profile
+  if (authLoading || checkingExisting) {
     return (
       <Layout>
         <div className="flex min-h-[60vh] items-center justify-center">

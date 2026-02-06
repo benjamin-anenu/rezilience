@@ -177,7 +177,68 @@ export function useClaimedProfileByProjectId(projectId: string) {
 }
 
 /**
- * Fetch all verified claimed profiles
+ * Fetch verified profiles for a specific X user (MY profiles)
+ * This is the correct hook to use in Dashboard - filters by owner
+ */
+export function useMyVerifiedProfiles(xUserId: string | undefined) {
+  return useQuery({
+    queryKey: ['my-verified-profiles', xUserId],
+    queryFn: async (): Promise<ClaimedProfile[]> => {
+      if (!xUserId) return [];
+
+      const { data, error } = await supabase
+        .from('claimed_profiles')
+        .select('*')
+        .eq('x_user_id', xUserId)
+        .eq('verified', true)
+        .order('verified_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching my verified profiles:', error);
+        throw error;
+      }
+
+      return (data || []).map(d => transformToClaimedProfile(d as unknown as DBClaimedProfile));
+    },
+    enabled: !!xUserId,
+    staleTime: 1000 * 60 * 5,
+  });
+}
+
+/**
+ * Check if user has any existing profile (verified or not)
+ * Used to detect if user should skip onboarding
+ */
+export function useExistingProfile(xUserId: string | undefined) {
+  return useQuery({
+    queryKey: ['existing-profile-check', xUserId],
+    queryFn: async (): Promise<{ hasProfile: boolean; profileId?: string }> => {
+      if (!xUserId) return { hasProfile: false };
+
+      const { data, error } = await supabase
+        .from('claimed_profiles')
+        .select('id, verified')
+        .eq('x_user_id', xUserId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error checking existing profile:', error);
+        return { hasProfile: false };
+      }
+
+      return {
+        hasProfile: !!data,
+        profileId: data?.id,
+      };
+    },
+    enabled: !!xUserId,
+    staleTime: 1000 * 60 * 2,
+  });
+}
+
+/**
+ * Fetch all verified claimed profiles (PUBLIC - for explorer, leaderboards)
+ * WARNING: Do NOT use in Dashboard - use useMyVerifiedProfiles instead!
  */
 export function useVerifiedProfiles() {
   return useQuery({

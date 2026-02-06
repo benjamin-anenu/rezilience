@@ -89,13 +89,15 @@ const GitHubCallback = () => {
         setCurrentStep('Calculating Resilience Score...');
         await new Promise(resolve => setTimeout(resolve, 500));
 
-        // Clean up temp storage but keep form progress
+        // FIX #3 & #8: Clean up ALL temp storage including form progress on success
         localStorage.removeItem('claimingProgramId');
         localStorage.removeItem('claimingProgramDbId');
         localStorage.removeItem('claimingWalletAddress');
         localStorage.removeItem('claimingXUserId');
         localStorage.removeItem('claimingXUsername');
         localStorage.removeItem('claimingProfile');
+        localStorage.removeItem('claimFormProgress'); // FIX #3: Clear form progress on success
+        localStorage.removeItem('github_oauth_state');
         
         // Store verified profile ID for final navigation
         localStorage.setItem('verifiedProfileId', data.profile?.id || '');
@@ -104,13 +106,16 @@ const GitHubCallback = () => {
         setStatus('success');
         setCurrentStep('Verification complete!');
 
-        // Redirect back to claim flow at Step 4 (Media) to complete onboarding
+        // Redirect directly to the profile page instead of back to onboarding
         setTimeout(() => {
-          navigate('/claim-profile?step=4&verified=true');
+          navigate(`/profile/${data.profile?.id}`);
         }, 2000);
 
       } catch (err) {
         console.error('GitHub callback error:', err);
+        // FIX #8: Clear temporary storage on error path as well
+        localStorage.removeItem('github_oauth_state');
+        localStorage.removeItem('claimingProfile');
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
         setStatus('error');
       }
