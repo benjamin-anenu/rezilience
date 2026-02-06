@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.delete-profile]
 verify_jwt = false
+
+[functions.analyze-github-repo]
+verify_jwt = false

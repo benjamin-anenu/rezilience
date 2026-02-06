@@ -28,6 +28,22 @@ interface DBClaimedProfile {
   updated_at: string;
   resilience_score: number | null;
   liveness_status: string | null;
+  // Extended GitHub analytics
+  github_stars: number | null;
+  github_forks: number | null;
+  github_contributors: number | null;
+  github_language: string | null;
+  github_last_commit: string | null;
+  github_commit_velocity: number | null;
+  github_commits_30d: number | null;
+  github_releases_30d: number | null;
+  github_open_issues: number | null;
+  github_topics: Json | null;
+  github_top_contributors: Json | null;
+  github_recent_events: Json | null;
+  github_is_fork: boolean | null;
+  github_homepage: string | null;
+  github_analyzed_at: string | null;
 }
 
 // Transform database format to frontend ClaimedProfile format
@@ -56,6 +72,23 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
     verifiedAt: db.verified_at || db.created_at,
     score: db.resilience_score ?? 0,
     livenessStatus: (db.liveness_status?.toLowerCase() as 'active' | 'dormant' | 'degraded') || 'active',
+    // Extended GitHub analytics
+    githubAnalytics: {
+      github_org_url: db.github_org_url || undefined,
+      github_stars: db.github_stars ?? undefined,
+      github_forks: db.github_forks ?? undefined,
+      github_contributors: db.github_contributors ?? undefined,
+      github_language: db.github_language || undefined,
+      github_last_commit: db.github_last_commit || undefined,
+      github_commit_velocity: db.github_commit_velocity ?? undefined,
+      github_commits_30d: db.github_commits_30d ?? undefined,
+      github_releases_30d: db.github_releases_30d ?? undefined,
+      github_open_issues: db.github_open_issues ?? undefined,
+      github_topics: (Array.isArray(db.github_topics) ? db.github_topics : []) as string[],
+      github_top_contributors: (Array.isArray(db.github_top_contributors) ? db.github_top_contributors : []) as Array<{ login: string; contributions: number; avatar: string }>,
+      github_recent_events: (Array.isArray(db.github_recent_events) ? db.github_recent_events : []) as Array<{ type: string; actor: string; date: string; message?: string }>,
+      github_analyzed_at: db.github_analyzed_at || undefined,
+    },
   };
 }
 

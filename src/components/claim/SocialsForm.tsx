@@ -4,6 +4,8 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ReputationBar } from './ReputationBar';
+import { GitHubUrlAnalyzer } from './GitHubUrlAnalyzer';
+import type { GitHubAnalysisResult } from '@/hooks/useGitHubAnalysis';
 
 interface SocialsFormProps {
   githubOrgUrl: string;
@@ -15,6 +17,9 @@ interface SocialsFormProps {
   setTelegramUrl: (value: string) => void;
   onGitHubConnect: () => void;
   githubConnected: boolean;
+  // New props for analysis flow
+  analysisResult: GitHubAnalysisResult | null;
+  onAnalysisComplete: (result: GitHubAnalysisResult) => void;
 }
 
 export const SocialsForm = ({
@@ -27,14 +32,18 @@ export const SocialsForm = ({
   setTelegramUrl,
   onGitHubConnect,
   githubConnected,
+  analysisResult,
+  onAnalysisComplete,
 }: SocialsFormProps) => {
+  const hasGitHubData = githubConnected || !!analysisResult;
+
   return (
     <div className="space-y-6">
       {/* Reputation Progress */}
       <Card className="border-border bg-card">
         <CardContent className="pt-6">
           <ReputationBar
-            githubConnected={githubConnected}
+            githubConnected={hasGitHubData}
             xLinked={!!xHandle}
             discordLinked={!!discordUrl}
             telegramLinked={!!telegramUrl}
@@ -42,45 +51,46 @@ export const SocialsForm = ({
         </CardContent>
       </Card>
 
-      {/* GitHub Integration */}
-      <Card className="border-primary/30 bg-card">
+      {/* Primary Option: Repository URL Analysis */}
+      <GitHubUrlAnalyzer
+        githubOrgUrl={githubOrgUrl}
+        setGithubOrgUrl={setGithubOrgUrl}
+        onAnalysisComplete={onAnalysisComplete}
+        analysisResult={analysisResult}
+      />
+
+      {/* Divider */}
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-border" />
+        </div>
+        <div className="relative flex justify-center text-xs uppercase">
+          <span className="bg-background px-4 text-muted-foreground">OR</span>
+        </div>
+      </div>
+
+      {/* Secondary Option: GitHub OAuth */}
+      <Card className="border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="flex items-center gap-3">
-            <Github className="h-5 w-5 text-primary" />
+            <Lock className="h-5 w-5 text-muted-foreground" />
             <span className="font-display text-lg uppercase tracking-tight">
-              GitHub Integration
+              Connect GitHub Account
             </span>
-            <span className="ml-auto rounded-sm bg-primary/20 px-2 py-0.5 text-[10px] font-mono uppercase text-primary">
-              REQUIRED
+            <span className="ml-auto rounded-sm bg-muted px-2 py-0.5 text-[10px] font-mono uppercase text-muted-foreground">
+              PRIVATE REPOS
             </span>
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <blockquote className="border-l-2 border-primary/50 pl-4 italic text-muted-foreground">
-            "IN AN OPEN-SOURCE WORLD, PRIVACY IS ROT."
-          </blockquote>
-
           <p className="text-sm text-muted-foreground">
-            This is where the <span className="font-semibold text-primary">Heartbeat</span> data 
-            (Velocity/Commits) is captured. Link your GitHub Organization or Repository.
+            For <span className="font-semibold text-foreground">private repositories</span> or 
+            enhanced rate limits, connect your GitHub account directly.
           </p>
 
-          <div className="space-y-2">
-            <Label htmlFor="githubOrg" className="font-display text-xs uppercase tracking-wider">
-              GitHub Organization/Repo URL
-            </Label>
-            <Input
-              id="githubOrg"
-              placeholder="https://github.com/your-org"
-              value={githubOrgUrl}
-              onChange={(e) => setGithubOrgUrl(e.target.value)}
-              className="font-mono"
-            />
-          </div>
-
-          <div className="rounded-sm border border-primary/20 bg-primary/5 p-4">
+          <div className="rounded-sm border border-muted bg-muted/30 p-4">
             <div className="flex items-start gap-3">
-              <Lock className="mt-0.5 h-4 w-4 text-primary" />
+              <Lock className="mt-0.5 h-4 w-4 text-muted-foreground" />
               <div className="text-sm">
                 <span className="font-semibold text-foreground">Read-Only Access: </span>
                 <span className="text-muted-foreground">
@@ -93,11 +103,13 @@ export const SocialsForm = ({
 
           <Button
             onClick={onGitHubConnect}
+            variant="outline"
             className="w-full font-display font-semibold uppercase tracking-wider"
             size="lg"
+            disabled={githubConnected}
           >
             <Github className="mr-2 h-5 w-5" />
-            CONNECT GITHUB
+            {githubConnected ? 'CONNECTED' : 'CONNECT GITHUB ACCOUNT'}
           </Button>
         </CardContent>
       </Card>

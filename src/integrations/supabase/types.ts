@@ -60,8 +60,23 @@ export type Database = {
           description: string | null
           discord_url: string | null
           github_access_token: string | null
+          github_analyzed_at: string | null
+          github_commit_velocity: number | null
+          github_commits_30d: number | null
+          github_contributors: number | null
+          github_forks: number | null
+          github_homepage: string | null
+          github_is_fork: boolean | null
+          github_language: string | null
+          github_last_commit: string | null
+          github_open_issues: number | null
           github_org_url: string | null
+          github_recent_events: Json | null
+          github_releases_30d: number | null
+          github_stars: number | null
           github_token_scope: string | null
+          github_top_contributors: Json | null
+          github_topics: Json | null
           github_username: string | null
           id: string
           liveness_status: string | null
@@ -88,8 +103,23 @@ export type Database = {
           description?: string | null
           discord_url?: string | null
           github_access_token?: string | null
+          github_analyzed_at?: string | null
+          github_commit_velocity?: number | null
+          github_commits_30d?: number | null
+          github_contributors?: number | null
+          github_forks?: number | null
+          github_homepage?: string | null
+          github_is_fork?: boolean | null
+          github_language?: string | null
+          github_last_commit?: string | null
+          github_open_issues?: number | null
           github_org_url?: string | null
+          github_recent_events?: Json | null
+          github_releases_30d?: number | null
+          github_stars?: number | null
           github_token_scope?: string | null
+          github_top_contributors?: Json | null
+          github_topics?: Json | null
           github_username?: string | null
           id?: string
           liveness_status?: string | null
@@ -116,8 +146,23 @@ export type Database = {
           description?: string | null
           discord_url?: string | null
           github_access_token?: string | null
+          github_analyzed_at?: string | null
+          github_commit_velocity?: number | null
+          github_commits_30d?: number | null
+          github_contributors?: number | null
+          github_forks?: number | null
+          github_homepage?: string | null
+          github_is_fork?: boolean | null
+          github_language?: string | null
+          github_last_commit?: string | null
+          github_open_issues?: number | null
           github_org_url?: string | null
+          github_recent_events?: Json | null
+          github_releases_30d?: number | null
+          github_stars?: number | null
           github_token_scope?: string | null
+          github_top_contributors?: Json | null
+          github_topics?: Json | null
           github_username?: string | null
           id?: string
           liveness_status?: string | null

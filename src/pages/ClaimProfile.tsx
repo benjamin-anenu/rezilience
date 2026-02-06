@@ -18,6 +18,7 @@ import {
   RoadmapForm,
 } from '@/components/claim';
 import type { MediaAsset, Milestone, ProjectCategory } from '@/types';
+import { type GitHubAnalysisResult, suggestCategory } from '@/hooks/useGitHubAnalysis';
 
 const ClaimProfile = () => {
   const navigate = useNavigate();
@@ -83,6 +84,9 @@ const ClaimProfile = () => {
 
   // Step 5: Roadmap
   const [milestones, setMilestones] = useState<Milestone[]>([]);
+
+  // GitHub Analysis State
+  const [githubAnalysisResult, setGithubAnalysisResult] = useState<GitHubAnalysisResult | null>(null);
 
   // Project lookup hook
   const { data: existingProject, refetch: refetchProject } = useProject(programId);
@@ -224,8 +228,36 @@ const ClaimProfile = () => {
     window.location.href = `https://github.com/login/oauth/authorize?${params.toString()}`;
   };
 
+  // Handle GitHub analysis completion with auto-population
+  const handleAnalysisComplete = (result: GitHubAnalysisResult) => {
+    setGithubAnalysisResult(result);
+    setGithubOrgUrl(result.htmlUrl);
+
+    // Auto-populate empty fields
+    if (!projectName && result.name) {
+      setProjectName(result.name);
+    }
+    if (!description && result.description) {
+      setDescription(result.description);
+    }
+    if (!websiteUrl && result.homepage) {
+      setWebsiteUrl(result.homepage);
+    }
+    if (!category && result.language) {
+      const suggestedCat = suggestCategory(result.language, result.topics);
+      if (suggestedCat) {
+        setCategory(suggestedCat as ProjectCategory);
+      }
+    }
+
+    toast({
+      title: 'Repository Analyzed',
+      description: `Score: ${result.resilienceScore}/100 | ${result.commitsLast30Days} commits in last 30 days`,
+    });
+  };
+
   const canProceedFromStep2 = projectName.trim() && category;
-  const canProceedFromStep3 = githubOrgUrl.trim();
+  const canProceedFromStep3 = githubOrgUrl.trim() || !!githubAnalysisResult;
 
   const handleNext = () => {
     if (currentStep < 5) {
@@ -475,7 +507,9 @@ const ClaimProfile = () => {
                 telegramUrl={telegramUrl}
                 setTelegramUrl={setTelegramUrl}
                 onGitHubConnect={handleGitHubConnect}
-                githubConnected={false}
+                githubConnected={githubVerified}
+                analysisResult={githubAnalysisResult}
+                onAnalysisComplete={handleAnalysisComplete}
               />
 
               {/* Navigation */}

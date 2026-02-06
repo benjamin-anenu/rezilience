@@ -140,6 +140,24 @@ export const PROJECT_CATEGORIES: { value: ProjectCategory; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
+// GitHub Analytics for Dashboard
+export interface GitHubAnalytics {
+  github_org_url?: string;
+  github_stars?: number;
+  github_forks?: number;
+  github_contributors?: number;
+  github_language?: string;
+  github_last_commit?: string;
+  github_commit_velocity?: number;
+  github_commits_30d?: number;
+  github_releases_30d?: number;
+  github_open_issues?: number;
+  github_topics?: string[];
+  github_top_contributors?: Array<{ login: string; contributions: number; avatar: string }>;
+  github_recent_events?: Array<{ type: string; actor: string; date: string; message?: string }>;
+  github_analyzed_at?: string;
+}
+
 // Complete Claimed Profile
 export interface ClaimedProfile {
   id: string;
@@ -175,6 +193,9 @@ export interface ClaimedProfile {
   verifiedAt: string;
   score: number;
   livenessStatus: 'active' | 'dormant' | 'degraded';
+  
+  // Extended GitHub Analytics (populated from DB)
+  githubAnalytics?: GitHubAnalytics;
 }
 
 // Form data for multi-step claim flow
