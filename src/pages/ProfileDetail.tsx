@@ -183,7 +183,10 @@ const ProfileDetail = () => {
               </div>
 
               {profile.description && (
-                <p className="mt-4 text-sm text-muted-foreground">{profile.description}</p>
+                <div 
+                  className="mt-4 prose prose-sm prose-invert max-w-none text-muted-foreground"
+                  dangerouslySetInnerHTML={{ __html: profile.description }}
+                />
               )}
             </CardContent>
           </Card>
