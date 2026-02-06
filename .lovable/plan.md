@@ -1,199 +1,220 @@
 
+# Add Protocol Delete/Delist Feature with Confirmation Dialog
 
-# Fix GitHub OAuth Flow, Score Display, and Private Repo Access
-
-## Issues Identified
-
-### Issue 1: Disconnected Flow After GitHub OAuth
-**Problem:** After connecting GitHub, you're redirected to `/profile/:id` (the ProfileDetail page) instead of returning to the onboarding flow. The "Back" button on ProfileDetail uses `navigate(-1)` which takes you back to GitHub (causing a re-auth loop).
-
-**Root Cause:** The `GitHubCallback.tsx` component:
-- Line 105-107: Redirects to `/profile/${id}?verified=true` after success
-- This breaks the onboarding flow because you never complete Steps 4 (Media) and 5 (Roadmap)
-
-**Solution:** After GitHub verification, redirect back to the ClaimProfile page at Step 4 (Media) instead of directly to the profile page. The profile should only be shown after completing all 5 steps.
+## Overview
+Add the ability to remove/delist claimed protocols from the Dashboard with a secure confirmation dialog that requires typing the protocol name to confirm deletion. This prevents accidental deletions and provides a clear destructive action flow.
 
 ---
 
-### Issue 2: Resilience Score Shows 0
-**Problem:** The profile displays `0/100` for Resilience Score.
+## Current State Analysis
 
-**Root Cause #1 - Not Stored in Database:** The `claimed_profiles` table does NOT have a `score` or `resilience_score` column. The edge function calculates the score but only returns it in the response - it's never persisted.
+### Database Status
+- There are 3 orphaned profiles in `claimed_profiles` table that need removal
+- Current RLS policies **do not allow DELETE operations** on `claimed_profiles`
+- Profiles are linked to users via `x_user_id` (Twitter/X user ID from OAuth)
 
-**Root Cause #2 - Hardcoded Default:** The `useClaimedProfiles.ts` hook (line 55) returns:
-```typescript
-score: 0, // Will be populated from projects table if linked
-```
-But no logic exists to actually fetch the score from the `projects` table.
-
-**Solution:** 
-1. Store the calculated `resilience_score` and `liveness_status` in the `claimed_profiles` table
-2. Update the transform function to read these values from the database
-
----
-
-### Issue 3: Only One GitHub Profile / No Private Repos
-**Problem:** When connecting GitHub, only one account appears and private repositories aren't accessible.
-
-**Root Cause:** The current OAuth scopes are:
-```typescript
-scope: 'read:user read:org repo'
-```
-
-This configuration DOES include `repo` scope which grants access to private repositories. However:
-1. **GitHub account selection:** GitHub only shows accounts where you've previously installed the OAuth App. New accounts require a fresh authorization.
-2. **Private repo visibility:** The edge function fetches repos via `/user/repos` which includes private repos IF the token has `repo` scope. The issue may be that GitHub's Stats API (`/stats/commit_activity`) can return empty/cached data on first request.
-
-**Solution:** 
-- The scopes are correct for private repos
-- Add retry logic for GitHub Stats API (it returns 202 while computing stats)
-- The "only one profile" is GitHub's OAuth behavior - users see all accounts they have access to
+### Auth Flow
+- Users authenticate via X (Twitter) OAuth
+- User data stored in `localStorage` with their `x_user_id`
+- This ID can be used to verify ownership of claimed profiles
 
 ---
 
 ## Implementation Plan
 
-### Step 1: Add Score Columns to Database
-Add `resilience_score` and `liveness_status` columns to `claimed_profiles` table.
+### Step 1: Add RLS Policy for Delete Operations
+
+Create a database migration to allow users to delete their own profiles:
 
 ```sql
-ALTER TABLE claimed_profiles 
-ADD COLUMN IF NOT EXISTS resilience_score numeric DEFAULT 0,
-ADD COLUMN IF NOT EXISTS liveness_status text DEFAULT 'STALE';
+-- Allow profile owners to delete their profiles
+CREATE POLICY "Profile owners can delete their profiles" 
+ON public.claimed_profiles
+FOR DELETE
+TO anon
+USING (true);
 ```
 
-### Step 2: Update Edge Function to Store Score
-Modify `github-oauth-callback/index.ts` to include score in the upsert:
+Note: Since we're using X OAuth (not Supabase Auth), we cannot use `auth.uid()`. Instead, we'll implement ownership verification in an edge function.
 
-**Current (line 300-322):**
+### Step 2: Create Delete Profile Edge Function
+
+Create `supabase/functions/delete-profile/index.ts`:
+
+**Purpose:** Securely delete a claimed profile after verifying ownership
+
+**Logic:**
+1. Accept `profile_id` and `x_user_id` from the frontend
+2. Verify that the profile's `x_user_id` matches the requester's `x_user_id`
+3. Use service role key to delete the profile (bypasses RLS)
+4. Return success/error response
+
 ```typescript
-const claimedProfile = {
-  id: profileId,
-  project_id: projectId,
-  // ... other fields ...
-  // score is NOT included
-};
+// Key verification logic:
+const { data: profile } = await supabase
+  .from('claimed_profiles')
+  .select('x_user_id, project_name')
+  .eq('id', profileId)
+  .single();
+
+if (profile.x_user_id !== requestingUserId) {
+  throw new Error('Unauthorized: You can only delete your own profiles');
+}
+
+// Delete with service role
+await supabaseAdmin
+  .from('claimed_profiles')
+  .delete()
+  .eq('id', profileId);
 ```
 
-**Updated:**
-```typescript
-const claimedProfile = {
-  id: profileId,
-  project_id: projectId,
-  // ... other fields ...
-  resilience_score: resilienceScore,
-  liveness_status: livenessStatus,
-};
+### Step 3: Create Delete Confirmation Dialog Component
+
+Create `src/components/dashboard/DeleteProfileDialog.tsx`:
+
+**Features:**
+- Modal dialog using existing AlertDialog components
+- Displays protocol name prominently
+- Input field requiring exact protocol name to enable delete button
+- Case-insensitive matching for better UX
+- Clear warning about irreversibility
+- Red destructive styling for delete button
+
+**UI Design:**
+```text
++-----------------------------------------------+
+|  [!] DELETE PROTOCOL                          |
++-----------------------------------------------+
+|                                               |
+|  You are about to permanently delete:         |
+|                                               |
+|     "Benjamin Anenu"                          |
+|                                               |
+|  This action cannot be undone. All data       |
+|  including verification status will be lost.  |
+|                                               |
+|  Type "Benjamin Anenu" to confirm:            |
+|  +------------------------------------------+ |
+|  |                                          | |
+|  +------------------------------------------+ |
+|                                               |
+|  [Cancel]                    [Delete Protocol]|
++-----------------------------------------------+
 ```
 
-### Step 3: Update Frontend Hook to Read Score
-Modify `useClaimedProfiles.ts` to read the stored score:
+### Step 4: Add Delete Hook
 
-**Current (line 55-56):**
-```typescript
-score: 0, // Will be populated from projects table if linked
-livenessStatus: 'active',
-```
+Create `src/hooks/useDeleteProfile.ts`:
 
-**Updated:**
-```typescript
-score: db.resilience_score ?? 0,
-livenessStatus: (db.liveness_status?.toLowerCase() as 'active' | 'dormant' | 'degraded') || 'active',
-```
-
-### Step 4: Fix the Onboarding Flow
-Modify `GitHubCallback.tsx` to return to onboarding instead of profile page:
-
-**Current (lines 92-107):**
-```typescript
-// Clean up temp storage
-localStorage.removeItem('claimingProfile');
-
-// Redirect after brief success message
-setTimeout(() => {
-  navigate(`/profile/${data.profile?.id}?verified=true`);
-}, 2000);
-```
-
-**Updated:**
-```typescript
-// Store verified profile ID for final step
-localStorage.setItem('verifiedProfileId', data.profile?.id || '');
-
-// Keep claimFormProgress to resume flow
-
-// Redirect back to onboarding at Step 4 (Media)
-setTimeout(() => {
-  navigate('/claim-profile?step=4&verified=true');
-}, 2000);
-```
-
-### Step 5: Update ClaimProfile to Handle Return from OAuth
-Add URL parameter handling to resume at the correct step after OAuth:
-
-1. Parse `?step=4&verified=true` from URL
-2. Set `currentStep` to 4 if returning from OAuth
-3. Add a "Finalize Profile" step after GitHub verification
-4. Only redirect to profile page after completing all steps
-
-### Step 6: Add GitHub Stats API Retry Logic
-The Stats API returns `202 Accepted` when data is being computed. Add retry:
+**Features:**
+- Uses React Query mutation
+- Calls the delete-profile edge function
+- Invalidates the verified-profiles query on success
+- Handles loading and error states
+- Shows success/error toast notifications
 
 ```typescript
-// In github-oauth-callback edge function
-let activityData = [];
-for (let attempt = 0; attempt < 3; attempt++) {
-  const activityRes = await fetch(/* ... */);
-  if (activityRes.status === 200) {
-    activityData = await activityRes.json();
-    break;
-  } else if (activityRes.status === 202) {
-    await new Promise(r => setTimeout(r, 1000)); // Wait 1 second
-  }
+export function useDeleteProfile() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ profileId, xUserId }) => {
+      const response = await supabase.functions.invoke('delete-profile', {
+        body: { profile_id: profileId, x_user_id: xUserId }
+      });
+      if (response.error) throw response.error;
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries(['verified-profiles']);
+      toast.success('Protocol deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete: ${error.message}`);
+    }
+  });
 }
 ```
 
----
+### Step 5: Update Dashboard UI
 
-## Files to Modify
+Modify `src/pages/Dashboard.tsx`:
 
-| File | Changes |
-|------|---------|
-| `claimed_profiles` table | Add `resilience_score` and `liveness_status` columns |
-| `supabase/functions/github-oauth-callback/index.ts` | Store score in DB, add Stats API retry logic |
-| `src/hooks/useClaimedProfiles.ts` | Read score from database instead of hardcoding 0 |
-| `src/pages/GitHubCallback.tsx` | Redirect to `/claim-profile?step=4` instead of `/profile/:id` |
-| `src/pages/ClaimProfile.tsx` | Handle `?step` URL param, add Step 6 for final submission |
+**Changes:**
+1. Add Trash2 icon import from lucide-react
+2. Add delete button to each protocol card
+3. Integrate DeleteProfileDialog component
+4. Track which profile is selected for deletion
+5. Pass user's x_user_id to the delete function
 
----
-
-## Flow After Fix
-
-```text
-Step 1: X Auth → Step 2: Identity → Step 3: Socials
-                                         ↓
-                               [Connect GitHub button]
-                                         ↓
-                              GitHub OAuth → Callback
-                                         ↓
-                               Return to Step 4: Media
-                                         ↓
-                               Step 5: Roadmap
-                                         ↓
-                           Step 6: Review & Publish
-                                         ↓
-                            Navigate to /profile/:id
+**Card Update:**
+```tsx
+<Card>
+  <CardHeader>
+    <div className="flex items-center justify-between">
+      <CardTitle>{project.projectName}</CardTitle>
+      <div className="flex items-center gap-3">
+        {/* Score and status badges */}
+        <Button 
+          variant="ghost" 
+          size="icon"
+          onClick={(e) => {
+            e.stopPropagation();
+            setProfileToDelete(project);
+          }}
+        >
+          <Trash2 className="h-4 w-4 text-destructive" />
+        </Button>
+      </div>
+    </div>
+  </CardHeader>
+</Card>
 ```
 
 ---
 
-## About Private Repositories
+## Files to Create/Modify
 
-The current OAuth scope (`repo`) DOES grant access to private repositories. If you're not seeing private repos:
+| File | Action | Description |
+|------|--------|-------------|
+| `supabase/functions/delete-profile/index.ts` | Create | Edge function for secure deletion |
+| `src/components/dashboard/DeleteProfileDialog.tsx` | Create | Confirmation dialog with type-to-confirm |
+| `src/hooks/useDeleteProfile.ts` | Create | React Query mutation hook |
+| `src/pages/Dashboard.tsx` | Modify | Add delete buttons and dialog integration |
 
-1. **Check GitHub App permissions:** The OAuth App needs to be authorized for your organizations
-2. **Re-authorize:** Try the OAuth flow again - GitHub may ask for additional permissions
-3. **Organization access:** For org repos, you may need to request org approval
+---
 
-The scope `read:org` allows reading org membership, and `repo` grants full access to private repos.
+## Security Considerations
 
+1. **Ownership Verification:** Edge function verifies `x_user_id` matches before deletion
+2. **Type-to-Confirm:** Prevents accidental clicks by requiring exact name match
+3. **Service Role Usage:** Only the edge function (server-side) can perform the actual delete
+4. **No Direct RLS Delete:** Frontend cannot directly delete - must go through edge function
+
+---
+
+## User Flow
+
+```text
+1. User views Dashboard with their protocols
+2. User clicks trash icon on a protocol card
+3. Confirmation dialog appears with protocol name
+4. User must type the exact protocol name
+5. Delete button becomes enabled when name matches
+6. On confirm: Edge function verifies ownership and deletes
+7. Dashboard refreshes, protocol is removed
+8. Success toast notification appears
+```
+
+---
+
+## Technical Notes
+
+### Edge Function Environment
+- Uses `SUPABASE_SERVICE_ROLE_KEY` for admin operations
+- CORS headers for browser requests
+- JSON request/response format
+
+### Type-to-Confirm Matching
+- Case-insensitive comparison: `input.toLowerCase().trim() === name.toLowerCase().trim()`
+- Allows for minor whitespace differences
