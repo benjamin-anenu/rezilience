@@ -1,106 +1,67 @@
 
 
-# Separate Bytecode & GitHub Originality - Dual Track Implementation
+# Fix Bytecode Originality Display for Non-On-Chain Projects
 
-## Problem Statement
+## Problem Identified
 
-The current `MetricCards` component conflates two distinct originality concepts:
+You're absolutely right! The current display is inaccurate:
 
-| Concept | Source | What It Measures |
-|---------|--------|------------------|
-| **Bytecode Originality** | On-chain (Solana) | Cryptographic fingerprint of deployed program bytecode vs known database |
-| **GitHub Originality** | Off-chain (GitHub) | Whether the source code repository is a fork of another project |
+| Card | Current Display | Actual Data | Correct Display |
+|------|----------------|-------------|-----------------|
+| **Bytecode Originality** | "Verified Original" (100%) | No `program_id` - not on-chain | **"N/A"** or "Not Deployed" |
+| **GitHub Originality** | "Original Repository" (100%) | `github_is_fork: false` | ✅ **Correct!** |
 
-These provide different trust signals and should be tracked separately:
-- A project could have **original bytecode** but be a **forked repo** (modified fork)
-- A project could have **forked bytecode** but **original repo** (copied on-chain code)
-
----
-
-## Current Data Available
-
-| Field | Table | Description | Status |
-|-------|-------|-------------|--------|
-| `is_fork` | `projects` | GitHub fork status | Available |
-| `github_is_fork` | `claimed_profiles` | GitHub fork status | Available (false in test data) |
-| `originality_score` | `projects` | Bytecode originality (0-1) | Placeholder (always 1.0) |
-| `originalityStatus` | Component prop | Derived from `is_fork` + `verified` | Currently mixed |
+The GitHub API confirms `"fork": false` for this repository, so that card is accurate. However, the Bytecode Originality card shows "Verified Original" which is wrong because:
+- `program_id` is `null` (no Solana program deployed)
+- There's no bytecode to verify since the project isn't on-chain
 
 ---
 
-## Implementation Plan
+## Root Cause
 
-### Phase 1: Update MetricCards to Show 4 Cards
-
-Expand from 3 to 4 metric cards to properly separate concerns:
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                           METRIC CARDS (4 total)                            │
-├─────────────────┬─────────────────┬─────────────────┬─────────────────────┤
-│  BYTECODE       │  GITHUB CODE    │   STAKED        │   ADMIN             │
-│  ORIGINALITY    │  ORIGINALITY    │   ASSURANCE     │   CONSTRAINTS       │
-│  (On-Chain)     │  (Off-Chain)    │                 │                     │
-├─────────────────┼─────────────────┼─────────────────┼─────────────────────┤
-│  Fingerprint    │  Original Repo  │  200K SOL       │  Multisig           │
-│  Verified       │  OR Fork of X   │  Staked         │  Required           │
-├─────────────────┼─────────────────┼─────────────────┼─────────────────────┤
-│  ████████ 100%  │  ████████ 100%  │  ████████ 66%   │  ████████ 85%       │
-├─────────────────┼─────────────────┼─────────────────┼─────────────────────┤
-│  Cryptographic  │  Source code    │  Economic       │  Upgrade auth       │
-│  comparison     │  provenance     │  security       │  controls           │
-└─────────────────┴─────────────────┴─────────────────┴─────────────────────┘
+In `ProgramDetail.tsx` line 113:
+```typescript
+originalityStatus: project?.is_fork ? 'fork' : isVerified ? 'verified' : 'unverified'
 ```
 
-### Phase 2: Add GitHub Fork Info to Props
+This incorrectly derives bytecode status from `isVerified` (GitHub verification), not actual on-chain deployment status.
 
-Update the `MetricCards` component to accept additional props:
+---
+
+## Solution
+
+### 1. Add "N/A" State for Bytecode Originality
+
+Update `MetricCards.tsx` to handle a new `'not-deployed'` status:
+
+| Status | Subtitle | Progress | Color |
+|--------|----------|----------|-------|
+| `verified` | "Verified Original" | 100% | Green |
+| `fork` | "Known Fork" | 45% | Amber |
+| `unverified` | "Unverified" | 60% | Muted |
+| `not-deployed` | "Not On-Chain" | 0% | Muted/Gray |
+
+### 2. Update ProgramDetail.tsx Logic
+
+Determine bytecode status based on whether a valid Solana program ID exists:
 
 ```typescript
-interface MetricCardsProps {
-  program: Program;
-  githubIsFork?: boolean;        // From claimed_profiles.github_is_fork
-  githubForkParent?: string;     // Future: parent repo if forked
-}
+// Check if project has a valid on-chain program ID
+const hasOnChainProgram = displayProgramId && 
+  displayProgramId.length >= 32 && 
+  displayProgramId !== id; // Not just the UUID
+
+const getBytecodeStatus = () => {
+  if (!hasOnChainProgram) return 'not-deployed';
+  if (project?.is_fork) return 'fork';
+  if (isVerified) return 'verified';
+  return 'unverified';
+};
 ```
 
-### Phase 3: Update ProgramDetail to Pass Fork Data
+### 3. Update Types
 
-Modify `ProgramDetail.tsx` to pass the `github_is_fork` value from `claimedProfile.githubAnalytics` to `MetricCards`.
-
----
-
-## Card Definitions
-
-### 1. BYTECODE ORIGINALITY (On-Chain)
-
-| Property | Value |
-|----------|-------|
-| Icon | `Fingerprint` |
-| Title | BYTECODE ORIGINALITY |
-| Subtitle | Based on `project.originalityStatus`: "Verified Original" / "Known Fork" / "Unverified" |
-| Progress | 100% (verified), 45% (fork), 60% (unverified) |
-| Description | "Cryptographic fingerprint comparison against known program database." |
-| Color | Positive if verified |
-
-### 2. GITHUB CODE ORIGINALITY (Off-Chain) - NEW
-
-| Property | Value |
-|----------|-------|
-| Icon | `GitBranch` or `Code2` |
-| Title | GITHUB ORIGINALITY |
-| Subtitle | "Original Repository" (if not fork) / "Forked Repository" (if fork) |
-| Progress | 100% (original), 30% (fork) |
-| Description | "Source code provenance verification via GitHub metadata." |
-| Color | Green if original, Amber/Orange if fork |
-
-### 3. STAKED ASSURANCE (Unchanged)
-
-Remains the same as current implementation.
-
-### 4. ADMIN CONSTRAINTS (Unchanged)
-
-Remains the same as current implementation.
+Add `'not-deployed'` to the `originalityStatus` union type in `Program` interface.
 
 ---
 
@@ -108,86 +69,67 @@ Remains the same as current implementation.
 
 | File | Changes |
 |------|---------|
-| `src/components/program/MetricCards.tsx` | Add GitHub Originality card, update props interface |
-| `src/pages/ProgramDetail.tsx` | Pass `githubIsFork` prop from `claimedProfile.githubAnalytics` |
-| `src/types/index.ts` | Update `Program` interface if needed |
+| `src/types/index.ts` | Add `'not-deployed'` to `originalityStatus` type |
+| `src/pages/ProgramDetail.tsx` | Add logic to detect if program is on-chain |
+| `src/components/program/MetricCards.tsx` | Handle `'not-deployed'` state with N/A display |
 
 ---
 
-## Technical Implementation
+## Visual Result
 
-### MetricCards Enhancement
+After the fix, the Metric Cards will show:
 
-```typescript
-interface MetricCardsProps {
-  program: Program;
-  githubIsFork?: boolean;
-}
-
-export function MetricCards({ program, githubIsFork }: MetricCardsProps) {
-  const metrics = [
-    // 1. Bytecode Originality (On-Chain)
-    {
-      icon: Fingerprint,
-      title: 'BYTECODE ORIGINALITY',
-      subtitle: program.originalityStatus === 'verified' ? 'Verified Original' : 
-                program.originalityStatus === 'fork' ? 'Known Fork' : 'Unverified',
-      value: program.originalityStatus === 'verified' ? 100 : 
-             program.originalityStatus === 'fork' ? 45 : 60,
-      description: 'Cryptographic fingerprint comparison against known program database.',
-      isPositive: program.originalityStatus === 'verified',
-    },
-    // 2. GitHub Code Originality (Off-Chain) - NEW
-    {
-      icon: GitBranch, // or Code2
-      title: 'GITHUB ORIGINALITY',
-      subtitle: githubIsFork === undefined ? 'Not Analyzed' :
-                githubIsFork ? 'Forked Repository' : 'Original Repository',
-      value: githubIsFork === undefined ? 50 :
-             githubIsFork ? 30 : 100,
-      description: 'Source code provenance verification via GitHub metadata.',
-      isPositive: githubIsFork === false,
-      isWarning: githubIsFork === true,
-    },
-    // 3. Staked Assurance
-    { ...existingStakedCard },
-    // 4. Admin Constraints  
-    { ...existingAdminCard },
-  ];
-  
-  return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {/* Render all 4 cards */}
-    </div>
-  );
-}
-```
-
-### ProgramDetail Update
-
-```typescript
-<MetricCards 
-  program={programForComponents} 
-  githubIsFork={claimedProfile?.githubAnalytics?.github_is_fork}
-/>
+```text
+┌─────────────────────┬─────────────────────┬──────────────────┬──────────────────┐
+│ BYTECODE ORIGINALITY│ GITHUB ORIGINALITY  │ STAKED ASSURANCE │ ADMIN CONSTRAINTS│
+├─────────────────────┼─────────────────────┼──────────────────┼──────────────────┤
+│ Not On-Chain        │ Original Repository │ 0K SOL Staked    │ Multisig Required│
+│ (gray/muted)        │ (green ✓)           │                  │                  │
+├─────────────────────┼─────────────────────┼──────────────────┼──────────────────┤
+│ ░░░░░░░░░░░░ 0%     │ ████████████ 100%   │ ░░░░░░░░░░░░ 0%  │ ████████░░░░ 85% │
+└─────────────────────┴─────────────────────┴──────────────────┴──────────────────┘
 ```
 
 ---
 
-## Layout Considerations
+## Implementation Details
 
-With 4 cards instead of 3:
-- **Desktop (lg+)**: 4 columns (`lg:grid-cols-4`)
-- **Tablet (md)**: 2 columns (`md:grid-cols-2`)
-- **Mobile**: 1 column (stacked)
+### MetricCards Update
 
-This maintains visual balance and ensures all trust signals are visible at a glance.
+```typescript
+const getBytecodeInfo = () => {
+  switch (program.originalityStatus) {
+    case 'verified':
+      return { subtitle: 'Verified Original', value: 100, isPositive: true };
+    case 'fork':
+      return { subtitle: 'Known Fork', value: 45, isPositive: false, isWarning: true };
+    case 'not-deployed':
+      return { subtitle: 'Not On-Chain', value: 0, isPositive: false, isNA: true };
+    default:
+      return { subtitle: 'Unverified', value: 60, isPositive: false };
+  }
+};
+```
 
----
+### ProgramDetail Logic
 
-## Future Enhancements
+```typescript
+// Determine if this is an on-chain Solana program
+const isValidSolanaProgramId = (id: string) => {
+  // Solana addresses are base58 encoded, typically 32-44 characters
+  // UUIDs have dashes and are exactly 36 characters
+  return id && id.length >= 32 && !id.includes('-');
+};
 
-1. **Fork Parent Display**: If GitHub repo is a fork, show "Fork of [parent-repo]" with link
-2. **Bytecode Verification**: Actual on-chain bytecode fingerprinting (Phase 2)
-3. **Verification Badges**: Add checkmarks for each originality type that passes
+const hasOnChainProgram = isValidSolanaProgramId(displayProgramId);
+
+const programForComponents = {
+  // ...existing fields
+  originalityStatus: hasOnChainProgram 
+    ? (project?.is_fork ? 'fork' : isVerified ? 'verified' : 'unverified')
+    : 'not-deployed',
+};
+```
+
+This ensures Bytecode Originality accurately reflects whether the project has on-chain presence, while GitHub Originality correctly shows the repository fork status.
 
