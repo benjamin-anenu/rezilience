@@ -41,17 +41,17 @@ const stats = [
                <span className="font-mono text-xs text-primary">ON-CHAIN ASSURANCE</span>
              </div>
  
-            <h1 className="mb-6 font-display text-4xl font-bold uppercase leading-tight tracking-tight text-foreground md:text-5xl lg:text-6xl">
+           <h1 className="mb-6 font-display text-3xl font-bold uppercase leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
                 REPUTATION CAN'T BE{' '}
                 <span className="text-primary">FORKED.</span>
               </h1>
 
-              <p className="mb-8 max-w-xl text-lg text-muted-foreground">
+              <p className="mb-8 max-w-xl text-base text-muted-foreground sm:text-lg">
                 Any dev can copy a repo. You can't fake a heartbeat. We turn your development velocity into an immutable Resilience score that investors can bank on. Don't just launch. Outlast.
               </p>
  
-              <div className="flex flex-wrap gap-4">
-                <Button asChild size="lg" className="font-display font-semibold uppercase tracking-wider">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+                <Button asChild size="lg" className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider touch-feedback sm:w-auto">
                   <Link to="/explorer">
                     SOLANA PROJECT VITALS
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -61,7 +61,7 @@ const stats = [
                   variant="outline" 
                   size="lg" 
                   disabled 
-                  className="font-display font-semibold uppercase tracking-wider cursor-not-allowed"
+                  className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider cursor-not-allowed sm:w-auto"
                 >
                   <Lock className="mr-2 h-4 w-4" />
                   STAKE NOW
@@ -69,17 +69,23 @@ const stats = [
                 </Button>
               </div>
  
-            {/* Stats */}
+            {/* Stats - Stack vertically on mobile */}
             <TooltipProvider>
-              <div className="mt-12 grid grid-cols-3 gap-8">
+              <div className="mt-10 grid grid-cols-1 gap-4 sm:mt-12 sm:grid-cols-3 sm:gap-8">
                 {stats.map((stat) => (
-                  <div key={stat.label}>
-                    <p className="font-mono text-2xl font-bold text-primary">{stat.value}</p>
+                  <div 
+                    key={stat.label} 
+                    className="flex items-center justify-between rounded-sm border border-border bg-card/50 p-4 sm:block sm:border-0 sm:bg-transparent sm:p-0"
+                  >
+                    <div className="flex items-center gap-2 sm:block">
+                      <p className="font-mono text-xl font-bold text-primary sm:text-2xl">{stat.value}</p>
+                      <p className="text-sm text-muted-foreground sm:hidden">{stat.label}</p>
+                    </div>
                     <div className="flex items-center gap-1">
-                      <p className="text-sm text-muted-foreground">{stat.label}</p>
+                      <p className="hidden text-sm text-muted-foreground sm:block">{stat.label}</p>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <Info className="h-3 w-3 text-muted-foreground cursor-help" />
+                          <Info className="h-4 w-4 text-muted-foreground cursor-help sm:h-3 sm:w-3" />
                         </TooltipTrigger>
                         <TooltipContent className="max-w-xs border-primary/20">
                           <p className="text-xs">{stat.tooltip}</p>

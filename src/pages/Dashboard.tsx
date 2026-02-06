@@ -60,46 +60,77 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className="py-12">
+      <div className="py-8 sm:py-12">
         <div className="container mx-auto max-w-4xl px-4 lg:px-8">
-          {/* Header */}
-          <div className="mb-10 flex items-center justify-between">
-            <div>
-              <h1 className="mb-2 font-display text-3xl font-bold uppercase tracking-tight text-foreground">
-                BUILDER DASHBOARD
-              </h1>
-              <p className="text-muted-foreground">
-                Manage your registered protocols and monitor Resilience Scores
-              </p>
+          {/* Header - Mobile optimized */}
+          <div className="mb-8 sm:mb-10">
+            {/* Title Row */}
+            <div className="mb-4 flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="mb-2 font-display text-2xl font-bold uppercase tracking-tight text-foreground sm:text-3xl">
+                  BUILDER DASHBOARD
+                </h1>
+                <p className="text-sm text-muted-foreground sm:text-base">
+                  Manage your registered protocols and monitor Resilience Scores
+                </p>
+              </div>
+              {/* Desktop user info */}
+              <div className="hidden items-center gap-3 sm:flex">
+                {user && (
+                  <div className="flex items-center gap-2 rounded-sm border border-border bg-card px-3 py-2">
+                    <img
+                      src={user.avatarUrl}
+                      alt={user.username}
+                      className="h-6 w-6 rounded-full"
+                    />
+                    <span className="font-mono text-sm text-muted-foreground">
+                      @{user.username}
+                    </span>
+                  </div>
+                )}
+                <Button variant="ghost" size="icon" onClick={signOut}>
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              {user && (
-                <div className="flex items-center gap-2 rounded-sm border border-border bg-card px-3 py-2">
+
+            {/* Mobile user info - collapsible card style */}
+            {user && (
+              <div className="mb-6 flex items-center justify-between rounded-sm border border-border bg-card p-3 sm:hidden">
+                <div className="flex items-center gap-2">
                   <img
                     src={user.avatarUrl}
                     alt={user.username}
-                    className="h-6 w-6 rounded-full"
+                    className="h-8 w-8 rounded-full ring-2 ring-primary/20"
                   />
-                  <span className="font-mono text-sm text-muted-foreground">
-                    @{user.username}
-                  </span>
+                  <div>
+                    <span className="font-mono text-sm font-medium text-foreground">
+                      @{user.username}
+                    </span>
+                    <p className="text-xs text-muted-foreground">Connected via X</p>
+                  </div>
                 </div>
-              )}
-              <Button variant="ghost" size="icon" onClick={signOut}>
-                <LogOut className="h-4 w-4" />
-              </Button>
-            </div>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  onClick={signOut}
+                  className="h-10 w-10 text-muted-foreground hover:text-destructive touch-feedback"
+                >
+                  <LogOut className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
 
-          {/* Action Buttons */}
-          <div className="mb-8 flex flex-wrap gap-4">
-            <Button asChild className="font-display font-semibold uppercase tracking-wider">
+          {/* Action Buttons - Stack on mobile */}
+          <div className="mb-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
+            <Button asChild className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider touch-feedback sm:w-auto">
               <Link to="/claim-profile">
                 <Plus className="mr-2 h-4 w-4" />
                 REGISTER PROTOCOL
               </Link>
             </Button>
-            <Button variant="outline" asChild className="font-display font-semibold uppercase tracking-wider">
+            <Button variant="outline" asChild className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider touch-feedback sm:w-auto">
               <Link to="/explorer">
                 <Compass className="mr-2 h-4 w-4" />
                 EXPLORE REGISTRY
