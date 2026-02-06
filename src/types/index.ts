@@ -140,6 +140,22 @@ export const PROJECT_CATEGORIES: { value: ProjectCategory; label: string }[] = [
   { value: 'other', label: 'Other' },
 ];
 
+// Top Contributor for charts
+export interface TopContributor {
+  login: string;
+  contributions: number;
+  avatar: string;
+}
+
+// Recent Event for activity charts
+export interface RecentEvent {
+  type: string;
+  actor: string;
+  date: string;
+  createdAt: string;
+  message?: string;
+}
+
 // GitHub Analytics for Dashboard
 export interface GitHubAnalytics {
   github_org_url?: string;
@@ -153,8 +169,8 @@ export interface GitHubAnalytics {
   github_releases_30d?: number;
   github_open_issues?: number;
   github_topics?: string[];
-  github_top_contributors?: Array<{ login: string; contributions: number; avatar: string }>;
-  github_recent_events?: Array<{ type: string; actor: string; date: string; message?: string }>;
+  github_top_contributors?: TopContributor[];
+  github_recent_events?: RecentEvent[];
   github_analyzed_at?: string;
 }
 

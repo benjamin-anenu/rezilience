@@ -4,3 +4,7 @@ export { RecentEvents } from './RecentEvents';
 export { MetricCards } from './MetricCards';
 export { DescriptionSection } from './DescriptionSection';
 export { SocialPulseSection } from './SocialPulseSection';
+export { PublicGitHubMetrics } from './PublicGitHubMetrics';
+export { AnalyticsCharts } from './AnalyticsCharts';
+export { ContributorsPieChart } from './ContributorsPieChart';
+export { ActivityAreaChart } from './ActivityAreaChart';
