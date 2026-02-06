@@ -347,14 +347,14 @@ const ProgramDetail = () => {
           {/* Stake CTA */}
           <div className="mt-8 rounded-sm border border-primary/30 bg-primary/5 p-6 text-center">
             <h3 className="mb-2 font-display text-xl font-bold uppercase text-foreground">
-              SUPPORT THIS PROTOCOL
+              SUPPORT THIS PROJECT
             </h3>
             <p className="mb-4 text-sm text-muted-foreground">
               Stake SOL to increase the resilience score and earn rewards.
             </p>
-            <Button asChild className="font-display font-semibold uppercase tracking-wider">
+            <Button asChild className="w-full font-display font-semibold uppercase tracking-wider sm:w-auto">
               <Link to={`/staking?program=${displayProgramId}`}>
-                STAKE ON {displayName.toUpperCase()}
+                STAKE NOW
               </Link>
             </Button>
           </div>
