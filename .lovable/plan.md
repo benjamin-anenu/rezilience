@@ -1,246 +1,161 @@
 
-# Enhanced Program Detail Page with Public GitHub Analytics & Chart Switcher
+# Enhanced Public GitHub Metrics - Robust & Informative Display
 
-## Overview
+## Problem Analysis
 
-This plan adds two key features to the Program Detail page (Explorer → project details):
+The current `PublicGitHubMetrics.tsx` component shows only 6 basic metrics:
+- Stars, Forks, Contributors, Commits (30d), Releases (30d), Language
 
-1. **Public GitHub Analytics Display** - Show the same rich GitHub data from the owner dashboard to all public visitors
-2. **Chart Type Switcher** - Allow users to toggle between different chart visualizations (Score History, Contributors Breakdown, Activity Heatmap)
+However, the database contains much richer data that would help users make informed decisions:
+- **Missing metrics**: Open Issues, Commit Velocity, Last Commit Date, Topics/Tags
+- **Missing context**: How "active" is the project? When was data last analyzed?
+- **Missing visual indicators**: No velocity bars, no health status, no trend indicators
 
----
-
-## Current State
-
-| Feature | Status |
-|---------|--------|
-| `GitHubAnalyticsCard` | Exists in `src/components/dashboard/` - only shown to owners |
-| `UpgradeChart` | Shows Score + Velocity as ComposedChart (bar + line) |
-| Public Program Detail | Missing GitHub metrics (stars, forks, contributors, commits) |
-| Chart options | Single static view, no switcher |
-
----
-
-## Architecture Design
-
-```text
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                        PROGRAM DETAIL PAGE                                  │
-├─────────────────────────────────────────────────────────────────────────────┤
-│                                                                             │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │                     PUBLIC GITHUB METRICS                             │  │
-│  │  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐   │  │
-│  │  │ 14.2k  │ │  4.1k  │ │  156   │ │  234   │ │   3    │ │  Rust  │   │  │
-│  │  │ Stars  │ │ Forks  │ │Contrib.│ │Commits │ │Releases│ │Language│   │  │
-│  │  └────────┘ └────────┘ └────────┘ └────────┘ └────────┘ └────────┘   │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-│  ┌───────────────────────────────────────────────────────────────────────┐  │
-│  │  ANALYTICS                                                            │  │
-│  │  ┌────────────────────────────────────────────────────────────────┐   │  │
-│  │  │ [Score History] [Contributors] [Activity] [Releases]           │   │  │
-│  │  └────────────────────────────────────────────────────────────────┘   │  │
-│  │                                                                       │  │
-│  │  ┌────────────────────────────────────────────────────────────────┐   │  │
-│  │  │                                                                │   │  │
-│  │  │              [SELECTED CHART VISUALIZATION]                    │   │  │
-│  │  │                                                                │   │  │
-│  │  │    - Score History: Line + Bar (existing)                      │   │  │
-│  │  │    - Contributors: Pie Chart with top 5                        │   │  │
-│  │  │    - Activity: Stacked Area by event type                      │   │  │
-│  │  │    - Releases: Timeline bar chart                              │   │  │
-│  │  │                                                                │   │  │
-│  │  └────────────────────────────────────────────────────────────────┘   │  │
-│  └───────────────────────────────────────────────────────────────────────┘  │
-│                                                                             │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
+The owner dashboard (`GitHubAnalyticsCard`) is much more sophisticated - we should bring this same level of detail to the public view.
 
 ---
 
 ## Implementation Plan
 
-### Phase 1: Public GitHub Metrics Bar Component
+### Phase 1: Expand Metrics Grid
 
-Create a new component `PublicGitHubMetrics.tsx` that displays key stats in a horizontal bar:
+Add additional key metrics that influence decision-making:
 
-**New Component**: `src/components/program/PublicGitHubMetrics.tsx`
+| Current Metrics | New Metrics to Add |
+|-----------------|-------------------|
+| Stars | Open Issues |
+| Forks | Commit Velocity (visual bar) |
+| Contributors | Last Commit (relative time) |
+| Commits (30d) | Health Status Badge |
+| Releases (30d) | — |
+| Language | — |
 
-| Metric | Icon | Data Source |
-|--------|------|-------------|
-| Stars | Star | `github_stars` |
-| Forks | GitFork | `github_forks` |
-| Contributors | Users | `github_contributors` |
-| Commits (30d) | Activity | `github_commits_30d` |
-| Releases (30d) | Package | `github_releases_30d` |
-| Language | Code | `github_language` |
+**New Layout**: 2 rows of metrics
+- **Row 1** (Core Stats): Stars, Forks, Contributors, Open Issues
+- **Row 2** (Activity Indicators): Commits (30d), Releases, Velocity, Language
 
-This component will:
-- Accept `ClaimedProfile['githubAnalytics']` as props
-- Display metrics in a responsive 6-column grid (stacks to 3x2 on mobile)
-- Show "—" for missing data
-- Include GitHub link icon with external link to repository
+### Phase 2: Add Commit Velocity Bar
 
----
+Show a visual progress bar for commit velocity (similar to owner dashboard):
+- 0-1 commits/day = Low activity (red/orange)
+- 1-3 commits/day = Moderate (yellow)
+- 3+ commits/day = High activity (green/teal)
 
-### Phase 2: Multi-Chart Component with Tabs
+### Phase 3: Add Health Status Badge
 
-Create an enhanced analytics section with chart type switching:
+Display liveness status as a prominent badge:
+- **ACTIVE** (green) - Recent commits within 30 days
+- **STALE** (yellow) - No commits for 30-90 days
+- **DECAYING** (red) - No commits for 90+ days
 
-**New Component**: `src/components/program/AnalyticsCharts.tsx`
+### Phase 4: Add Last Activity Indicator
 
-**Chart Types**:
+Show "Last commit: 2 hours ago" in relative time format to help users understand recency.
 
-1. **Score History** (default) - Existing ComposedChart (bar + line)
-   - X-axis: Months
-   - Left Y-axis: Commit velocity (bars)
-   - Right Y-axis: Resilience score (line)
+### Phase 5: Add Topics/Tags Display
 
-2. **Contributors** - Pie Chart
-   - Shows top 5 contributors by commit count
-   - Data from `github_top_contributors`
-   - Legend with percentages
+If `github_topics` array has data, display them as small badges to show project categories.
 
-3. **Activity** - Stacked Area Chart
-   - Shows event distribution over time
-   - Event types: PushEvent, IssuesEvent, PullRequestEvent, ReleaseEvent
-   - Data from `github_recent_events`
+### Phase 6: Add "Last Analyzed" Footer
 
-4. **Releases** - Bar Chart
-   - Shows release frequency over last 6 months
-   - Data derived from score_history or releases data
-
-**UI Pattern**: Use `Tabs` component from shadcn/ui for switching
+Show when the data was last synced (e.g., "Data synced 2 hours ago") so users know data freshness.
 
 ---
 
-### Phase 3: Update ProgramDetail Page
+## Updated Component Structure
 
-Modify `src/pages/ProgramDetail.tsx` to:
-
-1. Add `PublicGitHubMetrics` component after the description section
-2. Replace current `UpgradeChart` with new `AnalyticsCharts` component
-3. Pass `claimedProfile?.githubAnalytics` to new components
-4. Show empty states when no GitHub data is available
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ GITHUB METRICS                               [ACTIVE]     [View Repository] │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│  ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐ ┌───────────┐     │
+│  │   14.2k   │ │   4.1k    │ │    156    │ │    892    │ │    234    │     │
+│  │   Stars   │ │   Forks   │ │ Contrib.  │ │  Issues   │ │ Commits   │     │
+│  │     ⭐     │ │     🍴     │ │     👥     │ │     ⚠️     │ │   (30d)   │     │
+│  └───────────┘ └───────────┘ └───────────┘ └───────────┘ └───────────┘     │
+│                                                                             │
+│  ┌───────────┐ ┌───────────┐ ┌─────────────────────────────────────────────┐│
+│  │     3     │ │   Rust    │ │ COMMIT VELOCITY                            ││
+│  │ Releases  │ │ Language  │ │ ████████████████░░░░░░░░  8.5 commits/day  ││
+│  │   (30d)   │ │     💻     │ │                                            ││
+│  └───────────┘ └───────────┘ └─────────────────────────────────────────────┘│
+│                                                                             │
+│  Topics: [blockchain] [solana] [rust] [cryptocurrency] [defi]              │
+│                                                                             │
+│  Last commit: 2 hours ago  •  Data synced: 1 hour ago                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/components/program/PublicGitHubMetrics.tsx` | Horizontal metrics bar for public view |
-| `src/components/program/AnalyticsCharts.tsx` | Multi-chart component with tab switcher |
-| `src/components/program/ContributorsPieChart.tsx` | Pie chart for contributor breakdown |
-| `src/components/program/ActivityAreaChart.tsx` | Stacked area chart for event activity |
 
 ## Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/ProgramDetail.tsx` | Add PublicGitHubMetrics, replace UpgradeChart with AnalyticsCharts |
-| `src/components/program/index.ts` | Export new components |
+| `src/components/program/PublicGitHubMetrics.tsx` | Complete enhancement with new metrics, velocity bar, status badge, topics, and footer |
+| `src/types/index.ts` | Ensure `github_is_fork` and `github_homepage` are in GitHubAnalytics interface (already present) |
 
 ---
 
 ## Technical Details
 
-### PublicGitHubMetrics Component
+### Health Status Calculation
 
-```tsx
-interface PublicGitHubMetricsProps {
-  analytics?: GitHubAnalytics;
-  githubUrl?: string;
+```typescript
+function getHealthStatus(lastCommit?: string, commitVelocity?: number) {
+  if (!lastCommit) return { status: 'unknown', color: 'muted' };
+  
+  const daysSince = Math.floor((Date.now() - new Date(lastCommit).getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (daysSince <= 30 && (commitVelocity || 0) > 0.5) {
+    return { status: 'ACTIVE', color: 'primary' };
+  }
+  if (daysSince <= 90) {
+    return { status: 'STALE', color: 'yellow-500' };
+  }
+  return { status: 'DECAYING', color: 'destructive' };
 }
-
-// Responsive grid: 6 columns on desktop, 3 on tablet, 2 on mobile
-<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-  {metrics.map(metric => (
-    <div className="text-center p-3 rounded-sm border bg-muted/30">
-      <Icon className="mx-auto h-4 w-4" />
-      <div className="font-mono text-xl font-bold">{value}</div>
-      <div className="text-[10px] text-muted-foreground">{label}</div>
-    </div>
-  ))}
-</div>
 ```
 
-### AnalyticsCharts Tab Configuration
+### Relative Time Formatting
 
-```tsx
-const chartTabs = [
-  { value: 'score', label: 'Score History', icon: TrendingUp },
-  { value: 'contributors', label: 'Contributors', icon: Users },
-  { value: 'activity', label: 'Activity', icon: Activity },
-  { value: 'releases', label: 'Releases', icon: Package },
-];
-
-<Tabs defaultValue="score">
-  <TabsList className="w-full justify-start">
-    {chartTabs.map(tab => (
-      <TabsTrigger key={tab.value} value={tab.value}>
-        <tab.icon className="h-4 w-4 mr-2" />
-        {tab.label}
-      </TabsTrigger>
-    ))}
-  </TabsList>
-  <TabsContent value="score">
-    <UpgradeChart projectId={projectId} />
-  </TabsContent>
-  <TabsContent value="contributors">
-    <ContributorsPieChart data={topContributors} />
-  </TabsContent>
-  {/* ... */}
-</Tabs>
+```typescript
+function formatRelativeTime(dateString?: string): string {
+  if (!dateString) return 'Unknown';
+  const date = new Date(dateString);
+  const diffMs = Date.now() - date.getTime();
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  
+  if (diffHours < 1) return 'Just now';
+  if (diffHours < 24) return `${diffHours} hours ago`;
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return date.toLocaleDateString();
+}
 ```
 
-### ContributorsPieChart Data Transform
+### Velocity Bar Calculation
 
-```tsx
-// Transform github_top_contributors to Recharts pie format
-const pieData = topContributors.slice(0, 5).map(c => ({
-  name: c.login,
-  value: c.contributions,
-  avatar: c.avatar,
-}));
+```typescript
+// Normalize velocity to 0-100 scale (5 commits/day = 100%)
+const velocityPercent = Math.min((commitVelocity || 0) * 20, 100);
 
-// Add "Others" if more than 5 contributors
-if (topContributors.length > 5) {
-  const othersTotal = topContributors
-    .slice(5)
-    .reduce((sum, c) => sum + c.contributions, 0);
-  pieData.push({ name: 'Others', value: othersTotal });
-}
+// Color based on velocity
+const velocityColor = 
+  velocityPercent > 60 ? 'bg-primary' :
+  velocityPercent > 30 ? 'bg-yellow-500' : 'bg-destructive';
 ```
 
 ---
 
-## Visual Hierarchy (Updated ProgramDetail Layout)
+## Visual Enhancements
 
-```text
-1. Back to Explorer link
-2. Verification Banner (if verified)
-3. Program Header (name, score, status, social links)
-4. Description Section
-5. PUBLIC GITHUB METRICS BAR ← NEW
-6. ANALYTICS CHARTS with TAB SWITCHER ← ENHANCED
-7. Recent Events (existing)
-8. Metric Cards (Originality, Staked, Constraints)
-9. Verified Timeline (if verified)
-10. Website Preview (if verified)
-11. Media Gallery & Social Pulse (if verified)
-12. Stake CTA
-```
+1. **Color-coded icons**: Stars (yellow), Forks (blue), Contributors (green), Issues (amber)
+2. **Health status badge**: Prominent colored badge next to title
+3. **Velocity progress bar**: Visual representation of commit activity
+4. **Topic badges**: Small pill badges for GitHub topics
+5. **Footer metadata**: Subtle text showing data freshness
 
----
-
-## Chart Styling Guidelines
-
-All charts will follow the existing Bloomberg Terminal aesthetic:
-- Dark theme with `hsl(var(--card))` backgrounds
-- Primary teal color for active data
-- Muted foreground for axis labels
-- JetBrains Mono font for tooltips and values
-- Consistent 300px chart height
-- Empty states with centered messages
+This creates a "Bloomberg Terminal" style information density that helps users quickly assess project health at a glance.
