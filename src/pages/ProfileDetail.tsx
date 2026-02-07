@@ -12,8 +12,9 @@ import {
   DevelopmentTabContent,
   CommunityTabContent,
   RoadmapTabContent,
+  TeamTabContent,
 } from '@/components/program';
-import { SettingsTab, BuildInPublicTab } from '@/components/profile/tabs';
+import { SettingsTab, BuildInPublicTab, TeamManagement } from '@/components/profile/tabs';
 import { RoadmapManagement } from '@/components/profile/tabs/RoadmapManagement';
 import { PROJECT_CATEGORIES } from '@/types';
 import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
@@ -153,6 +154,9 @@ const ProfileDetail = () => {
                       githubIsFork={profile.githubAnalytics?.github_is_fork}
                     />
                   ),
+                  team: (
+                    <TeamManagement profile={profile} xUserId={user!.id} />
+                  ),
                   community: (
                     <div className="space-y-6">
                       {/* Build In Public Editor for Owner */}
@@ -247,6 +251,13 @@ const ProfileDetail = () => {
                     analytics={profile.githubAnalytics}
                     program={programForComponents}
                     githubIsFork={profile.githubAnalytics?.github_is_fork}
+                  />
+                ),
+                team: (
+                  <TeamTabContent
+                    teamMembers={profile.teamMembers}
+                    stakingPitch={profile.stakingPitch}
+                    isVerified={profile.verified}
                   />
                 ),
                 community: (

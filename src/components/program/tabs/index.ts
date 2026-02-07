@@ -3,3 +3,4 @@ export { DevelopmentTabContent } from './DevelopmentTabContent';
 export { CommunityTabContent } from './CommunityTabContent';
 export { RoadmapTabContent } from './RoadmapTabContent';
 export { SupportTabContent } from './SupportTabContent';
+export { TeamTabContent } from './TeamTabContent';

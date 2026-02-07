@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { ClaimedProfile, MediaAsset, Milestone, BuildInPublicVideo, TwitterTweet } from '@/types';
+import type { ClaimedProfile, MediaAsset, Milestone, BuildInPublicVideo, TwitterTweet, TeamMember } from '@/types';
 import type { Json } from '@/integrations/supabase/types';
 
 interface DBClaimedProfile {
@@ -55,6 +55,9 @@ interface DBClaimedProfile {
   twitter_engagement_rate: number | null;
   twitter_recent_tweets: Json | null;
   twitter_last_synced: string | null;
+  // Team fields
+  team_members: Json | null;
+  staking_pitch: string | null;
 }
 
 // Transform database format to frontend ClaimedProfile format
@@ -114,6 +117,9 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
       recentTweets: (Array.isArray(db.twitter_recent_tweets) ? db.twitter_recent_tweets : []) as unknown as TwitterTweet[],
       lastSynced: db.twitter_last_synced || undefined,
     },
+    // Team Section
+    teamMembers: (Array.isArray(db.team_members) ? db.team_members : []) as unknown as TeamMember[],
+    stakingPitch: db.staking_pitch || undefined,
   };
 }
 

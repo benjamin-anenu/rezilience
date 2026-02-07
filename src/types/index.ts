@@ -192,6 +192,22 @@ export interface BuildInPublicVideo {
   timestamp?: string;
 }
 
+// Team Member Role Options
+export type TeamMemberRole = 'developer' | 'founder' | 'other';
+
+// Individual Team Member
+export interface TeamMember {
+  id: string;
+  imageUrl?: string;
+  name: string;
+  nickname?: string;
+  jobTitle: string;
+  whyFit: string;
+  role: TeamMemberRole;
+  customRole?: string;
+  order: number;
+}
+
 // Twitter Tweet for engagement display
 export interface TwitterTweet {
   id: string;
@@ -253,6 +269,10 @@ export interface ClaimedProfile {
   // Build In Public & Twitter Integration (Phase 2)
   buildInPublicVideos?: BuildInPublicVideo[];
   twitterMetrics?: TwitterMetrics;
+  
+  // Team Section
+  teamMembers?: TeamMember[];
+  stakingPitch?: string;
 }
 
 // Form data for multi-step claim flow
