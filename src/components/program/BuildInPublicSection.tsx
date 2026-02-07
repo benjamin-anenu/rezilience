@@ -6,7 +6,7 @@ import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious
 export interface BuildInPublicVideo {
   id: string;
   url: string;
-  tweetUrl: string;
+  tweetUrl?: string;  // Optional - legacy field, new entries use url
   thumbnailUrl?: string;
   title?: string;
   timestamp?: string;
@@ -24,7 +24,8 @@ const getTwitterEmbedUrl = (tweetUrl: string): string => {
 };
 
 // Get tweet ID from URL for embed
-const getTweetId = (url: string): string | null => {
+const getTweetId = (url: string | undefined): string | null => {
+  if (!url) return null;
   const match = url.match(/status\/(\d+)/);
   return match ? match[1] : null;
 };
@@ -59,14 +60,16 @@ export function BuildInPublicSection({ videos, xUsername }: BuildInPublicSection
       </CardHeader>
       <CardContent>
         <Carousel className="w-full">
-          <CarouselContent className="-ml-2">
-            {videos.map((video) => {
-              const tweetId = getTweetId(video.tweetUrl);
-              
-              return (
-                <CarouselItem key={video.id} className="pl-2 sm:basis-1/2 lg:basis-1/3">
-                  <a 
-                    href={video.tweetUrl}
+        <CarouselContent className="-ml-2">
+          {videos.map((video) => {
+            // Handle both field names for backwards compatibility
+            const videoUrl = video.tweetUrl || video.url;
+            const tweetId = getTweetId(videoUrl);
+            
+            return (
+              <CarouselItem key={video.id} className="pl-2 sm:basis-1/2 lg:basis-1/3">
+                <a 
+                  href={videoUrl}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="group block"
