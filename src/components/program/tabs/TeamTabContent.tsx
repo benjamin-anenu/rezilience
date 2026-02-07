@@ -97,16 +97,16 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified }: TeamTa
               )}
             </div>
             
-            <div className="grid gap-6 sm:grid-cols-2">
+            <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
               {teamMembers
                 .sort((a, b) => a.order - b.order)
                 .map((member) => (
                   <Card
                     key={member.id}
-                    className="group overflow-hidden border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg"
+                    className="group overflow-hidden border-border bg-card transition-all hover:border-primary/30 hover:shadow-md"
                   >
-                    {/* Large Profile Image */}
-                    <div className="relative aspect-square w-full overflow-hidden bg-muted">
+                    {/* Compact Profile Image */}
+                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
                       {member.imageUrl ? (
                         <img
                           src={member.imageUrl}
@@ -115,14 +115,14 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified }: TeamTa
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-                          <span className="font-display text-5xl font-bold text-primary/60">
+                          <span className="font-display text-3xl font-bold text-primary/60">
                             {getInitials(member.name)}
                           </span>
                         </div>
                       )}
                       
                       {/* Role Badge Overlay */}
-                      <div className="absolute bottom-3 left-3">
+                      <div className="absolute bottom-2 left-2">
                         <Badge 
                           variant={getRoleBadgeVariant(member.role)}
                           className="font-display text-xs uppercase tracking-wider shadow-md"
@@ -132,15 +132,15 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified }: TeamTa
                       </div>
                     </div>
                     
-                    {/* Member Info */}
-                    <CardContent className="p-4 space-y-3">
+                    {/* Member Info - Compact */}
+                    <CardContent className="p-3 space-y-2">
                       {/* Name & Nickname */}
                       <div>
-                        <h3 className="font-display text-lg font-semibold text-foreground">
+                        <h3 className="font-display text-base font-semibold text-foreground">
                           {member.name}
                         </h3>
                         {member.nickname && (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-xs text-muted-foreground">
                             @{member.nickname}
                           </p>
                         )}
@@ -154,12 +154,12 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified }: TeamTa
                       {/* Why Fit Quote with Label */}
                       {member.whyFit && (
                         <div className="relative pt-2 border-t border-border/50">
-                          <p className="text-xs font-medium text-primary/70 uppercase tracking-wider mb-1">
+                          <p className="text-xs font-medium text-primary/70 uppercase tracking-wider mb-0.5">
                             I am best fit for this project
                           </p>
                           <div className="flex items-start gap-1">
-                            <Quote className="h-4 w-4 text-primary/40 flex-shrink-0 mt-0.5" />
-                            <p className="text-sm italic text-muted-foreground leading-relaxed">
+                            <Quote className="h-3 w-3 text-primary/40 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs italic text-muted-foreground leading-relaxed line-clamp-2">
                               {member.whyFit}
                             </p>
                           </div>
