@@ -114,15 +114,23 @@
      color: hsl(var(--muted-foreground));
    }
  
-   /* Terminal-style glow effects */
-   .glow-signal {
-     box-shadow: 0 0 20px hsl(174 100% 38% / 0.2);
-   }
- 
-   .glow-signal-strong {
-     box-shadow: 0 0 30px hsl(174 100% 38% / 0.3);
-   }
- 
+    /* Terminal-style glow effects */
+    .glow-signal {
+      box-shadow: 0 0 20px hsl(174 100% 38% / 0.2);
+    }
+  
+    .glow-signal-strong {
+      box-shadow: 0 0 30px hsl(174 100% 38% / 0.3);
+    }
+
+    /* Hide scrollbar for horizontal scroll areas */
+    .scrollbar-none {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    .scrollbar-none::-webkit-scrollbar {
+      display: none;
+    }
   /* High-density data table styles */
   .data-table {
     @apply text-sm;

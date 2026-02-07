@@ -8,3 +8,6 @@ export { PublicGitHubMetrics } from './PublicGitHubMetrics';
 export { AnalyticsCharts } from './AnalyticsCharts';
 export { ContributorsPieChart } from './ContributorsPieChart';
 export { ActivityAreaChart } from './ActivityAreaChart';
+export { HeroBanner } from './HeroBanner';
+export { QuickStats } from './QuickStats';
+export { StickyCTA } from './StickyCTA';
