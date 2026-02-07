@@ -1,218 +1,333 @@
 
 
-# Align Owner Dashboard (`/profile/:id`) with Public Page Design
+# Comprehensive End-to-End System Audit Report
 
-## Problem
+## Executive Summary
 
-The owner page at `/profile/:id` uses different components that don't match the premium design of the public page at `/program/:id`:
+**Status: CONDITIONALLY READY**
 
-| Current | Public (`/program/:id`) | Owner (`/profile/:id`) |
-|---------|-------------------------|------------------------|
-| Hero | `HeroBanner` (premium) | `ProfileHeroBanner` (different design) |
-| Stats Bar | `QuickStats` | Missing |
-| Tabs | `ProgramTabs` | `ProfileTabs` (different structure) |
-
-Your spec requires the owner page to **mirror the visual sophistication** of the public page, with the same layout and components but with owner-specific capabilities.
+This audit identifies several critical issues affecting user experience, navigation, and data flow. While the core architecture is sound, there are routing inconsistencies, incomplete state management, and edge cases that could frustrate users or cause data loss.
 
 ---
 
-## Solution
+## 1. Complete Routing Architecture
 
-Refactor `ProfileDetail.tsx` to use the **same components** as `ProgramDetail.tsx`:
-- `HeroBanner` with new `isOwner` prop
-- `QuickStats`
-- `ProgramTabs` with owner-enhanced tab content
+### All Routes in the System
 
----
+| Route | Component | Purpose | Access |
+|-------|-----------|---------|--------|
+| `/` | `Index` | Landing page | Public |
+| `/explorer` | `Explorer` | Browse all verified protocols | Public |
+| `/program/:id` | `ProgramDetail` | **Public view** of any protocol | Public |
+| `/profile/:id` | `ProfileDetail` | **Smart route**: Owner = management UI, Visitor = public view | Conditional |
+| `/claim-profile` | `ClaimProfile` | 5-step onboarding to register protocol | Authenticated |
+| `/github-callback` | `GitHubCallback` | OAuth callback from GitHub | Auth flow |
+| `/x-callback` | `XCallback` | OAuth callback from X/Twitter | Auth flow |
+| `/dashboard` | `Dashboard` | "My Registry" - list of user's protocols | Authenticated |
+| `/staking` | `Staking` | Staking interface | Public |
+| `/my-bonds` | `MyBonds` | User's bonds | Authenticated |
+| `*` | `NotFound` | 404 catch-all | Public |
 
-## Implementation
-
-### 1. Update `HeroBanner.tsx` - Add Owner Mode
-
-Add props for owner-specific rendering:
-
-```typescript
-interface HeroBannerProps {
-  // ...existing props
-  isOwner?: boolean;
-  onRefresh?: () => void;
-  isRefreshing?: boolean;
-}
-```
-
-When `isOwner={true}`:
-- Show "YOUR PROTOCOL" badge instead of "VERIFIED TITAN"
-- Show "Back to Dashboard" link
-- Show "Refresh Metrics" button
-- Show "View Public Page" button linking to `/program/:id`
-
-### 2. Update `ProfileDetail.tsx` - Use Public Page Components
-
-Replace the owner view section to use:
-
-```typescript
-// Replace ProfileHeroBanner + ProfileTabs with:
-<HeroBanner
-  program={programForComponents}
-  isOwner={true}
-  onRefresh={handleRefresh}
-  isRefreshing={isRefreshing}
-  // ...same props as ProgramDetail
-/>
-
-<QuickStats analytics={profile.githubAnalytics} />
-
-<ProgramTabs>
-  {{
-    about: <AboutTabContent 
-      // read-only About content
-      description={profile.description}
-      category={profile.category}
-      // ...
-    />,
-    development: <DevelopmentTabContent 
-      // read-only GitHub analytics
-    />,
-    community: <OwnerCommunityTab 
-      // Editable Build In Public + Community links
-    />,
-    roadmap: <RoadmapManagement 
-      // Owner can mark complete, request variance
-    />,
-    support: <OwnerSettingsTab 
-      // Editable website, discord, telegram
-    />,
-  }}
-</ProgramTabs>
-```
-
-### 3. Create Owner-Enhanced Tab Components
-
-Map the 5 tabs from your spec to the existing `ProgramTabs` structure:
-
-| Your Spec Tab | Maps To | Content |
-|---------------|---------|---------|
-| About | `about` | `AboutTabContent` (read-only, protected fields notice) |
-| Settings | `support` | `SettingsTab` (editable website, socials) |
-| Media | Part of `about` | `MediaTab` integrated into About section |
-| Build In Public | `community` | `BuildInPublicTab` (editable) + community links |
-| Development | `development` | `DevelopmentTabContent` (read-only) |
-| Roadmap | `roadmap` | `RoadmapManagement` (owner actions) |
-
----
-
-## Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/components/program/HeroBanner.tsx` | Add `isOwner`, `onRefresh`, `isRefreshing` props; conditionally render owner badge and actions |
-| `src/pages/ProfileDetail.tsx` | Replace `ProfileHeroBanner` + `ProfileTabs` with `HeroBanner` + `QuickStats` + `ProgramTabs` |
-| `src/components/program/tabs/SupportTabContent.tsx` | Accept optional `SettingsEditor` component for owner mode |
-
-## Files to Potentially Remove (Cleanup)
-
-| File | Reason |
-|------|--------|
-| `src/components/profile/ProfileHeroBanner.tsx` | Replaced by enhanced `HeroBanner` |
-| `src/components/profile/ProfileTabs.tsx` | Using `ProgramTabs` instead |
-
----
-
-## Owner View Structure (After Fix)
+### Navigation Flow
 
 ```text
-/profile/:id (Owner Dashboard)
-├── Back to Dashboard link
-├── HeroBanner (with isOwner=true)
-│   ├── Logo + Name
-│   ├── "YOUR PROTOCOL" badge (gold/amber)
-│   ├── Status badges (ACTIVE, VERIFIED)
-│   ├── Animated Score Ring (same as public)
-│   └── Actions: [View Public Page] [Refresh Metrics]
-├── QuickStats bar (GitHub stats)
-└── ProgramTabs (same 5-tab structure)
-    ├── About (description + category + media gallery - READ-ONLY)
-    │   └── Protected Fields notice
-    ├── Development (GitHub analytics - READ-ONLY)
-    ├── Community → Build In Public (EDITABLE videos + X links)
-    ├── Roadmap (EDITABLE - mark complete, request variance)
-    └── Support → Settings (EDITABLE - website, discord, telegram)
+Landing (/)
+    ├── JOIN THE REGISTRY → /claim-profile
+    ├── EXPLORER → /explorer
+    │       └── Click protocol → /program/:id (PUBLIC VIEW)
+    └── MY REGISTRY (if auth) → /dashboard
+            └── Click owned project → /profile/:id (OWNER VIEW)
 ```
 
 ---
 
-## HeroBanner Owner Mode Changes
+## 2. User Journey Analysis
+
+### Owner Journey
+
+```text
+1. User clicks "JOIN THE REGISTRY" or navigates to /claim-profile
+2. Step 1: Sign in with X → redirects to /x-callback
+3. /x-callback:
+   - If user already has profile → redirect to /dashboard
+   - If new user → redirect to /claim-profile?auth=fresh
+4. Steps 2-5: Identity, Verify (GitHub), Media, Roadmap
+5. Step 5 Final Submit:
+   a. If public repo was analyzed → Direct submit via handleDirectSubmit()
+   b. If private repo → GitHub OAuth → /github-callback
+6. /github-callback → Creates profile → Redirects to /profile/:id
+7. Owner lands on /profile/:id → sees OWNER VIEW with management tabs
+8. Later: Dashboard (/dashboard) → Click project → /profile/:id
+```
+
+### Public User Journey
+
+```text
+1. User visits /explorer
+2. Browses ProgramLeaderboard
+3. Clicks on protocol → navigates to /program/:id
+4. Sees PUBLIC VIEW with read-only tabs
+```
+
+---
+
+## 3. Coverage & Intent Validation
+
+### Original Requirements vs Implementation
+
+| Requirement | Status | Notes |
+|-------------|--------|-------|
+| `/profile/:id` shows owner UI | **IMPLEMENTED** | Uses `isOwner` check |
+| `/profile/:id` shows public UI for visitors | **IMPLEMENTED** | Conditional rendering |
+| `/program/:id` for public view | **IMPLEMENTED** | Always public |
+| HeroBanner with `isOwner` prop | **IMPLEMENTED** | Shows "YOUR PROTOCOL" badge |
+| QuickStats bar | **IMPLEMENTED** | Same component shared |
+| 5-tab structure (About, Dev, Community, Roadmap, Support) | **IMPLEMENTED** | Using ProgramTabs |
+| Owner tabs: editable Community, Roadmap, Settings | **IMPLEMENTED** | BuildInPublicTab, RoadmapManagement, SettingsTab |
+| Public repos bypass GitHub OAuth | **IMPLEMENTED** | `handleDirectSubmit()` in ClaimProfile |
+| Back button hidden after verification | **PARTIALLY IMPLEMENTED** | See issues below |
+
+---
+
+## 4. Critical Issues Identified
+
+### ISSUE #1: Back Button Logic Has Edge Case (HIGH CHURN RISK)
+
+**Location**: `src/pages/ClaimProfile.tsx` lines 749-761
+
+**Problem**: The back button visibility is controlled by `githubVerified` state, but there's a race condition:
 
 ```typescript
-// In HeroBanner.tsx
-{isOwner ? (
-  // Owner badge
-  <Badge className="bg-chart-5/20 text-chart-5 border-chart-5/40">
-    <Shield className="h-3.5 w-3.5 mr-1.5" />
-    YOUR PROTOCOL
-  </Badge>
-) : isVerified ? (
-  // Public verified badge
-  <Badge className="bg-primary/20 text-primary">
-    <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
-    VERIFIED TITAN
-  </Badge>
-) : null}
-
-// Owner actions
-{isOwner && (
-  <div className="flex gap-2">
-    <Button asChild>
-      <Link to={`/program/${program.id}`}>
-        <Eye className="mr-2 h-4 w-4" />
-        View Public Page
-      </Link>
-    </Button>
-    <Button onClick={onRefresh} disabled={isRefreshing}>
-      <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
-      Refresh Metrics
-    </Button>
-  </div>
+{!githubVerified && (
+  <Button onClick={handleBack}>BACK</Button>
 )}
 ```
 
+**Edge Case**: When a public repo is analyzed via `handleDirectSubmit()`:
+1. `githubVerified` is never set to `true` (it's only set when OAuth completes)
+2. `githubAnalysisResult` is set instead
+3. The back button remains visible even after successful registration
+
+**User Experience Impact**: After successfully registering via public repo analysis, user can click "BACK" which takes them to Step 4, but their profile is already created - causing confusion.
+
+**Fix Required**:
+```typescript
+{!githubVerified && !githubAnalysisResult && (
+  <Button onClick={handleBack}>BACK</Button>
+)}
+```
+
+### ISSUE #2: Direct Submit Does Not Clear All State (MEDIUM RISK)
+
+**Location**: `src/pages/ClaimProfile.tsx` lines 340-341
+
+**Problem**: After `handleDirectSubmit()` succeeds:
+```typescript
+localStorage.removeItem('claimFormProgress');
+localStorage.setItem('verifiedProfileId', profileId);
+```
+
+**Missing**: The `claimingProfile` localStorage is NOT cleared on direct submit (it IS cleared in GitHubCallback on line 98).
+
+**Impact**: If user abandons flow or comes back, stale `claimingProfile` data may persist.
+
+### ISSUE #3: Step 5 Has Two Paths But No Unified Success State (MEDIUM RISK)
+
+**Location**: `src/pages/ClaimProfile.tsx` lines 680-745
+
+**Problem**: Step 5 has three branches:
+1. `githubVerified` = true → Show "VIEW MY PROFILE"
+2. `githubAnalysisResult` exists → Show "COMPLETE REGISTRATION"
+3. Neither → Show "CONNECT GITHUB & COMPLETE"
+
+**Issue**: After `handleDirectSubmit()` completes successfully, the user is immediately navigated away (line 347), but there's a brief moment where the form could be in an inconsistent state. If navigation fails or is slow, user sees "COMPLETE REGISTRATION" again.
+
+### ISSUE #4: `update-profile` Edge Function Missing from config.toml (CRITICAL)
+
+**Location**: `supabase/config.toml`
+
+**Problem**: The `update-profile` edge function is NOT listed with `verify_jwt = false`:
+
+```toml
+# Missing:
+[functions.update-profile]
+verify_jwt = false
+```
+
+**Impact**: Calls to update-profile may fail if JWT verification is enforced by default. The function uses service role internally but the incoming request may be rejected.
+
+### ISSUE #5: Console Warning About forwardRef (LOW RISK)
+
+**Location**: Console logs show warning in `RoadmapTabContent`
+
+```
+Warning: Function components cannot be given refs.
+Check the render method of `ProgramDetail`.
+at RoadmapTabContent
+```
+
+**Impact**: Cosmetic React warning, not breaking functionality but indicates improper component usage.
+
 ---
 
-## Tab Content Mapping
+## 5. Edge Cases & Failure Scenarios
 
-**About Tab (Read-Only):**
-- Uses existing `AboutTabContent` from ProgramDetail
-- Add "Protected Fields" notice card at top for owner
+### 5.1 Empty States
 
-**Development Tab (Read-Only):**
-- Uses existing `DevelopmentTabContent` from ProgramDetail
-- Same GitHub analytics display
+| Scenario | Handling | Status |
+|----------|----------|--------|
+| No projects in Dashboard | Shows "No Registered Protocols" card | OK |
+| No milestones in Roadmap | Shows "No milestones yet" message | OK |
+| No media assets | Silent empty array | OK |
+| No Build In Public videos | Shows only "Add Video" form | OK |
 
-**Community Tab (Editable for Owner):**
-- For owner: Wraps `BuildInPublicTab` (editable videos)
-- For public: Uses existing `CommunityTabContent` (read-only)
+### 5.2 Network Failures
 
-**Roadmap Tab (Editable for Owner):**
-- For owner: Uses `RoadmapManagement` (mark complete, request variance)
-- For public: Uses existing `RoadmapTabContent` (read-only)
+| Scenario | Handling | Risk |
+|----------|----------|------|
+| update-profile fails | Toast error message | LOW |
+| Profile fetch fails | Shows "Profile not found" | LOW |
+| GitHub analysis fails | Error toast, can retry | LOW |
+| X OAuth fails | Error page with retry button | LOW |
 
-**Support Tab becomes Settings Tab (Editable for Owner):**
-- For owner: Uses `SettingsTab` (editable website, socials)
-- For public: Uses existing `SupportTabContent`
+### 5.3 Permission/Access Edge Cases
+
+| Scenario | Expected | Actual |
+|----------|----------|--------|
+| User visits /profile/:id they don't own | Public read-only view | **CORRECT** |
+| User visits /program/:id | Always public view | **CORRECT** |
+| Unauthenticated user visits /dashboard | Redirects to /claim-profile | **CORRECT** |
+| User with existing profile visits /claim-profile | Redirects to /dashboard | **CORRECT** |
+
+### 5.4 Data Integrity Risks
+
+| Risk | Mitigation | Status |
+|------|------------|--------|
+| Protected fields editable | update-profile uses EDITABLE_FIELDS whitelist | OK |
+| Non-owner updating profile | x_user_id ownership check in edge function | OK |
+| Duplicate profile creation | useExistingProfile check in ClaimProfile | OK |
 
 ---
 
-## Summary
+## 6. Frontend Review
 
-This refactor ensures:
+### UI State Coverage
 
-1. **Visual Consistency**: Owner page uses exact same premium components as public page
-2. **Same Layout**: HeroBanner + QuickStats + ProgramTabs structure
-3. **Owner Badge**: "YOUR PROTOCOL" clearly identifies ownership
-4. **Animated Score Ring**: Same premium visual as public
-5. **5 Tabs**: About, Development, Community, Roadmap, Support/Settings
-6. **Editable Content**: Community, Roadmap, and Support tabs have owner editing
-7. **Protected Fields**: About tab shows read-only notice for locked fields
+| State | About Tab | Settings Tab | Roadmap Tab | Build In Public | Development |
+|-------|-----------|--------------|-------------|-----------------|-------------|
+| Loading | OK | OK | OK | OK | OK |
+| Error | Partial | Toast | Toast | Toast | OK |
+| Empty | OK | Default values | OK | OK | Fallback |
+| Success | OK | Toast + Save indicator | Dialog close | Auto-save toast | OK |
 
-The owner will see the exact same premium "Heartbeat Dashboard" design as the public, with management controls seamlessly integrated into the appropriate tabs.
+### Broken/Confusing Flows
+
+1. **Back button after direct submit** - Already documented
+2. **No confirmation before milestone deletion** - User can accidentally remove milestones
+3. **Video removal is immediate** - No undo, auto-saves immediately
+
+### Missing Loading States
+
+- `handleRefresh` in ProfileDetail only sets `isRefreshing` but there's no visual indicator on the QuickStats bar itself
+
+---
+
+## 7. Backend Review
+
+### Edge Function Security
+
+| Function | JWT Verify | Ownership Check | Notes |
+|----------|------------|-----------------|-------|
+| update-profile | **MISSING CONFIG** | Yes (x_user_id) | Needs config.toml entry |
+| delete-profile | false | Yes | OK |
+| github-oauth-callback | false | N/A | OK |
+| x-oauth-callback | false | N/A | OK |
+| analyze-github-repo | false | N/A | Public analysis |
+
+### Data Validation
+
+- **update-profile**: Field whitelist protects against mutation of protected fields
+- **Milestone updates**: No server-side validation of date formats
+- **URL validation**: Client-side only (Settings tab)
+
+### Idempotency
+
+- **Direct submit**: No idempotency key - double-click could create duplicates
+- **update-profile**: Safe - uses UUID for identification
+
+---
+
+## 8. Churn & Risk Assessment
+
+### High Churn Risk
+
+1. **Back button visible after public repo registration** - Leads to confusion
+2. **update-profile config missing** - May cause 403 errors on all profile edits
+
+### Medium Churn Risk
+
+1. **No undo for milestone/video deletions** - Accidental data loss
+2. **Stale localStorage on abandoned flows** - Confusing form state
+
+### Low Churn Risk
+
+1. **forwardRef warning** - Cosmetic only
+2. **Missing loading indicator during refresh** - Minor UX friction
+
+---
+
+## 9. Final Verdict
+
+### Status: CONDITIONALLY READY
+
+### Mandatory Fixes Before Production
+
+1. **Add `update-profile` to config.toml** with `verify_jwt = false`
+2. **Fix back button visibility** in ClaimProfile Step 5
+3. **Clear `claimingProfile` in `handleDirectSubmit`**
+
+### Recommended Improvements
+
+1. Add confirmation dialog for milestone/video deletion
+2. Add loading indicator to QuickStats during refresh
+3. Fix React forwardRef warning in RoadmapTabContent
+4. Add idempotency key to direct submit
+
+### Files Requiring Changes
+
+| File | Priority | Change |
+|------|----------|--------|
+| `supabase/config.toml` | CRITICAL | Add update-profile entry |
+| `src/pages/ClaimProfile.tsx` | HIGH | Fix back button logic (line 750) |
+| `src/pages/ClaimProfile.tsx` | MEDIUM | Clear claimingProfile in handleDirectSubmit |
+| `src/components/program/tabs/RoadmapTabContent.tsx` | LOW | Fix forwardRef |
+
+---
+
+## 10. Route Summary Diagram
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                        NAVIGATION                                │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  PUBLIC ROUTES                    AUTHENTICATED ROUTES           │
+│  ═══════════════                  ══════════════════════         │
+│                                                                  │
+│  /                                /dashboard (MY REGISTRY)       │
+│  /explorer                           └─→ /profile/:id            │
+│     └─→ /program/:id                     └─→ OWNER UI            │
+│            └─→ PUBLIC VIEW                                       │
+│                                   /claim-profile                 │
+│  /program/:id                        └─→ /x-callback             │
+│     └─→ Always PUBLIC VIEW              └─→ /github-callback     │
+│                                            └─→ /profile/:id      │
+│  /profile/:id                                                    │
+│     └─→ isOwner? OWNER : PUBLIC                                  │
+│                                                                  │
+│  /staking                                                        │
+│  /my-bonds                                                       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
 
