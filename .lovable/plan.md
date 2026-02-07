@@ -1,190 +1,95 @@
 
 
-# Roadmap Management Feature for About Tab
+# Option B: Merge Owner Dashboard into `/profile/:id`
 
-## Overview
+## Problem Understood
 
-Add milestone management capabilities to the About tab in the owner dashboard (`/my-profile/:id`), allowing protocol owners to:
+You want **one URL** (`/profile/:id`) that shows:
+- **NEW tabbed UI** when the owner is viewing
+- **OLD public view** when a visitor is viewing
 
-1. **Mark milestones as complete** - Update milestone status from "upcoming" to "completed"
-2. **Request timeline variances** - Flag a milestone's date change, which triggers a public "TIMELINE VARIANCE" badge on the profile
+Currently there are two separate routes which is confusing:
+- `/profile/:id` (ProfileDetail) - shows old public UI for everyone
+- `/my-profile/:id` (MyProfileDetail) - shows new tabbed UI (but you never land here)
 
-These actions require updating the `milestones` JSONB array in the database and will be handled via the existing `update-profile` edge function.
+## Solution
 
----
-
-## Current State
-
-The About tab currently displays milestones as **read-only** with visual indicators:
-- Completed milestones (green checkmark)
-- Overdue milestones (red alert)
-- Variance requested (yellow badge)
-- Locked milestones (lock icon)
-
-**Missing**: Action buttons for owners to change milestone status.
+Replace `ProfileDetail.tsx` with the logic from `MyProfileDetail.tsx` that checks ownership and conditionally renders the appropriate UI.
 
 ---
 
-## Implementation
+## Changes
 
-### 1. Update Edge Function: Add `milestones` to Editable Fields
+### 1. Update `src/pages/ProfileDetail.tsx`
 
-Modify `supabase/functions/update-profile/index.ts` to allow milestone updates:
+Replace the entire file to:
+1. Check if current user is the owner (`user.id === profile.xUserId`)
+2. If owner: Show the new tabbed UI (ProfileHeroBanner + ProfileTabs)
+3. If visitor: Show the existing public view
+
+### 2. Update `src/pages/Dashboard.tsx`
+
+Change navigation from `/my-profile/:id` back to `/profile/:id` since that's now the smart route:
 
 ```typescript
-const EDITABLE_FIELDS = [
-  "website_url",
-  "discord_url",
-  "telegram_url",
-  "media_assets",
-  "build_in_public_videos",
-  "milestones",  // ADD THIS
-];
+// Line 162: Change from
+onClick={() => navigate(`/my-profile/${project.id}`)}
+
+// To
+onClick={() => navigate(`/profile/${project.id}`)}
 ```
 
-Also update the TypeScript interface to include milestones in the request type.
+### 3. Optional Cleanup
+
+- Remove `/my-profile/:id` route from `App.tsx`
+- Delete `src/pages/MyProfileDetail.tsx` (no longer needed)
 
 ---
 
-### 2. Create RoadmapManagement Component
+## Technical Details
 
-Create a new component `src/components/profile/tabs/RoadmapManagement.tsx` that provides:
+### ProfileDetail.tsx Structure
 
-**For each milestone:**
-- Display title and target date
-- **"Mark Complete" button** - Changes status to "completed" with completion date
-- **"Request Update" button** - Sets `varianceRequested: true` and allows date change
-- Visual feedback for each state
-
-**UI Layout:**
 ```text
-+------------------------------------------+
-| Milestone: Mainnet V2 Launch             |
-| Target: Mar 15, 2025                     |
-| Status: UPCOMING                         |
-| [Mark Complete] [Request Timeline Update]|
-+------------------------------------------+
+ProfileDetail Component:
+├── Loading state (skeleton)
+├── Error state (not found)
+├── Check ownership: user.id === profile.xUserId
+│   ├── If OWNER:
+│   │   ├── ProfileHeroBanner (with "YOUR PROTOCOL" badge)
+│   │   └── ProfileTabs (About, Settings, Media, Build In Public, Development)
+│   └── If VISITOR:
+│       └── Current public view (existing code)
 ```
 
----
+### Imports to Add
 
-### 3. Update AboutTab Component
-
-Modify `src/components/profile/tabs/AboutTab.tsx` to:
-- Accept `xUserId` prop (for mutation)
-- Replace read-only milestone display with interactive `RoadmapManagement` component
-- Show action buttons only for the owner (already enforced by route)
-
----
-
-### 4. Update MyProfileDetail to Pass xUserId to AboutTab
-
-Currently AboutTab only receives `profile`. Update to also pass `xUserId`:
-
-```tsx
-// Before
-<AboutTab profile={profile} />
-
-// After
-<AboutTab profile={profile} xUserId={user!.id} />
-```
-
----
-
-## Component: RoadmapManagement
-
-### Props
 ```typescript
-interface RoadmapManagementProps {
-  profile: ClaimedProfile;
-  xUserId: string;
-}
+import { ProfileHeroBanner } from '@/components/profile/ProfileHeroBanner';
+import { ProfileTabs } from '@/components/profile/ProfileTabs';
+import { AboutTab, SettingsTab, MediaTab, BuildInPublicTab, DevelopmentTab } from '@/components/profile/tabs';
 ```
-
-### Features
-
-1. **Mark Complete**
-   - Shows confirmation dialog
-   - Updates milestone: `{ status: 'completed', completedAt: ISO date }`
-   - Uses `useUpdateProfile` mutation with full milestones array
-
-2. **Request Timeline Update**
-   - Sets `varianceRequested: true`
-   - Opens date picker for new target date
-   - Public profile will show "TIMELINE VARIANCE" badge
-
-3. **Add New Milestone**
-   - Optional: Allow adding new milestones with title + date
-   - New milestones are unlocked until explicitly locked
-
-4. **Lock Milestones**
-   - "Commitment Lock" button to lock all unlocked milestones
-   - Once locked, dates can only change via variance request
 
 ---
 
 ## Files to Modify
 
-| File | Changes |
-|------|---------|
-| `supabase/functions/update-profile/index.ts` | Add `milestones` to EDITABLE_FIELDS |
-| `src/components/profile/tabs/AboutTab.tsx` | Accept xUserId prop, integrate RoadmapManagement |
-| `src/pages/MyProfileDetail.tsx` | Pass xUserId to AboutTab |
-| `src/types/index.ts` | Add `completedAt` field to Milestone type |
-
-### New Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/components/profile/tabs/RoadmapManagement.tsx` | Interactive milestone management UI |
+| File | Change |
+|------|--------|
+| `src/pages/ProfileDetail.tsx` | Add ownership check, conditionally render owner UI vs public UI |
+| `src/pages/Dashboard.tsx` | Change navigation to `/profile/:id` |
+| `src/App.tsx` | Remove `/my-profile/:id` route |
+| `src/pages/MyProfileDetail.tsx` | Delete (optional cleanup) |
 
 ---
 
-## Milestone Type Update
+## Result
 
-Add `completedAt` field to track when milestones were completed:
+After this change:
+- `/profile/abc123` as **owner** → NEW tabbed UI with editing
+- `/profile/abc123` as **visitor** → Public read-only view
+- Dashboard click → Goes to `/profile/:id` (shows owner UI)
+- Explorer click → Goes to `/profile/:id` (shows public UI)
 
-```typescript
-export interface Milestone {
-  id: string;
-  title: string;
-  targetDate: string;
-  isLocked: boolean;
-  status: 'upcoming' | 'completed' | 'overdue';
-  varianceRequested?: boolean;
-  completedAt?: string;      // ADD: ISO date when marked complete
-  originalTargetDate?: string; // ADD: Track original date for variance
-}
-```
-
----
-
-## UI/UX Considerations
-
-1. **Confirmation dialogs** for destructive actions (marking complete is permanent)
-2. **Loading states** during mutation
-3. **Toast notifications** on success/failure
-4. **Visual hierarchy** - completed items should feel "done"
-5. **Empty state** - Encourage adding milestones if none exist
-
----
-
-## Security
-
-- Ownership verified server-side via `x_user_id` match
-- Only the profile owner can see the `/my-profile/:id` route
-- Edge function rejects updates from non-owners
-
----
-
-## Summary
-
-This feature adds interactive roadmap management to the owner's About tab, enabling:
-
-1. One-click milestone completion with timestamp
-2. Timeline variance requests with date update
-3. New milestone creation (optional)
-4. Commitment locking for public accountability
-
-All changes flow through the existing `update-profile` edge function with proper ownership verification.
+One URL, two experiences based on who's viewing.
 
