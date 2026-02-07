@@ -186,7 +186,7 @@ export interface GitHubAnalytics {
 export interface BuildInPublicVideo {
   id: string;
   url: string;
-  tweetUrl: string;
+  tweetUrl?: string;  // Optional - legacy field, new entries use url
   thumbnailUrl?: string;
   title?: string;
   timestamp?: string;
