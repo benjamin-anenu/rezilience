@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
-import { BookOpen, Code, Users, Map, Heart } from 'lucide-react';
+import { BookOpen, Code, Users, Users2, Map, Heart } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
@@ -7,6 +7,7 @@ interface ProgramTabsProps {
   children: {
     about: React.ReactNode;
     development: React.ReactNode;
+    team: React.ReactNode;
     community: React.ReactNode;
     roadmap: React.ReactNode;
     support: React.ReactNode;
@@ -16,6 +17,7 @@ interface ProgramTabsProps {
 const tabConfig = [
   { value: 'about', label: 'About', icon: BookOpen },
   { value: 'development', label: 'Development', icon: Code },
+  { value: 'team', label: 'Team', icon: Users2 },
   { value: 'community', label: 'Community', icon: Users },
   { value: 'roadmap', label: 'Roadmap', icon: Map },
   { value: 'support', label: 'Support', icon: Heart },
@@ -72,6 +74,10 @@ export function ProgramTabs({ children }: ProgramTabsProps) {
 
       <TabsContent value="development" className="mt-0 animate-in fade-in-50 duration-300">
         {children.development}
+      </TabsContent>
+
+      <TabsContent value="team" className="mt-0 animate-in fade-in-50 duration-300">
+        {children.team}
       </TabsContent>
 
       <TabsContent value="community" className="mt-0 animate-in fade-in-50 duration-300">

@@ -1,7 +1,7 @@
-import { Video, ExternalLink, Play } from 'lucide-react';
+import { Video, ExternalLink } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { Tweet } from 'react-tweet';
 
 export interface BuildInPublicVideo {
   id: string;
@@ -16,12 +16,6 @@ interface BuildInPublicSectionProps {
   videos: BuildInPublicVideo[];
   xUsername?: string;
 }
-
-// Extract Twitter video embed URL from tweet URL
-const getTwitterEmbedUrl = (tweetUrl: string): string => {
-  // Twitter doesn't support direct video embeds, so we link to the tweet
-  return tweetUrl;
-};
 
 // Get tweet ID from URL for embed
 const getTweetId = (url: string | undefined): string | null => {
@@ -59,80 +53,61 @@ export function BuildInPublicSection({ videos, xUsername }: BuildInPublicSection
         </div>
       </CardHeader>
       <CardContent>
-        <Carousel className="w-full">
-        <CarouselContent className="-ml-2">
+        {/* Embedded Tweets Grid */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {videos.map((video) => {
             // Handle both field names for backwards compatibility
             const videoUrl = video.tweetUrl || video.url;
             const tweetId = getTweetId(videoUrl);
             
-            return (
-              <CarouselItem key={video.id} className="pl-2 sm:basis-1/2 lg:basis-1/3">
+            if (!tweetId) {
+              // Fallback for non-tweet URLs - show link card
+              return (
                 <a 
+                  key={video.id}
                   href={videoUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group block"
-                  >
-                    <div className="relative aspect-video overflow-hidden rounded-sm border border-border bg-muted/50 transition-all group-hover:border-primary/50 group-hover:shadow-lg group-hover:shadow-primary/10">
-                      {/* Thumbnail or placeholder */}
-                      {video.thumbnailUrl ? (
-                        <img
-                          src={video.thumbnailUrl}
-                          alt={video.title || 'Build in public video'}
-                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
-                        />
-                      ) : (
-                        <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-                          <div className="flex flex-col items-center gap-2 text-muted-foreground">
-                            <Video className="h-8 w-8" />
-                            <span className="text-xs">Video Update</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Play overlay */}
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 transition-opacity group-hover:opacity-100">
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/90 text-primary-foreground shadow-lg">
-                          <Play className="h-5 w-5 ml-0.5" />
-                        </div>
-                      </div>
-                      
-                      {/* X/Twitter badge */}
-                      <div className="absolute bottom-2 right-2">
-                        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-black/80 text-white">
-                          <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current">
-                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                          </svg>
-                        </div>
-                      </div>
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group block rounded-sm border border-border bg-muted/30 p-4 transition-all hover:border-primary/50 hover:bg-muted/50"
+                >
+                  <div className="flex items-center gap-3">
+                    <Video className="h-8 w-8 text-muted-foreground" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {video.title || 'Video Update'}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Click to view
+                      </p>
                     </div>
-                    
-                    {/* Title */}
-                    {video.title && (
-                      <p className="mt-2 line-clamp-2 text-xs text-muted-foreground group-hover:text-foreground">
-                        {video.title}
-                      </p>
-                    )}
-                    
-                    {/* Timestamp */}
-                    {video.timestamp && (
-                      <p className="mt-1 text-xs text-muted-foreground/70">
-                        {new Date(video.timestamp).toLocaleDateString()}
-                      </p>
-                    )}
-                  </a>
-                </CarouselItem>
+                  </div>
+                </a>
               );
-            })}
-          </CarouselContent>
-          {videos.length > 3 && (
-            <>
-              <CarouselPrevious className="-left-3 h-8 w-8" />
-              <CarouselNext className="-right-3 h-8 w-8" />
-            </>
-          )}
-        </Carousel>
+            }
+            
+            return (
+              <div 
+                key={video.id} 
+                className="overflow-hidden rounded-sm border border-border bg-card"
+                data-theme="dark"
+              >
+                {/* Embedded Tweet with native video playback */}
+                <div className="[&_.react-tweet-theme]:!bg-transparent [&_article]:!border-0 [&_article]:!shadow-none">
+                  <Tweet id={tweetId} />
+                </div>
+                
+                {/* Optional title overlay */}
+                {video.title && (
+                  <div className="border-t border-border bg-muted/30 px-3 py-2">
+                    <p className="line-clamp-1 text-xs text-muted-foreground">
+                      {video.title}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
         
         {/* Follow CTA */}
         {xUsername && (

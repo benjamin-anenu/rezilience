@@ -11,6 +11,7 @@ import {
   CommunityTabContent,
   RoadmapTabContent,
   SupportTabContent,
+  TeamTabContent,
 } from '@/components/program';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -193,6 +194,13 @@ const ProgramDetail = () => {
                     analytics={claimedProfile?.githubAnalytics}
                     program={programForComponents}
                     githubIsFork={claimedProfile?.githubAnalytics?.github_is_fork}
+                  />
+                ),
+                team: (
+                  <TeamTabContent
+                    teamMembers={claimedProfile?.teamMembers}
+                    stakingPitch={claimedProfile?.stakingPitch}
+                    isVerified={isVerified}
                   />
                 ),
                 community: (

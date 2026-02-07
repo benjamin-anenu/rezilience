@@ -23,6 +23,18 @@ interface MilestoneUpdate {
   originalTargetDate?: string;
 }
 
+interface TeamMemberUpdate {
+  id: string;
+  imageUrl?: string;
+  name: string;
+  nickname?: string;
+  jobTitle: string;
+  whyFit: string;
+  role: 'developer' | 'founder' | 'other';
+  customRole?: string;
+  order: number;
+}
+
 interface UpdateProfileParams {
   profileId: string;
   xUserId: string;
@@ -33,6 +45,8 @@ interface UpdateProfileParams {
     media_assets?: MediaAsset[];
     build_in_public_videos?: BuildInPublicEntry[];
     milestones?: MilestoneUpdate[];
+    team_members?: TeamMemberUpdate[];
+    staking_pitch?: string;
   };
 }
 

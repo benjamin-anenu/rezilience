@@ -38,6 +38,18 @@ interface UpdateProfileRequest {
       completedAt?: string;
       originalTargetDate?: string;
     }>;
+    team_members?: Array<{
+      id: string;
+      imageUrl?: string;
+      name: string;
+      nickname?: string;
+      jobTitle: string;
+      whyFit: string;
+      role: 'developer' | 'founder' | 'other';
+      customRole?: string;
+      order: number;
+    }>;
+    staking_pitch?: string;
   };
 }
 
@@ -49,6 +61,8 @@ const EDITABLE_FIELDS = [
   "media_assets",
   "build_in_public_videos",
   "milestones",
+  "team_members",
+  "staking_pitch",
 ];
 
 Deno.serve(async (req) => {

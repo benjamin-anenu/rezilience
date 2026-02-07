@@ -92,6 +92,8 @@ export type Database = {
           project_id: string | null
           project_name: string
           resilience_score: number | null
+          staking_pitch: string | null
+          team_members: Json | null
           telegram_url: string | null
           twitter_engagement_rate: number | null
           twitter_followers: number | null
@@ -144,6 +146,8 @@ export type Database = {
           project_id?: string | null
           project_name: string
           resilience_score?: number | null
+          staking_pitch?: string | null
+          team_members?: Json | null
           telegram_url?: string | null
           twitter_engagement_rate?: number | null
           twitter_followers?: number | null
@@ -196,6 +200,8 @@ export type Database = {
           project_id?: string | null
           project_name?: string
           resilience_score?: number | null
+          staking_pitch?: string | null
+          team_members?: Json | null
           telegram_url?: string | null
           twitter_engagement_rate?: number | null
           twitter_followers?: number | null
