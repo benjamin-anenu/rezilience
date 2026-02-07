@@ -88,13 +88,13 @@ export function RoadmapTabContent({ milestones, isVerified }: RoadmapTabContentP
           <div className="relative mb-6">
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
-                className="h-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-500"
+                className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            {/* Progress glow */}
+            {/* Progress glow - softened */}
             <div
-              className="absolute top-0 h-2 bg-primary/30 blur-sm rounded-full"
+              className="absolute top-0 h-2 bg-primary/20 blur-sm rounded-full"
               style={{ width: `${progressPercent}%` }}
             />
           </div>

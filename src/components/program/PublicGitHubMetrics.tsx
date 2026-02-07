@@ -1,4 +1,4 @@
-import { Star, GitFork, Users, Activity, Package, Code, ExternalLink, AlertCircle, Clock, Zap, GitPullRequest, MessageSquare, Upload } from 'lucide-react';
+import { Star, GitFork, Users, Activity, Package, Code, ExternalLink, AlertCircle, Clock, TrendingUp, GitPullRequest, MessageSquare, Upload } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -217,7 +217,7 @@ export function PublicGitHubMetrics({ analytics, githubUrl }: PublicGitHubMetric
           <div className="col-span-2 flex flex-col justify-center rounded-sm border border-border bg-muted/30 p-3">
             <div className="mb-2 flex items-center justify-between">
               <div className="flex items-center gap-1.5">
-                <Zap className="h-4 w-4 text-primary" />
+                <TrendingUp className="h-4 w-4 text-primary" />
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
                   Commit Velocity
                 </span>

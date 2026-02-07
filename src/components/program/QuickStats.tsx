@@ -1,4 +1,4 @@
-import { Star, GitFork, Users, Activity, Package, Zap } from 'lucide-react';
+import { Star, GitFork, Users, Activity, Package, Coins } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { GitHubAnalytics } from '@/types';
 
@@ -88,10 +88,10 @@ export function QuickStats({ analytics, totalStaked, className }: QuickStatsProp
   // Only show staked amount if there's actual staking data
   if (totalStaked && totalStaked > 0) {
     stats.push({
-      icon: Zap,
+      icon: Coins,
       value: `${formatNumber(totalStaked)} SOL`,
       label: 'Staked',
-      iconColor: 'text-primary',
+      iconColor: 'text-amber-500',
     });
   }
 

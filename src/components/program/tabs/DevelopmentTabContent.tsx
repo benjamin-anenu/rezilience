@@ -96,8 +96,12 @@ export function DevelopmentTabContent({
 
       {/* Originality Metrics */}
       <div className="grid gap-4 md:grid-cols-2">
-        {originalityMetrics.map((metric) => (
-          <Card key={metric.title} className="card-premium border-border bg-card">
+        {originalityMetrics.map((metric, index) => (
+          <Card 
+            key={metric.title} 
+            className="card-premium card-lift border-border bg-card animate-card-enter"
+            style={{ animationDelay: `${index * 100}ms` }}
+          >
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10">
