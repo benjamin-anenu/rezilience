@@ -16,20 +16,42 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const X_CLIENT_ID = 'VmVzd2xOelNXOUZ2TFNCLUZqalQ6MTpjaQ';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<XUser | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Check localStorage for existing session on mount
-  useEffect(() => {
+  // Synchronous hydration - read from localStorage immediately on initial render
+  // This prevents flash of unauthenticated state
+  const [user, setUser] = useState<XUser | null>(() => {
     const storedUser = localStorage.getItem('x_user');
     if (storedUser) {
       try {
-        setUser(JSON.parse(storedUser));
+        return JSON.parse(storedUser);
       } catch {
         localStorage.removeItem('x_user');
       }
     }
-    setLoading(false);
+    return null;
+  });
+  
+  // Loading is false by default since hydration is synchronous
+  const [loading, setLoading] = useState(false);
+
+  // Cross-tab session synchronization
+  // When user logs in/out in another tab, this tab updates automatically
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'x_user') {
+        if (e.newValue) {
+          try {
+            setUser(JSON.parse(e.newValue));
+          } catch {
+            setUser(null);
+          }
+        } else {
+          setUser(null);
+        }
+      }
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const signInWithX = async () => {
