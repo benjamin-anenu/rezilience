@@ -108,6 +108,8 @@ export interface Milestone {
   isLocked: boolean;
   status: 'upcoming' | 'completed' | 'overdue';
   varianceRequested?: boolean;
+  completedAt?: string;
+  originalTargetDate?: string;
 }
 
 export interface SocialLinks {

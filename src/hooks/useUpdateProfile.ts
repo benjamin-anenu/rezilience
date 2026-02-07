@@ -12,6 +12,17 @@ interface BuildInPublicEntry {
   thumbnailUrl?: string;
 }
 
+interface MilestoneUpdate {
+  id: string;
+  title: string;
+  targetDate: string;
+  isLocked: boolean;
+  status: 'upcoming' | 'completed' | 'overdue';
+  varianceRequested?: boolean;
+  completedAt?: string;
+  originalTargetDate?: string;
+}
+
 interface UpdateProfileParams {
   profileId: string;
   xUserId: string;
@@ -21,6 +32,7 @@ interface UpdateProfileParams {
     telegram_url?: string;
     media_assets?: MediaAsset[];
     build_in_public_videos?: BuildInPublicEntry[];
+    milestones?: MilestoneUpdate[];
   };
 }
 
