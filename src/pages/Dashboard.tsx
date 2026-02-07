@@ -159,7 +159,7 @@ const Dashboard = () => {
                 <Card
                   key={project.id}
                   className="cursor-pointer border-border bg-card transition-colors hover:border-primary/50"
-                  onClick={() => navigate(`/my-profile/${project.id}`)}
+                  onClick={() => navigate(`/profile/${project.id}`)}
                 >
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
