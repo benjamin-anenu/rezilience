@@ -189,6 +189,7 @@ const ProgramDetail = () => {
                   <AboutTabContent
                     description={displayDescription}
                     category={claimedProfile?.category}
+                    country={(claimedProfile as { country?: string })?.country}
                     getCategoryLabel={getCategoryLabel}
                     websiteUrl={displayWebsiteUrl}
                     mediaAssets={claimedProfile?.mediaAssets}

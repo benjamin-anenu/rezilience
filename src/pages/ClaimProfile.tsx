@@ -82,6 +82,7 @@ const ClaimProfile = () => {
   const [projectName, setProjectName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<ProjectCategory | ''>('');
+  const [country, setCountry] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
   const [programId, setProgramId] = useState('');
   const [programLoading, setProgramLoading] = useState(false);
@@ -139,6 +140,7 @@ const ClaimProfile = () => {
       projectName,
       description,
       category,
+      country,
       websiteUrl,
       programId,
       githubOrgUrl,
@@ -149,7 +151,7 @@ const ClaimProfile = () => {
       milestones,
     };
     localStorage.setItem('claimFormProgress', JSON.stringify(formData));
-  }, [projectName, description, category, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones]);
+  }, [projectName, description, category, country, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones]);
 
   // Restore form state on mount
   useEffect(() => {
@@ -160,6 +162,7 @@ const ClaimProfile = () => {
         if (data.projectName) setProjectName(data.projectName);
         if (data.description) setDescription(data.description);
         if (data.category) setCategory(data.category);
+        if (data.country) setCountry(data.country);
         if (data.websiteUrl) setWebsiteUrl(data.websiteUrl);
         if (data.programId) setProgramId(data.programId);
         if (data.githubOrgUrl) setGithubOrgUrl(data.githubOrgUrl);
@@ -216,6 +219,7 @@ const ClaimProfile = () => {
       projectName,
       description,
       category,
+      country,
       websiteUrl,
       programId: programId || undefined,
       walletAddress: connected && publicKey ? publicKey.toBase58() : undefined,
@@ -304,6 +308,7 @@ const ClaimProfile = () => {
         project_name: projectName,
         description: description || null,
         category: category || null,
+        country: country || null,
         website_url: websiteUrl || null,
         program_id: programId || null,
         claimer_wallet: connected && publicKey ? publicKey.toBase58() : null,
@@ -470,6 +475,8 @@ const ClaimProfile = () => {
                 setDescription={setDescription}
                 category={category}
                 setCategory={setCategory}
+                country={country}
+                setCountry={setCountry}
                 websiteUrl={websiteUrl}
                 setWebsiteUrl={setWebsiteUrl}
               />

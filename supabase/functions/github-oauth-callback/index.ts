@@ -329,6 +329,7 @@ Deno.serve(async (req) => {
       project_name: profile_data?.projectName || githubUser.name || githubUser.login,
       description: profile_data?.description || null,
       category: profile_data?.category || null,
+      country: profile_data?.country || null,
       website_url: profile_data?.websiteUrl || null,
       program_id: programId || null,
       wallet_address: profile_data?.walletAddress || null,
