@@ -57,6 +57,7 @@ export type Database = {
           build_in_public_videos: Json | null
           category: string | null
           claimer_wallet: string | null
+          country: string | null
           created_at: string
           description: string | null
           discord_url: string | null
@@ -111,6 +112,7 @@ export type Database = {
           build_in_public_videos?: Json | null
           category?: string | null
           claimer_wallet?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           discord_url?: string | null
@@ -165,6 +167,7 @@ export type Database = {
           build_in_public_videos?: Json | null
           category?: string | null
           claimer_wallet?: string | null
+          country?: string | null
           created_at?: string
           description?: string | null
           discord_url?: string | null
@@ -363,7 +366,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_score_changes: {
+        Args: { profile_ids: string[] }
+        Returns: {
+          movement: string
+          profile_id: string
+        }[]
+      }
     }
     Enums: {
       liveness_status: "ACTIVE" | "STALE" | "DECAYING"
