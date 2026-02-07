@@ -107,21 +107,22 @@ export function useEcosystemStats() {
     queryKey: ['ecosystem-stats'],
     queryFn: async (): Promise<DBEcosystemStats> => {
       const { data, error } = await supabase
-        .from('projects')
-        .select('resilience_score, total_staked, liveness_status');
+        .from('claimed_profiles')
+        .select('resilience_score, liveness_status')
+        .eq('verified', true);
 
       if (error) {
         console.error('Error fetching ecosystem stats:', error);
         throw error;
       }
 
-      const projects = data || [];
-      const programsIndexed = projects.length;
-      const totalStaked = projects.reduce((sum, p) => sum + (p.total_staked || 0), 0);
+      const profiles = data || [];
+      const programsIndexed = profiles.length;
+      const totalStaked = 0; // Phase 2 feature - no staking data yet
       const averageScore = programsIndexed > 0
-        ? projects.reduce((sum, p) => sum + (p.resilience_score || 0), 0) / programsIndexed
+        ? profiles.reduce((sum, p) => sum + (p.resilience_score || 0), 0) / programsIndexed
         : 0;
-      const activePrograms = projects.filter(p => p.liveness_status === 'ACTIVE').length;
+      const activePrograms = profiles.filter(p => p.liveness_status === 'ACTIVE').length;
 
       return {
         programsIndexed,
