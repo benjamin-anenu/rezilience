@@ -1,4 +1,5 @@
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useState } from 'react';
 import {
   ArrowLeft,
   ExternalLink,
@@ -30,12 +31,16 @@ import { PROJECT_CATEGORIES } from '@/types';
 import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
 import { useAuth } from '@/context/AuthContext';
 import { GitHubAnalyticsCard } from '@/components/dashboard/GitHubAnalyticsCard';
+import { ProfileHeroBanner } from '@/components/profile/ProfileHeroBanner';
+import { ProfileTabs } from '@/components/profile/ProfileTabs';
+import { AboutTab, SettingsTab, MediaTab, BuildInPublicTab, DevelopmentTab } from '@/components/profile/tabs';
 
 const ProfileDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: profile, isLoading, error, refetch } = useClaimedProfile(id || '');
   const justVerified = searchParams.get('verified') === 'true';
@@ -43,17 +48,20 @@ const ProfileDetail = () => {
   // Check if current user is the owner
   const isOwner = user?.id && profile?.xUserId && user.id === profile.xUserId;
 
-  if (isLoading) {
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refetch();
+    setIsRefreshing(false);
+  };
+
+  if (isLoading || authLoading) {
     return (
       <Layout>
         <div className="py-12">
-          <div className="container mx-auto max-w-4xl px-4 lg:px-8">
+          <div className="container mx-auto max-w-5xl px-4 lg:px-8">
             <Skeleton className="mb-6 h-10 w-24" />
-            <Skeleton className="mb-6 h-32 w-full" />
-            <div className="grid gap-6 md:grid-cols-2">
-              <Skeleton className="h-64" />
-              <Skeleton className="h-64" />
-            </div>
+            <Skeleton className="mb-6 h-64 w-full" />
+            <Skeleton className="h-12 w-full" />
           </div>
         </div>
       </Layout>
@@ -76,18 +84,49 @@ const ProfileDetail = () => {
     );
   }
 
-  const categoryLabel = PROJECT_CATEGORIES.find(c => c.value === profile.category)?.label || profile.category;
+  // ========== OWNER VIEW: New Tabbed UI ==========
+  if (isOwner) {
+    return (
+      <Layout>
+        <div className="py-8 sm:py-12">
+          <div className="container mx-auto max-w-5xl px-4 lg:px-8">
+            {/* Back Link */}
+            <Button
+              variant="ghost"
+              className="mb-6 font-display text-xs uppercase tracking-wider"
+              onClick={() => navigate('/dashboard')}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Dashboard
+            </Button>
 
-  const getMediaIcon = (type: string) => {
-    switch (type) {
-      case 'youtube':
-        return <Youtube className="h-6 w-6" />;
-      case 'video':
-        return <Video className="h-6 w-6" />;
-      default:
-        return <Image className="h-6 w-6" />;
-    }
-  };
+            {/* Hero Banner */}
+            <div className="mb-8">
+              <ProfileHeroBanner
+                profile={profile}
+                onRefresh={handleRefresh}
+                isRefreshing={isRefreshing}
+              />
+            </div>
+
+            {/* Tabbed Content */}
+            <ProfileTabs>
+              {{
+                about: <AboutTab profile={profile} xUserId={user!.id} />,
+                settings: <SettingsTab profile={profile} xUserId={user!.id} />,
+                media: <MediaTab profile={profile} xUserId={user!.id} />,
+                buildInPublic: <BuildInPublicTab profile={profile} xUserId={user!.id} />,
+                development: <DevelopmentTab profile={profile} />,
+              }}
+            </ProfileTabs>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+
+  // ========== VISITOR VIEW: Public Profile ==========
+  const categoryLabel = PROJECT_CATEGORIES.find(c => c.value === profile.category)?.label || profile.category;
 
   const getEmbedUrl = (url: string, type: string) => {
     if (type === 'youtube') {
@@ -415,17 +454,6 @@ const ProfileDetail = () => {
             </Card>
           )}
 
-          {/* GitHub Analytics - Owner Only */}
-          {isOwner && profile.githubAnalytics && (
-            <div className="mt-6">
-              <GitHubAnalyticsCard
-                profileId={profile.id}
-                analytics={profile.githubAnalytics}
-                onRefresh={() => refetch()}
-              />
-            </div>
-          )}
-
           {/* Development Stats */}
           <Card className="mt-6 border-border bg-card">
             <CardHeader>
@@ -441,15 +469,21 @@ const ProfileDetail = () => {
                 </div>
                 <div className="rounded-sm border border-border bg-muted/30 p-4 text-center">
                   <div className="font-mono text-3xl font-bold text-foreground">
-                    {profile.livenessStatus === 'active' ? '94%' : profile.livenessStatus === 'degraded' ? '72%' : '45%'}
+                    {profile.verifiedAt
+                      ? new Date(profile.verifiedAt).toLocaleDateString('en-US', {
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : 'N/A'}
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">Survival Rate</div>
+                  <div className="mt-1 text-xs text-muted-foreground">Verified Since</div>
                 </div>
                 <div className="rounded-sm border border-border bg-muted/30 p-4 text-center">
                   <div className="font-mono text-3xl font-bold text-foreground">
-                    {new Date(profile.verifiedAt).toLocaleDateString()}
+                    {profile.milestones.filter((m) => m.status === 'completed').length}/
+                    {profile.milestones.length}
                   </div>
-                  <div className="mt-1 text-xs text-muted-foreground">Verified Date</div>
+                  <div className="mt-1 text-xs text-muted-foreground">Milestones Complete</div>
                 </div>
               </div>
             </CardContent>
