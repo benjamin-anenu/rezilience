@@ -28,6 +28,16 @@ interface UpdateProfileRequest {
       uploadedAt: string;
       thumbnailUrl?: string;
     }>;
+    milestones?: Array<{
+      id: string;
+      title: string;
+      targetDate: string;
+      isLocked: boolean;
+      status: "upcoming" | "completed" | "overdue";
+      varianceRequested?: boolean;
+      completedAt?: string;
+      originalTargetDate?: string;
+    }>;
   };
 }
 
@@ -38,6 +48,7 @@ const EDITABLE_FIELDS = [
   "telegram_url",
   "media_assets",
   "build_in_public_videos",
+  "milestones",
 ];
 
 Deno.serve(async (req) => {

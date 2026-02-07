@@ -1,15 +1,18 @@
-import { Lock, CheckCircle, Calendar, AlertTriangle } from 'lucide-react';
+import { Lock, CheckCircle, AlertTriangle, Calendar } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { PROJECT_CATEGORIES } from '@/types';
+import { RoadmapManagement } from './RoadmapManagement';
 import type { ClaimedProfile } from '@/types';
 
 interface AboutTabProps {
   profile: ClaimedProfile;
+  xUserId?: string;
 }
 
-export function AboutTab({ profile }: AboutTabProps) {
+export function AboutTab({ profile, xUserId }: AboutTabProps) {
   const categoryLabel = PROJECT_CATEGORIES.find(c => c.value === profile.category)?.label || profile.category;
+  const isOwner = !!xUserId;
 
   return (
     <div className="space-y-6">
@@ -113,68 +116,72 @@ export function AboutTab({ profile }: AboutTabProps) {
         </CardContent>
       </Card>
 
-      {/* Roadmap / Milestones */}
-      {profile.milestones.length > 0 && (
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="font-display text-lg uppercase tracking-tight">
-              Verified Timeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {profile.milestones.map((milestone) => {
-                const targetDate = new Date(milestone.targetDate);
-                const isOverdue = targetDate < new Date() && milestone.status !== 'completed';
+      {/* Roadmap / Milestones - Interactive for Owner, Static for Public */}
+      {isOwner ? (
+        <RoadmapManagement profile={profile} xUserId={xUserId} />
+      ) : (
+        profile.milestones.length > 0 && (
+          <Card className="border-border bg-card">
+            <CardHeader>
+              <CardTitle className="font-display text-lg uppercase tracking-tight">
+                Verified Timeline
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {profile.milestones.map((milestone) => {
+                  const targetDate = new Date(milestone.targetDate);
+                  const isOverdue = targetDate < new Date() && milestone.status !== 'completed';
 
-                return (
-                  <div
-                    key={milestone.id}
-                    className={`flex items-center justify-between rounded-sm border p-3 ${
-                      milestone.status === 'completed'
-                        ? 'border-primary/30 bg-primary/5'
-                        : isOverdue
-                        ? 'border-destructive/30 bg-destructive/5'
-                        : milestone.varianceRequested
-                        ? 'border-yellow-500/30 bg-yellow-500/5'
-                        : 'border-border bg-muted/30'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {milestone.status === 'completed' ? (
-                        <CheckCircle className="h-5 w-5 text-primary" />
-                      ) : isOverdue ? (
-                        <AlertTriangle className="h-5 w-5 text-destructive" />
-                      ) : milestone.isLocked ? (
-                        <Lock className="h-5 w-5 text-muted-foreground" />
-                      ) : (
-                        <Calendar className="h-5 w-5 text-muted-foreground" />
-                      )}
-                      <span className="font-mono text-sm">{milestone.title}</span>
-                      {milestone.varianceRequested && (
-                        <Badge className="bg-yellow-500/20 text-yellow-500">
-                          TIMELINE VARIANCE
-                        </Badge>
-                      )}
-                      {isOverdue && (
-                        <Badge className="bg-destructive/20 text-destructive">
-                          OVERDUE
-                        </Badge>
-                      )}
+                  return (
+                    <div
+                      key={milestone.id}
+                      className={`flex items-center justify-between rounded-sm border p-3 ${
+                        milestone.status === 'completed'
+                          ? 'border-primary/30 bg-primary/5'
+                          : isOverdue
+                          ? 'border-destructive/30 bg-destructive/5'
+                          : milestone.varianceRequested
+                          ? 'border-yellow-500/30 bg-yellow-500/5'
+                          : 'border-border bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        {milestone.status === 'completed' ? (
+                          <CheckCircle className="h-5 w-5 text-primary" />
+                        ) : isOverdue ? (
+                          <AlertTriangle className="h-5 w-5 text-destructive" />
+                        ) : milestone.isLocked ? (
+                          <Lock className="h-5 w-5 text-muted-foreground" />
+                        ) : (
+                          <Calendar className="h-5 w-5 text-muted-foreground" />
+                        )}
+                        <span className="font-mono text-sm">{milestone.title}</span>
+                        {milestone.varianceRequested && (
+                          <Badge className="bg-yellow-500/20 text-yellow-500">
+                            TIMELINE VARIANCE
+                          </Badge>
+                        )}
+                        {isOverdue && (
+                          <Badge className="bg-destructive/20 text-destructive">
+                            OVERDUE
+                          </Badge>
+                        )}
+                      </div>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {targetDate.toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </span>
                     </div>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {targetDate.toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )
       )}
     </div>
   );

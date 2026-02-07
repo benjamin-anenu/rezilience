@@ -107,7 +107,7 @@ const MyProfileDetail = () => {
           {/* Tabbed Content */}
           <ProfileTabs>
             {{
-              about: <AboutTab profile={profile} />,
+              about: <AboutTab profile={profile} xUserId={user!.id} />,
               settings: <SettingsTab profile={profile} xUserId={user!.id} />,
               media: <MediaTab profile={profile} xUserId={user!.id} />,
               buildInPublic: <BuildInPublicTab profile={profile} xUserId={user!.id} />,
