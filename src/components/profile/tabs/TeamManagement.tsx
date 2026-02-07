@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useBlocker } from 'react-router-dom';
-import { Plus, Trash2, GripVertical, Users2, Target, Save, Upload, Link, AlertCircle } from 'lucide-react';
+import { Plus, Trash2, GripVertical, Users2, Target, Save, Upload, Link, AlertCircle, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +65,7 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
   const [stakingPitch, setStakingPitch] = useState(profile.stakingPitch || '');
   const [formData, setFormData] = useState<TeamMemberFormData>(emptyFormData);
   const [isAddingMember, setIsAddingMember] = useState(false);
+  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [imageInputMode, setImageInputMode] = useState<ImageInputMode>('upload');
   const [isUploading, setIsUploading] = useState(false);
@@ -135,6 +136,58 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
     setFormData(emptyFormData);
     setIsAddingMember(false);
     toast.success('Team member added - click Save to persist');
+  };
+
+  const handleEditMember = (member: TeamMember) => {
+    setFormData({
+      imageUrl: member.imageUrl || '',
+      name: member.name,
+      nickname: member.nickname || '',
+      jobTitle: member.jobTitle,
+      whyFit: member.whyFit,
+      role: member.role,
+      customRole: member.customRole || '',
+    });
+    setEditingMemberId(member.id);
+    setIsAddingMember(true);
+    setImageInputMode(member.imageUrl ? 'url' : 'upload');
+  };
+
+  const handleUpdateMember = () => {
+    if (!formData.name.trim() || !formData.jobTitle.trim()) {
+      toast.error('Name and Job Title are required');
+      return;
+    }
+
+    if (formData.role === 'other' && !formData.customRole.trim()) {
+      toast.error('Please specify the role');
+      return;
+    }
+
+    setTeamMembers(prev => prev.map(m => 
+      m.id === editingMemberId 
+        ? {
+            ...m,
+            imageUrl: formData.imageUrl || undefined,
+            name: formData.name.trim(),
+            nickname: formData.nickname.trim() || undefined,
+            jobTitle: formData.jobTitle.trim(),
+            whyFit: formData.whyFit.trim(),
+            role: formData.role,
+            customRole: formData.role === 'other' ? formData.customRole.trim() : undefined,
+          }
+        : m
+    ));
+    setFormData(emptyFormData);
+    setIsAddingMember(false);
+    setEditingMemberId(null);
+    toast.success('Team member updated - click Save to persist');
+  };
+
+  const handleCancelForm = () => {
+    setIsAddingMember(false);
+    setEditingMemberId(null);
+    setFormData(emptyFormData);
   };
 
   const handleRemoveMember = (memberId: string) => {
@@ -215,7 +268,7 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
           {isAddingMember && (
             <div className="rounded-sm border border-primary/30 bg-primary/5 p-4 space-y-4">
               <h4 className="font-display text-sm font-semibold text-foreground">
-                Add New Team Member
+                {editingMemberId ? 'Edit Team Member' : 'Add New Team Member'}
               </h4>
               
               <div className="grid gap-4 sm:grid-cols-2">
@@ -369,15 +422,12 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
               <div className="flex justify-end gap-2">
                 <Button 
                   variant="outline" 
-                  onClick={() => {
-                    setIsAddingMember(false);
-                    setFormData(emptyFormData);
-                  }}
+                  onClick={handleCancelForm}
                 >
                   Cancel
                 </Button>
-                <Button onClick={handleAddMember}>
-                  Add Member
+                <Button onClick={editingMemberId ? handleUpdateMember : handleAddMember}>
+                  {editingMemberId ? 'Update Member' : 'Add Member'}
                 </Button>
               </div>
             </div>
@@ -422,14 +472,25 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
                       )}
                     </div>
                     
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
-                      onClick={() => handleRemoveMember(member.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                        onClick={() => handleEditMember(member)}
+                        disabled={isAddingMember}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                        onClick={() => handleRemoveMember(member.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
             </div>

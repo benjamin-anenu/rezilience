@@ -1,7 +1,6 @@
-import { Users2, BadgeCheck, Target } from 'lucide-react';
+import { Users2, BadgeCheck, Target, Quote } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import type { TeamMember } from '@/types';
 
 interface TeamTabContentProps {
@@ -62,77 +61,93 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified }: TeamTa
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Team Members Section */}
       {hasTeamMembers && (
-        <Card className="border-border bg-card">
-          <CardHeader className="pb-4">
-            <CardTitle className="flex items-center gap-2 font-display text-sm uppercase tracking-wider text-muted-foreground">
-              <Users2 className="h-4 w-4 text-primary" />
+        <div className="space-y-4">
+          <div className="flex items-center gap-2">
+            <Users2 className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-lg font-semibold text-foreground uppercase tracking-wider">
               Meet The Team
-              {isVerified && (
-                <BadgeCheck className="h-4 w-4 text-primary" />
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {teamMembers
-                .sort((a, b) => a.order - b.order)
-                .map((member) => (
-                  <div
-                    key={member.id}
-                    className="group rounded-sm border border-border bg-muted/30 p-4 transition-all hover:border-primary/30 hover:bg-muted/50"
-                  >
-                    {/* Avatar & Name */}
-                    <div className="mb-3 flex items-center gap-3">
-                      <Avatar className="h-12 w-12 border border-border">
-                        <AvatarImage src={member.imageUrl} alt={member.name} />
-                        <AvatarFallback className="bg-primary/10 text-primary">
+            </h2>
+            {isVerified && (
+              <BadgeCheck className="h-5 w-5 text-primary" />
+            )}
+          </div>
+          
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            {teamMembers
+              .sort((a, b) => a.order - b.order)
+              .map((member) => (
+                <Card
+                  key={member.id}
+                  className="group overflow-hidden border-border bg-card transition-all hover:border-primary/30 hover:shadow-lg"
+                >
+                  {/* Large Profile Image */}
+                  <div className="relative aspect-square w-full overflow-hidden bg-muted">
+                    {member.imageUrl ? (
+                      <img
+                        src={member.imageUrl}
+                        alt={member.name}
+                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                        <span className="font-display text-5xl font-bold text-primary/60">
                           {getInitials(member.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <h4 className="truncate font-display text-sm font-semibold text-foreground">
-                          {member.name}
-                        </h4>
-                        {member.nickname && (
-                          <p className="truncate text-xs text-muted-foreground">
-                            @{member.nickname}
-                          </p>
-                        )}
+                        </span>
                       </div>
+                    )}
+                    
+                    {/* Role Badge Overlay */}
+                    <div className="absolute bottom-3 left-3">
+                      <Badge 
+                        variant={getRoleBadgeVariant(member.role)}
+                        className="font-display text-xs uppercase tracking-wider shadow-md"
+                      >
+                        {getRoleLabel(member)}
+                      </Badge>
                     </div>
-
-                    {/* Role Badge */}
-                    <Badge 
-                      variant={getRoleBadgeVariant(member.role)}
-                      className="mb-3 font-display text-xs uppercase tracking-wider"
-                    >
-                      {getRoleLabel(member)}
-                    </Badge>
-
+                  </div>
+                  
+                  {/* Member Info */}
+                  <CardContent className="p-4 space-y-3">
+                    {/* Name & Nickname */}
+                    <div>
+                      <h3 className="font-display text-lg font-semibold text-foreground">
+                        {member.name}
+                      </h3>
+                      {member.nickname && (
+                        <p className="text-sm text-muted-foreground">
+                          @{member.nickname}
+                        </p>
+                      )}
+                    </div>
+                    
                     {/* Job Title */}
-                    <p className="mb-3 text-sm text-foreground">
+                    <p className="text-sm text-foreground/90 font-medium">
                       {member.jobTitle}
                     </p>
-
-                    {/* Why Fit */}
+                    
+                    {/* Why Fit Quote */}
                     {member.whyFit && (
-                      <p className="text-xs italic text-muted-foreground line-clamp-3">
-                        "{member.whyFit}"
-                      </p>
+                      <div className="relative pt-2 border-t border-border/50">
+                        <Quote className="absolute -top-1 left-0 h-4 w-4 text-primary/40" />
+                        <p className="pl-5 text-sm italic text-muted-foreground leading-relaxed">
+                          {member.whyFit}
+                        </p>
+                      </div>
                     )}
-                  </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
+                  </CardContent>
+                </Card>
+              ))}
+          </div>
+        </div>
       )}
 
       {/* Why Stake Section */}
       {hasStakingPitch && (
-        <Card className="border-border bg-gradient-to-br from-primary/5 via-card to-card">
+        <Card className="border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 font-display text-sm uppercase tracking-wider text-muted-foreground">
               <Target className="h-4 w-4 text-primary" />
@@ -141,7 +156,7 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified }: TeamTa
           </CardHeader>
           <CardContent>
             <blockquote className="border-l-2 border-primary/50 pl-4">
-              <p className="text-foreground leading-relaxed">
+              <p className="text-foreground leading-relaxed text-lg">
                 {stakingPitch}
               </p>
             </blockquote>
