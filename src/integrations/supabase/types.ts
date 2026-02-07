@@ -54,6 +54,7 @@ export type Database = {
       }
       claimed_profiles: {
         Row: {
+          build_in_public_videos: Json | null
           category: string | null
           claimer_wallet: string | null
           created_at: string
@@ -92,6 +93,10 @@ export type Database = {
           project_name: string
           resilience_score: number | null
           telegram_url: string | null
+          twitter_engagement_rate: number | null
+          twitter_followers: number | null
+          twitter_last_synced: string | null
+          twitter_recent_tweets: Json | null
           updated_at: string
           verified: boolean
           verified_at: string | null
@@ -101,6 +106,7 @@ export type Database = {
           x_username: string | null
         }
         Insert: {
+          build_in_public_videos?: Json | null
           category?: string | null
           claimer_wallet?: string | null
           created_at?: string
@@ -139,6 +145,10 @@ export type Database = {
           project_name: string
           resilience_score?: number | null
           telegram_url?: string | null
+          twitter_engagement_rate?: number | null
+          twitter_followers?: number | null
+          twitter_last_synced?: string | null
+          twitter_recent_tweets?: Json | null
           updated_at?: string
           verified?: boolean
           verified_at?: string | null
@@ -148,6 +158,7 @@ export type Database = {
           x_username?: string | null
         }
         Update: {
+          build_in_public_videos?: Json | null
           category?: string | null
           claimer_wallet?: string | null
           created_at?: string
@@ -186,6 +197,10 @@ export type Database = {
           project_name?: string
           resilience_score?: number | null
           telegram_url?: string | null
+          twitter_engagement_rate?: number | null
+          twitter_followers?: number | null
+          twitter_last_synced?: string | null
+          twitter_recent_tweets?: Json | null
           updated_at?: string
           verified?: boolean
           verified_at?: string | null

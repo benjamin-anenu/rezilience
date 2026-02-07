@@ -1,7 +1,7 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, ExternalLink, Calendar, Lock, AlertTriangle, Zap } from 'lucide-react';
 import { Layout } from '@/components/layout';
-import { HeroBanner, QuickStats, RecentEvents, MetricCards, DescriptionSection, SocialPulseSection, PublicGitHubMetrics, AnalyticsCharts, StickyCTA } from '@/components/program';
+import { HeroBanner, QuickStats, RecentEvents, MetricCards, DescriptionSection, SocialPulseSection, PublicGitHubMetrics, AnalyticsCharts, StickyCTA, BuildInPublicSection, TwitterPulseSection } from '@/components/program';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -183,7 +183,17 @@ const ProgramDetail = () => {
               />
             )}
 
-            {/* 4. Public GitHub Metrics - Development Health */}
+            {/* 4. BUILD IN PUBLIC - Twitter video showcase */}
+            {isVerified && claimedProfile?.buildInPublicVideos && claimedProfile.buildInPublicVideos.length > 0 && (
+              <div className="mb-6">
+                <BuildInPublicSection
+                  videos={claimedProfile.buildInPublicVideos}
+                  xUsername={claimedProfile.xUsername}
+                />
+              </div>
+            )}
+
+            {/* 5. Public GitHub Metrics - Development Health */}
             <div className="mb-6">
               <PublicGitHubMetrics 
                 analytics={claimedProfile?.githubAnalytics}
@@ -191,7 +201,7 @@ const ProgramDetail = () => {
               />
             </div>
 
-            {/* 5. Analytics Charts + Recent Events */}
+            {/* 6. Analytics Charts + Recent Events */}
             <div className="mb-6 grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2">
                 <AnalyticsCharts 
@@ -208,7 +218,20 @@ const ProgramDetail = () => {
               </div>
             </div>
 
-            {/* 6. Verified Timeline - Roadmap */}
+            {/* 7. TWITTER PULSE - Social engagement metrics */}
+            {isVerified && claimedProfile?.xUsername && (
+              <div className="mb-6">
+                <TwitterPulseSection
+                  xUsername={claimedProfile.xUsername}
+                  followers={claimedProfile.twitterMetrics?.followers}
+                  engagementRate={claimedProfile.twitterMetrics?.engagementRate}
+                  recentTweets={claimedProfile.twitterMetrics?.recentTweets}
+                  lastSynced={claimedProfile.twitterMetrics?.lastSynced}
+                />
+              </div>
+            )}
+
+            {/* 8. Verified Timeline - Roadmap */}
             {isVerified && claimedProfile?.milestones && claimedProfile.milestones.length > 0 && (
               <div className="mb-6">
                 <Card className="border-border bg-card">

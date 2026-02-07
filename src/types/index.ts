@@ -180,6 +180,35 @@ export interface GitHubAnalytics {
   github_last_activity?: string;
 }
 
+// Build In Public Video (Twitter video links)
+export interface BuildInPublicVideo {
+  id: string;
+  url: string;
+  tweetUrl: string;
+  thumbnailUrl?: string;
+  title?: string;
+  timestamp?: string;
+}
+
+// Twitter Tweet for engagement display
+export interface TwitterTweet {
+  id: string;
+  text: string;
+  createdAt: string;
+  likes: number;
+  retweets: number;
+  replies: number;
+  url: string;
+}
+
+// Twitter Engagement Metrics
+export interface TwitterMetrics {
+  followers: number;
+  engagementRate: number;
+  recentTweets: TwitterTweet[];
+  lastSynced?: string;
+}
+
 // Complete Claimed Profile
 export interface ClaimedProfile {
   id: string;
@@ -218,6 +247,10 @@ export interface ClaimedProfile {
   
   // Extended GitHub Analytics (populated from DB)
   githubAnalytics?: GitHubAnalytics;
+  
+  // Build In Public & Twitter Integration (Phase 2)
+  buildInPublicVideos?: BuildInPublicVideo[];
+  twitterMetrics?: TwitterMetrics;
 }
 
 // Form data for multi-step claim flow
