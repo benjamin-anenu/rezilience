@@ -13,6 +13,7 @@ import ClaimProfile from "./pages/ClaimProfile";
 import GitHubCallback from "./pages/GitHubCallback";
 import XCallback from "./pages/XCallback";
 import Dashboard from "./pages/Dashboard";
+import MyProfileDetail from "./pages/MyProfileDetail";
 import Staking from "./pages/Staking";
 import MyBonds from "./pages/MyBonds";
 import NotFound from "./pages/NotFound";
@@ -36,6 +37,7 @@ const App = () => (
               <Route path="/github-callback" element={<GitHubCallback />} />
               <Route path="/x-callback" element={<XCallback />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/my-profile/:id" element={<MyProfileDetail />} />
               <Route path="/staking" element={<Staking />} />
               <Route path="/my-bonds" element={<MyBonds />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
