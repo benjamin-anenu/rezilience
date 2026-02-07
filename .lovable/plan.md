@@ -1,157 +1,148 @@
 
 
-# Optimize Team Member Card Size
+# Fix: Resilience Score and GitHub Data Showing Zero
 
-## Current Issue
+## Root Cause Analysis
 
-The team member cards use `aspect-square` (1:1 ratio) for the profile image container, making each card very tall. When there are multiple team members, this causes the page to feel crowded and requires excessive scrolling, especially on mobile.
+The database record for this profile shows:
+- `resilience_score: 0`
+- `github_commits_30d: 0`
+- `github_contributors: 0`
+- All other metrics: `0` or `null`
 
-## Solution
+**Why this happened:** When the profile was created via GitHub OAuth:
 
-Reduce the card size by approximately half while keeping faces clearly visible:
+1. The `github-oauth-callback` function only fetches **basic repository data** (stars, forks, is_fork)
+2. It calculates a simple resilience score but does **NOT** call the comprehensive `analyze-github-repo` function
+3. The extended analytics fields (`github_commits_30d`, `github_top_contributors`, `github_recent_events`, etc.) are never populated
 
-1. **Change image aspect ratio** from `aspect-square` (1:1) to `aspect-[4/3]` (shorter height)
-2. **Reduce image container size** for a more compact layout
-3. **Adjust typography and spacing** to match the smaller card footprint
-4. **Optimize mobile grid** to show more cards on screen
-
----
-
-## Changes
-
-### File: `src/components/program/tabs/TeamTabContent.tsx`
-
-| Line | Current | New |
-|------|---------|-----|
-| 109 | `aspect-square` | `aspect-[4/3]` - Shorter image container |
-| 118 | `text-5xl` for initials | `text-3xl` - Smaller fallback initials |
-| 125-132 | Badge at `bottom-3 left-3` | `bottom-2 left-2` - Tighter positioning |
-| 136 | `p-4 space-y-3` | `p-3 space-y-2` - Reduced padding |
-| 139 | `text-lg` name | `text-base` - Slightly smaller name |
-| 157-165 | Quote section spacing | Tighter spacing for compact cards |
-
-### Grid Optimization
-
-Change the grid to fit more cards:
-
-```tsx
-// Current (line 100)
-<div className="grid gap-6 sm:grid-cols-2">
-
-// New - 3 columns on desktop, tighter gap
-<div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
-```
-
-This ensures:
-- **Mobile**: 2 cards per row (compact but readable)
-- **Desktop with staking pitch**: 3 cards in the 2/3 width area
-- **Desktop without staking pitch**: 3 cards across full width
+The `analyze-github-repo` function contains all the logic to fetch commits, events, contributors, and calculate proper scores - but it's only called by:
+- Daily cron job (may not have run yet)
+- Manual refresh from Dashboard's profile edit page
 
 ---
 
-## Visual Comparison
+## Solution: Two-Part Fix
 
-**Before (aspect-square):**
-```
-┌─────────────────┐
-│                 │
-│   [  Image  ]   │  <- Square, very tall
-│                 │
-├─────────────────┤
-│ Name            │
-│ @nickname       │
-│ Job Title       │
-│ Why Fit quote...│
-└─────────────────┘
-```
+### Part 1: Add Refresh Button to Public Program Detail Page
 
-**After (aspect-[4/3]):**
-```
-┌─────────────────┐
-│   [  Image  ]   │  <- 4:3 ratio, ~25% shorter
-├─────────────────┤
-│ Name            │
-│ @nickname       │
-│ Job Title       │
-│ Why Fit...      │
-└─────────────────┘
-```
+Add a "Refresh Data" button on the Development tab so owners can manually trigger a data refresh.
+
+**File: `src/components/program/tabs/DevelopmentTabContent.tsx`**
+
+Add a refresh button next to the GitHub Metrics section header that calls the `analyze-github-repo` function.
+
+### Part 2: Auto-Fetch Full Analytics on Profile Creation
+
+Modify `github-oauth-callback` to call `analyze-github-repo` after creating a profile to ensure all data is populated immediately.
+
+**File: `supabase/functions/github-oauth-callback/index.ts`**
+
+After saving the profile, make an internal call to `analyze-github-repo` to populate complete metrics.
 
 ---
 
 ## Technical Implementation
 
+### DevelopmentTabContent.tsx Changes
+
+Add refresh functionality to the Development tab:
+
 ```tsx
-// Optimized card structure
-<Card className="group overflow-hidden border-border bg-card transition-all hover:border-primary/30 hover:shadow-md">
-  {/* Shorter aspect ratio image */}
-  <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
-    {member.imageUrl ? (
-      <img
-        src={member.imageUrl}
-        alt={member.name}
-        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-      />
-    ) : (
-      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
-        <span className="font-display text-3xl font-bold text-primary/60">
-          {getInitials(member.name)}
-        </span>
-      </div>
-    )}
-    
-    {/* Role Badge - tighter positioning */}
-    <div className="absolute bottom-2 left-2">
-      <Badge 
-        variant={getRoleBadgeVariant(member.role)}
-        className="font-display text-xs uppercase tracking-wider shadow-md"
-      >
-        {getRoleLabel(member)}
-      </Badge>
-    </div>
-  </div>
+// Add imports
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useGitHubAnalysis } from '@/hooks/useGitHubAnalysis';
+import { useQueryClient } from '@tanstack/react-query';
+
+// Inside component - add refresh handler
+const { analyzeRepository, isAnalyzing } = useGitHubAnalysis();
+const queryClient = useQueryClient();
+
+const handleRefresh = async () => {
+  if (!githubUrl || !projectId) return;
   
-  {/* Member Info - reduced padding */}
-  <CardContent className="p-3 space-y-2">
-    <div>
-      <h3 className="font-display text-base font-semibold text-foreground">
-        {member.name}
-      </h3>
-      {member.nickname && (
-        <p className="text-xs text-muted-foreground">@{member.nickname}</p>
-      )}
-    </div>
-    
-    <p className="text-sm text-foreground/90 font-medium">
-      {member.jobTitle}
-    </p>
-    
-    {member.whyFit && (
-      <div className="relative pt-2 border-t border-border/50">
-        <p className="text-xs font-medium text-primary/70 uppercase tracking-wider mb-0.5">
-          I am best fit for this project
-        </p>
-        <div className="flex items-start gap-1">
-          <Quote className="h-3 w-3 text-primary/40 flex-shrink-0 mt-0.5" />
-          <p className="text-xs italic text-muted-foreground leading-relaxed line-clamp-2">
-            {member.whyFit}
-          </p>
-        </div>
-      </div>
-    )}
-  </CardContent>
-</Card>
+  const result = await analyzeRepository(githubUrl, projectId);
+  if (result) {
+    // Invalidate queries to refresh the data
+    queryClient.invalidateQueries({ queryKey: ['claimed-profile', projectId] });
+    toast({ title: 'Data Refreshed', description: `Score: ${result.resilienceScore}/100` });
+  }
+};
+
+// Add button to UI near PublicGitHubMetrics
+<Button 
+  variant="outline" 
+  size="sm" 
+  onClick={handleRefresh}
+  disabled={isAnalyzing}
+>
+  <RefreshCw className={`mr-2 h-4 w-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
+  Refresh Data
+</Button>
 ```
+
+### github-oauth-callback/index.ts Changes
+
+After successfully saving the profile, call `analyze-github-repo` to populate full metrics:
+
+```typescript
+// After line 356 (after saving profile)
+
+// Trigger full analytics fetch to populate all fields
+if (githubOrgUrl && savedProfile?.id) {
+  try {
+    const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-github-repo`;
+    await fetch(analyzeUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${supabaseKey}`,
+      },
+      body: JSON.stringify({
+        github_url: githubOrgUrl,
+        profile_id: savedProfile.id,
+      }),
+    });
+    console.log("Triggered full analytics fetch for new profile");
+  } catch (err) {
+    console.error("Failed to trigger analytics fetch:", err);
+    // Non-blocking - profile was still created successfully
+  }
+}
+```
+
+---
+
+## Immediate Fix for Existing Profile
+
+To fix the current profile immediately, we can manually call the analyze function. This will populate all the missing data.
+
+The edge function test I ran shows the repo **does have data**:
+- Commits in 30 days: 20
+- Push Events: 20
+- Contributors: 1
+- Resilience Score: 30 (calculated correctly)
+- Liveness Status: ACTIVE
+
+Once the code changes are implemented, clicking "Refresh Data" will populate all these values.
+
+---
+
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `src/components/program/tabs/DevelopmentTabContent.tsx` | Add Refresh Data button with `useGitHubAnalysis` hook |
+| `supabase/functions/github-oauth-callback/index.ts` | Call `analyze-github-repo` after profile creation |
 
 ---
 
 ## Summary
 
-| Change | Impact |
-|--------|--------|
-| `aspect-[4/3]` instead of `aspect-square` | ~25% shorter image area |
-| Smaller typography (`text-base`, `text-xs`) | More compact text |
-| Reduced padding (`p-3`, `gap-4`) | Tighter overall spacing |
-| 3-column grid on desktop | More cards visible at once |
-| `line-clamp-2` on "Why Fit" quote | Prevents overly long quotes |
+| Issue | Solution |
+|-------|----------|
+| Zero data on new profiles | Auto-call `analyze-github-repo` on profile creation |
+| Can't refresh data on public page | Add "Refresh Data" button to Development tab |
+| Missing extended metrics | Both solutions populate all fields via `analyze-github-repo` |
 
