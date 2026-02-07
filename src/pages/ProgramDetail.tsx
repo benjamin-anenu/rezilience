@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useProject } from '@/hooks/useProjects';
 import { useClaimedProfileByProgramId, useClaimedProfileByProjectId, useClaimedProfile } from '@/hooks/useClaimedProfiles';
+import { useAutoRefreshProfile } from '@/hooks/useAutoRefreshProfile';
 import { PROJECT_CATEGORIES } from '@/types';
 
 const ProgramDetail = () => {
@@ -41,6 +42,13 @@ const ProgramDetail = () => {
   const hasData = project || claimedProfile;
   const isLoading = loadingByProgramId && loadingClaimedById;
   const isVerified = project?.verified || claimedProfile?.verified || searchParams.get('verified') === 'true';
+
+  // Auto-refresh analytics when data is stale (> 30 minutes old)
+  const { isRefreshing } = useAutoRefreshProfile(
+    claimedProfile?.id,
+    claimedProfile?.githubOrgUrl,
+    claimedProfile?.githubAnalytics?.github_analyzed_at
+  );
 
   if (isLoading) {
     return (

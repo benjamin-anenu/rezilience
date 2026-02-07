@@ -1,13 +1,9 @@
-import { Fingerprint, GitBranch, RefreshCw } from 'lucide-react';
+import { Fingerprint, GitBranch } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Button } from '@/components/ui/button';
 import { PublicGitHubMetrics } from '../PublicGitHubMetrics';
 import { AnalyticsCharts } from '../AnalyticsCharts';
 import { RecentEvents } from '../RecentEvents';
-import { useGitHubAnalysis } from '@/hooks/useGitHubAnalysis';
-import { useQueryClient } from '@tanstack/react-query';
-import { useToast } from '@/hooks/use-toast';
 import type { GitHubAnalytics, Program } from '@/types';
 
 interface DevelopmentTabContentProps {
@@ -25,23 +21,6 @@ export function DevelopmentTabContent({
   program,
   githubIsFork,
 }: DevelopmentTabContentProps) {
-  const { analyzeRepository, isAnalyzing } = useGitHubAnalysis();
-  const queryClient = useQueryClient();
-  const { toast } = useToast();
-
-  const handleRefresh = async () => {
-    if (!githubUrl || !projectId) return;
-    
-    const result = await analyzeRepository(githubUrl, projectId);
-    if (result) {
-      queryClient.invalidateQueries({ queryKey: ['claimed-profile', projectId] });
-      toast({ 
-        title: 'Data Refreshed', 
-        description: `Resilience Score: ${result.resilienceScore}/100 • Status: ${result.livenessStatus}` 
-      });
-    }
-  };
-
   // Get GitHub originality status
   const getGithubOriginalityInfo = () => {
     if (githubIsFork === undefined) {
@@ -95,24 +74,8 @@ export function DevelopmentTabContent({
 
   return (
     <div className="space-y-6">
-      {/* GitHub Metrics - Full Width with Refresh Button */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex-1">
-          <PublicGitHubMetrics analytics={analytics} githubUrl={githubUrl} />
-        </div>
-        {githubUrl && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleRefresh}
-            disabled={isAnalyzing}
-            className="shrink-0"
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
-            {isAnalyzing ? 'Refreshing...' : 'Refresh Data'}
-          </Button>
-        )}
-      </div>
+      {/* GitHub Metrics - Full Width */}
+      <PublicGitHubMetrics analytics={analytics} githubUrl={githubUrl} />
 
       {/* Analytics Charts + Recent Events Grid */}
       <div className="grid gap-6 lg:grid-cols-3">
