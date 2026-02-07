@@ -363,6 +363,29 @@ Deno.serve(async (req) => {
       );
     }
 
+    // Trigger full analytics fetch to populate all extended fields
+    const repoUrl = githubOrgUrl || primaryRepo?.html_url;
+    if (repoUrl && savedProfile?.id) {
+      try {
+        const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-github-repo`;
+        await fetch(analyzeUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({
+            github_url: repoUrl,
+            profile_id: savedProfile.id,
+          }),
+        });
+        console.log("Triggered full analytics fetch for profile:", savedProfile.id);
+      } catch (err) {
+        console.error("Failed to trigger analytics fetch:", err);
+        // Non-blocking - profile was still created successfully
+      }
+    }
+
     // Return success with profile data (exclude access token from response)
     return new Response(
       JSON.stringify({
