@@ -1,132 +1,304 @@
 
 
-# X Authentication Session Persistence Fix
+# My Registry Dashboard - Personalized Tabbed Experience
 
-## Problem Analysis
+## Overview
 
-You reported that after logging in with X, returning to the page (in the same browser, without logging out) does not maintain the session - you have to log in again.
+Transform the current `/profile/:id` page into a sophisticated, personalized dashboard similar to the `/program/:id` page when the owner is viewing. The dashboard will feature a tabbed interface with granular editing capabilities:
 
-After analyzing the current implementation in `AuthContext.tsx`, the code **is designed correctly** to persist sessions via `localStorage`. However, I identified potential improvements to make session handling more robust:
-
-## Current Implementation
-
-The `AuthContext.tsx` correctly:
-1. Stores user data in `localStorage` as `x_user` after successful X OAuth
-2. Reads from `localStorage` on component mount
-3. Only clears the session on parse error or explicit logout
-
-## Potential Issues Found
-
-1. **No cross-tab synchronization** - If session changes in another tab, this tab won't update
-2. **No retry mechanism** - If localStorage read fails silently, no recovery
-3. **Loading state timing** - Brief flash where `isAuthenticated` is false before localStorage hydrates
-
-## Solution: Enhanced Session Persistence
-
-### Changes to `AuthContext.tsx`
-
-| Enhancement | Description |
-|-------------|-------------|
-| Cross-tab sync | Add `storage` event listener to detect changes from other tabs |
-| Debug logging | Add console logs during development to trace session state |
-| Robust parsing | Better error handling when parsing stored user data |
-| Initial hydration | Sync check localStorage immediately (not just in useEffect) |
-
-### Implementation Details
-
-#### 1. Immediate Synchronous Hydration
-
-Read from localStorage synchronously during state initialization to prevent flash of unauthenticated state:
-
-```tsx
-const [user, setUser] = useState<XUser | null>(() => {
-  // Synchronous read on initial render
-  const storedUser = localStorage.getItem('x_user');
-  if (storedUser) {
-    try {
-      return JSON.parse(storedUser);
-    } catch {
-      localStorage.removeItem('x_user');
-    }
-  }
-  return null;
-});
-```
-
-#### 2. Cross-Tab Session Synchronization
-
-Listen for `storage` events to sync session across browser tabs:
-
-```tsx
-useEffect(() => {
-  const handleStorageChange = (e: StorageEvent) => {
-    if (e.key === 'x_user') {
-      if (e.newValue) {
-        try {
-          setUser(JSON.parse(e.newValue));
-        } catch {
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-    }
-  };
-  
-  window.addEventListener('storage', handleStorageChange);
-  return () => window.removeEventListener('storage', handleStorageChange);
-}, []);
-```
-
-#### 3. Loading State Optimization
-
-Since we hydrate synchronously now, we can start with `loading: false`:
-
-```tsx
-const [loading, setLoading] = useState(false);
-```
-
-The `loading` state is now only needed for async operations (not initial hydration).
+- **About Tab**: View-only (project name, description, category are protected)
+- **Settings Tab**: Editable fields (website URL, social links)
+- **Media Tab**: Manage images and demo videos for the About section
+- **Build In Public Tab**: Manage video updates with link, title, description, and upload date
+- **Development Tab**: View GitHub analytics (read-only)
 
 ---
 
-## Files to Modify
+## Architecture
+
+### New Files to Create
+
+| File | Purpose |
+|------|---------|
+| `src/pages/MyProfileDetail.tsx` | Owner-only dashboard with premium tabbed UI |
+| `src/components/profile/ProfileTabs.tsx` | Tab navigation component (mirrors ProgramTabs) |
+| `src/components/profile/tabs/AboutTab.tsx` | Read-only About section |
+| `src/components/profile/tabs/SettingsTab.tsx` | Editable website, socials |
+| `src/components/profile/tabs/MediaTab.tsx` | Manage media assets |
+| `src/components/profile/tabs/BuildInPublicTab.tsx` | Manage video updates |
+| `src/components/profile/tabs/DevelopmentTab.tsx` | GitHub analytics view |
+| `src/components/profile/ProfileHeroBanner.tsx` | Owner-specific hero with edit indicators |
+| `src/hooks/useUpdateProfile.ts` | Mutation hook for profile updates |
+| `supabase/functions/update-profile/index.ts` | Edge function for secure updates |
+
+### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/context/AuthContext.tsx` | Synchronous hydration, cross-tab sync, improved loading state |
-
-## Technical Summary
-
-### Before (Current)
-- User state initialized as `null`
-- `useEffect` reads localStorage asynchronously
-- Brief window where `isAuthenticated` is `false` even if session exists
-- No cross-tab synchronization
-
-### After (Enhanced)
-- User state hydrated synchronously from localStorage on initial render
-- No flash of unauthenticated state
-- Cross-tab synchronization via `storage` event
-- More robust error handling
-- Loading state only for actual async operations
-
-## Expected Behavior After Fix
-
-1. User logs in with X successfully
-2. User closes browser or navigates away
-3. User returns to the site in the same browser
-4. User is immediately authenticated (no re-login required)
-5. Session persists until explicit logout or localStorage clear
+| `src/App.tsx` | Add route for `/my-profile/:id` |
+| `src/pages/Dashboard.tsx` | Update card click to navigate to `/my-profile/:id` |
+| `src/types/index.ts` | Add `BuildInPublicEntry` type with description field |
 
 ---
 
-## Note on Browser Behavior
+## Tab Structure
 
-If the issue persists after this fix, it may be due to:
-- **Incognito/Private browsing** - localStorage is cleared on window close
-- **Browser settings** - Some browsers can be configured to clear site data on close
-- **Storage quota exceeded** - Very rare, but can cause writes to fail
+### 1. About Tab (View-Only)
 
-These are browser-level issues outside the application's control.
+Displays protected information that cannot be edited:
+- Project name (locked)
+- Description (locked, shows rich text)
+- Category badge (locked)
+- Verification status and date
+- Current Resilience Score
+
+Shows a subtle "Protected fields" indicator explaining these require review to change.
+
+### 2. Settings Tab (Editable)
+
+Editable fields with inline save:
+- **Website URL** - Text input with validation
+- **Discord URL** - Text input
+- **Telegram URL** - Text input
+
+Each field saves individually on blur or via explicit save button.
+
+### 3. Media Tab (Editable)
+
+Manage media assets for the About page gallery:
+- Add images (URL input)
+- Add YouTube videos (URL input)
+- Add video files (URL input)
+- Reorder with drag/arrows
+- Delete existing items
+- Limit: 5 assets
+
+Re-uses logic from existing `MediaUploader` component but adapted for in-place editing.
+
+### 4. Build In Public Tab (Editable)
+
+Manage transparency updates via X/Twitter video links:
+
+**Add New Entry Form:**
+- Twitter/X Video Link URL (required)
+- Title (required, max 100 chars)
+- Description (optional, max 280 chars - tweet length)
+- Auto-captures upload date when saved
+
+**Existing Entries List:**
+- Thumbnail preview (or X icon placeholder)
+- Title and description
+- Date uploaded
+- "View on X" button
+- Delete button
+
+**X Encouragement Banner:**
+"Post video updates on your official X account to build transparency. Link them here to showcase your Build In Public journey!"
+
+### 5. Development Tab (View-Only)
+
+Shows GitHub analytics (same as ProgramDetail DevelopmentTabContent):
+- Repository stats (stars, forks, contributors)
+- Commit velocity
+- Recent activity events
+- Language breakdown
+
+---
+
+## Data Flow
+
+### Update Flow
+
+```text
+User edits field in Settings/Media/BuildInPublic
+    ↓
+Frontend validates input
+    ↓
+Calls useUpdateProfile mutation
+    ↓
+Mutation calls update-profile edge function
+    ↓
+Edge function:
+  1. Verifies x_user_id ownership
+  2. Validates field is editable
+  3. Updates claimed_profiles table
+  4. Returns updated profile
+    ↓
+Frontend updates local cache via react-query
+```
+
+### BuildInPublicEntry Type
+
+```typescript
+interface BuildInPublicEntry {
+  id: string;
+  url: string;          // X/Twitter video URL
+  title: string;        // User-provided title
+  description?: string; // Optional description
+  uploadedAt: string;   // ISO date when added
+  thumbnailUrl?: string; // Optional thumbnail
+}
+```
+
+Note: This extends the existing `BuildInPublicVideo` type with `description` and `uploadedAt`.
+
+---
+
+## UI Components
+
+### ProfileHeroBanner
+
+Similar to HeroBanner but personalized for owner:
+- "Your Protocol" badge
+- Score ring (same as ProgramDetail)
+- Quick action buttons (View Public Page, Refresh Metrics)
+- Last updated timestamp
+
+### ProfileTabs
+
+Five tabs with icons:
+1. **About** (BookOpen) - View protected info
+2. **Settings** (Settings) - Edit website/socials
+3. **Media** (Image) - Manage gallery
+4. **Build In Public** (Video) - Manage updates
+5. **Development** (Code) - GitHub stats
+
+Tab state synced with URL query param (`?tab=settings`).
+
+---
+
+## Edge Function: update-profile
+
+### Endpoint
+`POST /functions/v1/update-profile`
+
+### Request Body
+```json
+{
+  "profile_id": "uuid",
+  "x_user_id": "user's X id for ownership verification",
+  "updates": {
+    "website_url": "https://...",
+    "discord_url": "https://...",
+    "telegram_url": "https://...",
+    "media_assets": [...],
+    "build_in_public_videos": [...]
+  }
+}
+```
+
+### Response
+```json
+{
+  "success": true,
+  "profile": { ...updated profile data }
+}
+```
+
+### Security
+- Verifies `x_user_id` matches profile's `x_user_id` column
+- Rejects updates to protected fields (project_name, description, category)
+- Uses service role key for database write
+
+---
+
+## Route Changes
+
+| Route | Component | Access |
+|-------|-----------|--------|
+| `/profile/:id` | ProfileDetail | Public (read-only) |
+| `/my-profile/:id` | MyProfileDetail | Owner only (authenticated) |
+| `/program/:id` | ProgramDetail | Public (read-only) |
+
+Dashboard cards now navigate to `/my-profile/:id` instead of `/profile/:id`.
+
+---
+
+## Technical Details
+
+### useUpdateProfile Hook
+
+```typescript
+export function useUpdateProfile() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ profileId, xUserId, updates }) => {
+      const response = await supabase.functions.invoke('update-profile', {
+        body: { profile_id: profileId, x_user_id: xUserId, updates }
+      });
+      
+      if (response.error) throw new Error(response.error.message);
+      return response.data;
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate and refetch
+      queryClient.invalidateQueries(['claimed-profile', variables.profileId]);
+      queryClient.invalidateQueries(['my-verified-profiles']);
+    }
+  });
+}
+```
+
+### BuildInPublicTab Key Features
+
+1. **Add Video Form**
+   - X/Twitter URL input with validation (must be x.com or twitter.com)
+   - Title input (required)
+   - Description textarea (optional, 280 char limit)
+   - Auto-generates ID and uploadedAt on save
+
+2. **Video List**
+   - Card layout showing thumbnail/placeholder
+   - Title and description preview
+   - "Added [date]" timestamp
+   - "View on X" external link button
+   - Delete button with confirmation
+
+3. **Encouragement Banner**
+   - X brand styling (black background)
+   - Messaging: "Share your progress on X with video updates. Build trust by building in public!"
+   - Links to user's X profile
+
+---
+
+## File Structure
+
+```text
+src/
+├── pages/
+│   └── MyProfileDetail.tsx          # New owner dashboard
+├── components/
+│   └── profile/
+│       ├── ProfileTabs.tsx          # Tab navigation
+│       ├── ProfileHeroBanner.tsx    # Owner-specific hero
+│       └── tabs/
+│           ├── AboutTab.tsx         # View-only about
+│           ├── SettingsTab.tsx      # Edit website/socials
+│           ├── MediaTab.tsx         # Edit media gallery
+│           ├── BuildInPublicTab.tsx # Edit video updates
+│           └── DevelopmentTab.tsx   # GitHub analytics
+├── hooks/
+│   └── useUpdateProfile.ts          # Update mutation
+└── types/
+    └── index.ts                     # Add BuildInPublicEntry
+
+supabase/
+└── functions/
+    └── update-profile/
+        └── index.ts                 # Secure update endpoint
+```
+
+---
+
+## Summary
+
+This implementation creates a personalized, premium dashboard experience for protocol owners that:
+
+1. Mirrors the visual sophistication of the public ProgramDetail page
+2. Clearly separates editable from protected content
+3. Provides intuitive media and video management
+4. Encourages Build In Public transparency via X integration
+5. Maintains security through server-side ownership verification
+6. Uses the established design system (card-premium, card-lift, etc.)
 
