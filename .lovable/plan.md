@@ -1,131 +1,178 @@
 
+# Automated Real-Time GitHub Analytics
 
-# Fix: Resilience Score and GitHub Data Showing Zero
+## Problem Summary
 
-## Root Cause Analysis
+1. **Public repo registrations work correctly** - data is saved during the claim flow via `handleDirectSubmit`
+2. **Current refresh is only daily** - the cron job runs once at 6 AM UTC
+3. **Manual refresh button is burden** - owners and public viewers shouldn't need to click anything
 
-The database record for this profile shows:
-- `resilience_score: 0`
-- `github_commits_30d: 0`
-- `github_contributors: 0`
-- All other metrics: `0` or `null`
+## Solution: Smart Auto-Refresh System
 
-**Why this happened:** When the profile was created via GitHub OAuth:
-
-1. The `github-oauth-callback` function only fetches **basic repository data** (stars, forks, is_fork)
-2. It calculates a simple resilience score but does **NOT** call the comprehensive `analyze-github-repo` function
-3. The extended analytics fields (`github_commits_30d`, `github_top_contributors`, `github_recent_events`, etc.) are never populated
-
-The `analyze-github-repo` function contains all the logic to fetch commits, events, contributors, and calculate proper scores - but it's only called by:
-- Daily cron job (may not have run yet)
-- Manual refresh from Dashboard's profile edit page
+Implement a "stale data detection" system that automatically refreshes analytics when viewed, eliminating manual intervention.
 
 ---
 
-## Solution: Two-Part Fix
+## Architecture
 
-### Part 1: Add Refresh Button to Public Program Detail Page
+```text
+User Views Profile Page
+         │
+         ▼
+┌─────────────────────────┐
+│ Check last refresh time │
+│ (github_analyzed_at)    │
+└──────────┬──────────────┘
+           │
+           ▼
+    ┌──────────────┐
+    │ Data stale?  │──── No ───▶ Display cached data
+    │ (> 30 mins)  │
+    └──────┬───────┘
+           │ Yes
+           ▼
+┌─────────────────────────┐
+│ Trigger background      │
+│ refresh (non-blocking)  │
+└──────────┬──────────────┘
+           │
+           ▼
+┌─────────────────────────┐
+│ Update cache + UI when  │
+│ refresh completes       │
+└─────────────────────────┘
+```
 
-Add a "Refresh Data" button on the Development tab so owners can manually trigger a data refresh.
+---
+
+## Changes Required
+
+### 1. Update Cron Job Frequency (30-min interval)
+
+**Database**: Update existing cron job
+
+```sql
+SELECT cron.unschedule('daily-refresh-profiles');
+
+SELECT cron.schedule(
+  'refresh-profiles-30min',
+  '*/30 * * * *',  -- Every 30 minutes
+  $$
+  SELECT net.http_post(
+    url:='https://gsphlwjoowqkqhgthxtp.supabase.co/functions/v1/refresh-all-profiles',
+    headers:='{"Content-Type": "application/json", "Authorization": "Bearer ..."}'::jsonb,
+    body:='{}'::jsonb
+  ) as request_id;
+  $$
+);
+```
+
+### 2. Add Auto-Refresh on Profile View
+
+**File: `src/hooks/useClaimedProfiles.ts`**
+
+| Change | Description |
+|--------|-------------|
+| Add `useAutoRefreshProfile` hook | Detects stale data and triggers background refresh |
+| Check `github_analyzed_at` timestamp | If older than 30 minutes, initiate refresh |
+| Non-blocking background refresh | User sees cached data immediately, then updates when fresh |
+
+### 3. Integrate Auto-Refresh into Program Detail Page
+
+**File: `src/pages/ProgramDetail.tsx`**
+
+| Change | Description |
+|--------|-------------|
+| Import and use `useAutoRefreshProfile` | Pass profile ID and GitHub URL |
+| Background refresh with query invalidation | Data updates automatically without page reload |
+
+### 4. Remove Manual Refresh Button (or Make Optional)
 
 **File: `src/components/program/tabs/DevelopmentTabContent.tsx`**
 
-Add a refresh button next to the GitHub Metrics section header that calls the `analyze-github-repo` function.
-
-### Part 2: Auto-Fetch Full Analytics on Profile Creation
-
-Modify `github-oauth-callback` to call `analyze-github-repo` after creating a profile to ensure all data is populated immediately.
-
-**File: `supabase/functions/github-oauth-callback/index.ts`**
-
-After saving the profile, make an internal call to `analyze-github-repo` to populate complete metrics.
+| Change | Description |
+|--------|-------------|
+| Hide refresh button by default | Since auto-refresh handles updates |
+| Optional: Show "Last synced X min ago" | Transparency without requiring action |
 
 ---
 
 ## Technical Implementation
 
-### DevelopmentTabContent.tsx Changes
-
-Add refresh functionality to the Development tab:
-
-```tsx
-// Add imports
-import { RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useGitHubAnalysis } from '@/hooks/useGitHubAnalysis';
-import { useQueryClient } from '@tanstack/react-query';
-
-// Inside component - add refresh handler
-const { analyzeRepository, isAnalyzing } = useGitHubAnalysis();
-const queryClient = useQueryClient();
-
-const handleRefresh = async () => {
-  if (!githubUrl || !projectId) return;
-  
-  const result = await analyzeRepository(githubUrl, projectId);
-  if (result) {
-    // Invalidate queries to refresh the data
-    queryClient.invalidateQueries({ queryKey: ['claimed-profile', projectId] });
-    toast({ title: 'Data Refreshed', description: `Score: ${result.resilienceScore}/100` });
-  }
-};
-
-// Add button to UI near PublicGitHubMetrics
-<Button 
-  variant="outline" 
-  size="sm" 
-  onClick={handleRefresh}
-  disabled={isAnalyzing}
->
-  <RefreshCw className={`mr-2 h-4 w-4 ${isAnalyzing ? 'animate-spin' : ''}`} />
-  Refresh Data
-</Button>
-```
-
-### github-oauth-callback/index.ts Changes
-
-After successfully saving the profile, call `analyze-github-repo` to populate full metrics:
+### New Hook: useAutoRefreshProfile
 
 ```typescript
-// After line 356 (after saving profile)
+// src/hooks/useAutoRefreshProfile.ts
 
-// Trigger full analytics fetch to populate all fields
-if (githubOrgUrl && savedProfile?.id) {
-  try {
-    const analyzeUrl = `${supabaseUrl}/functions/v1/analyze-github-repo`;
-    await fetch(analyzeUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${supabaseKey}`,
-      },
-      body: JSON.stringify({
-        github_url: githubOrgUrl,
-        profile_id: savedProfile.id,
-      }),
-    });
-    console.log("Triggered full analytics fetch for new profile");
-  } catch (err) {
-    console.error("Failed to trigger analytics fetch:", err);
-    // Non-blocking - profile was still created successfully
-  }
+export function useAutoRefreshProfile(
+  profileId: string | undefined,
+  githubUrl: string | undefined,
+  lastAnalyzedAt: string | undefined
+) {
+  const queryClient = useQueryClient();
+  const { analyzeRepository } = useGitHubAnalysis();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    // Only run if we have required data
+    if (!profileId || !githubUrl) return;
+
+    // Check if data is stale (> 30 minutes old)
+    const isStale = !lastAnalyzedAt || 
+      (Date.now() - new Date(lastAnalyzedAt).getTime()) > 30 * 60 * 1000;
+
+    if (isStale && !isRefreshing) {
+      setIsRefreshing(true);
+      
+      // Background refresh - non-blocking
+      analyzeRepository(githubUrl, profileId)
+        .then((result) => {
+          if (result) {
+            // Invalidate queries to refresh UI with new data
+            queryClient.invalidateQueries({ queryKey: ['claimed-profile', profileId] });
+          }
+        })
+        .finally(() => setIsRefreshing(false));
+    }
+  }, [profileId, githubUrl, lastAnalyzedAt]);
+
+  return { isRefreshing };
 }
+```
+
+### Integration in ProgramDetail
+
+```typescript
+// In ProgramDetail.tsx
+
+import { useAutoRefreshProfile } from '@/hooks/useAutoRefreshProfile';
+
+// After fetching claimedProfile
+const { isRefreshing } = useAutoRefreshProfile(
+  claimedProfile?.id,
+  claimedProfile?.githubOrgUrl,
+  claimedProfile?.githubAnalytics?.github_analyzed_at
+);
+
+// Optional: Show subtle indicator when refreshing
+{isRefreshing && (
+  <div className="text-xs text-muted-foreground animate-pulse">
+    Updating metrics...
+  </div>
+)}
 ```
 
 ---
 
-## Immediate Fix for Existing Profile
+## Benefits
 
-To fix the current profile immediately, we can manually call the analyze function. This will populate all the missing data.
-
-The edge function test I ran shows the repo **does have data**:
-- Commits in 30 days: 20
-- Push Events: 20
-- Contributors: 1
-- Resilience Score: 30 (calculated correctly)
-- Liveness Status: ACTIVE
-
-Once the code changes are implemented, clicking "Refresh Data" will populate all these values.
+| Feature | Impact |
+|---------|--------|
+| Zero manual intervention | Public users see fresh data automatically |
+| Background refresh | No loading spinners, instant page load |
+| 30-min cron backup | Ensures all profiles stay fresh even without views |
+| Stale detection | Only refreshes when actually needed |
+| Non-blocking UX | Users see cached data immediately, updates flow in |
 
 ---
 
@@ -133,16 +180,21 @@ Once the code changes are implemented, clicking "Refresh Data" will populate all
 
 | File | Change |
 |------|--------|
-| `src/components/program/tabs/DevelopmentTabContent.tsx` | Add Refresh Data button with `useGitHubAnalysis` hook |
-| `supabase/functions/github-oauth-callback/index.ts` | Call `analyze-github-repo` after profile creation |
+| `src/hooks/useAutoRefreshProfile.ts` | **New file** - Auto-refresh logic hook |
+| `src/pages/ProgramDetail.tsx` | Integrate auto-refresh hook |
+| `src/components/program/tabs/DevelopmentTabContent.tsx` | Remove/hide manual refresh button |
+| Database (cron.job) | Update schedule from daily to every 30 minutes |
 
 ---
 
 ## Summary
 
-| Issue | Solution |
-|-------|----------|
-| Zero data on new profiles | Auto-call `analyze-github-repo` on profile creation |
-| Can't refresh data on public page | Add "Refresh Data" button to Development tab |
-| Missing extended metrics | Both solutions populate all fields via `analyze-github-repo` |
+- **Public repos already work** - data saves correctly during registration
+- **Problem is refresh frequency** - daily cron is too infrequent
+- **Solution is auto-refresh on view** - stale data triggers background update
+- **30-min cron as backup** - ensures coverage for profiles not actively viewed
 
+This approach means:
+- **Developers/founders**: No extra work, analytics update automatically
+- **Public users**: Always see reasonably fresh data (max 30 min old)
+- **GitHub API**: Rate-limited responsibly (only refreshes stale profiles)
