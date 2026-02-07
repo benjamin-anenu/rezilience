@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
-import { Plus, Trash2, GripVertical, Users2, Target, Save, Upload, Link } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { useBlocker } from 'react-router-dom';
+import { Plus, Trash2, GripVertical, Users2, Target, Save, Upload, Link, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,6 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateProfile } from '@/hooks/useUpdateProfile';
@@ -152,6 +163,25 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
   const hasChanges = 
     JSON.stringify(teamMembers) !== JSON.stringify(profile.teamMembers || []) ||
     stakingPitch !== (profile.stakingPitch || '');
+
+  // Warn before browser close/refresh with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasChanges]);
+
+  // Block in-app navigation when unsaved changes exist
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasChanges && currentLocation.pathname !== nextLocation.pathname
+  );
 
   return (
     <div className="space-y-6">
@@ -439,19 +469,45 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
         </CardContent>
       </Card>
 
-      {/* Save Button */}
+      {/* Fixed Save Bar */}
       {hasChanges && (
-        <div className="sticky bottom-4 flex justify-end">
-          <Button 
-            onClick={handleSave} 
-            disabled={isSaving}
-            className="gap-2 shadow-lg"
-          >
-            <Save className="h-4 w-4" />
-            {isSaving ? 'Saving...' : 'Save Team & Pitch'}
-          </Button>
+        <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-primary/30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
+          <div className="container mx-auto max-w-5xl flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm text-warning">
+            <AlertCircle className="h-4 w-4" />
+            <span>You have unsaved changes</span>
+          </div>
+            <Button 
+              onClick={handleSave} 
+              disabled={isSaving}
+              className="gap-2"
+            >
+              <Save className="h-4 w-4" />
+              {isSaving ? 'Saving...' : 'Save Team & Pitch'}
+            </Button>
+          </div>
         </div>
       )}
+
+      {/* Navigation Blocker Dialog */}
+      <AlertDialog open={blocker.state === 'blocked'}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved team changes. Are you sure you want to leave? Your changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => blocker.reset?.()}>
+              Stay on Page
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => blocker.proceed?.()}>
+              Leave Without Saving
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
