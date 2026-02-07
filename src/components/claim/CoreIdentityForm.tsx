@@ -11,6 +11,7 @@ import {
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { WebsitePreview } from './WebsitePreview';
 import { PROJECT_CATEGORIES, type ProjectCategory } from '@/types';
+import { COUNTRIES } from '@/lib/countries';
 
 interface CoreIdentityFormProps {
   projectName: string;
@@ -19,6 +20,8 @@ interface CoreIdentityFormProps {
   setDescription: (value: string) => void;
   category: ProjectCategory | '';
   setCategory: (value: ProjectCategory) => void;
+  country: string;
+  setCountry: (value: string) => void;
   websiteUrl: string;
   setWebsiteUrl: (value: string) => void;
 }
@@ -30,6 +33,8 @@ export const CoreIdentityForm = ({
   setDescription,
   category,
   setCategory,
+  country,
+  setCountry,
   websiteUrl,
   setWebsiteUrl,
 }: CoreIdentityFormProps) => {
@@ -74,22 +79,42 @@ export const CoreIdentityForm = ({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="category" className="font-display text-xs uppercase tracking-wider">
-              Category *
-            </Label>
-            <Select value={category} onValueChange={(val) => setCategory(val as ProjectCategory)}>
-              <SelectTrigger className="font-mono">
-                <SelectValue placeholder="Select a category..." />
-              </SelectTrigger>
-              <SelectContent>
-                {PROJECT_CATEGORIES.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value} className="font-mono">
-                    {cat.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="category" className="font-display text-xs uppercase tracking-wider">
+                Category *
+              </Label>
+              <Select value={category} onValueChange={(val) => setCategory(val as ProjectCategory)}>
+                <SelectTrigger className="font-mono">
+                  <SelectValue placeholder="Select a category..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROJECT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value} className="font-mono">
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="country" className="font-display text-xs uppercase tracking-wider">
+                Country / Region
+              </Label>
+              <Select value={country} onValueChange={setCountry}>
+                <SelectTrigger className="font-mono">
+                  <SelectValue placeholder="Select country..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {COUNTRIES.map((c) => (
+                    <SelectItem key={c.value} value={c.value} className="font-mono">
+                      {c.flag} {c.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>

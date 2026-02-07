@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Activity, CheckCircle, AlertCircle, Copy, ShieldCheck } from 'lucide-react';
+import { Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, TrendingUp, TrendingDown, Minus, Sparkles, Cloud } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -14,6 +14,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileProgramCards } from './MobileProgramCard';
+import { Sparkline } from './Sparkline';
+import { useRankMovement, type MovementType } from '@/hooks/useRankMovement';
+import { PROJECT_CATEGORIES } from '@/types';
 import type { ExplorerProject } from '@/hooks/useExplorerProjects';
 import type { LivenessStatus } from '@/types/database';
 
@@ -25,9 +28,13 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
+  // Fetch rank movements and score histories
+  const profileIds = projects.map(p => p.id);
+  const { data: rankData } = useRankMovement(profileIds);
+
   // Render mobile cards on small screens
   if (isMobile) {
-    return <MobileProgramCards projects={projects} />;
+    return <MobileProgramCards projects={projects} rankData={rankData} />;
   }
 
   const getScoreColor = (score: number) => {
@@ -84,14 +91,28 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
     );
   };
 
+  const getCategoryLabel = (value: string | null) => {
+    if (!value) return '—';
+    const cat = PROJECT_CATEGORIES.find(c => c.value === value);
+    return cat?.label || value;
+  };
+
   const copyToClipboard = (text: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(text);
   };
 
-  const truncateProgramId = (id: string) => {
-    if (!id || id.length < 8) return id || '—';
-    return `${id.slice(0, 4)}...${id.slice(-4)}`;
+  // Smart Program ID display - detects off-chain projects
+  const formatProgramId = (programId: string, projectId: string) => {
+    // If program_id equals project id (UUID fallback) or is missing, it's off-chain
+    if (!programId || programId === projectId || programId.includes('-')) {
+      return { display: 'Off-chain', isOnChain: false };
+    }
+    // Real Solana program IDs are Base58 encoded (32-44 chars, no dashes)
+    return { 
+      display: `${programId.slice(0, 4)}...${programId.slice(-4)}`, 
+      isOnChain: true 
+    };
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -101,6 +122,26 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
       month: 'short',
       day: 'numeric',
     });
+  };
+
+  const getMovementIndicator = (movement: MovementType | undefined) => {
+    switch (movement) {
+      case 'up':
+        return <TrendingUp className="h-3 w-3 text-green-500" />;
+      case 'down':
+        return <TrendingDown className="h-3 w-3 text-destructive" />;
+      case 'new':
+        return (
+          <Tooltip>
+            <TooltipTrigger>
+              <Sparkles className="h-3 w-3 text-amber-500" />
+            </TooltipTrigger>
+            <TooltipContent>New entry</TooltipContent>
+          </Tooltip>
+        );
+      default:
+        return <Minus className="h-3 w-3 text-muted-foreground" />;
+    }
   };
 
   const handleRowClick = (project: ExplorerProject) => {
@@ -119,8 +160,10 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
           <TableRow className="border-border hover:bg-transparent">
             <TableHead className="w-16">RANK</TableHead>
             <TableHead>PROTOCOL</TableHead>
+            <TableHead className="hidden lg:table-cell">TYPE</TableHead>
             <TableHead className="hidden lg:table-cell">PROGRAM ID</TableHead>
             <TableHead className="text-right">SCORE</TableHead>
+            <TableHead className="hidden xl:table-cell w-20">TREND</TableHead>
             <TableHead className="hidden md:table-cell">LIVENESS</TableHead>
             <TableHead className="hidden lg:table-cell">STATUS</TableHead>
             <TableHead className="hidden md:table-cell text-right">STAKED</TableHead>
@@ -128,76 +171,100 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {projects.map((project, index) => (
-            <TableRow
-              key={project.id}
-              className="cursor-pointer border-border transition-colors hover:bg-muted/50"
-              onClick={() => handleRowClick(project)}
-            >
-              <TableCell className="font-mono text-muted-foreground">
-                #{index + 1}
-              </TableCell>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary/10">
-                    <span className="font-display text-xs font-bold text-primary">
-                      {project.program_name.charAt(0)}
-                    </span>
+          {projects.map((project, index) => {
+            const programIdInfo = formatProgramId(project.program_id, project.id);
+            const movement = rankData?.movements[project.id];
+            const scoreHistory = rankData?.scoreHistories[project.id] || [project.resilience_score];
+            
+            return (
+              <TableRow
+                key={project.id}
+                className="cursor-pointer border-border transition-colors hover:bg-muted/50"
+                onClick={() => handleRowClick(project)}
+              >
+                <TableCell className="font-mono text-muted-foreground">
+                  <div className="flex items-center gap-1.5">
+                    <span>#{index + 1}</span>
+                    {getMovementIndicator(movement)}
                   </div>
-                  <span className="font-medium text-foreground">{project.program_name}</span>
-                  {project.verified && (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <ShieldCheck className="h-4 w-4 text-primary" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Verified Protocol</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                <div className="flex items-center gap-2">
-                  <code className="font-mono text-xs text-muted-foreground">
-                    {truncateProgramId(project.program_id)}
-                  </code>
-                  {project.program_id && project.program_id !== project.id && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={(e) => copyToClipboard(project.program_id, e)}
-                    >
-                      <Copy className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-              </TableCell>
-              <TableCell className="text-right">
-                <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
-                  {Math.round(project.resilience_score)}
-                </span>
-              </TableCell>
-              <TableCell className="hidden md:table-cell">
-                {getStatusBadge(project.liveness_status)}
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                {getOriginalityBadge(project.verified, project.is_fork)}
-              </TableCell>
-              <TableCell className="hidden md:table-cell text-right">
-                <span className="font-mono text-sm text-foreground">
-                  {(project.total_staked / 1000).toFixed(0)}K
-                </span>
-                <span className="ml-1 text-xs text-muted-foreground">SOL</span>
-              </TableCell>
-              <TableCell className="hidden lg:table-cell">
-                <span className="font-mono text-xs text-muted-foreground">
-                  {formatDate(project.github_last_commit)}
-                </span>
-              </TableCell>
-            </TableRow>
-          ))}
+                </TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary/10">
+                      <span className="font-display text-xs font-bold text-primary">
+                        {project.program_name.charAt(0)}
+                      </span>
+                    </div>
+                    <span className="font-medium text-foreground">{project.program_name}</span>
+                    {project.verified && (
+                      <Tooltip>
+                        <TooltipTrigger>
+                          <ShieldCheck className="h-4 w-4 text-primary" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Verified Protocol</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <Badge variant="outline" className="border-border text-xs">
+                    {getCategoryLabel(project.category)}
+                  </Badge>
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <div className="flex items-center gap-2">
+                    {programIdInfo.isOnChain ? (
+                      <>
+                        <code className="font-mono text-xs text-muted-foreground">
+                          {programIdInfo.display}
+                        </code>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={(e) => copyToClipboard(project.program_id, e)}
+                        >
+                          <Copy className="h-3 w-3" />
+                        </Button>
+                      </>
+                    ) : (
+                      <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground text-xs">
+                        <Cloud className="mr-1 h-3 w-3" />
+                        {programIdInfo.display}
+                      </Badge>
+                    )}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
+                    {Math.round(project.resilience_score)}
+                  </span>
+                </TableCell>
+                <TableCell className="hidden xl:table-cell">
+                  <Sparkline values={scoreHistory} />
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  {getStatusBadge(project.liveness_status)}
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  {getOriginalityBadge(project.verified, project.is_fork)}
+                </TableCell>
+                <TableCell className="hidden md:table-cell text-right">
+                  <span className="font-mono text-sm text-foreground">
+                    {(project.total_staked / 1000).toFixed(0)}K
+                  </span>
+                  <span className="ml-1 text-xs text-muted-foreground">SOL</span>
+                </TableCell>
+                <TableCell className="hidden lg:table-cell">
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {formatDate(project.github_last_commit)}
+                  </span>
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

@@ -8,6 +8,8 @@ const Explorer = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [verificationFilter, setVerificationFilter] = useState('all');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [countryFilter, setCountryFilter] = useState('all');
 
   const { data: projects, isLoading, error } = useExplorerProjects();
 
@@ -28,9 +30,15 @@ const Explorer = () => {
         (verificationFilter === 'verified' && project.verified) ||
         (verificationFilter === 'unverified' && !project.verified);
 
-      return matchesSearch && matchesStatus && matchesVerification;
+      const matchesCategory =
+        categoryFilter === 'all' || project.category === categoryFilter;
+
+      const matchesCountry =
+        countryFilter === 'all' || project.country === countryFilter;
+
+      return matchesSearch && matchesStatus && matchesVerification && matchesCategory && matchesCountry;
     });
-  }, [projects, searchQuery, statusFilter, verificationFilter]);
+  }, [projects, searchQuery, statusFilter, verificationFilter, categoryFilter, countryFilter]);
 
   return (
     <Layout>
@@ -62,6 +70,10 @@ const Explorer = () => {
               onStatusFilterChange={setStatusFilter}
               verificationFilter={verificationFilter}
               onVerificationFilterChange={setVerificationFilter}
+              categoryFilter={categoryFilter}
+              onCategoryFilterChange={setCategoryFilter}
+              countryFilter={countryFilter}
+              onCountryFilterChange={setCountryFilter}
             />
           </div>
 
@@ -99,10 +111,12 @@ const Explorer = () => {
             <div className="rounded-sm border border-border bg-card p-12 text-center">
               <div className="mx-auto max-w-md">
                 <h3 className="mb-2 font-display text-lg font-semibold uppercase text-foreground">
-                  {searchQuery || statusFilter !== 'all' ? 'No Matches Found' : 'No Registered Protocols Yet'}
+                  {searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' || countryFilter !== 'all' 
+                    ? 'No Matches Found' 
+                    : 'No Registered Protocols Yet'}
                 </h3>
                 <p className="text-muted-foreground">
-                  {searchQuery || statusFilter !== 'all'
+                  {searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' || countryFilter !== 'all'
                     ? 'No protocols match your search criteria. Try adjusting your filters.'
                     : 'Be among the first builders to register your protocol in the Resilience Registry.'}
                 </p>

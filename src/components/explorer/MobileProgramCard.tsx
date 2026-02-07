@@ -1,17 +1,21 @@
 import { useNavigate } from 'react-router-dom';
-import { Activity, AlertCircle, CheckCircle, ShieldCheck } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, ShieldCheck, TrendingUp, TrendingDown, Minus, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
+import { Sparkline } from './Sparkline';
+import { PROJECT_CATEGORIES } from '@/types';
 import type { ExplorerProject } from '@/hooks/useExplorerProjects';
 import type { LivenessStatus } from '@/types/database';
+import type { MovementType } from '@/hooks/useRankMovement';
 
 interface MobileProgramCardProps {
   project: ExplorerProject;
   rank: number;
+  movement?: MovementType;
+  scoreHistory?: number[];
 }
 
-export function MobileProgramCard({ project, rank }: MobileProgramCardProps) {
+export function MobileProgramCard({ project, rank, movement, scoreHistory }: MobileProgramCardProps) {
   const navigate = useNavigate();
 
   const getScoreColor = (score: number) => {
@@ -51,6 +55,25 @@ export function MobileProgramCard({ project, rank }: MobileProgramCardProps) {
     }
   };
 
+  const getCategoryLabel = (value: string | null) => {
+    if (!value) return null;
+    const cat = PROJECT_CATEGORIES.find(c => c.value === value);
+    return cat?.label || value;
+  };
+
+  const getMovementIndicator = () => {
+    switch (movement) {
+      case 'up':
+        return <TrendingUp className="h-3 w-3 text-green-500" />;
+      case 'down':
+        return <TrendingDown className="h-3 w-3 text-destructive" />;
+      case 'new':
+        return <Sparkles className="h-3 w-3 text-amber-500" />;
+      default:
+        return <Minus className="h-3 w-3 text-muted-foreground" />;
+    }
+  };
+
   const handleClick = () => {
     const routeId = project.program_id && project.program_id !== project.id 
       ? project.program_id 
@@ -63,10 +86,20 @@ export function MobileProgramCard({ project, rank }: MobileProgramCardProps) {
       onClick={handleClick}
       className="rounded-sm border border-border bg-card p-4 transition-all hover:border-primary/50 active:scale-[0.99] cursor-pointer touch-feedback"
     >
-      {/* Top Row: Rank + Status */}
+      {/* Top Row: Rank + Movement + Status */}
       <div className="mb-3 flex items-center justify-between">
-        <span className="font-mono text-sm font-bold text-muted-foreground">#{rank}</span>
-        {getStatusBadge(project.liveness_status)}
+        <div className="flex items-center gap-2">
+          <span className="font-mono text-sm font-bold text-muted-foreground">#{rank}</span>
+          {getMovementIndicator()}
+        </div>
+        <div className="flex items-center gap-2">
+          {project.category && (
+            <Badge variant="outline" className="border-border text-xs">
+              {getCategoryLabel(project.category)}
+            </Badge>
+          )}
+          {getStatusBadge(project.liveness_status)}
+        </div>
       </div>
 
       {/* Program Identity */}
@@ -85,23 +118,29 @@ export function MobileProgramCard({ project, rank }: MobileProgramCardProps) {
               <ShieldCheck className="h-4 w-4 text-primary shrink-0" />
             )}
           </div>
-          {project.program_id && project.program_id !== project.id && (
+          {project.program_id && project.program_id !== project.id && !project.program_id.includes('-') && (
             <code className="font-mono text-xs text-muted-foreground">
               {project.program_id.slice(0, 4)}...{project.program_id.slice(-4)}
             </code>
           )}
+          {(!project.program_id || project.program_id === project.id || project.program_id.includes('-')) && (
+            <span className="text-xs text-muted-foreground">Off-chain</span>
+          )}
         </div>
       </div>
 
-      {/* Score Section */}
+      {/* Score Section with Sparkline */}
       <div className="mb-3">
         <div className="mb-2 flex items-center justify-between">
           <span className="text-xs uppercase tracking-wider text-muted-foreground">
             Resilience Score
           </span>
-          <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
-            {Math.round(project.resilience_score)}/100
-          </span>
+          <div className="flex items-center gap-3">
+            <Sparkline values={scoreHistory || [project.resilience_score]} width={50} height={16} />
+            <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
+              {Math.round(project.resilience_score)}/100
+            </span>
+          </div>
         </div>
         <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
           <div 
@@ -135,13 +174,23 @@ export function MobileProgramCard({ project, rank }: MobileProgramCardProps) {
 
 interface MobileProgramCardsProps {
   projects: ExplorerProject[];
+  rankData?: {
+    movements: Record<string, MovementType>;
+    scoreHistories: Record<string, number[]>;
+  };
 }
 
-export function MobileProgramCards({ projects }: MobileProgramCardsProps) {
+export function MobileProgramCards({ projects, rankData }: MobileProgramCardsProps) {
   return (
     <div className="space-y-3">
       {projects.map((project, index) => (
-        <MobileProgramCard key={project.id} project={project} rank={index + 1} />
+        <MobileProgramCard 
+          key={project.id} 
+          project={project} 
+          rank={index + 1}
+          movement={rankData?.movements[project.id]}
+          scoreHistory={rankData?.scoreHistories[project.id]}
+        />
       ))}
     </div>
   );

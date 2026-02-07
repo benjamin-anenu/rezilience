@@ -18,6 +18,9 @@ export interface ExplorerProject {
   liveness_status: LivenessStatus;
   is_fork: boolean;
   total_staked: number;
+  // New fields for filtering
+  category: string | null;
+  country: string | null;
   // Source tracking for routing
   isRegisteredProtocol: true;
 }
@@ -84,6 +87,8 @@ export function useExplorerProjects() {
         liveness_status: (profile.liveness_status as LivenessStatus) || 'STALE',
         is_fork: profile.github_is_fork || false,
         total_staked: 0, // Phase 2 feature
+        category: profile.category,
+        country: (profile as { country?: string }).country || null,
         isRegisteredProtocol: true as const,
       }));
     },

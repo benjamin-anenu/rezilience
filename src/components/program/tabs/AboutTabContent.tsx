@@ -1,13 +1,15 @@
-import { ExternalLink, Globe, Maximize2 } from 'lucide-react';
+import { ExternalLink, Globe, Maximize2, MapPin } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
+import { getCountryLabel } from '@/lib/countries';
 import type { MediaAsset } from '@/types';
 
 interface AboutTabContentProps {
   description?: string;
   category?: string | null;
+  country?: string | null;
   getCategoryLabel: (value: string) => string;
   websiteUrl?: string;
   mediaAssets?: MediaAsset[];
@@ -25,12 +27,14 @@ const getEmbedUrl = (url: string, type: string) => {
 export function AboutTabContent({
   description,
   category,
+  country,
   getCategoryLabel,
   websiteUrl,
   mediaAssets,
   isVerified,
 }: AboutTabContentProps) {
   const isHtml = description ? /<[^>]+>/.test(description) : false;
+  const countryLabel = getCountryLabel(country);
 
   return (
     <div className="space-y-6">
@@ -54,12 +58,23 @@ export function AboutTabContent({
               </p>
             )}
             
-            {category && (
-              <div className="mt-6 pt-4 border-t border-border">
-                <span className="text-xs uppercase tracking-wider text-muted-foreground mr-2">Category:</span>
-                <Badge variant="outline" className="border-primary/30 text-primary">
-                  {getCategoryLabel(category)}
-                </Badge>
+            {/* Category and Country badges */}
+            {(category || countryLabel) && (
+              <div className="mt-6 pt-4 border-t border-border flex flex-wrap items-center gap-4">
+                {category && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">Category:</span>
+                    <Badge variant="outline" className="border-primary/30 text-primary">
+                      {getCategoryLabel(category)}
+                    </Badge>
+                  </div>
+                )}
+                {countryLabel && (
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-3 w-3 text-muted-foreground" />
+                    <span className="text-sm text-foreground">{countryLabel}</span>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

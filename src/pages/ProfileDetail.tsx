@@ -139,6 +139,7 @@ const ProfileDetail = () => {
                     <AboutTabContent
                       description={profile.description}
                       category={profile.category}
+                      country={(profile as { country?: string }).country}
                       getCategoryLabel={getCategoryLabel}
                       websiteUrl={profile.websiteUrl}
                       mediaAssets={profile.mediaAssets}
@@ -238,6 +239,7 @@ const ProfileDetail = () => {
                   <AboutTabContent
                     description={profile.description}
                     category={profile.category}
+                    country={(profile as { country?: string }).country}
                     getCategoryLabel={getCategoryLabel}
                     websiteUrl={profile.websiteUrl}
                     mediaAssets={profile.mediaAssets}
