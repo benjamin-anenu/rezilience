@@ -11,3 +11,5 @@ export { ActivityAreaChart } from './ActivityAreaChart';
 export { HeroBanner } from './HeroBanner';
 export { QuickStats } from './QuickStats';
 export { StickyCTA } from './StickyCTA';
+export { BuildInPublicSection } from './BuildInPublicSection';
+export { TwitterPulseSection } from './TwitterPulseSection';

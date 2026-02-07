@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { ClaimedProfile, MediaAsset, Milestone } from '@/types';
+import type { ClaimedProfile, MediaAsset, Milestone, BuildInPublicVideo, TwitterTweet } from '@/types';
 import type { Json } from '@/integrations/supabase/types';
 
 interface DBClaimedProfile {
@@ -49,6 +49,12 @@ interface DBClaimedProfile {
   github_pr_events_30d: number | null;
   github_issue_events_30d: number | null;
   github_last_activity: string | null;
+  // Twitter integration (Phase 2)
+  build_in_public_videos: Json | null;
+  twitter_followers: number | null;
+  twitter_engagement_rate: number | null;
+  twitter_recent_tweets: Json | null;
+  twitter_last_synced: string | null;
 }
 
 // Transform database format to frontend ClaimedProfile format
@@ -99,6 +105,14 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
       github_pr_events_30d: db.github_pr_events_30d ?? undefined,
       github_issue_events_30d: db.github_issue_events_30d ?? undefined,
       github_last_activity: db.github_last_activity || undefined,
+    },
+    // Build In Public & Twitter Integration
+    buildInPublicVideos: (Array.isArray(db.build_in_public_videos) ? db.build_in_public_videos : []) as unknown as BuildInPublicVideo[],
+    twitterMetrics: {
+      followers: db.twitter_followers ?? 0,
+      engagementRate: db.twitter_engagement_rate ?? 0,
+      recentTweets: (Array.isArray(db.twitter_recent_tweets) ? db.twitter_recent_tweets : []) as unknown as TwitterTweet[],
+      lastSynced: db.twitter_last_synced || undefined,
     },
   };
 }
