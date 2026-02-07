@@ -108,9 +108,9 @@ const XCallback = () => {
             navigate('/dashboard');
           }, 1500);
         } else {
-          // New user - go to claim profile
+          // New user - go to claim profile with fresh auth flag to auto-advance to step 2
           setTimeout(() => {
-            navigate('/claim-profile');
+            navigate('/claim-profile?auth=fresh');
           }, 1500);
         }
 

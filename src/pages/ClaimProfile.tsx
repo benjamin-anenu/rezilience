@@ -23,7 +23,7 @@ import { type GitHubAnalysisResult, suggestCategory } from '@/hooks/useGitHubAna
 
 const ClaimProfile = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, isAuthenticated, loading: authLoading, signInWithX } = useAuth();
   const { publicKey, connected } = useWallet();
   const { toast } = useToast();
@@ -31,6 +31,8 @@ const ClaimProfile = () => {
   // Check if returning from GitHub OAuth with verification
   const isVerified = searchParams.get('verified') === 'true';
   const stepFromUrl = searchParams.get('step');
+  // FIX #2: Check if returning from fresh X auth
+  const authFresh = searchParams.get('auth') === 'fresh';
   
   // Check if GitHub OAuth is configured
   const isGitHubConfigured = !!import.meta.env.VITE_GITHUB_CLIENT_ID;
@@ -42,8 +44,16 @@ const ClaimProfile = () => {
   // Track if GitHub verification is complete
   const [githubVerified, setGithubVerified] = useState(isVerified);
   
+  // FIX #1: Track submitting state for direct submit
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   // Initialize step based on auth state, URL params, and saved progress
   const [currentStep, setCurrentStep] = useState(() => {
+    // FIX #2: If returning from X auth with fresh flag, force step 2
+    if (authFresh) {
+      return 2;
+    }
+    
     // If returning from OAuth with step param, use that
     if (stepFromUrl) {
       const step = parseInt(stepFromUrl, 10);
@@ -115,6 +125,13 @@ const ClaimProfile = () => {
       setCurrentStep(1);
     }
   }, [isAuthenticated, currentStep]);
+
+  // FIX #2: Clear the auth=fresh param after processing to prevent issues on refresh
+  useEffect(() => {
+    if (authFresh && isAuthenticated) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [authFresh, isAuthenticated, setSearchParams]);
 
   // Persist form state to localStorage to survive wallet redirects
   useEffect(() => {
@@ -270,6 +287,75 @@ const ClaimProfile = () => {
       title: 'Repository Analyzed',
       description: `Score: ${result.resilienceScore}/100 | ${result.commitsLast30Days} commits in last 30 days`,
     });
+  };
+
+  // FIX #1: Direct submit for public repos (no GitHub OAuth needed)
+  const handleDirectSubmit = async () => {
+    if (!githubAnalysisResult || !user) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const { supabase } = await import('@/integrations/supabase/client');
+      const profileId = crypto.randomUUID();
+      
+      const profileData = {
+        id: profileId,
+        project_name: projectName,
+        description: description || null,
+        category: category || null,
+        website_url: websiteUrl || null,
+        program_id: programId || null,
+        claimer_wallet: connected && publicKey ? publicKey.toBase58() : null,
+        github_org_url: githubAnalysisResult.htmlUrl,
+        x_user_id: user.id,
+        x_username: user.username,
+        discord_url: discordUrl || null,
+        telegram_url: telegramUrl || null,
+        media_assets: JSON.parse(JSON.stringify(mediaAssets)),
+        milestones: JSON.parse(JSON.stringify(milestones)),
+        verified: true,
+        verified_at: new Date().toISOString(),
+        resilience_score: githubAnalysisResult.resilienceScore,
+        liveness_status: githubAnalysisResult.livenessStatus,
+        github_stars: githubAnalysisResult.stars,
+        github_forks: githubAnalysisResult.forks,
+        github_contributors: githubAnalysisResult.contributors,
+        github_language: githubAnalysisResult.language || null,
+        github_last_activity: githubAnalysisResult.pushedAt || null,
+        github_commit_velocity: githubAnalysisResult.commitVelocity || null,
+        github_commits_30d: githubAnalysisResult.commitsLast30Days || null,
+        github_open_issues: githubAnalysisResult.openIssues || null,
+        github_topics: githubAnalysisResult.topics || null,
+        github_is_fork: githubAnalysisResult.isFork || false,
+        github_analyzed_at: new Date().toISOString(),
+      };
+      
+      const { error } = await supabase
+        .from('claimed_profiles')
+        .insert([profileData]);
+      
+      if (error) throw error;
+      
+      localStorage.removeItem('claimFormProgress');
+      localStorage.setItem('verifiedProfileId', profileId);
+      
+      toast({ 
+        title: 'Profile Created!', 
+        description: 'Your protocol is now registered in the Resilience Registry.' 
+      });
+      navigate(`/profile/${profileId}`);
+      
+    } catch (err) {
+      console.error('Direct submit error:', err);
+      toast({ 
+        title: 'Registration Error', 
+        description: err instanceof Error ? err.message : 'Failed to create profile', 
+        variant: 'destructive' 
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const canProceedFromStep2 = projectName.trim() && category;
@@ -592,6 +678,7 @@ const ClaimProfile = () => {
               <Card className="mt-6 border-primary/30 bg-card">
                 <CardContent className="py-6">
                   {githubVerified ? (
+                    // Case 1: GitHub OAuth was used - show view profile button
                     <>
                       <div className="mb-4 flex items-center justify-center gap-2 text-primary">
                         <CheckCircle className="h-5 w-5" />
@@ -613,17 +700,46 @@ const ClaimProfile = () => {
                         VIEW MY PROFILE
                       </Button>
                     </>
+                  ) : githubAnalysisResult ? (
+                    // Case 2: Public repo was analyzed - direct submit without OAuth
+                    <>
+                      <div className="mb-4 flex items-center justify-center gap-2 text-primary">
+                        <CheckCircle className="h-5 w-5" />
+                        <span className="font-display text-sm uppercase">
+                          Repository Analyzed • Score: {githubAnalysisResult.resilienceScore}
+                        </span>
+                      </div>
+                      <p className="mb-4 text-center text-sm text-muted-foreground">
+                        Your public repository has been verified. Click below to complete your registration.
+                      </p>
+                      <Button
+                        onClick={handleDirectSubmit}
+                        disabled={isSubmitting}
+                        className="w-full font-display font-semibold uppercase tracking-wider"
+                        size="lg"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            REGISTERING...
+                          </>
+                        ) : (
+                          'COMPLETE REGISTRATION'
+                        )}
+                      </Button>
+                    </>
                   ) : (
+                    // Case 3: No analysis yet - require GitHub OAuth (for private repos)
                     <>
                       <p className="mb-4 text-center text-sm text-muted-foreground">
-                        Ready to verify? Clicking below will connect your GitHub and finalize your profile.
+                        Connect your GitHub to verify a private repository and complete registration.
                       </p>
                       <Button
                         onClick={handleGitHubConnect}
                         className="w-full font-display font-semibold uppercase tracking-wider"
                         size="lg"
                       >
-                        COMPLETE VERIFICATION
+                        CONNECT GITHUB & COMPLETE
                       </Button>
                     </>
                   )}
