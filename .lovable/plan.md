@@ -1,167 +1,140 @@
 
 
-# Fix: Team Member Data Not Persisting
+# Redesign Team Tab Layout
 
-## Root Cause Analysis
+## Overview
 
-After investigating the code and testing the edge function, I found that:
-
-1. **The backend works correctly** - The `update-profile` edge function successfully saves team members when called with valid data
-2. **The hook and mapping work correctly** - `useUpdateProfile` and `useClaimedProfiles` properly handle team data
-3. **The issue is UX-related** - Users are likely adding team members but navigating away before clicking "Save Team & Pitch"
-
-The current flow requires an explicit save action, but:
-- The save button only appears at the bottom when changes exist
-- No warning when leaving with unsaved changes
-- Toast message "click Save to persist" is easy to miss
+Restructure the Team tab to display a **two-column layout** with the "Why Stake" section on the left and the "Meet The Team" grid on the right. Also add the label "I am best fit for this project" before each team member's quote.
 
 ---
 
-## Solution: Improve Save Visibility & Add Unsaved Changes Warning
+## Layout Change
 
-### 1. Add Unsaved Changes Warning
+**Current Layout (Vertical Stack):**
+```
+┌─────────────────────────────────────────┐
+│           MEET THE TEAM                 │
+│  ┌─────┐  ┌─────┐  ┌─────┐             │
+│  │Card │  │Card │  │Card │              │
+│  └─────┘  └─────┘  └─────┘             │
+└─────────────────────────────────────────┘
+┌─────────────────────────────────────────┐
+│       WHY STAKE ON THIS PROJECT?        │
+│       "Staking pitch text..."           │
+└─────────────────────────────────────────┘
+```
 
-Add a `beforeunload` event listener to warn users when navigating away with unsaved changes. Also add a React Router navigation blocker.
+**New Layout (Side-by-Side):**
+```
+┌──────────────────┬──────────────────────┐
+│  WHY STAKE ON    │    MEET THE TEAM     │
+│  THIS PROJECT?   │  ┌─────┐  ┌─────┐    │
+│                  │  │Card │  │Card │    │
+│  "Staking pitch  │  └─────┘  └─────┘    │
+│   text..."       │  ┌─────┐  ┌─────┐    │
+│                  │  │Card │  │Card │    │
+│                  │  └─────┘  └─────┘    │
+└──────────────────┴──────────────────────┘
+```
 
-**File: `src/components/profile/tabs/TeamManagement.tsx`**
+- On desktop: 1/3 width for "Why Stake" (left), 2/3 width for "Meet The Team" (right)
+- On mobile: Stack vertically with "Why Stake" first, then team grid below
 
-Add effect to warn before browser close/refresh:
-```typescript
-useEffect(() => {
-  const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-    if (hasChanges) {
-      e.preventDefault();
-      e.returnValue = '';
-    }
-  };
+---
+
+## Changes
+
+### File: `src/components/program/tabs/TeamTabContent.tsx`
+
+| Change | Description |
+|--------|-------------|
+| Restructure main container | Use CSS Grid with `lg:grid-cols-3` for side-by-side layout |
+| Move "Why Stake" section | Position it first (left column, spans 1 column) |
+| Move "Meet The Team" section | Position it second (right column, spans 2 columns) |
+| Add "I am best fit" label | Insert text above the quote in each team member card |
+| Make "Why Stake" sticky | Add `lg:sticky lg:top-6` so it stays visible while scrolling team members |
+
+### Quote Section Enhancement
+
+**Current:**
+```
+┌────────────────────┐
+│ " Member's quote   │
+│   text here...     │
+└────────────────────┘
+```
+
+**New:**
+```
+┌────────────────────┐
+│ I am best fit for  │
+│ this project       │
+│ " Member's quote   │
+│   text here...     │
+└────────────────────┘
+```
+
+---
+
+## Technical Implementation
+
+```tsx
+// New layout structure
+<div className="grid gap-8 lg:grid-cols-3">
+  {/* Left Column - Why Stake (1/3 width) */}
+  {hasStakingPitch && (
+    <div className="lg:col-span-1">
+      <Card className="lg:sticky lg:top-6 ...">
+        {/* Why Stake content */}
+      </Card>
+    </div>
+  )}
   
-  window.addEventListener('beforeunload', handleBeforeUnload);
-  return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-}, [hasChanges]);
-```
-
-Add React Router blocker for in-app navigation:
-```typescript
-import { useBlocker } from 'react-router-dom';
-
-// Inside component
-const blocker = useBlocker(
-  ({ currentLocation, nextLocation }) =>
-    hasChanges && currentLocation.pathname !== nextLocation.pathname
-);
-```
-
-Add confirmation dialog when blocker is triggered.
-
-### 2. Make Save Button More Prominent
-
-Move the save button to a fixed position at the bottom of the viewport when there are unsaved changes, with a more visible warning style.
-
-**Changes:**
-```typescript
-{hasChanges && (
-  <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-primary/30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
-    <div className="container mx-auto max-w-5xl flex items-center justify-between gap-4">
-      <div className="flex items-center gap-2 text-sm text-amber-500">
-        <AlertCircle className="h-4 w-4" />
-        <span>You have unsaved changes</span>
+  {/* Right Column - Meet The Team (2/3 width) */}
+  {hasTeamMembers && (
+    <div className={hasStakingPitch ? "lg:col-span-2" : "lg:col-span-3"}>
+      {/* Team header and grid */}
+      <div className="grid gap-6 sm:grid-cols-2">
+        {/* Team cards - reduced from 3 cols to 2 since container is smaller */}
       </div>
-      <Button 
-        onClick={handleSave} 
-        disabled={isSaving}
-        className="gap-2"
-      >
-        <Save className="h-4 w-4" />
-        {isSaving ? 'Saving...' : 'Save Team & Pitch'}
-      </Button>
+    </div>
+  )}
+</div>
+```
+
+```tsx
+// Quote section with label
+{member.whyFit && (
+  <div className="relative pt-2 border-t border-border/50">
+    <p className="text-xs font-medium text-primary/70 uppercase tracking-wider mb-1">
+      I am best fit for this project
+    </p>
+    <div className="flex items-start gap-1">
+      <Quote className="h-4 w-4 text-primary/40 flex-shrink-0 mt-0.5" />
+      <p className="text-sm italic text-muted-foreground leading-relaxed">
+        {member.whyFit}
+      </p>
     </div>
   </div>
 )}
 ```
 
-### 3. Add Navigation Blocker Dialog
+---
 
-Create a confirmation dialog that appears when the user tries to navigate away with unsaved changes.
+## Responsive Behavior
+
+| Breakpoint | Layout |
+|------------|--------|
+| Mobile (< 1024px) | Single column: "Why Stake" stacked above team grid |
+| Desktop (≥ 1024px) | Two columns: "Why Stake" (left, sticky), Team grid (right) |
 
 ---
 
-## Files to Modify
+## Edge Cases
 
-| File | Change |
-|------|--------|
-| `src/components/profile/tabs/TeamManagement.tsx` | Add beforeunload handler, useBlocker, confirmation dialog, improve save button visibility |
-
----
-
-## Implementation Details
-
-### TeamManagement.tsx Changes
-
-1. **Import additions:**
-   - `useEffect` (already imported)
-   - `useBlocker` from react-router-dom
-   - `AlertCircle` from lucide-react
-   - `AlertDialog` components for confirmation
-
-2. **Add beforeunload effect** (lines ~60-70):
-   ```typescript
-   useEffect(() => {
-     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-       if (hasChanges) {
-         e.preventDefault();
-         e.returnValue = '';
-       }
-     };
-     
-     window.addEventListener('beforeunload', handleBeforeUnload);
-     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-   }, [hasChanges]);
-   ```
-
-3. **Add React Router blocker** (after the hasChanges calculation):
-   ```typescript
-   const blocker = useBlocker(
-     ({ currentLocation, nextLocation }) =>
-       hasChanges && currentLocation.pathname !== nextLocation.pathname
-   );
-   ```
-
-4. **Add confirmation dialog** (before closing `</div>`):
-   ```typescript
-   <AlertDialog open={blocker.state === 'blocked'}>
-     <AlertDialogContent>
-       <AlertDialogHeader>
-         <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-         <AlertDialogDescription>
-           You have unsaved team changes. Are you sure you want to leave? Your changes will be lost.
-         </AlertDialogDescription>
-       </AlertDialogHeader>
-       <AlertDialogFooter>
-         <AlertDialogCancel onClick={() => blocker.reset?.()}>
-           Stay on Page
-         </AlertDialogCancel>
-         <AlertDialogAction onClick={() => blocker.proceed?.()}>
-           Leave Without Saving
-         </AlertDialogAction>
-       </AlertDialogFooter>
-     </AlertDialogContent>
-   </AlertDialog>
-   ```
-
-5. **Improve save button visibility** (replace existing save button section):
-   - Make it fixed at bottom with warning icon
-   - Add amber warning text "You have unsaved changes"
-
----
-
-## Summary
-
-| Change | Purpose |
-|--------|---------|
-| `beforeunload` event | Warn when closing/refreshing browser tab with unsaved changes |
-| `useBlocker` hook | Intercept in-app navigation when unsaved changes exist |
-| Confirmation dialog | Give users option to save or discard changes before leaving |
-| Fixed save bar | Make save button impossible to miss with warning indicator |
-
-This ensures users never accidentally lose their team member data by navigating away before saving.
+| Scenario | Behavior |
+|----------|----------|
+| Only team members (no staking pitch) | Team grid takes full width (3 columns) |
+| Only staking pitch (no team members) | Staking pitch card displayed alone, centered |
+| Both present | Side-by-side layout as described |
 
