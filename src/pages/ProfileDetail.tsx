@@ -1,49 +1,31 @@
-import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useState } from 'react';
-import {
-  ArrowLeft,
-  ExternalLink,
-  CheckCircle,
-  Github,
-  MessageCircle,
-  Send,
-  Calendar,
-  Lock,
-  AlertTriangle,
-  Youtube,
-  Image,
-  Video,
-  Loader2,
-} from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from '@/components/ui/carousel';
+  HeroBanner,
+  QuickStats,
+  ProgramTabs,
+  AboutTabContent,
+  DevelopmentTabContent,
+  CommunityTabContent,
+  RoadmapTabContent,
+} from '@/components/program';
+import { SettingsTab, BuildInPublicTab } from '@/components/profile/tabs';
+import { RoadmapManagement } from '@/components/profile/tabs/RoadmapManagement';
 import { PROJECT_CATEGORIES } from '@/types';
 import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
 import { useAuth } from '@/context/AuthContext';
-import { GitHubAnalyticsCard } from '@/components/dashboard/GitHubAnalyticsCard';
-import { ProfileHeroBanner } from '@/components/profile/ProfileHeroBanner';
-import { ProfileTabs } from '@/components/profile/ProfileTabs';
-import { AboutTab, SettingsTab, MediaTab, BuildInPublicTab, DevelopmentTab } from '@/components/profile/tabs';
 
 const ProfileDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const { data: profile, isLoading, error, refetch } = useClaimedProfile(id || '');
-  const justVerified = searchParams.get('verified') === 'true';
 
   // Check if current user is the owner
   const isOwner = user?.id && profile?.xUserId && user.id === profile.xUserId;
@@ -54,13 +36,19 @@ const ProfileDetail = () => {
     setIsRefreshing(false);
   };
 
+  const getCategoryLabel = (value: string) => {
+    const category = PROJECT_CATEGORIES.find(c => c.value === value);
+    return category?.label || value;
+  };
+
   if (isLoading || authLoading) {
     return (
       <Layout>
-        <div className="py-12">
+        <div className="py-8">
           <div className="container mx-auto max-w-5xl px-4 lg:px-8">
-            <Skeleton className="mb-6 h-10 w-24" />
+            <Skeleton className="mb-6 h-10 w-32" />
             <Skeleton className="mb-6 h-64 w-full" />
+            <Skeleton className="mb-6 h-16 w-full" />
             <Skeleton className="h-12 w-full" />
           </div>
         </div>
@@ -84,410 +72,216 @@ const ProfileDetail = () => {
     );
   }
 
-  // ========== OWNER VIEW: New Tabbed UI ==========
+  // Build program object for HeroBanner and other components
+  const programForComponents = {
+    id: profile.id,
+    name: profile.projectName,
+    programId: profile.programId || '',
+    score: profile.score,
+    livenessStatus: profile.livenessStatus as 'active' | 'dormant' | 'degraded',
+    originalityStatus: 'verified' as const,
+    stakedAmount: 0,
+    lastUpgrade: profile.verifiedAt || new Date().toISOString(),
+    upgradeCount: 0,
+    rank: 0,
+  };
+
+  // ========== OWNER VIEW: Premium Dashboard with Management ==========
   if (isOwner) {
     return (
       <Layout>
-        <div className="py-8 sm:py-12">
-          <div className="container mx-auto max-w-5xl px-4 lg:px-8">
-            {/* Back Link */}
-            <Button
-              variant="ghost"
-              className="mb-6 font-display text-xs uppercase tracking-wider"
-              onClick={() => navigate('/dashboard')}
-            >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Button>
+        <div className="pb-20 lg:pb-0">
+          <div className="py-6 lg:py-8">
+            <div className="container mx-auto max-w-5xl px-4 lg:px-8">
+              {/* Back Link */}
+              <div className="mb-4">
+                <Button
+                  variant="ghost"
+                  className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                  onClick={() => navigate('/dashboard')}
+                >
+                  <ArrowLeft className="mr-1.5 h-4 w-4" />
+                  Back to Dashboard
+                </Button>
+              </div>
 
-            {/* Hero Banner */}
-            <div className="mb-8">
-              <ProfileHeroBanner
-                profile={profile}
-                onRefresh={handleRefresh}
-                isRefreshing={isRefreshing}
-              />
+              {/* 1. HERO BANNER - Same as public but with owner badge */}
+              <div className="mb-6">
+                <HeroBanner
+                  program={programForComponents}
+                  websiteUrl={profile.websiteUrl}
+                  xUsername={profile.xUsername}
+                  discordUrl={profile.socials?.discordUrl}
+                  telegramUrl={profile.socials?.telegramUrl}
+                  githubUrl={profile.githubOrgUrl}
+                  isVerified={profile.verified}
+                  verifiedAt={profile.verifiedAt}
+                  description={profile.description}
+                  logoUrl={profile.logoUrl}
+                  isOwner={true}
+                  onRefresh={handleRefresh}
+                  isRefreshing={isRefreshing}
+                />
+              </div>
+
+              {/* 2. QUICK STATS BAR - Same as public */}
+              <div className="mb-6">
+                <QuickStats
+                  analytics={profile.githubAnalytics}
+                />
+              </div>
+
+              {/* 3. TABBED CONTENT - Owner-enhanced versions */}
+              <ProgramTabs>
+                {{
+                  about: (
+                    <AboutTabContent
+                      description={profile.description}
+                      category={profile.category}
+                      getCategoryLabel={getCategoryLabel}
+                      websiteUrl={profile.websiteUrl}
+                      mediaAssets={profile.mediaAssets}
+                      isVerified={profile.verified}
+                    />
+                  ),
+                  development: (
+                    <DevelopmentTabContent
+                      projectId={profile.id}
+                      githubUrl={profile.githubOrgUrl}
+                      analytics={profile.githubAnalytics}
+                      program={programForComponents}
+                      githubIsFork={profile.githubAnalytics?.github_is_fork}
+                    />
+                  ),
+                  community: (
+                    <div className="space-y-6">
+                      {/* Build In Public Editor for Owner */}
+                      <BuildInPublicTab profile={profile} xUserId={user!.id} />
+                      
+                      {/* Also show community links */}
+                      <CommunityTabContent
+                        buildInPublicVideos={profile.buildInPublicVideos}
+                        xUsername={profile.xUsername}
+                        twitterFollowers={profile.twitterMetrics?.followers}
+                        twitterEngagementRate={profile.twitterMetrics?.engagementRate}
+                        twitterRecentTweets={profile.twitterMetrics?.recentTweets}
+                        twitterLastSynced={profile.twitterMetrics?.lastSynced}
+                        discordUrl={profile.socials?.discordUrl}
+                        telegramUrl={profile.socials?.telegramUrl}
+                        githubUrl={profile.githubOrgUrl}
+                        isVerified={profile.verified}
+                      />
+                    </div>
+                  ),
+                  roadmap: (
+                    <RoadmapManagement profile={profile} xUserId={user!.id} />
+                  ),
+                  support: (
+                    <SettingsTab profile={profile} xUserId={user!.id} />
+                  ),
+                }}
+              </ProgramTabs>
             </div>
-
-            {/* Tabbed Content */}
-            <ProfileTabs>
-              {{
-                about: <AboutTab profile={profile} xUserId={user!.id} />,
-                settings: <SettingsTab profile={profile} xUserId={user!.id} />,
-                media: <MediaTab profile={profile} xUserId={user!.id} />,
-                buildInPublic: <BuildInPublicTab profile={profile} xUserId={user!.id} />,
-                development: <DevelopmentTab profile={profile} />,
-              }}
-            </ProfileTabs>
           </div>
         </div>
       </Layout>
     );
   }
 
-  // ========== VISITOR VIEW: Public Profile ==========
-  const categoryLabel = PROJECT_CATEGORIES.find(c => c.value === profile.category)?.label || profile.category;
-
-  const getEmbedUrl = (url: string, type: string) => {
-    if (type === 'youtube') {
-      const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&]+)/);
-      if (match) {
-        return `https://www.youtube.com/embed/${match[1]}`;
-      }
-    }
-    return url;
-  };
-
+  // ========== VISITOR VIEW: Public Profile (same as /program/:id) ==========
   return (
     <Layout>
-      <div className="py-12">
-        <div className="container mx-auto max-w-4xl px-4 lg:px-8">
-          {/* Back Link */}
-          <Button
-            variant="ghost"
-            className="mb-6 font-display text-xs uppercase tracking-wider"
-            onClick={() => navigate(-1)}
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
+      <div className="pb-20 lg:pb-0">
+        <div className="py-6 lg:py-8">
+          <div className="container mx-auto max-w-5xl px-4 lg:px-8">
+            {/* Back Link */}
+            <div className="mb-4">
+              <Button variant="ghost" asChild className="h-8 px-2 text-muted-foreground hover:text-foreground">
+                <Link to="/explorer">
+                  <ArrowLeft className="mr-1.5 h-4 w-4" />
+                  Back to Registry
+                </Link>
+              </Button>
+            </div>
 
-          {/* Just Verified Banner */}
-          {justVerified && (
-            <Card className="mb-6 border-primary bg-primary/10">
-              <CardContent className="py-4">
-                <div className="flex items-center justify-center gap-3">
-                  <CheckCircle className="h-6 w-6 text-primary" />
-                  <span className="font-display text-lg uppercase tracking-tight text-primary">
-                    VERIFIED TITAN
-                  </span>
-                </div>
-                <p className="mt-2 text-center text-sm text-muted-foreground">
-                  Your profile is now verified and visible to the community
-                </p>
-              </CardContent>
-            </Card>
-          )}
+            {/* 1. HERO BANNER */}
+            <div className="mb-6">
+              <HeroBanner
+                program={programForComponents}
+                websiteUrl={profile.websiteUrl}
+                xUsername={profile.xUsername}
+                discordUrl={profile.socials?.discordUrl}
+                telegramUrl={profile.socials?.telegramUrl}
+                githubUrl={profile.githubOrgUrl}
+                isVerified={profile.verified}
+                verifiedAt={profile.verifiedAt}
+                description={profile.description}
+                logoUrl={profile.logoUrl}
+              />
+            </div>
 
-          {/* Header */}
-          <Card className="mb-6 border-border bg-card">
-            <CardContent className="py-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4">
-                  {profile.logoUrl ? (
-                    <img
-                      src={profile.logoUrl}
-                      alt={profile.projectName}
-                      className="h-16 w-16 rounded-sm border border-border object-cover"
-                    />
-                  ) : (
-                    <div className="flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-muted">
-                      <span className="font-display text-2xl text-muted-foreground">
-                        {profile.projectName.charAt(0)}
-                      </span>
+            {/* 2. QUICK STATS BAR */}
+            <div className="mb-6">
+              <QuickStats
+                analytics={profile.githubAnalytics}
+              />
+            </div>
+
+            {/* 3. TABBED CONTENT - Read-only for visitors */}
+            <ProgramTabs>
+              {{
+                about: (
+                  <AboutTabContent
+                    description={profile.description}
+                    category={profile.category}
+                    getCategoryLabel={getCategoryLabel}
+                    websiteUrl={profile.websiteUrl}
+                    mediaAssets={profile.mediaAssets}
+                    isVerified={profile.verified}
+                  />
+                ),
+                development: (
+                  <DevelopmentTabContent
+                    projectId={profile.id}
+                    githubUrl={profile.githubOrgUrl}
+                    analytics={profile.githubAnalytics}
+                    program={programForComponents}
+                    githubIsFork={profile.githubAnalytics?.github_is_fork}
+                  />
+                ),
+                community: (
+                  <CommunityTabContent
+                    buildInPublicVideos={profile.buildInPublicVideos}
+                    xUsername={profile.xUsername}
+                    twitterFollowers={profile.twitterMetrics?.followers}
+                    twitterEngagementRate={profile.twitterMetrics?.engagementRate}
+                    twitterRecentTweets={profile.twitterMetrics?.recentTweets}
+                    twitterLastSynced={profile.twitterMetrics?.lastSynced}
+                    discordUrl={profile.socials?.discordUrl}
+                    telegramUrl={profile.socials?.telegramUrl}
+                    githubUrl={profile.githubOrgUrl}
+                    isVerified={profile.verified}
+                  />
+                ),
+                roadmap: (
+                  <RoadmapTabContent
+                    milestones={profile.milestones}
+                    isVerified={profile.verified}
+                  />
+                ),
+                support: (
+                  <div className="space-y-6">
+                    {/* Public support/staking info would go here */}
+                    <div className="rounded-sm border border-border bg-muted/30 p-6 text-center">
+                      <p className="text-muted-foreground">
+                        Support options coming soon.
+                      </p>
                     </div>
-                  )}
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h1 className="font-display text-2xl font-bold uppercase tracking-tight">
-                        {profile.projectName}
-                      </h1>
-                      {profile.verified && (
-                        <Badge className="bg-primary/20 text-primary">
-                          <CheckCircle className="mr-1 h-3 w-3" />
-                          VERIFIED
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
-                      <Badge variant="outline">{categoryLabel}</Badge>
-                      <span>•</span>
-                      <span>@{profile.xUsername}</span>
-                    </div>
                   </div>
-                </div>
-
-                {/* Score */}
-                <div className="text-center sm:text-right">
-                  <div className="font-mono text-4xl font-bold text-primary">
-                    {profile.score}/100
-                  </div>
-                  <div className="text-xs text-muted-foreground">Resilience Score</div>
-                  <Badge
-                    className={`mt-1 ${
-                      profile.livenessStatus === 'active'
-                        ? 'bg-primary/20 text-primary'
-                        : profile.livenessStatus === 'degraded'
-                        ? 'bg-yellow-500/20 text-yellow-500'
-                        : 'bg-destructive/20 text-destructive'
-                    }`}
-                  >
-                    {profile.livenessStatus.toUpperCase()}
-                  </Badge>
-                </div>
-              </div>
-
-              {profile.description && (
-                <div 
-                  className="mt-4 prose prose-sm prose-invert max-w-none text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: profile.description }}
-                />
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Media Gallery */}
-          {profile.mediaAssets.length > 0 && (
-            <Card className="mb-6 border-border bg-card">
-              <CardHeader>
-                <CardTitle className="font-display text-lg uppercase tracking-tight">
-                  Media Gallery
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Carousel className="mx-auto max-w-2xl">
-                  <CarouselContent>
-                    {profile.mediaAssets.map((asset) => (
-                      <CarouselItem key={asset.id}>
-                        <div className="aspect-video overflow-hidden rounded-sm bg-muted">
-                          {asset.type === 'youtube' ? (
-                            <iframe
-                              src={getEmbedUrl(asset.url, asset.type)}
-                              className="h-full w-full"
-                              allowFullScreen
-                              title={asset.title || 'Video'}
-                            />
-                          ) : asset.type === 'video' ? (
-                            <video
-                              src={asset.url}
-                              controls
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <img
-                              src={asset.url}
-                              alt={asset.title || 'Media'}
-                              className="h-full w-full object-cover"
-                            />
-                          )}
-                        </div>
-                        {asset.title && (
-                          <p className="mt-2 text-center text-sm text-muted-foreground">
-                            {asset.title}
-                          </p>
-                        )}
-                      </CarouselItem>
-                    ))}
-                  </CarouselContent>
-                  <CarouselPrevious />
-                  <CarouselNext />
-                </Carousel>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="grid gap-6 md:grid-cols-2">
-            {/* Website Snippet */}
-            {profile.websiteUrl && (
-              <Card className="border-border bg-card">
-                <CardHeader>
-                  <CardTitle className="font-display text-lg uppercase tracking-tight">
-                    Website
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="relative h-48 overflow-hidden rounded-sm border border-border bg-muted">
-                    <iframe
-                      src={profile.websiteUrl}
-                      className="h-full w-full scale-50 origin-top-left"
-                      style={{ width: '200%', height: '200%' }}
-                      sandbox="allow-scripts allow-same-origin"
-                      title="Website Preview"
-                    />
-                  </div>
-                  <Button
-                    variant="outline"
-                    className="mt-3 w-full font-display text-xs uppercase tracking-wider"
-                    onClick={() => window.open(profile.websiteUrl, '_blank')}
-                  >
-                    <ExternalLink className="mr-2 h-4 w-4" />
-                    View Site
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Social Pulse */}
-            <Card className="border-border bg-card">
-              <CardHeader>
-                <CardTitle className="font-display text-lg uppercase tracking-tight">
-                  Social Pulse
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => window.open(`https://twitter.com/${profile.socials.xHandle}`, '_blank')}
-                    className="font-mono text-xs"
-                  >
-                    <span className="mr-2">𝕏</span>
-                    @{profile.socials.xHandle}
-                  </Button>
-
-                  {profile.githubOrgUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(profile.githubOrgUrl, '_blank')}
-                      className="font-mono text-xs"
-                    >
-                      <Github className="mr-2 h-4 w-4" />
-                      GitHub
-                    </Button>
-                  )}
-
-                  {profile.socials.discordUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(profile.socials.discordUrl, '_blank')}
-                      className="font-mono text-xs"
-                    >
-                      <MessageCircle className="mr-2 h-4 w-4" />
-                      Discord
-                    </Button>
-                  )}
-
-                  {profile.socials.telegramUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => window.open(profile.socials.telegramUrl, '_blank')}
-                      className="font-mono text-xs"
-                    >
-                      <Send className="mr-2 h-4 w-4" />
-                      Telegram
-                    </Button>
-                  )}
-                </div>
-
-                {profile.programId && (
-                  <div className="rounded-sm border border-border bg-muted/30 p-3">
-                    <p className="text-[10px] uppercase text-muted-foreground">Program ID</p>
-                    <p className="mt-1 font-mono text-xs">{profile.programId}</p>
-                  </div>
-                )}
-
-                {profile.walletAddress && (
-                  <div className="rounded-sm border border-border bg-muted/30 p-3">
-                    <p className="text-[10px] uppercase text-muted-foreground">Wallet</p>
-                    <p className="mt-1 font-mono text-xs">{profile.walletAddress}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                ),
+              }}
+            </ProgramTabs>
           </div>
-
-          {/* Verified Timeline */}
-          {profile.milestones.length > 0 && (
-            <Card className="mt-6 border-border bg-card">
-              <CardHeader>
-                <CardTitle className="font-display text-lg uppercase tracking-tight">
-                  Verified Timeline
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {profile.milestones.map((milestone) => {
-                    const targetDate = new Date(milestone.targetDate);
-                    const isOverdue = targetDate < new Date() && milestone.status !== 'completed';
-
-                    return (
-                      <div
-                        key={milestone.id}
-                        className={`flex items-center justify-between rounded-sm border p-3 ${
-                          milestone.status === 'completed'
-                            ? 'border-primary/30 bg-primary/5'
-                            : isOverdue
-                            ? 'border-destructive/30 bg-destructive/5'
-                            : milestone.varianceRequested
-                            ? 'border-yellow-500/30 bg-yellow-500/5'
-                            : 'border-border bg-muted/30'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          {milestone.status === 'completed' ? (
-                            <CheckCircle className="h-5 w-5 text-primary" />
-                          ) : isOverdue ? (
-                            <AlertTriangle className="h-5 w-5 text-destructive" />
-                          ) : milestone.isLocked ? (
-                            <Lock className="h-5 w-5 text-muted-foreground" />
-                          ) : (
-                            <Calendar className="h-5 w-5 text-muted-foreground" />
-                          )}
-                          <span className="font-mono text-sm">{milestone.title}</span>
-                          {milestone.varianceRequested && (
-                            <Badge className="bg-yellow-500/20 text-yellow-500">
-                              TIMELINE VARIANCE
-                            </Badge>
-                          )}
-                          {isOverdue && (
-                            <Badge className="bg-destructive/20 text-destructive">
-                              OVERDUE
-                            </Badge>
-                          )}
-                        </div>
-                        <span className="font-mono text-xs text-muted-foreground">
-                          {targetDate.toLocaleDateString('en-US', {
-                            month: 'short',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Development Stats */}
-          <Card className="mt-6 border-border bg-card">
-            <CardHeader>
-              <CardTitle className="font-display text-lg uppercase tracking-tight">
-                Development Stats
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-3">
-                <div className="rounded-sm border border-border bg-muted/30 p-4 text-center">
-                  <div className="font-mono text-3xl font-bold text-primary">{profile.score}</div>
-                  <div className="mt-1 text-xs text-muted-foreground">Resilience Score</div>
-                </div>
-                <div className="rounded-sm border border-border bg-muted/30 p-4 text-center">
-                  <div className="font-mono text-3xl font-bold text-foreground">
-                    {profile.verifiedAt
-                      ? new Date(profile.verifiedAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                      : 'N/A'}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">Verified Since</div>
-                </div>
-                <div className="rounded-sm border border-border bg-muted/30 p-4 text-center">
-                  <div className="font-mono text-3xl font-bold text-foreground">
-                    {profile.milestones.filter((m) => m.status === 'completed').length}/
-                    {profile.milestones.length}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">Milestones Complete</div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </div>
     </Layout>

@@ -1,4 +1,5 @@
-import { CheckCircle, ExternalLink, Globe, Github, MessageCircle, Send, Shield } from 'lucide-react';
+import { CheckCircle, ExternalLink, Globe, Github, MessageCircle, Send, Shield, RefreshCw, Eye, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -16,6 +17,10 @@ interface HeroBannerProps {
   verifiedAt?: string;
   description?: string;
   logoUrl?: string;
+  // Owner mode props
+  isOwner?: boolean;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export function HeroBanner({
@@ -29,6 +34,9 @@ export function HeroBanner({
   verifiedAt,
   description,
   logoUrl,
+  isOwner,
+  onRefresh,
+  isRefreshing,
 }: HeroBannerProps) {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -69,15 +77,20 @@ export function HeroBanner({
       }} />
 
       <div className="relative z-10 p-6 sm:p-8 lg:p-10">
-        {/* Verification Badge - Top Right */}
-        {isVerified && (
-          <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
+        {/* Badge - Top Right: Owner or Verified */}
+        <div className="absolute right-4 top-4 sm:right-6 sm:top-6">
+          {isOwner ? (
+            <Badge className="bg-chart-5/20 text-chart-5 border-chart-5/40 font-display font-bold uppercase tracking-wider gap-1.5 px-3 py-1.5">
+              <Shield className="h-3.5 w-3.5" />
+              YOUR PROTOCOL
+            </Badge>
+          ) : isVerified ? (
             <Badge className="bg-primary/20 text-primary border-primary/40 font-display font-bold uppercase tracking-wider gap-1.5 px-3 py-1.5 glow-signal">
               <Shield className="h-3.5 w-3.5" />
               VERIFIED TITAN
             </Badge>
-          </div>
-        )}
+          ) : null}
+        </div>
 
         {/* Main Content Grid */}
         <div className="flex flex-col items-center gap-8 lg:flex-row lg:items-start lg:gap-12">
@@ -179,6 +192,52 @@ export function HeroBanner({
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </Button>
+              </div>
+            )}
+
+            {/* Owner Actions Row */}
+            {isOwner && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="font-display text-xs uppercase tracking-wider"
+                        asChild
+                      >
+                        <Link to={`/program/${program.id}`}>
+                          <Eye className="mr-2 h-4 w-4" />
+                          View Public Page
+                        </Link>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>See how others view your profile</p>
+                    </TooltipContent>
+                  </Tooltip>
+
+                  {onRefresh && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="font-display text-xs uppercase tracking-wider"
+                          onClick={onRefresh}
+                          disabled={isRefreshing}
+                        >
+                          <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
+                          Refresh Metrics
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Re-sync GitHub data and recalculate score</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                </TooltipProvider>
               </div>
             )}
 
