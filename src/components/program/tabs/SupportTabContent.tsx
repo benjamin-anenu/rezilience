@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { Shield, Lock, Zap, HelpCircle, ChevronRight, TrendingUp, Clock, Coins } from 'lucide-react';
+import { Shield, Lock, Heart, HelpCircle, ChevronRight, TrendingUp, Clock, Coins } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -80,18 +80,18 @@ export function SupportTabContent({ program, isVerified }: SupportTabContentProp
   return (
     <div className="space-y-6">
       {/* Hero Stake CTA Card */}
-      <Card className="relative overflow-hidden border-primary/30 bg-gradient-to-br from-primary/10 via-card to-card">
-        {/* Animated gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5 opacity-50" />
+      <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
+        {/* Subtle gradient overlay */}
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/3 via-transparent to-primary/3 opacity-50" />
         
-        {/* Glow effect */}
-        <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-primary/20 blur-3xl" />
-        <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+        {/* Refined glow effect */}
+        <div className="absolute -right-20 -top-20 h-40 w-40 rounded-full bg-primary/10 blur-3xl" />
+        <div className="absolute -bottom-20 -left-20 h-40 w-40 rounded-full bg-primary/5 blur-3xl" />
 
         <CardContent className="relative py-8">
           <div className="flex flex-col items-center text-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/20 ring-2 ring-primary/30">
-              <Zap className="h-8 w-8 text-primary" />
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 ring-1 ring-primary/20">
+              <Heart className="h-8 w-8 text-primary" />
             </div>
             <h2 className="font-display text-2xl font-bold uppercase tracking-tight text-foreground">
               Support This Project
@@ -127,10 +127,10 @@ export function SupportTabContent({ program, isVerified }: SupportTabContentProp
             <Button
               asChild
               size="lg"
-              className="mt-6 gap-2 font-display text-lg uppercase tracking-wider glow-signal"
+              className="mt-6 gap-2 font-display text-lg uppercase tracking-wider"
             >
               <Link to={`/staking?program=${program.programId}`}>
-                <Zap className="h-5 w-5" />
+                <Heart className="h-5 w-5" />
                 Stake Now
                 <ChevronRight className="h-5 w-5" />
               </Link>
@@ -141,8 +141,12 @@ export function SupportTabContent({ program, isVerified }: SupportTabContentProp
 
       {/* Trust Metrics */}
       <div className="grid gap-4 md:grid-cols-2">
-        {trustMetrics.map((metric) => (
-          <Card key={metric.title} className="card-premium border-border bg-card">
+        {trustMetrics.map((metric, index) => (
+          <Card 
+            key={metric.title} 
+            className="card-premium card-lift border-border bg-card animate-card-enter"
+            style={{ animationDelay: `${index * 100}ms` }}
+          >
             <CardHeader className="pb-2">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10">
@@ -171,7 +175,7 @@ export function SupportTabContent({ program, isVerified }: SupportTabContentProp
       </div>
 
       {/* Staking Benefits */}
-      <Card className="card-premium border-border bg-card">
+      <Card className="card-premium card-lift border-border bg-card">
         <CardHeader className="pb-3">
           <CardTitle className="font-display text-sm uppercase tracking-wider text-muted-foreground">
             Why Stake?
@@ -179,10 +183,10 @@ export function SupportTabContent({ program, isVerified }: SupportTabContentProp
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2">
-            {stakingBenefits.map((benefit) => (
+            {stakingBenefits.map((benefit, index) => (
               <div
                 key={benefit.title}
-                className="flex items-start gap-3 rounded-sm border border-border bg-muted/30 p-4"
+                className="flex items-start gap-3 rounded-sm border border-border bg-muted/30 p-4 transition-all hover:border-primary/20 hover:bg-muted/50"
               >
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary/10">
                   <benefit.icon className="h-5 w-5 text-primary" />

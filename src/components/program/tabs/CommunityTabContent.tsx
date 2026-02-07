@@ -46,7 +46,7 @@ function SocialLinkCard({ icon, name, description, url, brandColor }: SocialLink
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center gap-4 rounded-sm border border-border bg-muted/30 p-4 transition-all hover:border-primary/30 hover:bg-muted/50"
+      className="group flex items-center gap-4 rounded-sm border border-border bg-muted/30 p-4 card-lift transition-all hover:border-primary/20 hover:bg-muted/50"
     >
       <div
         className={cn(
@@ -57,12 +57,12 @@ function SocialLinkCard({ icon, name, description, url, brandColor }: SocialLink
         {icon}
       </div>
       <div className="flex-1">
-        <h4 className="font-display text-sm font-medium text-foreground group-hover:text-primary">
+        <h4 className="font-display text-sm font-medium text-foreground group-hover:text-primary transition-colors">
           {name}
         </h4>
         <p className="text-xs text-muted-foreground">{description}</p>
       </div>
-      <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
+      <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
     </a>
   );
 }

@@ -1,5 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
-import { BookOpen, Code, Users, Map, Zap } from 'lucide-react';
+import { BookOpen, Code, Users, Map, Heart } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +18,7 @@ const tabConfig = [
   { value: 'development', label: 'Development', icon: Code },
   { value: 'community', label: 'Community', icon: Users },
   { value: 'roadmap', label: 'Roadmap', icon: Map },
-  { value: 'support', label: 'Support', icon: Zap },
+  { value: 'support', label: 'Support', icon: Heart },
 ] as const;
 
 export function ProgramTabs({ children }: ProgramTabsProps) {

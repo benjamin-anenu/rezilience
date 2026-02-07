@@ -84,32 +84,32 @@ export function AboutTabContent({
             </div>
           </CardHeader>
           <CardContent className="pb-0">
-            {/* Browser Chrome Frame */}
+            {/* Browser Chrome Frame - Compact */}
             <div className="overflow-hidden rounded-sm border border-border">
-              {/* Browser Header */}
-              <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-3 py-2">
-                {/* Traffic lights */}
-                <div className="flex items-center gap-1.5">
-                  <div className="h-3 w-3 rounded-full bg-destructive/60" />
-                  <div className="h-3 w-3 rounded-full bg-amber-500/60" />
-                  <div className="h-3 w-3 rounded-full bg-green-500/60" />
+              {/* Browser Header - Slim */}
+              <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-2.5 py-1.5">
+                {/* Traffic lights - Smaller */}
+                <div className="flex items-center gap-1">
+                  <div className="h-2.5 w-2.5 rounded-full bg-destructive/50" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-amber-500/50" />
+                  <div className="h-2.5 w-2.5 rounded-full bg-green-500/50" />
                 </div>
-                {/* URL Bar */}
-                <div className="flex-1 mx-2">
-                  <div className="flex items-center gap-2 rounded-sm bg-background px-3 py-1.5 text-xs text-muted-foreground">
-                    <Globe className="h-3 w-3" />
+                {/* URL Bar - Compact */}
+                <div className="flex-1 mx-1.5">
+                  <div className="flex items-center gap-1.5 rounded-sm bg-background px-2 py-1 text-[11px] text-muted-foreground">
+                    <Globe className="h-2.5 w-2.5" />
                     <span className="truncate">{websiteUrl}</span>
                   </div>
                 </div>
                 {/* Actions */}
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" asChild>
+                <Button variant="ghost" size="sm" className="h-5 w-5 p-0" asChild>
                   <a href={websiteUrl} target="_blank" rel="noopener noreferrer">
-                    <Maximize2 className="h-3 w-3" />
+                    <Maximize2 className="h-2.5 w-2.5" />
                   </a>
                 </Button>
               </div>
-              {/* Iframe */}
-              <div className="aspect-[16/10]">
+              {/* Iframe - 16:9 aspect ratio */}
+              <div className="aspect-video">
                 <iframe
                   src={websiteUrl}
                   className="h-full w-full bg-background"
@@ -133,16 +133,17 @@ export function AboutTabContent({
           <CardContent>
             {/* Grid on desktop, Carousel on mobile */}
             <div className="hidden md:grid md:grid-cols-3 gap-4">
-              {mediaAssets.sort((a, b) => a.order - b.order).map((asset) => (
+              {mediaAssets.sort((a, b) => a.order - b.order).map((asset, index) => (
                 <div
                   key={asset.id}
-                  className="group relative aspect-video overflow-hidden rounded-sm border border-border bg-muted transition-all hover:border-primary/50"
+                  className="group relative aspect-video overflow-hidden rounded-sm border border-border bg-muted card-lift transition-all hover:border-primary/30"
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
                   {asset.type === 'image' ? (
                     <img
                       src={asset.url}
                       alt="Project media"
-                      className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                      className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                     />
                   ) : asset.type === 'youtube' ? (
                     <iframe
