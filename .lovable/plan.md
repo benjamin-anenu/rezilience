@@ -1,44 +1,19 @@
 
 
-# Redesign Team Tab Layout
+# Optimize Team Member Card Size
 
-## Overview
+## Current Issue
 
-Restructure the Team tab to display a **two-column layout** with the "Why Stake" section on the left and the "Meet The Team" grid on the right. Also add the label "I am best fit for this project" before each team member's quote.
+The team member cards use `aspect-square` (1:1 ratio) for the profile image container, making each card very tall. When there are multiple team members, this causes the page to feel crowded and requires excessive scrolling, especially on mobile.
 
----
+## Solution
 
-## Layout Change
+Reduce the card size by approximately half while keeping faces clearly visible:
 
-**Current Layout (Vertical Stack):**
-```
-┌─────────────────────────────────────────┐
-│           MEET THE TEAM                 │
-│  ┌─────┐  ┌─────┐  ┌─────┐             │
-│  │Card │  │Card │  │Card │              │
-│  └─────┘  └─────┘  └─────┘             │
-└─────────────────────────────────────────┘
-┌─────────────────────────────────────────┐
-│       WHY STAKE ON THIS PROJECT?        │
-│       "Staking pitch text..."           │
-└─────────────────────────────────────────┘
-```
-
-**New Layout (Side-by-Side):**
-```
-┌──────────────────┬──────────────────────┐
-│  WHY STAKE ON    │    MEET THE TEAM     │
-│  THIS PROJECT?   │  ┌─────┐  ┌─────┐    │
-│                  │  │Card │  │Card │    │
-│  "Staking pitch  │  └─────┘  └─────┘    │
-│   text..."       │  ┌─────┐  ┌─────┐    │
-│                  │  │Card │  │Card │    │
-│                  │  └─────┘  └─────┘    │
-└──────────────────┴──────────────────────┘
-```
-
-- On desktop: 1/3 width for "Why Stake" (left), 2/3 width for "Meet The Team" (right)
-- On mobile: Stack vertically with "Why Stake" first, then team grid below
+1. **Change image aspect ratio** from `aspect-square` (1:1) to `aspect-[4/3]` (shorter height)
+2. **Reduce image container size** for a more compact layout
+3. **Adjust typography and spacing** to match the smaller card footprint
+4. **Optimize mobile grid** to show more cards on screen
 
 ---
 
@@ -46,32 +21,60 @@ Restructure the Team tab to display a **two-column layout** with the "Why Stake"
 
 ### File: `src/components/program/tabs/TeamTabContent.tsx`
 
-| Change | Description |
-|--------|-------------|
-| Restructure main container | Use CSS Grid with `lg:grid-cols-3` for side-by-side layout |
-| Move "Why Stake" section | Position it first (left column, spans 1 column) |
-| Move "Meet The Team" section | Position it second (right column, spans 2 columns) |
-| Add "I am best fit" label | Insert text above the quote in each team member card |
-| Make "Why Stake" sticky | Add `lg:sticky lg:top-6` so it stays visible while scrolling team members |
+| Line | Current | New |
+|------|---------|-----|
+| 109 | `aspect-square` | `aspect-[4/3]` - Shorter image container |
+| 118 | `text-5xl` for initials | `text-3xl` - Smaller fallback initials |
+| 125-132 | Badge at `bottom-3 left-3` | `bottom-2 left-2` - Tighter positioning |
+| 136 | `p-4 space-y-3` | `p-3 space-y-2` - Reduced padding |
+| 139 | `text-lg` name | `text-base` - Slightly smaller name |
+| 157-165 | Quote section spacing | Tighter spacing for compact cards |
 
-### Quote Section Enhancement
+### Grid Optimization
 
-**Current:**
-```
-┌────────────────────┐
-│ " Member's quote   │
-│   text here...     │
-└────────────────────┘
+Change the grid to fit more cards:
+
+```tsx
+// Current (line 100)
+<div className="grid gap-6 sm:grid-cols-2">
+
+// New - 3 columns on desktop, tighter gap
+<div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
 ```
 
-**New:**
+This ensures:
+- **Mobile**: 2 cards per row (compact but readable)
+- **Desktop with staking pitch**: 3 cards in the 2/3 width area
+- **Desktop without staking pitch**: 3 cards across full width
+
+---
+
+## Visual Comparison
+
+**Before (aspect-square):**
 ```
-┌────────────────────┐
-│ I am best fit for  │
-│ this project       │
-│ " Member's quote   │
-│   text here...     │
-└────────────────────┘
+┌─────────────────┐
+│                 │
+│   [  Image  ]   │  <- Square, very tall
+│                 │
+├─────────────────┤
+│ Name            │
+│ @nickname       │
+│ Job Title       │
+│ Why Fit quote...│
+└─────────────────┘
+```
+
+**After (aspect-[4/3]):**
+```
+┌─────────────────┐
+│   [  Image  ]   │  <- 4:3 ratio, ~25% shorter
+├─────────────────┤
+│ Name            │
+│ @nickname       │
+│ Job Title       │
+│ Why Fit...      │
+└─────────────────┘
 ```
 
 ---
@@ -79,62 +82,76 @@ Restructure the Team tab to display a **two-column layout** with the "Why Stake"
 ## Technical Implementation
 
 ```tsx
-// New layout structure
-<div className="grid gap-8 lg:grid-cols-3">
-  {/* Left Column - Why Stake (1/3 width) */}
-  {hasStakingPitch && (
-    <div className="lg:col-span-1">
-      <Card className="lg:sticky lg:top-6 ...">
-        {/* Why Stake content */}
-      </Card>
-    </div>
-  )}
-  
-  {/* Right Column - Meet The Team (2/3 width) */}
-  {hasTeamMembers && (
-    <div className={hasStakingPitch ? "lg:col-span-2" : "lg:col-span-3"}>
-      {/* Team header and grid */}
-      <div className="grid gap-6 sm:grid-cols-2">
-        {/* Team cards - reduced from 3 cols to 2 since container is smaller */}
+// Optimized card structure
+<Card className="group overflow-hidden border-border bg-card transition-all hover:border-primary/30 hover:shadow-md">
+  {/* Shorter aspect ratio image */}
+  <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+    {member.imageUrl ? (
+      <img
+        src={member.imageUrl}
+        alt={member.name}
+        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+      />
+    ) : (
+      <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+        <span className="font-display text-3xl font-bold text-primary/60">
+          {getInitials(member.name)}
+        </span>
       </div>
-    </div>
-  )}
-</div>
-```
-
-```tsx
-// Quote section with label
-{member.whyFit && (
-  <div className="relative pt-2 border-t border-border/50">
-    <p className="text-xs font-medium text-primary/70 uppercase tracking-wider mb-1">
-      I am best fit for this project
-    </p>
-    <div className="flex items-start gap-1">
-      <Quote className="h-4 w-4 text-primary/40 flex-shrink-0 mt-0.5" />
-      <p className="text-sm italic text-muted-foreground leading-relaxed">
-        {member.whyFit}
-      </p>
+    )}
+    
+    {/* Role Badge - tighter positioning */}
+    <div className="absolute bottom-2 left-2">
+      <Badge 
+        variant={getRoleBadgeVariant(member.role)}
+        className="font-display text-xs uppercase tracking-wider shadow-md"
+      >
+        {getRoleLabel(member)}
+      </Badge>
     </div>
   </div>
-)}
+  
+  {/* Member Info - reduced padding */}
+  <CardContent className="p-3 space-y-2">
+    <div>
+      <h3 className="font-display text-base font-semibold text-foreground">
+        {member.name}
+      </h3>
+      {member.nickname && (
+        <p className="text-xs text-muted-foreground">@{member.nickname}</p>
+      )}
+    </div>
+    
+    <p className="text-sm text-foreground/90 font-medium">
+      {member.jobTitle}
+    </p>
+    
+    {member.whyFit && (
+      <div className="relative pt-2 border-t border-border/50">
+        <p className="text-xs font-medium text-primary/70 uppercase tracking-wider mb-0.5">
+          I am best fit for this project
+        </p>
+        <div className="flex items-start gap-1">
+          <Quote className="h-3 w-3 text-primary/40 flex-shrink-0 mt-0.5" />
+          <p className="text-xs italic text-muted-foreground leading-relaxed line-clamp-2">
+            {member.whyFit}
+          </p>
+        </div>
+      </div>
+    )}
+  </CardContent>
+</Card>
 ```
 
 ---
 
-## Responsive Behavior
+## Summary
 
-| Breakpoint | Layout |
-|------------|--------|
-| Mobile (< 1024px) | Single column: "Why Stake" stacked above team grid |
-| Desktop (≥ 1024px) | Two columns: "Why Stake" (left, sticky), Team grid (right) |
-
----
-
-## Edge Cases
-
-| Scenario | Behavior |
-|----------|----------|
-| Only team members (no staking pitch) | Team grid takes full width (3 columns) |
-| Only staking pitch (no team members) | Staking pitch card displayed alone, centered |
-| Both present | Side-by-side layout as described |
+| Change | Impact |
+|--------|--------|
+| `aspect-[4/3]` instead of `aspect-square` | ~25% shorter image area |
+| Smaller typography (`text-base`, `text-xs`) | More compact text |
+| Reduced padding (`p-3`, `gap-4`) | Tighter overall spacing |
+| 3-column grid on desktop | More cards visible at once |
+| `line-clamp-2` on "Why Fit" quote | Prevents overly long quotes |
 
