@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Plus, Trash2, GripVertical, Users2, Target, Save } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Plus, Trash2, GripVertical, Users2, Target, Save, Upload, Link } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 import { useUpdateProfile } from '@/hooks/useUpdateProfile';
 import type { ClaimedProfile, TeamMember, TeamMemberRole } from '@/types';
 
@@ -16,6 +17,8 @@ interface TeamManagementProps {
   profile: ClaimedProfile;
   xUserId: string;
 }
+
+type ImageInputMode = 'url' | 'upload';
 
 interface TeamMemberFormData {
   imageUrl: string;
@@ -52,8 +55,47 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
   const [formData, setFormData] = useState<TeamMemberFormData>(emptyFormData);
   const [isAddingMember, setIsAddingMember] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [imageInputMode, setImageInputMode] = useState<ImageInputMode>('upload');
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const updateProfile = useUpdateProfile();
+
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error('Image must be less than 2MB');
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${profile.id}/${crypto.randomUUID()}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('team-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('team-images')
+        .getPublicUrl(fileName);
+
+      setFormData(prev => ({ ...prev, imageUrl: publicUrl }));
+      toast.success('Image uploaded successfully');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image');
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   const handleAddMember = () => {
     if (!formData.name.trim() || !formData.jobTitle.trim()) {
@@ -147,14 +189,70 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
               </h4>
               
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="imageUrl">Profile Image URL</Label>
-                  <Input
-                    id="imageUrl"
-                    placeholder="https://..."
-                    value={formData.imageUrl}
-                    onChange={e => setFormData({ ...formData, imageUrl: e.target.value })}
-                  />
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Profile Image</Label>
+                  <div className="flex gap-2 mb-2">
+                    <Button
+                      type="button"
+                      variant={imageInputMode === 'upload' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setImageInputMode('upload')}
+                      className="gap-1.5"
+                    >
+                      <Upload className="h-3.5 w-3.5" />
+                      Upload
+                    </Button>
+                    <Button
+                      type="button"
+                      variant={imageInputMode === 'url' ? 'default' : 'outline'}
+                      size="sm"
+                      onClick={() => setImageInputMode('url')}
+                      className="gap-1.5"
+                    >
+                      <Link className="h-3.5 w-3.5" />
+                      URL
+                    </Button>
+                  </div>
+                  
+                  {imageInputMode === 'upload' ? (
+                    <div className="flex items-center gap-3">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file);
+                        }}
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="gap-1.5"
+                      >
+                        <Upload className="h-4 w-4" />
+                        {isUploading ? 'Uploading...' : 'Choose Image'}
+                      </Button>
+                      {formData.imageUrl && (
+                        <Avatar className="h-10 w-10 border border-border">
+                          <AvatarImage src={formData.imageUrl} alt="Preview" />
+                          <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                            IMG
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
+                    </div>
+                  ) : (
+                    <Input
+                      id="imageUrl"
+                      placeholder="https://..."
+                      value={formData.imageUrl}
+                      onChange={e => setFormData({ ...formData, imageUrl: e.target.value })}
+                    />
+                  )}
                 </div>
                 
                 <div className="space-y-2">
