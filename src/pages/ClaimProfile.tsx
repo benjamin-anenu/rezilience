@@ -338,6 +338,7 @@ const ClaimProfile = () => {
       if (error) throw error;
       
       localStorage.removeItem('claimFormProgress');
+      localStorage.removeItem('claimingProfile');
       localStorage.setItem('verifiedProfileId', profileId);
       
       toast({ 
@@ -746,8 +747,8 @@ const ClaimProfile = () => {
                 </CardContent>
               </Card>
 
-              {/* Navigation - hide back button after verification, show Explorer link instead */}
-              {!githubVerified && (
+              {/* Navigation - hide back button after verification OR public repo analysis */}
+              {!githubVerified && !githubAnalysisResult && (
                 <div className="mt-8 flex justify-start">
                   <Button
                     variant="outline"
