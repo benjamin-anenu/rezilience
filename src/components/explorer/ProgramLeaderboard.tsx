@@ -159,7 +159,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
         <TableHeader>
           <TableRow className="border-border hover:bg-transparent">
             <TableHead className="w-16">RANK</TableHead>
-            <TableHead>PROTOCOL</TableHead>
+            <TableHead className="max-w-[140px]">PROJECT</TableHead>
             <TableHead className="hidden lg:table-cell">TYPE</TableHead>
             <TableHead className="hidden lg:table-cell">PROGRAM ID</TableHead>
             <TableHead className="text-right">SCORE</TableHead>
@@ -188,21 +188,30 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
                     {getMovementIndicator(movement)}
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="max-w-[140px]">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary/10">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-primary/10">
                       <span className="font-display text-xs font-bold text-primary">
                         {project.program_name.charAt(0)}
                       </span>
                     </div>
-                    <span className="font-medium text-foreground">{project.program_name}</span>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="truncate font-medium text-foreground cursor-default">
+                          {project.program_name}
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>{project.program_name}</p>
+                      </TooltipContent>
+                    </Tooltip>
                     {project.verified && (
                       <Tooltip>
                         <TooltipTrigger>
-                          <ShieldCheck className="h-4 w-4 text-primary" />
+                          <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Verified Protocol</p>
+                          <p>Verified Project</p>
                         </TooltipContent>
                       </Tooltip>
                     )}
