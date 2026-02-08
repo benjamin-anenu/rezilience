@@ -203,6 +203,10 @@ const ProgramDetail = () => {
                     analytics={claimedProfile?.githubAnalytics}
                     program={programForComponents}
                     githubIsFork={claimedProfile?.githubAnalytics?.github_is_fork}
+                    bytecodeMatchStatus={claimedProfile?.bytecodeMatchStatus}
+                    bytecodeVerifiedAt={claimedProfile?.bytecodeVerifiedAt}
+                    programId={displayProgramId}
+                    profileId={claimedProfile?.id}
                   />
                 ),
                 team: (

@@ -55,6 +55,9 @@ export type Database = {
       claimed_profiles: {
         Row: {
           build_in_public_videos: Json | null
+          bytecode_hash: string | null
+          bytecode_match_status: string | null
+          bytecode_verified_at: string | null
           category: string | null
           claim_status: string | null
           claimer_wallet: string | null
@@ -112,6 +115,9 @@ export type Database = {
         }
         Insert: {
           build_in_public_videos?: Json | null
+          bytecode_hash?: string | null
+          bytecode_match_status?: string | null
+          bytecode_verified_at?: string | null
           category?: string | null
           claim_status?: string | null
           claimer_wallet?: string | null
@@ -169,6 +175,9 @@ export type Database = {
         }
         Update: {
           build_in_public_videos?: Json | null
+          bytecode_hash?: string | null
+          bytecode_match_status?: string | null
+          bytecode_verified_at?: string | null
           category?: string | null
           claim_status?: string | null
           claimer_wallet?: string | null

@@ -49,6 +49,10 @@ interface DBClaimedProfile {
   github_pr_events_30d: number | null;
   github_issue_events_30d: number | null;
   github_last_activity: string | null;
+  // Bytecode verification
+  bytecode_hash: string | null;
+  bytecode_verified_at: string | null;
+  bytecode_match_status: string | null;
   // Twitter integration (Phase 2)
   build_in_public_videos: Json | null;
   twitter_followers: number | null;
@@ -109,6 +113,10 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
       github_issue_events_30d: db.github_issue_events_30d ?? undefined,
       github_last_activity: db.github_last_activity || undefined,
     },
+    // Bytecode verification
+    bytecodeHash: db.bytecode_hash || undefined,
+    bytecodeVerifiedAt: db.bytecode_verified_at || undefined,
+    bytecodeMatchStatus: (db.bytecode_match_status as ClaimedProfile['bytecodeMatchStatus']) || undefined,
     // Build In Public & Twitter Integration
     buildInPublicVideos: (Array.isArray(db.build_in_public_videos) ? db.build_in_public_videos : []) as unknown as BuildInPublicVideo[],
     twitterMetrics: {

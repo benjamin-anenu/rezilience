@@ -1,9 +1,13 @@
-import { Fingerprint, GitBranch } from 'lucide-react';
+import { Fingerprint, GitBranch, RefreshCw, CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PublicGitHubMetrics } from '../PublicGitHubMetrics';
 import { AnalyticsCharts } from '../AnalyticsCharts';
 import { RecentEvents } from '../RecentEvents';
+import { useBytecodeVerification, getBytecodeStatusInfo } from '@/hooks/useBytecodeVerification';
+import { formatDistanceToNow } from 'date-fns';
 import type { GitHubAnalytics, Program } from '@/types';
 
 interface DevelopmentTabContentProps {
@@ -12,6 +16,10 @@ interface DevelopmentTabContentProps {
   analytics?: GitHubAnalytics;
   program: Program;
   githubIsFork?: boolean;
+  bytecodeMatchStatus?: string | null;
+  bytecodeVerifiedAt?: string | null;
+  programId?: string | null;
+  profileId?: string;
 }
 
 export function DevelopmentTabContent({
@@ -20,7 +28,13 @@ export function DevelopmentTabContent({
   analytics,
   program,
   githubIsFork,
+  bytecodeMatchStatus,
+  bytecodeVerifiedAt,
+  programId,
+  profileId,
 }: DevelopmentTabContentProps) {
+  const { verifyBytecode, isVerifying } = useBytecodeVerification();
+
   // Get GitHub originality status
   const getGithubOriginalityInfo = () => {
     if (githubIsFork === undefined) {
@@ -32,33 +46,54 @@ export function DevelopmentTabContent({
     return { subtitle: 'Original Repository', value: 100, isPositive: true, isWarning: false };
   };
 
-  // Get bytecode originality status
+  // Get bytecode originality from database or fallback to program status
   const getBytecodeOriginalityInfo = () => {
+    // If we have bytecode verification data from the database, use it
+    if (bytecodeMatchStatus) {
+      return getBytecodeStatusInfo(bytecodeMatchStatus);
+    }
+    
+    // Fallback to program's originality status (legacy)
     switch (program.originalityStatus) {
       case 'verified':
-        return { subtitle: 'Verified Original', value: 100, isPositive: true, isWarning: false, isNA: false };
+        return { label: 'Verified Original', value: 100, isPositive: true, isWarning: false, isNA: false, description: '' };
       case 'fork':
-        return { subtitle: 'Known Fork', value: 45, isPositive: false, isWarning: true, isNA: false };
+        return { label: 'Known Fork', value: 45, isPositive: false, isWarning: true, isNA: false, description: '' };
       case 'not-deployed':
-        return { subtitle: 'Not On-Chain', value: 0, isPositive: false, isWarning: false, isNA: true };
+        return { label: 'Not On-Chain', value: 0, isPositive: false, isWarning: false, isNA: true, description: '' };
       default:
-        return { subtitle: 'Unverified', value: 60, isPositive: false, isWarning: false, isNA: false };
+        return { label: 'Unverified', value: 60, isPositive: false, isWarning: false, isNA: false, description: '' };
+    }
+  };
+
+  const handleVerifyBytecode = async () => {
+    if (programId && profileId) {
+      await verifyBytecode(programId, profileId, githubUrl);
     }
   };
 
   const githubOriginality = getGithubOriginalityInfo();
   const bytecodeOriginality = getBytecodeOriginalityInfo();
 
+  const getStatusIcon = (status: { isNA: boolean; isWarning: boolean; isPositive: boolean }) => {
+    if (status.isNA) return <XCircle className="h-4 w-4 text-muted-foreground/50" />;
+    if (status.isWarning) return <AlertTriangle className="h-4 w-4 text-warning" />;
+    if (status.isPositive) return <CheckCircle className="h-4 w-4 text-primary" />;
+    return null;
+  };
+
   const originalityMetrics = [
     {
       icon: Fingerprint,
       title: 'BYTECODE ORIGINALITY',
-      subtitle: bytecodeOriginality.subtitle,
+      subtitle: bytecodeOriginality.label,
       value: bytecodeOriginality.value,
-      description: 'Cryptographic fingerprint comparison against known program database.',
+      description: bytecodeOriginality.description || 'Cryptographic fingerprint comparison against known program database.',
       isPositive: bytecodeOriginality.isPositive,
       isWarning: bytecodeOriginality.isWarning,
       isNA: bytecodeOriginality.isNA,
+      canVerify: !!programId && !!profileId,
+      lastVerified: bytecodeVerifiedAt,
     },
     {
       icon: GitBranch,
@@ -69,6 +104,8 @@ export function DevelopmentTabContent({
       isPositive: githubOriginality.isPositive,
       isWarning: githubOriginality.isWarning,
       isNA: false,
+      canVerify: false,
+      lastVerified: null,
     },
   ];
 
@@ -95,50 +132,78 @@ export function DevelopmentTabContent({
       </div>
 
       {/* Originality Metrics */}
-      <div className="grid gap-4 md:grid-cols-2">
-        {originalityMetrics.map((metric, index) => (
-          <Card 
-            key={metric.title} 
-            className="card-premium card-lift border-border bg-card animate-card-enter"
-            style={{ animationDelay: `${index * 100}ms` }}
-          >
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10">
-                  <metric.icon className="h-5 w-5 text-primary" />
+      <TooltipProvider>
+        <div className="grid gap-4 md:grid-cols-2">
+          {originalityMetrics.map((metric, index) => (
+            <Card 
+              key={metric.title} 
+              className="card-premium card-lift border-border bg-card animate-card-enter"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10">
+                      <metric.icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <CardTitle className="font-display text-sm uppercase tracking-tight">
+                        {metric.title}
+                      </CardTitle>
+                      <CardDescription
+                        className={`flex items-center gap-1.5 ${
+                          metric.isNA
+                            ? 'text-muted-foreground/50'
+                            : metric.isWarning
+                            ? 'text-amber-500'
+                            : metric.isPositive
+                            ? 'text-primary'
+                            : 'text-muted-foreground'
+                        }`}
+                      >
+                        {getStatusIcon(metric)}
+                        {metric.subtitle}
+                      </CardDescription>
+                    </div>
+                  </div>
+                  {metric.canVerify && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={handleVerifyBytecode}
+                          disabled={isVerifying}
+                          className="h-8 w-8"
+                        >
+                          <RefreshCw className={`h-4 w-4 ${isVerifying ? 'animate-spin' : ''}`} />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {isVerifying ? 'Verifying...' : 'Verify bytecode on-chain'}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
-                <div>
-                  <CardTitle className="font-display text-sm uppercase tracking-tight">
-                    {metric.title}
-                  </CardTitle>
-                  <CardDescription
-                    className={
-                      metric.isNA
-                        ? 'text-muted-foreground/50'
-                        : metric.isWarning
-                        ? 'text-amber-500'
-                        : metric.isPositive
-                        ? 'text-primary'
-                        : 'text-muted-foreground'
-                    }
-                  >
-                    {metric.subtitle}
-                  </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-2">
+                  <Progress
+                    value={metric.value}
+                    className={`h-2 ${metric.isWarning ? '[&>div]:bg-amber-500' : ''}`}
+                  />
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-2">
-                <Progress
-                  value={metric.value}
-                  className={`h-2 ${metric.isWarning ? '[&>div]:bg-amber-500' : ''}`}
-                />
-              </div>
-              <p className="text-xs text-muted-foreground">{metric.description}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                <p className="text-xs text-muted-foreground">{metric.description}</p>
+                {metric.lastVerified && (
+                  <p className="mt-1 text-[10px] text-muted-foreground/70">
+                    Last verified: {formatDistanceToNow(new Date(metric.lastVerified), { addSuffix: true })}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </TooltipProvider>
     </div>
   );
 }
