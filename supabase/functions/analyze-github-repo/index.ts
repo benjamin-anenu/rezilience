@@ -336,7 +336,7 @@ Deno.serve(async (req) => {
       daysSinceLastActivity,
     };
 
-    console.log(`Analysis complete for ${owner}/${repo}: Score ${resilienceScore}, Status ${livenessStatus}, Activity=${totalActivity}`);
+    console.log(`Analysis complete for ${owner}/${repo}: Score ${resilienceScore}, Status ${livenessStatus}, Activity=${adjustedActivity.toFixed(1)}`);
 
     // If profile_id is provided, update the claimed_profiles table
     if (profile_id) {
@@ -390,7 +390,7 @@ Deno.serve(async (req) => {
             commit_velocity: result.commitVelocity,
             days_last_commit: result.daysSinceLastCommit,
             breakdown: {
-              activity: totalActivity,
+              activity: adjustedActivity,
               contributors: contributorCount,
               stars: result.stars,
               releases: result.releasesLast30Days,
