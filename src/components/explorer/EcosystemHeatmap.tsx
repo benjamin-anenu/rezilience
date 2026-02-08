@@ -26,7 +26,7 @@ function getHealthStatus(score: number, claimStatus?: string): HealthStatus {
 function getHealthColor(status: HealthStatus): string {
   switch (status) {
     case 'healthy':
-      return 'bg-chart-2/80 hover:bg-chart-2';
+      return 'bg-primary/80 hover:bg-primary';
     case 'stale':
       return 'bg-chart-4/80 hover:bg-chart-4';
     case 'decaying':
@@ -148,7 +148,7 @@ export function EcosystemHeatmap() {
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-1.5">
-            <div className="h-3 w-3 rounded-sm bg-chart-2" />
+            <div className="h-3 w-3 rounded-sm bg-primary" />
             <span>Healthy (70+)</span>
             <span className="font-mono text-foreground">{stats.healthy}</span>
           </div>
