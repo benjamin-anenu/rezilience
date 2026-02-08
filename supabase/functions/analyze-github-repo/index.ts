@@ -228,48 +228,71 @@ Deno.serve(async (req) => {
       return event;
     });
 
-    // Calculate Resilience Score using MULTI-SIGNAL approach
+    // Calculate Resilience Score using WEIGHTED ANTI-GAMING approach
     let resilienceScore = 0;
 
-    // === WEIGHTED ACTIVITY SCORE (0-30 points) ===
-    // Combines all activity signals: pushes, PRs (2x weight), issues, commits
-    const totalActivity = pushEvents30d + (prEvents30d * 2) + issueEvents30d + commitsLast30Days;
-    
-    if (totalActivity > 50) resilienceScore += 30;
-    else if (totalActivity > 30) resilienceScore += 25;
-    else if (totalActivity > 15) resilienceScore += 20;
-    else if (totalActivity > 5) resilienceScore += 12;
-    else if (totalActivity > 0) resilienceScore += 5;
+    // === ANTI-GAMING: Fork Penalty ===
+    // Forks get a 0.3 multiplier (70% penalty) on their base score
+    const originalityMultiplier = repoData.fork ? 0.3 : 1.0;
 
-    // Contributors (0-25 points)
+    // === WEIGHTED ACTIVITY SCORE (0-30 points) ===
+    // PRs are weighted 2.5x (require review), Issues 0.5x (easy to spam), Releases 10x (high-signal)
+    // Daily cap: max 10 events per day count toward score (prevents commit farming)
+    const cappedPushEvents = Math.min(pushEvents30d, 10 * 30); // Max 10/day for 30 days
+    const cappedPrEvents = Math.min(prEvents30d, 5 * 30); // Max 5/day
+    const cappedIssueEvents = Math.min(issueEvents30d, 10 * 30); // Max 10/day
+    
+    const weightedActivity = (
+      (cappedPushEvents * 1.0) +           // Base weight for pushes
+      (cappedPrEvents * 2.5) +             // PRs require review - high signal
+      (cappedIssueEvents * 0.5) +          // Issues - lower weight, easy to spam
+      (releasesLast30Days * 10.0)          // Releases are high-signal
+    );
+    
+    // Apply originality multiplier to activity score
+    const adjustedActivity = weightedActivity * originalityMultiplier;
+    
+    if (adjustedActivity > 100) resilienceScore += 30;
+    else if (adjustedActivity > 60) resilienceScore += 25;
+    else if (adjustedActivity > 30) resilienceScore += 20;
+    else if (adjustedActivity > 10) resilienceScore += 12;
+    else if (adjustedActivity > 0) resilienceScore += 5;
+
+    // === CONTRIBUTOR DIVERSITY (0-25 points) ===
+    // Require minimum 3 unique contributors for full "ACTIVE" status consideration
     const contributorCount = contributors.length;
     if (contributorCount > 20) resilienceScore += 25;
     else if (contributorCount > 10) resilienceScore += 20;
-    else if (contributorCount > 5) resilienceScore += 15;
-    else if (contributorCount > 2) resilienceScore += 10;
+    else if (contributorCount >= 5) resilienceScore += 15;
+    else if (contributorCount >= 3) resilienceScore += 10;
     else if (contributorCount > 0) resilienceScore += 5;
 
-    // Releases (0-20 points)
+    // === RELEASES (0-20 points) ===
+    // Releases with semantic versioning are high-signal
     if (releasesLast30Days > 3) resilienceScore += 20;
     else if (releasesLast30Days > 1) resilienceScore += 15;
     else if (releasesLast30Days > 0) resilienceScore += 10;
 
-    // Stars (0-15 points)
+    // === POPULARITY/STARS (0-15 points) ===
     if (repoData.stargazers_count > 10000) resilienceScore += 15;
     else if (repoData.stargazers_count > 1000) resilienceScore += 12;
     else if (repoData.stargazers_count > 100) resilienceScore += 8;
     else if (repoData.stargazers_count > 10) resilienceScore += 4;
 
-    // Project age (0-10 points)
+    // === PROJECT AGE (0-10 points) ===
     const createdAt = new Date(repoData.created_at);
     const daysActive = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
     if (daysActive > 365) resilienceScore += 10;
     else if (daysActive > 180) resilienceScore += 8;
     else if (daysActive > 90) resilienceScore += 5;
 
-    // Determine liveness status using MULTI-SIGNAL activity
+    // === DETERMINE LIVENESS STATUS ===
+    // ACTIVE requires: activity in last 14 days, 5+ weighted events, AND 3+ contributors
     let livenessStatus: "ACTIVE" | "STALE" | "DECAYING";
-    if (daysSinceLastActivity <= 14 && totalActivity >= 5) {
+    const hasMinContributors = contributorCount >= 3;
+    const hasMeaningfulActivity = adjustedActivity >= 5;
+    
+    if (daysSinceLastActivity <= 14 && hasMeaningfulActivity && hasMinContributors) {
       livenessStatus = "ACTIVE";
     } else if (daysSinceLastActivity <= 45) {
       livenessStatus = "STALE";
@@ -277,7 +300,7 @@ Deno.serve(async (req) => {
       livenessStatus = "DECAYING";
     }
     
-    console.log(`Multi-signal activity: pushes=${pushEvents30d}, PRs=${prEvents30d}, issues=${issueEvents30d}, defaultBranchCommits=${defaultBranchCommits}, pushEventCommits=${pushEventCommits}, commitsLast30Days=${commitsLast30Days}, totalActivity=${totalActivity}, daysSinceLastActivity=${daysSinceLastActivity}, status=${livenessStatus}`);
+    console.log(`Anti-gaming scoring: originalityMultiplier=${originalityMultiplier}, weightedActivity=${weightedActivity.toFixed(1)}, adjustedActivity=${adjustedActivity.toFixed(1)}, contributors=${contributorCount}, minContributors=${hasMinContributors}, status=${livenessStatus}`);
 
     resilienceScore = Math.min(Math.round(resilienceScore), 100);
 

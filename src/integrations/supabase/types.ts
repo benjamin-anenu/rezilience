@@ -56,11 +56,13 @@ export type Database = {
         Row: {
           build_in_public_videos: Json | null
           category: string | null
+          claim_status: string | null
           claimer_wallet: string | null
           country: string | null
           created_at: string
           description: string | null
           discord_url: string | null
+          discovered_at: string | null
           github_access_token: string | null
           github_analyzed_at: string | null
           github_commit_velocity: number | null
@@ -111,11 +113,13 @@ export type Database = {
         Insert: {
           build_in_public_videos?: Json | null
           category?: string | null
+          claim_status?: string | null
           claimer_wallet?: string | null
           country?: string | null
           created_at?: string
           description?: string | null
           discord_url?: string | null
+          discovered_at?: string | null
           github_access_token?: string | null
           github_analyzed_at?: string | null
           github_commit_velocity?: number | null
@@ -166,11 +170,13 @@ export type Database = {
         Update: {
           build_in_public_videos?: Json | null
           category?: string | null
+          claim_status?: string | null
           claimer_wallet?: string | null
           country?: string | null
           created_at?: string
           description?: string | null
           discord_url?: string | null
+          discovered_at?: string | null
           github_access_token?: string | null
           github_analyzed_at?: string | null
           github_commit_velocity?: number | null
