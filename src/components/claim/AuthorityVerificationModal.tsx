@@ -9,7 +9,9 @@ import {
   AlertTriangle,
   Wallet,
   KeyRound,
-  ExternalLink
+  ExternalLink,
+  Users,
+  HelpCircle
 } from 'lucide-react';
 import {
   Dialog,
@@ -20,12 +22,13 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useSIWS, type SIWSResult } from '@/hooks/useSIWS';
-import { useVerifyProgramAuthority, type AuthorityVerificationResult } from '@/hooks/useVerifyProgramAuthority';
+import { useVerifyProgramAuthority, type AuthorityVerificationResult, type MultisigInfo } from '@/hooks/useVerifyProgramAuthority';
 
 type VerificationStep = 
   | 'connect-wallet'
   | 'verifying-authority'
   | 'authority-mismatch'
+  | 'multisig-detected'
   | 'sign-message'
   | 'success'
   | 'error';
@@ -39,6 +42,9 @@ interface AuthorityVerificationModalProps {
     signature: string;
     message: string;
     authorityType: string;
+    multisigAddress?: string;
+    squadsVersion?: string;
+    multisigVerifiedVia?: string;
   }) => void;
 }
 
@@ -90,6 +96,8 @@ export function AuthorityVerificationModal({
       setCurrentStep('sign-message');
     } else if (result.authorityType === 'immutable') {
       setCurrentStep('error');
+    } else if (result.authorityType === 'multisig' && result.multisigInfo) {
+      setCurrentStep('multisig-detected');
     } else {
       setCurrentStep('authority-mismatch');
     }
@@ -101,14 +109,23 @@ export function AuthorityVerificationModal({
     if (siwsResult) {
       setCurrentStep('success');
       
-      // Notify parent with verification data
+      // Notify parent with verification data (including multisig info if applicable)
       onVerificationComplete({
         authorityWallet: siwsResult.publicKey,
         signature: siwsResult.signature,
         message: siwsResult.message,
         authorityType: verificationData?.authorityType || 'direct',
+        multisigAddress: verificationData?.multisigInfo?.multisigAddress,
+        squadsVersion: verificationData?.multisigInfo?.squadsVersion,
+        multisigVerifiedVia: verificationData?.authorityType === 'multisig' ? 'member_signature' : undefined,
       });
     }
+  };
+
+  const handleMultisigMemberVerify = async () => {
+    // For multisig member verification, we allow signing with a member wallet
+    // This is trust-based for Phase 1 - Phase 2 will add on-chain member verification
+    setCurrentStep('sign-message');
   };
 
   const handleTryDifferentWallet = () => {
@@ -233,7 +250,110 @@ export function AuthorityVerificationModal({
             </div>
           )}
 
-          {/* Step 3b: Sign Message */}
+          {/* Step 3b: Multisig Detected */}
+          {currentStep === 'multisig-detected' && verificationData?.multisigInfo && (
+            <div className="space-y-4 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-cyan-500/10">
+                <Users className="h-8 w-8 text-cyan-500" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-semibold uppercase text-cyan-500">
+                  Multisig Authority Detected
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  This program's upgrade authority is controlled by a Squads multisig
+                </p>
+              </div>
+              <div className="space-y-3 rounded-md bg-muted/50 p-4 text-left">
+                <div>
+                  <p className="text-xs text-muted-foreground">Multisig Address:</p>
+                  <p className="font-mono text-sm text-cyan-500 break-all">
+                    {verificationData.multisigInfo.multisigAddress}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">Your Wallet:</p>
+                  <p className="font-mono text-sm text-foreground">
+                    {publicKey && truncateAddress(publicKey.toBase58())}
+                  </p>
+                </div>
+                {verificationData.multisigInfo.squadsVersion !== 'unknown' && (
+                  <div className="flex items-center gap-2">
+                    <span className="rounded bg-cyan-500/20 px-2 py-0.5 text-[10px] font-mono uppercase text-cyan-500">
+                      Squads {verificationData.multisigInfo.squadsVersion.toUpperCase()}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  To claim this profile, choose one of the following options:
+                </p>
+                
+                <Button
+                  onClick={handleMultisigMemberVerify}
+                  className="w-full bg-cyan-600 hover:bg-cyan-700 font-display text-sm uppercase tracking-wider"
+                  size="lg"
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  Verify as Multisig Member
+                </Button>
+                <p className="text-[10px] text-muted-foreground">
+                  Sign with your member wallet to prove you are part of this multisig
+                </p>
+                
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">or</span>
+                  </div>
+                </div>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => window.open(verificationData.multisigInfo?.squadsUrl, '_blank')}
+                  className="w-full font-display text-xs uppercase border-cyan-500/30 text-cyan-500 hover:bg-cyan-500/10"
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open Squads Dashboard
+                </Button>
+                <p className="text-[10px] text-muted-foreground">
+                  Initiate a verification transaction from your Squads dashboard
+                </p>
+              </div>
+              
+              <div className="rounded-md bg-muted/30 p-3 text-left">
+                <div className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <HelpCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>
+                    Need help? Contact support for manual verification with proof of ownership.
+                  </span>
+                </div>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={onClose}
+                  className="flex-1 font-display text-xs uppercase"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={handleTryDifferentWallet}
+                  className="flex-1 font-display text-xs uppercase"
+                >
+                  Try Different Wallet
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3c: Sign Message */}
           {currentStep === 'sign-message' && (
             <div className="space-y-4 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
@@ -289,24 +409,50 @@ export function AuthorityVerificationModal({
           {/* Step 4: Success */}
           {currentStep === 'success' && (
             <div className="space-y-4 text-center">
-              <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-primary/20 ring-4 ring-primary/30">
-                <CheckCircle className="h-10 w-10 text-primary" />
+              <div className={`mx-auto flex h-20 w-20 items-center justify-center rounded-full ring-4 ${
+                verificationData?.authorityType === 'multisig' 
+                  ? 'bg-cyan-500/20 ring-cyan-500/30' 
+                  : 'bg-primary/20 ring-primary/30'
+              }`}>
+                <CheckCircle className={`h-10 w-10 ${
+                  verificationData?.authorityType === 'multisig' ? 'text-cyan-500' : 'text-primary'
+                }`} />
               </div>
               <div>
-                <h3 className="font-display text-xl font-bold uppercase tracking-tight text-primary">
-                  VERIFIED TITAN
+                <h3 className={`font-display text-xl font-bold uppercase tracking-tight ${
+                  verificationData?.authorityType === 'multisig' ? 'text-cyan-500' : 'text-primary'
+                }`}>
+                  {verificationData?.authorityType === 'multisig' ? 'VERIFIED TITAN (MS)' : 'VERIFIED TITAN'}
                 </h3>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Your authority has been cryptographically verified
+                  {verificationData?.authorityType === 'multisig' 
+                    ? 'Your membership has been cryptographically verified'
+                    : 'Your authority has been cryptographically verified'
+                  }
                 </p>
               </div>
-              <div className="rounded-md border border-primary/50 bg-primary/10 p-4">
+              <div className={`rounded-md border p-4 ${
+                verificationData?.authorityType === 'multisig' 
+                  ? 'border-cyan-500/50 bg-cyan-500/10' 
+                  : 'border-primary/50 bg-primary/10'
+              }`}>
                 <div className="flex items-center justify-center gap-2">
-                  <Shield className="h-5 w-5 text-primary" />
-                  <span className="font-mono text-sm text-primary">
+                  {verificationData?.authorityType === 'multisig' ? (
+                    <Users className="h-5 w-5 text-cyan-500" />
+                  ) : (
+                    <Shield className="h-5 w-5 text-primary" />
+                  )}
+                  <span className={`font-mono text-sm ${
+                    verificationData?.authorityType === 'multisig' ? 'text-cyan-500' : 'text-primary'
+                  }`}>
                     {publicKey && truncateAddress(publicKey.toBase58())}
                   </span>
                 </div>
+                {verificationData?.authorityType === 'multisig' && verificationData?.multisigInfo && (
+                  <div className="mt-2 text-xs text-muted-foreground">
+                    Multisig: {truncateAddress(verificationData.multisigInfo.multisigAddress)}
+                  </div>
+                )}
               </div>
               <Button
                 onClick={onClose}

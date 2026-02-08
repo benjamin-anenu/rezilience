@@ -98,10 +98,13 @@ export type Database = {
           logo_url: string | null
           media_assets: Json | null
           milestones: Json | null
+          multisig_address: string | null
+          multisig_verified_via: string | null
           program_id: string | null
           project_id: string | null
           project_name: string
           resilience_score: number | null
+          squads_version: string | null
           staking_pitch: string | null
           team_members: Json | null
           telegram_url: string | null
@@ -162,10 +165,13 @@ export type Database = {
           logo_url?: string | null
           media_assets?: Json | null
           milestones?: Json | null
+          multisig_address?: string | null
+          multisig_verified_via?: string | null
           program_id?: string | null
           project_id?: string | null
           project_name: string
           resilience_score?: number | null
+          squads_version?: string | null
           staking_pitch?: string | null
           team_members?: Json | null
           telegram_url?: string | null
@@ -226,10 +232,13 @@ export type Database = {
           logo_url?: string | null
           media_assets?: Json | null
           milestones?: Json | null
+          multisig_address?: string | null
+          multisig_verified_via?: string | null
           program_id?: string | null
           project_id?: string | null
           project_name?: string
           resilience_score?: number | null
+          squads_version?: string | null
           staking_pitch?: string | null
           team_members?: Json | null
           telegram_url?: string | null

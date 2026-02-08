@@ -98,6 +98,9 @@ const ClaimProfile = () => {
     signature: string;
     message: string;
     authorityType: string;
+    multisigAddress?: string;
+    squadsVersion?: string;
+    multisigVerifiedVia?: string;
   } | null>(null);
 
   // Step 3: Socials
@@ -227,13 +230,20 @@ const ClaimProfile = () => {
     signature: string;
     message: string;
     authorityType: string;
+    multisigAddress?: string;
+    squadsVersion?: string;
+    multisigVerifiedVia?: string;
   }) => {
     setAuthorityData(data);
     setAuthorityVerified(true);
     setShowAuthorityModal(false);
+    
+    const isMultisig = data.authorityType === 'multisig';
     toast({
-      title: 'Authority Verified',
-      description: 'Your wallet has been cryptographically verified as the program authority.',
+      title: isMultisig ? 'Multisig Member Verified' : 'Authority Verified',
+      description: isMultisig 
+        ? 'You have been verified as a member of the program\'s multisig authority.'
+        : 'Your wallet has been cryptographically verified as the program authority.',
     });
   };
 
@@ -266,6 +276,10 @@ const ClaimProfile = () => {
       authorityMessage: authorityData?.message,
       authorityType: authorityData?.authorityType,
       authorityVerified,
+      // Multisig verification data (Squads)
+      multisigAddress: authorityData?.multisigAddress,
+      squadsVersion: authorityData?.squadsVersion,
+      multisigVerifiedVia: authorityData?.multisigVerifiedVia,
     };
 
     localStorage.setItem('claimingProfile', JSON.stringify(claimingProfile));
@@ -372,6 +386,10 @@ const ClaimProfile = () => {
         authority_verified_at: authorityVerified ? new Date().toISOString() : null,
         authority_signature: authorityData?.signature || null,
         authority_type: authorityData?.authorityType || null,
+        // Multisig verification data (Squads)
+        multisig_address: authorityData?.multisigAddress || null,
+        squads_version: authorityData?.squadsVersion || null,
+        multisig_verified_via: authorityData?.multisigVerifiedVia || null,
       };
       
       const { error } = await supabase

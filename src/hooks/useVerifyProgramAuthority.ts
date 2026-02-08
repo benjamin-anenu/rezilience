@@ -2,11 +2,20 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 export type AuthorityType = 'direct' | 'multisig' | 'immutable' | 'none';
+export type SquadsVersion = 'v3' | 'v4' | 'unknown';
+
+export interface MultisigInfo {
+  multisigAddress: string;
+  vaultAddress?: string;
+  squadsVersion: SquadsVersion;
+  squadsUrl: string;
+}
 
 export interface AuthorityVerificationResult {
   isAuthority: boolean;
   authorityType: AuthorityType;
   actualAuthority: string | null;
+  multisigInfo?: MultisigInfo;
   error?: string;
 }
 
@@ -50,6 +59,7 @@ export function useVerifyProgramAuthority(): UseVerifyProgramAuthorityReturn {
         isAuthority: data.isAuthority ?? false,
         authorityType: data.authorityType ?? 'none',
         actualAuthority: data.actualAuthority ?? null,
+        multisigInfo: data.multisigInfo ?? undefined,
         error: data.error,
       };
 

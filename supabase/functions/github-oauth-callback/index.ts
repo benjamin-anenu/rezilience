@@ -353,6 +353,10 @@ Deno.serve(async (req) => {
       authority_verified_at: profile_data?.authorityVerified ? new Date().toISOString() : null,
       authority_signature: profile_data?.authoritySignature || null,
       authority_type: profile_data?.authorityType || null,
+      // Multisig verification data (Squads)
+      multisig_address: profile_data?.multisigAddress || null,
+      squads_version: profile_data?.squadsVersion || null,
+      multisig_verified_via: profile_data?.multisigVerifiedVia || null,
     };
 
     const { data: savedProfile, error: saveError } = await supabase

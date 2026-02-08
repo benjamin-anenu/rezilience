@@ -284,6 +284,11 @@ export interface ClaimedProfile {
   authorityVerifiedAt?: string;
   authoritySignature?: string;
   authorityType?: 'direct' | 'multisig' | 'immutable';
+  
+  // Multisig Verification (Squads)
+  multisigAddress?: string;
+  squadsVersion?: 'v3' | 'v4';
+  multisigVerifiedVia?: 'member_signature' | 'transaction_proof' | 'manual_review';
 }
 
 // Form data for multi-step claim flow
