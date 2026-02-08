@@ -1,16 +1,17 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle, AlertCircle, Loader2, Shield, Wallet, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { CheckCircle, AlertCircle, Loader2, Shield, Wallet, ChevronLeft, ChevronRight, AlertTriangle, Flag } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { useProject } from '@/hooks/useProjects';
 import { useToast } from '@/hooks/use-toast';
-import { useExistingProfile } from '@/hooks/useClaimedProfiles';
+import { useExistingProfile, useUnclaimedProfile } from '@/hooks/useClaimedProfiles';
 import {
   StepIndicator,
   CoreIdentityForm,
@@ -35,11 +36,18 @@ const ClaimProfile = () => {
   // FIX #2: Check if returning from fresh X auth
   const authFresh = searchParams.get('auth') === 'fresh';
   
+  // Check if claiming an unclaimed (pre-seeded) profile
+  const unclaimedProfileId = searchParams.get('profile_id');
+  const unclaimedProjectName = searchParams.get('project');
+  
   // Check if GitHub OAuth is configured
   const isGitHubConfigured = !!import.meta.env.VITE_GITHUB_CLIENT_ID;
 
   // FIX #2: Check if user already has a verified profile
   const { data: existingProfileData, isLoading: checkingExisting } = useExistingProfile(user?.id);
+  
+  // Fetch unclaimed profile data if claiming pre-seeded project
+  const { data: unclaimedProfile, isLoading: loadingUnclaimed } = useUnclaimedProfile(unclaimedProfileId || undefined);
 
   // Current step (1-5)
   // Track if GitHub verification is complete
@@ -189,6 +197,18 @@ const ClaimProfile = () => {
       }
     }
   }, []);
+
+  // Pre-populate fields from unclaimed profile
+  useEffect(() => {
+    if (unclaimedProfile) {
+      if (unclaimedProfile.projectName) setProjectName(unclaimedProfile.projectName);
+      if (unclaimedProfile.description) setDescription(unclaimedProfile.description);
+      if (unclaimedProfile.category) setCategory(unclaimedProfile.category);
+      if (unclaimedProfile.websiteUrl) setWebsiteUrl(unclaimedProfile.websiteUrl);
+      if (unclaimedProfile.programId) setProgramId(unclaimedProfile.programId);
+      if (unclaimedProfile.githubOrgUrl) setGithubOrgUrl(unclaimedProfile.githubOrgUrl);
+    }
+  }, [unclaimedProfile]);
 
   // Wallet address is included in claimingProfile object during GitHub OAuth redirect
   // No separate localStorage needed here
@@ -341,6 +361,7 @@ const ClaimProfile = () => {
   };
 
   // FIX #1: Direct submit for public repos (no GitHub OAuth needed)
+  // Updated to handle both new profiles and claiming unclaimed profiles
   const handleDirectSubmit = async () => {
     if (!githubAnalysisResult || !user) return;
     
@@ -348,10 +369,11 @@ const ClaimProfile = () => {
     
     try {
       const { supabase } = await import('@/integrations/supabase/client');
-      const profileId = crypto.randomUUID();
+      
+      // Use existing profile ID if claiming unclaimed, otherwise generate new
+      const profileId = unclaimedProfileId || crypto.randomUUID();
       
       const profileData = {
-        id: profileId,
         project_name: projectName,
         description: description || null,
         category: category || null,
@@ -368,6 +390,7 @@ const ClaimProfile = () => {
         milestones: JSON.parse(JSON.stringify(milestones)),
         verified: true,
         verified_at: new Date().toISOString(),
+        claim_status: 'claimed',
         resilience_score: githubAnalysisResult.resilienceScore,
         liveness_status: githubAnalysisResult.livenessStatus,
         github_stars: githubAnalysisResult.stars,
@@ -392,9 +415,23 @@ const ClaimProfile = () => {
         multisig_verified_via: authorityData?.multisigVerifiedVia || null,
       };
       
-      const { error } = await supabase
-        .from('claimed_profiles')
-        .insert([profileData]);
+      let error;
+      
+      if (unclaimedProfileId) {
+        // Update existing unclaimed profile
+        const result = await supabase
+          .from('claimed_profiles')
+          .update(profileData)
+          .eq('id', unclaimedProfileId)
+          .eq('claim_status', 'unclaimed');
+        error = result.error;
+      } else {
+        // Insert new profile
+        const result = await supabase
+          .from('claimed_profiles')
+          .insert([{ id: profileId, ...profileData }]);
+        error = result.error;
+      }
       
       if (error) throw error;
       
@@ -403,7 +440,7 @@ const ClaimProfile = () => {
       localStorage.setItem('verifiedProfileId', profileId);
       
       toast({ 
-        title: 'Profile Created!', 
+        title: unclaimedProfileId ? 'Project Claimed!' : 'Profile Created!', 
         description: 'Your protocol is now registered in the Resilience Registry.' 
       });
       navigate(`/profile/${profileId}`);
@@ -435,8 +472,8 @@ const ClaimProfile = () => {
     }
   };
 
-  // Show loading while checking auth or existing profile
-  if (authLoading || checkingExisting) {
+  // Show loading while checking auth, existing profile, or unclaimed profile
+  if (authLoading || checkingExisting || loadingUnclaimed) {
     return (
       <Layout>
         <div className="flex min-h-[60vh] items-center justify-center">
@@ -450,13 +487,38 @@ const ClaimProfile = () => {
     <Layout>
       <div className="py-12">
         <div className="container mx-auto max-w-2xl px-4 lg:px-8">
+          {/* Unclaimed Profile Banner */}
+          {unclaimedProfileId && unclaimedProfile && (
+            <Card className="mb-6 border-amber-500/50 bg-amber-500/5">
+              <CardContent className="py-4">
+                <div className="flex items-center gap-3">
+                  <Flag className="h-5 w-5 text-amber-500" />
+                  <div>
+                    <p className="font-display text-sm uppercase text-amber-500">
+                      Claiming: {unclaimedProfile.projectName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Verify you are the program authority to claim this project
+                    </p>
+                  </div>
+                  <Badge variant="outline" className="ml-auto border-amber-500/50 text-amber-500">
+                    UNCLAIMED
+                  </Badge>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Header */}
           <div className="mb-8 text-center">
             <h1 className="mb-3 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
-              SECURE YOUR STANDING
+              {unclaimedProfileId ? 'CLAIM THIS PROJECT' : 'SECURE YOUR STANDING'}
             </h1>
             <p className="text-muted-foreground">
-              Register your protocol. Prove your development velocity. Unlock your heartbeat.
+              {unclaimedProfileId 
+                ? 'Prove you own this protocol to claim your profile and manage your presence.'
+                : 'Register your protocol. Prove your development velocity. Unlock your heartbeat.'
+              }
             </p>
           </div>
 
@@ -858,6 +920,7 @@ const ClaimProfile = () => {
             isOpen={showAuthorityModal}
             onClose={() => setShowAuthorityModal(false)}
             programId={programId}
+            profileId={unclaimedProfileId || undefined}
             onVerificationComplete={handleAuthorityVerified}
           />
         </div>
