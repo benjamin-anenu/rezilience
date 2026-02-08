@@ -1,4 +1,5 @@
-import { ExternalLink, Globe, Maximize2, MapPin } from 'lucide-react';
+import { useState } from 'react';
+import { ExternalLink, Globe, Maximize2, MapPin, Play } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +34,7 @@ export function AboutTabContent({
   mediaAssets,
   isVerified,
 }: AboutTabContentProps) {
+  const [isPreviewActive, setIsPreviewActive] = useState(false);
   const isHtml = description ? /<[^>]+>/.test(description) : false;
   const countryLabel = getCountryLabel(country);
 
@@ -90,12 +92,25 @@ export function AboutTabContent({
                 <Globe className="h-4 w-4 text-primary" />
                 Website Preview
               </CardTitle>
-              <Button asChild variant="outline" size="sm" className="gap-2">
-                <a href={websiteUrl} target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-4 w-4" />
-                  Launch Site
-                </a>
-              </Button>
+              <div className="flex items-center gap-2">
+                {!isPreviewActive && (
+                  <Button 
+                    variant="default" 
+                    size="sm" 
+                    className="gap-2"
+                    onClick={() => setIsPreviewActive(true)}
+                  >
+                    <Play className="h-4 w-4" />
+                    Launch Preview
+                  </Button>
+                )}
+                <Button asChild variant="outline" size="sm" className="gap-2">
+                  <a href={websiteUrl} target="_blank" rel="noopener noreferrer">
+                    <ExternalLink className="h-4 w-4" />
+                    Open in New Tab
+                  </a>
+                </Button>
+              </div>
             </div>
           </CardHeader>
           <CardContent className="pb-0">
@@ -123,14 +138,30 @@ export function AboutTabContent({
                   </a>
                 </Button>
               </div>
-              {/* Iframe - 16:9 aspect ratio */}
-              <div className="aspect-video">
-                <iframe
-                  src={websiteUrl}
-                  className="h-full w-full bg-background"
-                  title="Website preview"
-                  sandbox="allow-scripts allow-same-origin"
-                />
+              {/* Iframe or Placeholder - 16:9 aspect ratio */}
+              <div className="aspect-video bg-muted/30">
+                {isPreviewActive ? (
+                  <iframe
+                    src={websiteUrl}
+                    className="h-full w-full bg-background"
+                    title="Website preview"
+                    sandbox="allow-scripts allow-same-origin"
+                  />
+                ) : (
+                  <div className="h-full w-full flex flex-col items-center justify-center gap-4">
+                    <Globe className="h-12 w-12 text-muted-foreground/30" />
+                    <p className="text-sm text-muted-foreground">Click "Launch Preview" to load the website</p>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setIsPreviewActive(true)}
+                      className="gap-2"
+                    >
+                      <Play className="h-4 w-4" />
+                      Launch Preview
+                    </Button>
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
