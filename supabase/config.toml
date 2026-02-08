@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.verify-bytecode]
 verify_jwt = false
+
+[functions.verify-program-authority]
+verify_jwt = false
