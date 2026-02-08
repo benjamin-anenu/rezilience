@@ -11,7 +11,8 @@ import {
   KeyRound,
   ExternalLink,
   Users,
-  HelpCircle
+  HelpCircle,
+  Ban
 } from 'lucide-react';
 import {
   Dialog,
@@ -23,9 +24,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { useSIWS, type SIWSResult } from '@/hooks/useSIWS';
 import { useVerifyProgramAuthority, type AuthorityVerificationResult, type MultisigInfo } from '@/hooks/useVerifyProgramAuthority';
+import { useClaimBlacklist } from '@/hooks/useClaimBlacklist';
 
 type VerificationStep = 
   | 'connect-wallet'
+  | 'checking-blacklist'
+  | 'blacklisted'
   | 'verifying-authority'
   | 'authority-mismatch'
   | 'multisig-detected'
@@ -37,6 +41,7 @@ interface AuthorityVerificationModalProps {
   isOpen: boolean;
   onClose: () => void;
   programId: string;
+  profileId?: string; // For unclaimed profiles - used for blacklist check
   onVerificationComplete: (result: {
     authorityWallet: string;
     signature: string;
@@ -52,6 +57,7 @@ export function AuthorityVerificationModal({
   isOpen,
   onClose,
   programId,
+  profileId,
   onVerificationComplete,
 }: AuthorityVerificationModalProps) {
   const { publicKey, connected, disconnect } = useWallet();
@@ -63,26 +69,53 @@ export function AuthorityVerificationModal({
     error: authorityError,
     reset: resetAuthority 
   } = useVerifyProgramAuthority();
+  const { checkBlacklist, recordFailedAttempt, isChecking, isRecording } = useClaimBlacklist();
 
   const [currentStep, setCurrentStep] = useState<VerificationStep>('connect-wallet');
   const [verificationData, setVerificationData] = useState<AuthorityVerificationResult | null>(null);
+  const [blacklistWarning, setBlacklistWarning] = useState<string | null>(null);
 
   // Reset state when modal opens
   useEffect(() => {
     if (isOpen) {
       setCurrentStep('connect-wallet');
       setVerificationData(null);
+      setBlacklistWarning(null);
       clearSiwsError();
       resetAuthority();
     }
   }, [isOpen, clearSiwsError, resetAuthority]);
 
-  // Auto-advance when wallet connects
+  // Auto-advance when wallet connects - check blacklist first if profileId exists
   useEffect(() => {
     if (connected && publicKey && currentStep === 'connect-wallet') {
-      handleVerifyAuthority();
+      if (profileId) {
+        handleCheckBlacklistThenVerify();
+      } else {
+        handleVerifyAuthority();
+      }
     }
   }, [connected, publicKey]);
+
+  const handleCheckBlacklistThenVerify = async () => {
+    if (!publicKey || !profileId) return;
+    
+    setCurrentStep('checking-blacklist');
+    
+    const result = await checkBlacklist(profileId, publicKey.toBase58());
+    
+    if (result.isPermanentBan) {
+      setBlacklistWarning(result.message || 'You are permanently blocked from claiming this project.');
+      setCurrentStep('blacklisted');
+      return;
+    }
+    
+    if (result.message) {
+      setBlacklistWarning(result.message);
+    }
+    
+    handleVerifyAuthority();
+  };
 
   const handleVerifyAuthority = async () => {
     if (!publicKey) return;
@@ -95,10 +128,25 @@ export function AuthorityVerificationModal({
     if (result.isAuthority) {
       setCurrentStep('sign-message');
     } else if (result.authorityType === 'immutable') {
+      // Record failed attempt for unclaimed profiles
+      if (profileId) {
+        await recordFailedAttempt(profileId, publicKey.toBase58());
+      }
       setCurrentStep('error');
     } else if (result.authorityType === 'multisig' && result.multisigInfo) {
       setCurrentStep('multisig-detected');
     } else {
+      // Record failed attempt for unclaimed profiles
+      if (profileId) {
+        const attemptResult = await recordFailedAttempt(profileId, publicKey.toBase58());
+        if (attemptResult.message) {
+          setBlacklistWarning(attemptResult.message);
+        }
+        if (attemptResult.isPermanentBan) {
+          setCurrentStep('blacklisted');
+          return;
+        }
+      }
       setCurrentStep('authority-mismatch');
     }
   };
@@ -132,6 +180,7 @@ export function AuthorityVerificationModal({
     disconnect();
     setCurrentStep('connect-wallet');
     setVerificationData(null);
+    setBlacklistWarning(null);
     resetAuthority();
   };
 
@@ -174,6 +223,52 @@ export function AuthorityVerificationModal({
               <div className="flex justify-center">
                 <WalletMultiButton className="!bg-primary !text-primary-foreground hover:!bg-primary/90 !font-display !text-sm !uppercase !tracking-wider !rounded-md !h-11" />
               </div>
+            </div>
+          )}
+
+          {/* Checking Blacklist */}
+          {currentStep === 'checking-blacklist' && (
+            <div className="space-y-4 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-semibold uppercase">
+                  Checking Eligibility
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Verifying your wallet can claim this project...
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Blacklisted */}
+          {currentStep === 'blacklisted' && (
+            <div className="space-y-4 text-center">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-destructive/10">
+                <Ban className="h-8 w-8 text-destructive" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-semibold uppercase text-destructive">
+                  Access Blocked
+                </h3>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {blacklistWarning || 'You cannot claim this project with this wallet.'}
+                </p>
+              </div>
+              <div className="rounded-md bg-destructive/10 border border-destructive/30 p-4">
+                <p className="text-xs text-muted-foreground">
+                  If you believe this is an error and you are the legitimate owner, please contact support with proof of ownership.
+                </p>
+              </div>
+              <Button
+                variant="outline"
+                onClick={onClose}
+                className="w-full font-display text-xs uppercase"
+              >
+                Close
+              </Button>
             </div>
           )}
 
@@ -232,6 +327,13 @@ export function AuthorityVerificationModal({
                   </p>
                 </div>
               </div>
+              {blacklistWarning && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 p-3">
+                  <p className="text-xs text-amber-500 font-medium">
+                    {blacklistWarning}
+                  </p>
+                </div>
+              )}
               <div className="flex gap-2">
                 <Button
                   variant="outline"

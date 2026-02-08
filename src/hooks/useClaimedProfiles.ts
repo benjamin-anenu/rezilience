@@ -298,3 +298,33 @@ export function useVerifiedProfiles() {
     staleTime: 1000 * 60 * 5,
   });
 }
+
+/**
+ * Fetch an unclaimed profile by its UUID (for claim flow)
+ */
+export function useUnclaimedProfile(profileId: string | undefined) {
+  return useQuery({
+    queryKey: ['unclaimed-profile', profileId],
+    queryFn: async (): Promise<ClaimedProfile | null> => {
+      if (!profileId) return null;
+
+      const { data, error } = await supabase
+        .from('claimed_profiles')
+        .select('*')
+        .eq('id', profileId)
+        .eq('claim_status', 'unclaimed')
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching unclaimed profile:', error);
+        throw error;
+      }
+
+      if (!data) return null;
+
+      return transformToClaimedProfile(data as unknown as DBClaimedProfile);
+    },
+    enabled: !!profileId,
+    staleTime: 1000 * 60 * 2,
+  });
+}

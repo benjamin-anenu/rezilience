@@ -52,6 +52,47 @@ export type Database = {
           },
         ]
       }
+      claim_blacklist: {
+        Row: {
+          attempt_count: number
+          created_at: string
+          first_attempt_at: string
+          id: string
+          is_permanent_ban: boolean
+          last_attempt_at: string
+          profile_id: string
+          wallet_address: string
+        }
+        Insert: {
+          attempt_count?: number
+          created_at?: string
+          first_attempt_at?: string
+          id?: string
+          is_permanent_ban?: boolean
+          last_attempt_at?: string
+          profile_id: string
+          wallet_address: string
+        }
+        Update: {
+          attempt_count?: number
+          created_at?: string
+          first_attempt_at?: string
+          id?: string
+          is_permanent_ban?: boolean
+          last_attempt_at?: string
+          profile_id?: string
+          wallet_address?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claim_blacklist_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claimed_profiles: {
         Row: {
           authority_signature: string | null

@@ -21,6 +21,8 @@ export interface ExplorerProject {
   // New fields for filtering
   category: string | null;
   country: string | null;
+  // Claim status for unclaimed profiles
+  claimStatus: 'claimed' | 'unclaimed' | 'pending';
   // Source tracking for routing
   isRegisteredProtocol: true;
 }
@@ -61,10 +63,11 @@ export function useExplorerProjects() {
   return useQuery({
     queryKey: ['explorer-projects'],
     queryFn: async (): Promise<ExplorerProject[]> => {
+      // Fetch both verified profiles AND unclaimed profiles
       const { data, error } = await supabase
         .from('claimed_profiles')
         .select('*')
-        .eq('verified', true)
+        .or('verified.eq.true,claim_status.eq.unclaimed')
         .order('resilience_score', { ascending: false });
 
       if (error) {
@@ -89,6 +92,7 @@ export function useExplorerProjects() {
         total_staked: 0, // Phase 2 feature
         category: profile.category,
         country: (profile as { country?: string }).country || null,
+        claimStatus: (profile.claim_status as 'claimed' | 'unclaimed' | 'pending') || 'claimed',
         isRegisteredProtocol: true as const,
       }));
     },

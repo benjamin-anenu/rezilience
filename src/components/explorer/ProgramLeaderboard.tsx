@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, TrendingUp, TrendingDown, Minus, Sparkles, Cloud } from 'lucide-react';
+import { Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, TrendingUp, TrendingDown, Minus, Sparkles, Cloud, AlertTriangle } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -68,15 +68,25 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
     }
   };
 
-  const getOriginalityBadge = (verified: boolean, isFork: boolean) => {
-    if (isFork) {
+  const getOriginalityBadge = (project: ExplorerProject) => {
+    // Handle unclaimed profiles first
+    if (project.claimStatus === 'unclaimed') {
+      return (
+        <Badge variant="outline" className="border-amber-500/50 bg-amber-500/10 text-amber-500">
+          <AlertTriangle className="mr-1 h-3 w-3" />
+          Unclaimed
+        </Badge>
+      );
+    }
+    
+    if (project.is_fork) {
       return (
         <Badge variant="outline" className="border-destructive/50 text-destructive">
           Fork
         </Badge>
       );
     }
-    if (verified) {
+    if (project.verified) {
       return (
         <Badge variant="outline" className="border-primary/50 text-primary">
           <CheckCircle className="mr-1 h-3 w-3" />
@@ -144,7 +154,20 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
     }
   };
 
-  const handleRowClick = (project: ExplorerProject) => {
+  const handleRowClick = (project: ExplorerProject, e: React.MouseEvent) => {
+    // Prevent navigation if clicking on the Claim button
+    if ((e.target as HTMLElement).closest('button')) return;
+    
+    // For unclaimed profiles, navigate to claim flow
+    if (project.claimStatus === 'unclaimed') {
+      const params = new URLSearchParams({
+        profile_id: project.id,
+        project: project.program_name,
+      });
+      navigate(`/claim-profile?${params.toString()}`);
+      return;
+    }
+    
     // Navigate to full program detail view
     // Use program_id if it's a real Solana address, otherwise use claimed profile id
     const routeId = project.program_id && project.program_id !== project.id 
@@ -180,7 +203,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
               <TableRow
                 key={project.id}
                 className="cursor-pointer border-border transition-colors hover:bg-muted/50"
-                onClick={() => handleRowClick(project)}
+                onClick={(e) => handleRowClick(project, e)}
               >
                 <TableCell className="font-mono text-muted-foreground">
                   <div className="flex items-center gap-1.5">
@@ -258,7 +281,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
                   {getStatusBadge(project.liveness_status)}
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
-                  {getOriginalityBadge(project.verified, project.is_fork)}
+                  {getOriginalityBadge(project)}
                 </TableCell>
                 <TableCell className="hidden md:table-cell text-right">
                   <span className="font-mono text-sm text-foreground">
@@ -267,9 +290,27 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
                   <span className="ml-1 text-xs text-muted-foreground">SOL</span>
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
-                  <span className="font-mono text-xs text-muted-foreground">
-                    {formatDate(project.github_last_commit)}
-                  </span>
+                  {project.claimStatus === 'unclaimed' ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-display text-[10px] uppercase"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const params = new URLSearchParams({
+                          profile_id: project.id,
+                          project: project.program_name,
+                        });
+                        navigate(`/claim-profile?${params.toString()}`);
+                      }}
+                    >
+                      Claim This
+                    </Button>
+                  ) : (
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {formatDate(project.github_last_commit)}
+                    </span>
+                  )}
                 </TableCell>
               </TableRow>
             );

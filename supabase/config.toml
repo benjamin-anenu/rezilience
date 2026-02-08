@@ -23,3 +23,9 @@ verify_jwt = false
 
 [functions.verify-program-authority]
 verify_jwt = false
+
+[functions.check-claim-blacklist]
+verify_jwt = false
+
+[functions.record-claim-attempt]
+verify_jwt = false
