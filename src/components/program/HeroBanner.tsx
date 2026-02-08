@@ -159,41 +159,57 @@ export function HeroBanner({
               </p>
             )}
 
-            {/* Program ID */}
-            {program.programId && (
-              <div className="mb-6 flex items-center gap-2 rounded-sm border border-border bg-muted/30 px-3 py-2">
-                <code className="font-mono text-xs text-muted-foreground">
-                  {program.programId.length > 20
-                    ? `${program.programId.slice(0, 8)}...${program.programId.slice(-8)}`
-                    : program.programId}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => copyToClipboard(program.programId)}
-                >
-                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-                  </svg>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  asChild
-                >
-                  <a
-                    href={`https://explorer.solana.com/address/${program.programId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
+            {/* Program ID or Off-chain Badge */}
+            {(() => {
+              // Check if program ID is a UUID (off-chain project) or missing
+              const isOffChain = !program.programId || 
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(program.programId);
+              
+              if (isOffChain) {
+                return (
+                  <div className="mb-6 flex items-center gap-2 rounded-sm border border-border bg-muted/30 px-3 py-2">
+                    <Badge variant="outline" className="border-muted-foreground/50 text-muted-foreground font-mono text-xs">
+                      Off-chain
+                    </Badge>
+                  </div>
+                );
+              }
+              
+              return (
+                <div className="mb-6 flex items-center gap-2 rounded-sm border border-border bg-muted/30 px-3 py-2">
+                  <code className="font-mono text-xs text-muted-foreground">
+                    {program.programId.length > 20
+                      ? `${program.programId.slice(0, 8)}...${program.programId.slice(-8)}`
+                      : program.programId}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    onClick={() => copyToClipboard(program.programId)}
                   >
-                    <ExternalLink className="h-3 w-3" />
-                  </a>
-                </Button>
-              </div>
-            )}
+                    <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+                    </svg>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6"
+                    asChild
+                  >
+                    <a
+                      href={`https://explorer.solana.com/address/${program.programId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </Button>
+                </div>
+              );
+            })()}
 
             {/* Owner Actions Row */}
             {isOwner && (
