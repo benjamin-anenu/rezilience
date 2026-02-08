@@ -1,189 +1,245 @@
 
-
-# Cryptographic Claim Logic Implementation Plan
+# Squads Multisig Support Implementation Plan
 
 ## Overview
 
-This plan implements the "no-loophole" Solana authority verification system to ensure only the true owner of an on-chain program can claim it in the Resilience Registry.
+This plan extends the authority verification system to detect and support Squads Protocol multisig-controlled programs. When the upgrade authority is a PDA (Program Derived Address) belonging to a Squads multisig, the system will detect this, provide clear guidance, and offer an alternative verification path.
 
-## The Triple-Check Verification Flow
+## Current State Analysis
 
-```text
-+-------------------+     +----------------------+     +------------------+
-| 1. WALLET SIGN-IN | --> | 2. AUTHORITY CHECK   | --> | 3. DATABASE LOCK |
-| User signs SIWS   |     | Fetch upgradeAuth    |     | Store wallet +   |
-| message           |     | from programData     |     | verified = true  |
-+-------------------+     +----------------------+     +------------------+
-         |                         |                          |
-         v                         v                          v
-   "I am the owner        connectedWallet ===         claimed_by_wallet
-   of [program_id]..."    upgradeAuthority            cannot be changed
-```
+The existing implementation has:
+- `verify-program-authority` edge function that fetches `upgradeAuthority` from program's `programData`
+- `isPotentialMultisig()` function that currently returns `false` (stub implementation)
+- `AuthorityVerificationModal` with states for direct authority match, mismatch, and immutable programs
+- `authorityType` field supporting: `direct`, `multisig`, `immutable`, `none`
+
+**Gap**: No actual multisig detection logic or UI flow for multisig-controlled programs.
+
+---
 
 ## Technical Implementation
 
-### Step 1: Create Authority Verification Edge Function
+### Step 1: Enhanced Multisig Detection in Edge Function
 
-**New File**: `supabase/functions/verify-program-authority/index.ts`
+**File**: `supabase/functions/verify-program-authority/index.ts`
 
-This edge function will:
-- Accept a `program_id` and `wallet_address`
-- Call Solana RPC to fetch the program's `upgradeAuthority`
-- Return whether the wallet matches the authority
-- Handle Multisig PDAs (Squads protocol detection)
+Enhance the `isPotentialMultisig()` function to actually detect Squads PDAs:
 
-**Key Logic**:
+**Detection Logic**:
 ```text
-1. Fetch program account using getParsedAccountInfo(program_id)
-2. If program is a BPF Upgradeable Loader program:
-   - Extract the programData PDA
-   - Fetch the programData account
-   - Get the upgradeAuthority field
-3. Compare upgradeAuthority with provided wallet_address
-4. Return { isAuthority: boolean, authorityType: 'wallet' | 'multisig' | 'none' }
+1. Query the Squads v4 program (SMPLecH...v4) to check if authority is a known multisig vault
+2. Use PDA derivation pattern: ["squad", createKey, "multisig"] 
+3. Check if the authority account is owned by the Squads program
+4. Return multisig metadata: vault address, multisig PDA, Squads version
 ```
 
-### Step 2: Implement SIWS (Sign In With Solana) Hook
+**New Response Fields**:
+- `multisigAddress`: The Squads multisig PDA (if detected)
+- `vaultAddress`: The Squads vault (if different from authority)
+- `squadsVersion`: 'v3' | 'v4' | 'unknown'
+- `squadsUrl`: Direct link to Squads dashboard for this multisig
 
-**New File**: `src/hooks/useSIWS.ts`
+### Step 2: Update Hook and Types
 
-This hook will:
-- Generate a structured message: "I am the owner of [program_id] and I claim this profile on Resilience. Timestamp: [ISO date]"
-- Request wallet signature via `signMessage()` from wallet adapter
-- Verify the signature matches the connected public key
-- Return signature and message for backend verification
+**File**: `src/hooks/useVerifyProgramAuthority.ts`
 
-### Step 3: Create Verification Modal Component
+Add new fields to the response interface:
 
-**New File**: `src/components/claim/AuthorityVerificationModal.tsx`
-
-A high-tech modal with Signal Cyan accents that guides users through:
-1. **Step 1**: "CONNECT AUTHORITY WALLET" button
-2. **Step 2**: "Verifying On-Chain Authority" loader with Solana icon
-3. **Step 3**: Sign message prompt with signature preview
-4. **Success State**: Animated "VERIFIED TITAN" badge reveal
-5. **Failure States**: Clear error messages for each failure mode
-
-**UI States**:
-- Wallet not connected: Show "Connect Wallet" CTA
-- Wallet connected but not authority: "This wallet is not the upgrade authority for this program"
-- Multisig detected: Show "Enter Multisig Address" field with Squads integration guidance
-- Signature rejected: "Signature required to prove ownership"
-- Success: Glowing cyan "VERIFIED TITAN" badge animation
-
-### Step 4: Modify Claim Profile Flow
-
-**File to Modify**: `src/pages/ClaimProfile.tsx`
-
-Changes:
-- When a Program ID is entered in Step 2, make wallet connection REQUIRED (not optional)
-- Add new verification step between current Steps 2 and 3
-- Integrate AuthorityVerificationModal for on-chain programs
-- Allow bypass for off-chain projects (no program ID)
-
-**New Flow**:
 ```text
-Step 1: X Auth (unchanged)
-Step 2: Core Identity + Program ID input
-Step 2.5 (NEW): Authority Verification Modal (if program ID provided)
-Step 3: Socials/GitHub
-Step 4: Media
-Step 5: Roadmap
+AuthorityVerificationResult {
+  isAuthority: boolean;
+  authorityType: 'direct' | 'multisig' | 'immutable' | 'none';
+  actualAuthority: string | null;
+  // NEW: Multisig-specific fields
+  multisigInfo?: {
+    multisigAddress: string;
+    vaultAddress?: string;
+    squadsVersion: 'v3' | 'v4' | 'unknown';
+    squadsUrl: string;
+  };
+  error?: string;
+}
 ```
 
-### Step 5: Database Schema Updates
+**File**: `src/types/index.ts`
 
-**Migration**: Add authority verification fields to `claimed_profiles`
+Update the `ClaimedProfile` interface to include optional multisig info for audit trail:
+- `multisigAddress?: string` - The Squads multisig PDA
+- `squadsVersion?: string` - Version of Squads used
+
+### Step 3: New Multisig Verification Modal State
+
+**File**: `src/components/claim/AuthorityVerificationModal.tsx`
+
+Add a new step: `'multisig-detected'` with the following UI:
+
+**UI Components**:
+1. **Header**: "Multisig Authority Detected" with Squads logo/icon
+2. **Info Panel**: Display detected multisig address and connected wallet
+3. **Verification Options**:
+   - **Option A**: "I am a member of this multisig" - shows membership verification guidance
+   - **Option B**: "Initiate verification via Squads" - opens Squads dashboard link
+4. **Manual Override**: Input field for users to enter a transaction signature proving ownership
+5. **External Link**: Button to open Squads dashboard directly
+
+**Flow Logic**:
+```text
+IF authorityType === 'multisig' && multisigInfo exists:
+  SHOW 'multisig-detected' step
+  - Display Squads dashboard link
+  - Provide guidance for multisig members
+  - Allow manual signature submission (future feature)
+  - Option to "Request Manual Review" for complex cases
+```
+
+### Step 4: Squads Dashboard Deep Linking
+
+Generate proper Squads dashboard URLs:
+- **v4 (current)**: `https://app.squads.so/squads/{multisigAddress}/home`
+- **v3 (legacy)**: `https://v3.squads.so/squads/{multisigAddress}`
+
+The URL will be constructed based on detected Squads version.
+
+### Step 5: Database Schema Update
+
+**Migration**: Add multisig tracking fields to `claimed_profiles`:
 
 New columns:
-- `authority_wallet` (TEXT): The verified upgrade authority wallet
-- `authority_verified_at` (TIMESTAMPTZ): When authority was verified
-- `authority_signature` (TEXT): The SIWS signature for audit trail
-- `authority_type` (TEXT): 'direct' | 'multisig' | 'immutable'
+- `multisig_address` (TEXT): The Squads multisig PDA if applicable
+- `squads_version` (TEXT): 'v3', 'v4', or null
+- `multisig_verified_via` (TEXT): 'member_signature' | 'transaction_proof' | 'manual_review'
 
-### Step 6: Update Backend Validation
+### Step 6: Alternative Verification Paths
 
-**File to Modify**: `supabase/functions/github-oauth-callback/index.ts`
+For multisig-controlled programs, provide three verification options:
 
-Add validation:
-- If `program_id` is provided, require `authority_wallet` and `authority_verified`
-- Verify the signature on the backend (prevent frontend spoofing)
-- Only set `verified = true` if all checks pass
+**Path A: Member Signature (Recommended)**
+- User proves they are a member of the multisig
+- Sign SIWS message with their member wallet
+- System stores member wallet + multisig reference
+- Badge: "VERIFIED (Multisig Member)"
 
----
+**Path B: Transaction Proof (Advanced)**
+- User provides a transaction signature from the multisig
+- System verifies the transaction was executed by the multisig
+- Suitable for teams that have already made an on-chain action
+- Badge: "VERIFIED (Multisig Transaction)"
 
-## Security Measures
-
-### Why This Prevents Loopholes:
-
-1. **Cryptographic Proof**: The SIWS signature proves the user controls the wallet private key
-2. **On-Chain Truth**: The upgrade authority is read directly from Solana, not user input
-3. **Database Lock**: Once verified, the authority wallet is locked to the profile
-4. **Backend Verification**: Signatures are verified server-side, not just client-side
-
-### Multisig Handling:
-
-For programs controlled by Squads or other multisigs:
-- Detect if authority is a PDA (starts with derived address pattern)
-- Show "Multisig Detected" UI with guidance
-- Option A: Verify user is a member of the multisig vault
-- Option B: Require a verified transaction from the multisig to complete claim
-
----
-
-## UI/UX Design
-
-### Badge States:
-
-| State | Badge | Color | Description |
-|-------|-------|-------|-------------|
-| Unclaimed | UNCLAIMED | Grey (#4B5563) | Waiting for owner |
-| Authority Verified | VERIFIED TITAN | Cyan (#00F2FF) | Owner confirmed on-chain |
-| Off-Chain Project | VERIFIED | Green | No program ID, GitHub verified |
-| Pending Verification | PENDING | Amber | Awaiting signature |
-
-### Error Messages:
-
-- "This wallet (ABC...XYZ) is not the upgrade authority. The authority is (DEF...UVW)"
-- "This program's authority is immutable (set to null). Contact support for verification."
-- "Multisig detected. Please initiate verification via your Squads dashboard."
+**Path C: Manual Review (Fallback)**
+- User submits request for manual verification
+- Provides documentation (Squads screenshot, team confirmation)
+- Admin reviews and approves
+- Badge: "VERIFIED (Manual Review)"
 
 ---
 
 ## Files to Create
 
-1. `supabase/functions/verify-program-authority/index.ts` - Authority check edge function
-2. `src/hooks/useSIWS.ts` - Sign In With Solana hook
-3. `src/components/claim/AuthorityVerificationModal.tsx` - Verification UI
+None - all changes are modifications to existing files.
 
 ## Files to Modify
 
-1. `src/pages/ClaimProfile.tsx` - Integrate new verification step
-2. `supabase/functions/github-oauth-callback/index.ts` - Add backend validation
-3. `src/types/index.ts` - Add new types
-4. `supabase/config.toml` - Add new edge function config
+1. `supabase/functions/verify-program-authority/index.ts` - Add Squads detection logic
+2. `src/hooks/useVerifyProgramAuthority.ts` - Add multisig info to response type
+3. `src/components/claim/AuthorityVerificationModal.tsx` - Add multisig-detected UI state
+4. `src/types/index.ts` - Add multisig fields to ClaimedProfile
+5. `src/pages/ClaimProfile.tsx` - Handle multisig verification flow
+6. `supabase/functions/github-oauth-callback/index.ts` - Store multisig metadata on profile creation
+
+---
+
+## UI Design
+
+### Multisig Detection Screen
+
+```text
++--------------------------------------------------+
+|     [Squads Icon]  MULTISIG AUTHORITY DETECTED   |
++--------------------------------------------------+
+|                                                  |
+|  This program's upgrade authority is controlled  |
+|  by a Squads multisig wallet.                    |
+|                                                  |
+|  +--------------------------------------------+  |
+|  | Multisig Address:                          |  |
+|  | SMq1...8xZK                                |  |
+|  |                                            |  |
+|  | Your Wallet:                               |  |
+|  | ABC...XYZ                                  |  |
+|  +--------------------------------------------+  |
+|                                                  |
+|  To claim this profile, you have two options:    |
+|                                                  |
+|  [  VERIFY AS MULTISIG MEMBER  ]                 |
+|  Sign with your member wallet to prove you       |
+|  are part of this multisig.                      |
+|                                                  |
+|  [  OPEN SQUADS DASHBOARD  ->  ]                 |
+|  Initiate a verification transaction from        |
+|  your Squads dashboard.                          |
+|                                                  |
+|  +--------------------------------------------+  |
+|  | [?] Need help? Contact support for         |  |
+|  | manual verification.                       |  |
+|  +--------------------------------------------+  |
+|                                                  |
+|         [ CANCEL ]     [ TRY DIFFERENT WALLET ]  |
++--------------------------------------------------+
+```
+
+### Badge States for Multisig
+
+| State | Badge | Color |
+|-------|-------|-------|
+| Multisig Member Verified | VERIFIED TITAN (MS) | Cyan |
+| Multisig Pending | PENDING VERIFICATION | Amber |
+| Multisig Manual Review | UNDER REVIEW | Grey |
+
+---
+
+## Security Considerations
+
+1. **Member Verification**: When a user claims "I am a member," the system should ideally verify this on-chain by checking the multisig's member list. However, Squads v4 makes this complex, so initial implementation will trust the signature but mark it as "multisig member" type.
+
+2. **Audit Trail**: All multisig verifications store the multisig address, member wallet, and verification method for transparency.
+
+3. **Single Claim Rule**: Once a multisig program is claimed by one member, other members cannot claim it again. The first verified member owns the profile.
+
+---
+
+## Implementation Phases
+
+**Phase 1 (This PR)**:
+- Detect Squads multisig via account owner check
+- Display multisig-detected UI with Squads dashboard link
+- Allow member signature verification (trust-based)
+- Store multisig metadata in database
+
+**Phase 2 (Future)**:
+- On-chain member verification via Squads SDK
+- Transaction proof verification
+- Admin review workflow
 
 ---
 
 ## Testing Checklist
 
-- Verify with a real Solana program you control (devnet first, then mainnet)
-- Test with a wallet that is NOT the authority (should fail)
-- Test with multisig-controlled programs
-- Test with immutable programs (null authority)
-- Verify signatures are validated server-side
-- Confirm claimed profiles cannot be re-claimed by different wallets
+- Test with a known Squads v4 multisig-controlled program (e.g., Jupiter, Marinade)
+- Verify Squads dashboard link opens correctly
+- Test member signature flow for multisig programs
+- Confirm multisig programs show correct badge type
+- Test with non-Squads multisig (should fall back to "unknown multisig")
+- Verify single-claim rule for multisig programs
 
 ---
 
 ## Estimated Implementation Time
 
-- Edge Function (verify-program-authority): 2-3 hours
-- SIWS Hook: 1-2 hours
-- Authority Verification Modal: 3-4 hours
-- ClaimProfile Integration: 2-3 hours
+- Edge Function Enhancement: 2-3 hours
+- Hook/Types Updates: 1 hour
+- Modal UI Changes: 3-4 hours
+- ClaimProfile Integration: 1-2 hours
 - Database Migration: 30 minutes
 - Testing: 2-3 hours
 
-**Total**: 1-2 days of focused development
-
+**Total**: 1-1.5 days of focused development
