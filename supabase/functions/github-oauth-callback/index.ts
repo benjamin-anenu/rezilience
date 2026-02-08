@@ -348,6 +348,11 @@ Deno.serve(async (req) => {
       verified_at: new Date().toISOString(),
       resilience_score: resilienceScore,
       liveness_status: livenessStatus,
+      // Authority verification data (SIWS)
+      authority_wallet: profile_data?.authorityWallet || null,
+      authority_verified_at: profile_data?.authorityVerified ? new Date().toISOString() : null,
+      authority_signature: profile_data?.authoritySignature || null,
+      authority_type: profile_data?.authorityType || null,
     };
 
     const { data: savedProfile, error: saveError } = await supabase

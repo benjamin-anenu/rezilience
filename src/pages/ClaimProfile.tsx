@@ -17,6 +17,7 @@ import {
   SocialsForm,
   MediaUploader,
   RoadmapForm,
+  AuthorityVerificationModal,
 } from '@/components/claim';
 import type { MediaAsset, Milestone, ProjectCategory } from '@/types';
 import { type GitHubAnalysisResult, suggestCategory } from '@/hooks/useGitHubAnalysis';
@@ -88,6 +89,16 @@ const ClaimProfile = () => {
   const [programLoading, setProgramLoading] = useState(false);
   const [programVerified, setProgramVerified] = useState(false);
   const [programError, setProgramError] = useState<string | null>(null);
+
+  // Authority Verification State (SIWS)
+  const [showAuthorityModal, setShowAuthorityModal] = useState(false);
+  const [authorityVerified, setAuthorityVerified] = useState(false);
+  const [authorityData, setAuthorityData] = useState<{
+    authorityWallet: string;
+    signature: string;
+    message: string;
+    authorityType: string;
+  } | null>(null);
 
   // Step 3: Socials
   const [githubOrgUrl, setGithubOrgUrl] = useState('');
@@ -196,18 +207,34 @@ const ClaimProfile = () => {
     // Check database for existing program
     const result = await refetchProject();
 
-    // Allow valid program IDs (either in DB or valid format)
-    const isValidProgramId = result.data || programId.length >= 32;
+    // Allow valid program IDs (either in DB or valid format - base58, 32-44 chars)
+    const isValidProgramId = result.data || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(programId);
 
     if (isValidProgramId) {
       setProgramVerified(true);
-      // Program ID is included in claimingProfile object during GitHub OAuth redirect
-      // No separate localStorage needed here
+      // Show authority verification modal for on-chain programs
+      setShowAuthorityModal(true);
     } else {
       setProgramError('Invalid Program ID. Please check and try again.');
     }
 
     setProgramLoading(false);
+  };
+
+  // Handle authority verification completion
+  const handleAuthorityVerified = (data: {
+    authorityWallet: string;
+    signature: string;
+    message: string;
+    authorityType: string;
+  }) => {
+    setAuthorityData(data);
+    setAuthorityVerified(true);
+    setShowAuthorityModal(false);
+    toast({
+      title: 'Authority Verified',
+      description: 'Your wallet has been cryptographically verified as the program authority.',
+    });
   };
 
   const handleGitHubConnect = () => {
@@ -233,6 +260,12 @@ const ClaimProfile = () => {
       mediaAssets,
       milestones,
       githubOrgUrl,
+      // Authority verification data (SIWS)
+      authorityWallet: authorityData?.authorityWallet,
+      authoritySignature: authorityData?.signature,
+      authorityMessage: authorityData?.message,
+      authorityType: authorityData?.authorityType,
+      authorityVerified,
     };
 
     localStorage.setItem('claimingProfile', JSON.stringify(claimingProfile));
@@ -334,6 +367,11 @@ const ClaimProfile = () => {
         github_topics: githubAnalysisResult.topics || null,
         github_is_fork: githubAnalysisResult.isFork || false,
         github_analyzed_at: new Date().toISOString(),
+        // Authority verification data (SIWS)
+        authority_wallet: authorityData?.authorityWallet || null,
+        authority_verified_at: authorityVerified ? new Date().toISOString() : null,
+        authority_signature: authorityData?.signature || null,
+        authority_type: authorityData?.authorityType || null,
       };
       
       const { error } = await supabase
@@ -531,9 +569,27 @@ const ClaimProfile = () => {
                           )}
                         </>
                       ) : (
-                        <div className="flex items-center gap-2 text-xs text-primary">
-                          <CheckCircle className="h-4 w-4" />
-                          <span className="font-mono">{programId.slice(0, 12)}...</span>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 text-xs text-primary">
+                            <CheckCircle className="h-4 w-4" />
+                            <span className="font-mono">{programId.slice(0, 12)}...</span>
+                          </div>
+                          {authorityVerified ? (
+                            <div className="flex items-center gap-2 text-xs text-primary">
+                              <Shield className="h-3 w-3" />
+                              <span className="font-mono uppercase text-[10px]">VERIFIED TITAN</span>
+                            </div>
+                          ) : (
+                            <Button
+                              onClick={() => setShowAuthorityModal(true)}
+                              variant="outline"
+                              size="sm"
+                              className="w-full font-display text-[10px] uppercase tracking-wider"
+                            >
+                              <Shield className="mr-1.5 h-3 w-3" />
+                              VERIFY AUTHORITY
+                            </Button>
+                          )}
                         </div>
                       )}
                     </CardContent>
@@ -778,6 +834,14 @@ const ClaimProfile = () => {
               to your Resilience Score using our open methodology.
             </span>
           </div>
+
+          {/* Authority Verification Modal */}
+          <AuthorityVerificationModal
+            isOpen={showAuthorityModal}
+            onClose={() => setShowAuthorityModal(false)}
+            programId={programId}
+            onVerificationComplete={handleAuthorityVerified}
+          />
         </div>
       </div>
     </Layout>

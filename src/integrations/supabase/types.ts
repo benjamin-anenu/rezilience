@@ -54,6 +54,10 @@ export type Database = {
       }
       claimed_profiles: {
         Row: {
+          authority_signature: string | null
+          authority_type: string | null
+          authority_verified_at: string | null
+          authority_wallet: string | null
           build_in_public_videos: Json | null
           bytecode_hash: string | null
           bytecode_match_status: string | null
@@ -114,6 +118,10 @@ export type Database = {
           x_username: string | null
         }
         Insert: {
+          authority_signature?: string | null
+          authority_type?: string | null
+          authority_verified_at?: string | null
+          authority_wallet?: string | null
           build_in_public_videos?: Json | null
           bytecode_hash?: string | null
           bytecode_match_status?: string | null
@@ -174,6 +182,10 @@ export type Database = {
           x_username?: string | null
         }
         Update: {
+          authority_signature?: string | null
+          authority_type?: string | null
+          authority_verified_at?: string | null
+          authority_wallet?: string | null
           build_in_public_videos?: Json | null
           bytecode_hash?: string | null
           bytecode_match_status?: string | null

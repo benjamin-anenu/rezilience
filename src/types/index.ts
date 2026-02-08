@@ -278,6 +278,12 @@ export interface ClaimedProfile {
   // Team Section
   teamMembers?: TeamMember[];
   stakingPitch?: string;
+  
+  // Authority Verification (SIWS)
+  authorityWallet?: string;
+  authorityVerifiedAt?: string;
+  authoritySignature?: string;
+  authorityType?: 'direct' | 'multisig' | 'immutable';
 }
 
 // Form data for multi-step claim flow
