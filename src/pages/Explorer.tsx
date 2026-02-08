@@ -1,8 +1,9 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '@/components/layout';
-import { EcosystemStats, SearchBar, ProgramLeaderboard } from '@/components/explorer';
+import { EcosystemStats, EcosystemHeatmap, SearchBar, ProgramLeaderboard } from '@/components/explorer';
 import { useExplorerProjects } from '@/hooks/useExplorerProjects';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const Explorer = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -57,9 +58,22 @@ const Explorer = () => {
           </div>
 
           {/* Ecosystem Stats */}
-          <div className="mb-8">
+          <div className="mb-6">
             <EcosystemStats />
           </div>
+
+          {/* View Toggle: Heatmap vs List */}
+          <Tabs defaultValue="list" className="mb-6">
+            <TabsList className="grid w-full max-w-xs grid-cols-2">
+              <TabsTrigger value="list">List View</TabsTrigger>
+              <TabsTrigger value="heatmap">Titan Watch</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="heatmap" className="mt-4">
+              <EcosystemHeatmap />
+            </TabsContent>
+
+            <TabsContent value="list" className="mt-4">
 
           {/* Search & Filters */}
           <div className="mb-6">
@@ -128,6 +142,8 @@ const Explorer = () => {
           {!isLoading && !error && filteredPrograms.length > 0 && (
             <ProgramLeaderboard projects={filteredPrograms} />
           )}
+            </TabsContent>
+          </Tabs>
         </div>
       </div>
     </Layout>
