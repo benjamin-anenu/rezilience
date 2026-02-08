@@ -255,17 +255,21 @@ UNCLAIMED PROFILE IN REGISTRY
 
 ## Implementation Phases
 
-**Phase A (This PR)**:
-1. Create `claim_blacklist` table
-2. Insert Drift Protocol as unclaimed
-3. Update Explorer to show unclaimed profiles
-4. Add UNCLAIMED badge and CTA
+**Phase A (COMPLETED)**:
+1. ✅ Create `claim_blacklist` table with RLS
+2. ✅ Insert Drift Protocol as unclaimed 
+3. ✅ Update Explorer to show unclaimed profiles (useExplorerProjects.ts)
+4. ✅ Add UNCLAIMED badge and CTA (ProgramLeaderboard.tsx)
+5. ✅ Add new RLS policy for reading unclaimed profiles
 
-**Phase B (This PR)**:
-5. Create blacklist check edge function
-6. Update ClaimProfile to handle pre-seeded projects
-7. Integrate blacklist checks into authority verification flow
-8. Show warning messages for repeated failures
+**Phase B (COMPLETED)**:
+6. ✅ Create blacklist check edge function (check-claim-blacklist)
+7. ✅ Create record attempt edge function (record-claim-attempt)
+8. ✅ Add useClaimBlacklist hook for frontend integration
+9. ✅ Update ClaimProfile to handle pre-seeded projects (update vs insert)
+10. ✅ Integrate blacklist checks into authority verification flow
+11. ✅ Show warning messages for repeated failures
+12. ✅ Add useUnclaimedProfile hook for fetching pre-seeded data
 
 ---
 
