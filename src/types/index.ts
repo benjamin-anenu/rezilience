@@ -266,6 +266,11 @@ export interface ClaimedProfile {
   // Extended GitHub Analytics (populated from DB)
   githubAnalytics?: GitHubAnalytics;
   
+  // Bytecode Verification (Phase 2)
+  bytecodeHash?: string;
+  bytecodeVerifiedAt?: string;
+  bytecodeMatchStatus?: 'original' | 'fork' | 'unknown' | 'not-deployed';
+  
   // Build In Public & Twitter Integration (Phase 2)
   buildInPublicVideos?: BuildInPublicVideo[];
   twitterMetrics?: TwitterMetrics;
