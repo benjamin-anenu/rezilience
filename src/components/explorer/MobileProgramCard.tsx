@@ -233,15 +233,26 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
           {(project.total_staked / 1000).toFixed(0)}K SOL Staked
         </span>
         <span className="flex items-center gap-1">
-          {project.verified ? (
-            <>
-              <CheckCircle className="h-3 w-3 text-primary" />
-              <span className="text-primary">Verified</span>
-            </>
-          ) : project.is_fork ? (
-            <span className="text-destructive">Fork</span>
+          {project.is_fork ? (
+            <Badge variant="outline" className="border-destructive/50 bg-destructive/10 text-destructive text-xs">
+              Forked
+            </Badge>
           ) : (
-            <span>Unverified</span>
+            <Badge variant="outline" className="border-primary/50 bg-primary/10 text-primary text-xs">
+              <CheckCircle className="mr-1 h-3 w-3" />
+              Owned
+            </Badge>
+          )}
+          {project.claimStatus === 'unclaimed' ? (
+            <Badge variant="outline" className="border-amber-500/50 bg-amber-500/10 text-amber-500 text-xs">
+              <AlertCircle className="mr-1 h-3 w-3" />
+              Unclaimed
+            </Badge>
+          ) : (
+            <Badge variant="outline" className="border-primary/50 bg-primary/10 text-primary text-xs">
+              <CheckCircle className="mr-1 h-3 w-3" />
+              Claimed
+            </Badge>
           )}
         </span>
       </div>
