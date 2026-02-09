@@ -54,7 +54,7 @@ export default function Readme() {
               <span className="text-primary">README</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-              The definitive guide to decentralized protocol health monitoring on Solana.
+              The definitive guide to decentralized project health monitoring on Solana.
               Understand our scoring methodology, visual indicators, and how to use the platform.
             </p>
 
@@ -119,14 +119,14 @@ export default function Readme() {
               <Card className="card-premium">
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground leading-relaxed mb-4">
-                    <strong className="text-foreground">Resilience</strong> is a decentralized protocol health registry 
+                    <strong className="text-foreground">Resilience</strong> is a decentralized project health registry 
                     for the Solana ecosystem. We aggregate on-chain and off-chain data to create transparent, 
                     real-time trust signals for infrastructure projects.
                   </p>
                   <p className="text-muted-foreground leading-relaxed mb-4">
                     Our core belief: <strong className="text-primary">"Reputation cannot be forked."</strong> While 
                     code can be copied, the human effort behind continuous maintenance, governance participation, 
-                    and community building creates unique trust signals that define a protocol's true resilience.
+                    and community building creates unique trust signals that define a project's true resilience.
                   </p>
                   <p className="text-muted-foreground leading-relaxed">
                     The platform serves two primary audiences:
@@ -136,13 +136,13 @@ export default function Readme() {
                       <Users className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                       <span className="text-muted-foreground">
                         <strong className="text-foreground">Public Visitors ("The Fish")</strong> — Seeking data-backed 
-                        transparency before integrating or investing in protocols
+                        transparency before integrating or investing in projects
                       </span>
                     </li>
                     <li className="flex items-start gap-3">
                       <Rocket className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                       <span className="text-muted-foreground">
-                        <strong className="text-foreground">Protocol Builders ("The Eagles")</strong> — Proving their 
+                        <strong className="text-foreground">Project Builders ("The Eagles")</strong> — Proving their 
                         work through immutable trust scores and commitment staking
                       </span>
                     </li>
@@ -163,7 +163,7 @@ export default function Readme() {
                   <CardContent className="pt-6">
                     <p className="text-muted-foreground leading-relaxed mb-4">
                       Every new project starts with a <strong className="text-primary">baseline of 15-30 points</strong>.
-                      This "Zero Proof" approach ensures no protocol receives credit without demonstrating sustained 
+                      This "Zero Proof" approach ensures no project receives credit without demonstrating sustained 
                       proof-of-work across all trust dimensions.
                     </p>
                     <div className="rounded-sm bg-muted/30 p-4 border border-border">
@@ -290,10 +290,10 @@ export default function Readme() {
                   <Card className="card-premium">
                     <CardContent className="pt-6">
                       <p className="text-muted-foreground mb-4">
-                        Only applicable to DeFi protocols. Data from DeFiLlama API.
+                        Only applicable to DeFi projects. Data from DeFiLlama API.
                       </p>
                       <div className="space-y-3">
-                        <MetricRow label="Total Value Locked" weight="$10M+" description="Economic stake in protocol" />
+                        <MetricRow label="Total Value Locked" weight="$10M+" description="Economic stake in project" />
                         <MetricRow label="Risk Ratio" weight="TVL/Commits" description="Economic responsibility per effort" />
                         <MetricRow label="Market Share" weight="Category %" description="Position within DeFi segment" />
                       </div>
@@ -338,7 +338,7 @@ export default function Readme() {
               <div className="grid gap-4">
                 <FeatureCard
                   title="Resilience Registry (Explorer)"
-                  description="Browse and compare all indexed protocols with sortable leaderboard, search, and category filters."
+                  description="Browse and compare all indexed projects with sortable leaderboard, search, and category filters."
                   link="/explorer"
                 />
                 <FeatureCard
@@ -348,7 +348,7 @@ export default function Readme() {
                 />
                 <FeatureCard
                   title="Heartbeat Dashboard"
-                  description="Deep-dive into individual protocol health with score breakdown, activity charts, and trend analysis."
+                  description="Deep-dive into individual project health with score breakdown, activity charts, and trend analysis."
                   link="/explorer"
                 />
                 <FeatureCard
@@ -358,7 +358,7 @@ export default function Readme() {
                 />
                 <FeatureCard
                   title="Staking (Coming Soon)"
-                  description="Stake tokens on protocols you believe in. Economic skin-in-the-game for trust signals."
+                  description="Stake tokens on projects you believe in. Economic skin-in-the-game for trust signals."
                   link="/staking"
                   badge="PHASE 2"
                 />
@@ -367,7 +367,7 @@ export default function Readme() {
 
             {/* For Builders Section */}
             <section id="for-builders" className="scroll-mt-24">
-              <SectionHeader icon={Rocket} title="For Protocol Builders" />
+              <SectionHeader icon={Rocket} title="For Project Builders" />
               
               <Card className="card-premium">
                 <CardContent className="pt-6">
@@ -534,7 +534,7 @@ export default function Readme() {
                   Ready to Get Started?
                 </h2>
                 <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-                  Join the Resilience Registry and prove your protocol's commitment to the Solana ecosystem.
+                  Join the Resilience Registry and prove your project's commitment to the Solana ecosystem.
                 </p>
                 <div className="flex flex-wrap justify-center gap-4">
                   <Button asChild size="lg" className="font-display uppercase tracking-wider">
@@ -546,7 +546,7 @@ export default function Readme() {
                   <Button asChild variant="outline" size="lg" className="font-display uppercase tracking-wider">
                     <Link to="/explorer">
                       <BarChart3 className="mr-2 h-4 w-4" />
-                      Browse Protocols
+                      Browse Projects
                     </Link>
                   </Button>
                 </div>

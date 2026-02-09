@@ -2,14 +2,14 @@
  import { TrendingUp, Users, FileCheck, ArrowRight } from 'lucide-react';
  import { Button } from '@/components/ui/button';
  
- const useCases = [
-   {
-     icon: TrendingUp,
-     title: 'PROTOCOL RISK',
-     description:
-       'DeFi protocols need to assess counterparty risk before integrating with external programs. Resilience scores provide instant, quantified risk assessment.',
-     cta: 'For DeFi Teams',
-   },
+const useCases = [
+  {
+    icon: TrendingUp,
+    title: 'PROJECT RISK',
+    description:
+      'DeFi projects need to assess counterparty risk before integrating with external programs. Resilience scores provide instant, quantified risk assessment.',
+    cta: 'For DeFi Teams',
+  },
    {
      icon: Users,
      title: 'DAO DILIGENCE',

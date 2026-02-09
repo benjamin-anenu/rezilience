@@ -93,9 +93,9 @@ const Explorer = () => {
               <h1 className="mb-2 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
                 RESILIENCE REGISTRY
               </h1>
-              <p className="text-muted-foreground">
-                Browse verified protocols and their trust metrics across the Solana ecosystem.
-              </p>
+            <p className="text-muted-foreground">
+              Browse verified projects and their trust metrics across the Solana ecosystem.
+            </p>
             </div>
           </div>
 
@@ -139,7 +139,7 @@ const Explorer = () => {
               <Skeleton className="h-5 w-32" />
             ) : (
               <p className="text-sm text-muted-foreground">
-                Showing <span className="font-mono text-foreground">{startIndex + 1}-{Math.min(endIndex, filteredPrograms.length)}</span> of <span className="font-mono text-foreground">{filteredPrograms.length}</span> registered protocols
+                Showing <span className="font-mono text-foreground">{startIndex + 1}-{Math.min(endIndex, filteredPrograms.length)}</span> of <span className="font-mono text-foreground">{filteredPrograms.length}</span> registered projects
               </p>
             )}
           </div>
@@ -169,12 +169,12 @@ const Explorer = () => {
                 <h3 className="mb-2 font-display text-lg font-semibold uppercase text-foreground">
                   {searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' || countryFilter !== 'all' 
                     ? 'No Matches Found' 
-                    : 'No Registered Protocols Yet'}
+                    : 'No Registered Projects Yet'}
                 </h3>
                 <p className="text-muted-foreground">
                   {searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' || countryFilter !== 'all'
-                    ? 'No protocols match your search criteria. Try adjusting your filters.'
-                    : 'Be among the first builders to register your protocol in the Resilience Registry.'}
+                    ? 'No projects match your search criteria. Try adjusting your filters.'
+                    : 'Be among the first builders to register your project in the Resilience Registry.'}
                 </p>
               </div>
             </div>

@@ -71,7 +71,7 @@ const Dashboard = () => {
                   BUILDER DASHBOARD
                 </h1>
                 <p className="text-sm text-muted-foreground sm:text-base">
-                  Manage your registered protocols and monitor Resilience Scores
+                  Manage your registered projects and monitor Resilience Scores
                 </p>
               </div>
               {/* Desktop user info */}
@@ -127,7 +127,7 @@ const Dashboard = () => {
             <Button asChild className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider touch-feedback sm:w-auto">
               <Link to="/claim-profile">
                 <Plus className="mr-2 h-4 w-4" />
-                REGISTER PROTOCOL
+                REGISTER PROJECT
               </Link>
             </Button>
             <Button variant="outline" asChild className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider touch-feedback sm:w-auto">
@@ -143,10 +143,10 @@ const Dashboard = () => {
             <Card className="border-border bg-card">
               <CardContent className="py-12 text-center">
                 <p className="mb-2 font-display text-lg uppercase tracking-tight text-muted-foreground">
-                  No Registered Protocols
+                  No Registered Projects
                 </p>
                 <p className="mb-6 text-sm text-muted-foreground">
-                  Register your first protocol to get started
+                  Register your first project to get started
                 </p>
                 <Button asChild className="font-display font-semibold uppercase tracking-wider">
                   <Link to="/claim-profile">REGISTER NOW</Link>

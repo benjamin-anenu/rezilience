@@ -28,7 +28,7 @@ export function TVLMetricsCard({
         color: 'text-muted-foreground/50',
         icon: DollarSign,
         score: 50,
-        description: 'Not a DeFi protocol or no TVL tracked.'
+        description: 'Not a DeFi project or no TVL tracked.'
       };
     }
     

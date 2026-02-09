@@ -120,10 +120,10 @@
                <p className="mb-1 font-display text-sm font-semibold uppercase text-destructive">
                  RISK DISCLOSURE
                </p>
-               <p className="text-xs text-muted-foreground">
-                 Staked SOL is locked for the duration of the lockup period and cannot be withdrawn early.
-                 The protocol does not guarantee returns. Please stake responsibly.
-               </p>
+                <p className="text-xs text-muted-foreground">
+                  Staked SOL is locked for the duration of the lockup period and cannot be withdrawn early.
+                  The project does not guarantee returns. Please stake responsibly.
+                </p>
              </div>
            </div>
          </CardContent>

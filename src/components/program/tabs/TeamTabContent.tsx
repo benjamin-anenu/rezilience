@@ -51,7 +51,7 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified }: TeamTa
               Team Coming Soon
             </h3>
             <p className="mt-2 max-w-md text-sm text-muted-foreground">
-              The team behind this protocol hasn't added their information yet.
+              The team behind this project hasn't added their information yet.
               Check back later for updates.
             </p>
           </CardContent>
@@ -183,7 +183,7 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified }: TeamTa
                 Team Coming Soon
               </h3>
               <p className="mt-2 max-w-md text-sm text-muted-foreground">
-                The team behind this protocol hasn't added their information yet.
+                The team behind this project hasn't added their information yet.
                 Check back later for updates.
               </p>
             </CardContent>

@@ -148,7 +148,7 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
             <Calendar className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
             <p className="text-sm text-muted-foreground">No milestones yet</p>
             <p className="mt-1 text-xs text-muted-foreground/70">
-              Add milestones to track your protocol's progress
+              Add milestones to track your project's progress
             </p>
           </div>
         ) : (
@@ -354,7 +354,7 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
               Add New Milestone
             </DialogTitle>
             <DialogDescription>
-              Create a new milestone for your protocol roadmap. New milestones are
+              Create a new milestone for your project roadmap. New milestones are
               unlocked until you explicitly lock them.
             </DialogDescription>
           </DialogHeader>

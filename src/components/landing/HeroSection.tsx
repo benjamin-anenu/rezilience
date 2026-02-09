@@ -27,22 +27,22 @@ export function HeroSection() {
   const stats = [
     {
       value: registryDisplay.value,
-      label: heroStats?.displayMode === 'launching' ? 'Registry Status' : 'Registered Protocols',
+      label: heroStats?.displayMode === 'launching' ? 'Registry Status' : 'Registered Projects',
       tooltip: heroStats?.displayMode === 'launching' 
-        ? 'The Resilience Registry is launching soon. Be among the first to claim your protocol.'
-        : 'Verified protocols in the Resilience Registry who have secured their standing.',
+        ? 'The Resilience Registry is launching soon. Be among the first to claim your project.'
+        : 'Verified projects in the Resilience Registry who have secured their standing.',
       badge: registryDisplay.badge,
     },
     {
       value: heroStats ? `${heroStats.activeCount}` : '...',
       label: 'Active Heartbeats',
-      tooltip: 'Protocols with verified activity in the last 14 days and 5+ events.',
+      tooltip: 'Projects with verified activity in the last 14 days and 5+ events.',
       badge: undefined,
     },
     {
       value: heroStats ? heroStats.averageScore.toFixed(1) : '...',
       label: 'Avg. Resilience',
-      tooltip: 'Average Resilience Score across all verified protocols in the registry.',
+      tooltip: 'Average Resilience Score across all verified projects in the registry.',
       badge: undefined,
     }
   ];
