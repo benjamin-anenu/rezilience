@@ -1,81 +1,159 @@
 
-# Refactor: Replace Inline Row with Dropdown Menu
+# Implementation Plan: Seed Colosseum Startups + Add Pagination
 
-## Why Dropdown is Better
+## Overview
 
-| Aspect | Inline Row (Current) | Dropdown/Popover (Proposed) |
-|--------|---------------------|----------------------------|
-| Table Flow | Breaks flow, shifts content | Maintains table integrity |
-| Visual Space | Takes full row width | Compact, contained |
-| UX Pattern | Less familiar | Standard interaction |
-| Animation | Row insertion/removal | Smooth fade in/out |
+This plan adds 120 Colosseum hackathon startups to the Resilience Registry and implements pagination (100 records per page) for better performance and usability.
 
 ---
 
-## Implementation
+## Part 1: Seed Registry with Colosseum Startups
 
-### Change Eye Icon to Popover Trigger
+### Data Structure
 
-Replace the current expand/collapse state logic with a Radix Popover component:
+The JSON file contains 120 startups across:
+- 4 Accelerator Cohorts (44 startups): Renaissance, Radar, Breakout, Cypherpunk
+- Hackathon Winners (76 startups): Various track winners not in accelerator
 
-```typescript
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+Each startup includes:
+- Name, Category, Description
+- Program ID (many are "TBD" for pre-mainnet)
+- GitHub URL (many are "private")
+- Website, X handle, Location
+- Discovery source (hackathon/cohort info)
 
-// In LeaderboardRow.tsx - replace Button with Popover
-<Popover>
-  <PopoverTrigger asChild>
-    <Button variant="ghost" size="icon" className="h-7 w-7">
-      <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
-    </Button>
-  </PopoverTrigger>
-  <PopoverContent 
-    className="w-80 p-4" 
-    align="end" 
-    side="left"
-  >
-    {/* Details content here */}
-  </PopoverContent>
-</Popover>
-```
+### Implementation: Edge Function for Bulk Seeding
 
-### Dropdown Content Layout
-
-Stack the details vertically in the popover for better readability:
+Create a new edge function `seed-colosseum-profiles` that:
+1. Parses the JSON data
+2. Maps each startup to the `claimed_profiles` schema
+3. Uses UPSERT to avoid duplicates (matching on project_name)
+4. Sets `claim_status = 'unclaimed'` and `verified = false`
+5. Populates `discovery_source` with cohort/hackathon info
+6. Maps `location` to the `country` field
 
 ```text
-┌─────────────────────────────┐
-│ GitHub Status    [PUBLIC]   │
-│ ─────────────────────────── │
-│ 🌐 Website      novengrid.io│
-│ 👥 Contributors      3      │
-│ ✨ Source       Breakout '25│
-│ 𝕏 Handle       @novengrid   │
-└─────────────────────────────┘
+JSON Startup Record          claimed_profiles Column
+─────────────────────        ─────────────────────────
+name                    -->  project_name
+category                -->  category
+description             -->  description
+program_id              -->  program_id (or NULL if "TBD")
+github_url              -->  github_org_url (or NULL if "private")
+website                 -->  website_url
+x_handle                -->  x_username (strip @ prefix)
+location                -->  country
+contributors_approx     -->  github_contributors
+cohort/hackathon        -->  discovery_source
 ```
+
+### Files to Create/Modify
+
+| File | Action |
+|------|--------|
+| `supabase/functions/seed-colosseum-profiles/index.ts` | Create - Edge function for seeding |
+| `src/data/colosseum-startups.json` | Create - Copy JSON to project for import |
 
 ---
 
-## Files to Modify
+## Part 2: Add Pagination (100 per page)
+
+### Current State
+- All projects fetched at once from `claimed_profiles`
+- Rendered in single list without pagination
+- With 120+ new records, performance will degrade
+
+### Implementation
+
+Add pagination state and controls to the Explorer page:
+
+```text
+┌─────────────────────────────────────────────────────────┐
+│  Showing 1-100 of 200 registered protocols              │
+├─────────────────────────────────────────────────────────┤
+│  [Table with 100 rows]                                  │
+├─────────────────────────────────────────────────────────┤
+│  ← Previous  [1] [2] [3] ... [N]  Next →               │
+└─────────────────────────────────────────────────────────┘
+```
+
+### Technical Approach
+
+1. **Add pagination state** to `Explorer.tsx`:
+   - `currentPage` (default: 1)
+   - `itemsPerPage` (fixed: 100)
+
+2. **Slice filtered results** based on current page:
+   ```typescript
+   const paginatedPrograms = filteredPrograms.slice(
+     (currentPage - 1) * 100,
+     currentPage * 100
+   );
+   ```
+
+3. **Update results count** to show range:
+   ```
+   "Showing 1-100 of 200 registered protocols"
+   ```
+
+4. **Add pagination controls** below the table using existing `Pagination` component
+
+5. **Reset to page 1** when filters change
+
+### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/components/explorer/LeaderboardRow.tsx` | Replace expand state with Popover, remove ExpandedDetailsRow |
-| `src/components/explorer/ProgramLeaderboard.tsx` | Remove expandedRows state and toggle handler |
+| `src/pages/Explorer.tsx` | Add pagination state, slice logic, pagination controls |
 
 ---
 
-## Benefits
+## Detailed Changes
 
-1. **No state management needed** - Popover handles open/close internally
-2. **Simpler component** - Remove expanded row rendering logic
-3. **Better performance** - No row insertion/removal, just overlay
-4. **Cleaner table** - Content stays in place, no shifting
+### 1. Edge Function: `seed-colosseum-profiles/index.ts`
+
+```typescript
+// Parse the startup data from JSON
+// Map each entry to claimed_profiles schema
+// Bulk UPSERT using Supabase service role
+// Return count of inserted/updated records
+```
+
+Key features:
+- Uses service role for write access (bypasses RLS)
+- Deduplicates by project_name
+- Handles "TBD" program IDs as NULL
+- Handles "private" GitHub URLs as NULL
+- Strips @ from X handles
+
+### 2. Explorer.tsx Pagination
+
+Add state:
+```typescript
+const [currentPage, setCurrentPage] = useState(1);
+const itemsPerPage = 100;
+```
+
+Add pagination logic:
+```typescript
+const totalPages = Math.ceil(filteredPrograms.length / itemsPerPage);
+const startIndex = (currentPage - 1) * itemsPerPage;
+const paginatedPrograms = filteredPrograms.slice(startIndex, startIndex + itemsPerPage);
+```
+
+Add pagination controls at bottom of table using the existing `Pagination` component.
 
 ---
 
-## Technical Notes
+## Summary
 
-- The Popover component is already available from `@/components/ui/popover`
-- Use `align="end"` and `side="left"` to position dropdown to the left of the eye icon
-- Add `sideOffset={8}` for proper spacing
-- The popover will auto-close when clicking outside
+| Task | Complexity | Files |
+|------|------------|-------|
+| Create seeding edge function | Medium | 1 new file |
+| Copy JSON data to project | Low | 1 new file |
+| Add pagination to Explorer | Low | 1 file modified |
+
+After implementation:
+- Run the edge function once to seed 120 startups
+- Explorer will show 100 records per page with navigation
+- All Colosseum startups will appear as "Unclaimed" with their discovery source badge
