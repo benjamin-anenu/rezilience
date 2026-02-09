@@ -144,27 +144,7 @@ export function DevelopmentTabContent({
 
   return (
     <div className="space-y-6">
-      {/* GitHub Metrics - Full Width */}
-      <PublicGitHubMetrics analytics={analytics} githubUrl={githubUrl} />
-
-      {/* Analytics Charts + Recent Events Grid */}
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <AnalyticsCharts
-            projectId={projectId}
-            topContributors={analytics?.github_top_contributors}
-            recentEvents={analytics?.github_recent_events}
-          />
-        </div>
-        <div>
-          <RecentEvents
-            projectId={projectId}
-            githubEvents={analytics?.github_recent_events}
-          />
-        </div>
-      </div>
-
-      {/* Originality Metrics */}
+      {/* Originality Metrics - Trust Signals First */}
       <TooltipProvider>
         <div className="grid gap-4 md:grid-cols-2">
           {originalityMetrics.map((metric, index) => (
@@ -240,23 +220,18 @@ export function DevelopmentTabContent({
 
       {/* Multi-Dimensional Health Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {/* Dependency Health */}
         <DependencyHealthCard
           healthScore={dependencyHealthScore}
           outdatedCount={dependencyOutdatedCount}
           criticalCount={dependencyCriticalCount}
           analyzedAt={dependencyAnalyzedAt}
         />
-
-        {/* Governance Health */}
         <GovernanceHealthCard
           governanceAddress={governanceAddress}
           transactions30d={governanceTx30d}
           lastActivity={governanceLastActivity}
           analyzedAt={governanceAnalyzedAt}
         />
-
-        {/* TVL Metrics - Only show for DeFi protocols */}
         {(category === 'defi' || tvlUsd > 0) && (
           <TVLMetricsCard
             tvlUsd={tvlUsd}
@@ -266,6 +241,26 @@ export function DevelopmentTabContent({
             analyzedAt={tvlAnalyzedAt}
           />
         )}
+      </div>
+
+      {/* GitHub Metrics */}
+      <PublicGitHubMetrics analytics={analytics} githubUrl={githubUrl} />
+
+      {/* Analytics Charts + Recent Events Grid */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <AnalyticsCharts
+            projectId={projectId}
+            topContributors={analytics?.github_top_contributors}
+            recentEvents={analytics?.github_recent_events}
+          />
+        </div>
+        <div>
+          <RecentEvents
+            projectId={projectId}
+            githubEvents={analytics?.github_recent_events}
+          />
+        </div>
       </div>
     </div>
   );
