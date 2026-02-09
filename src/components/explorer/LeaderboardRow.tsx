@@ -234,21 +234,22 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
           </div>
         </TableCell>
         {/* Type */}
-        <TableCell className="hidden lg:table-cell px-2 w-16">
-          <span className="text-xs text-muted-foreground">
+        <TableCell className="hidden lg:table-cell px-2 w-20">
+          <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-border">
             {getCategoryLabel(project.category)}
-          </span>
+          </Badge>
         </TableCell>
         {/* Program ID */}
-        <TableCell className="hidden lg:table-cell px-2 w-20">
+        <TableCell className="hidden lg:table-cell px-2 w-24">
           {programIdInfo.isOnChain ? (
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
-                  className="font-mono text-[10px] text-muted-foreground hover:text-foreground"
+                  className="flex items-center gap-1 font-mono text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                   onClick={(e) => copyToClipboard(project.program_id, e)}
                 >
-                  {programIdInfo.display}
+                  <span>{programIdInfo.display}</span>
+                  <Copy className="h-2.5 w-2.5" />
                 </button>
               </TooltipTrigger>
               <TooltipContent>
@@ -259,7 +260,7 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
           ) : (
             <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
               <Cloud className="h-3 w-3" />
-              Off
+              Off-chain
             </span>
           )}
         </TableCell>
@@ -274,12 +275,11 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
           )}
         </TableCell>
         {/* Health */}
-        <TableCell className="hidden xl:table-cell px-1 w-12">
+        <TableCell className="hidden xl:table-cell px-1 w-14">
           <DimensionHealthIndicators
             dependencyScore={project.dependency_health_score}
             governanceTx30d={project.governance_tx_30d}
             tvlUsd={project.tvl_usd}
-            compact
           />
         </TableCell>
         {/* Trend */}
