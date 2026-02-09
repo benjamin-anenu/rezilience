@@ -1,43 +1,31 @@
 
+# Restructure: Add LAST COMMIT Column + Merge Claim & Eye into ACTION Column
 
-# Split STATUS into Two Columns: ORIG + STATUS
+## Current Layout (14 columns)
+`# | PROJECT | TYPE | PROGRAM | SCORE | HEALTH | TREND | LIVE | DECAY | ORIG | STATUS | STAKED | ACTIVITY | Eye`
 
-The current "STATUS" column is doing double duty — mixing originality (Fork/OK) with claim status (Unclaimed). This splits it into two distinct columns.
+The ACTIVITY column currently shows either a "Claim" button (unclaimed) or a last commit date (claimed). The Eye popover is a separate column. This merges those two into one ACTION column and extracts the last commit date into its own dedicated column.
+
+## New Layout (14 columns -- same count)
+`# | PROJECT | TYPE | PROGRAM | SCORE | HEALTH | TREND | LIVE | DECAY | ORIG | STATUS | STAKED | COMMIT | ACTION`
 
 ## Changes
 
-### 1. Add ORIG column header (ProgramLeaderboard.tsx)
+### 1. ProgramLeaderboard.tsx -- Update headers
+- Rename `ACTIVITY` header to `COMMIT`
+- Rename the Eye icon header to `ACTION` (text, not icon)
 
-Insert a new `ORIG` column header before the existing `STATUS` header. Keep STATUS where it is.
+### 2. LeaderboardRow.tsx -- Restructure cells
 
-### 2. Update badge logic (LeaderboardRow.tsx)
+**COMMIT column** (replaces old ACTIVITY position):
+- Always shows the formatted last commit date (`formatDate(project.github_last_commit)`)
+- Lock icon for private repos
 
-**Rename `getOriginalityBadge` to `getStatusBadge2`** (or create new functions):
+**ACTION column** (replaces old Eye column):
+- Contains both the Claim button (for unclaimed projects) and the Eye popover, side by side in a `flex` row
+- For claimed projects: just the Eye popover button
+- For unclaimed projects: Claim button + Eye popover button
 
-- **New `getOriginalityBadge`** -- Shows code provenance:
-  - `is_fork === true` --> Red "Forked" badge
-  - `is_fork === false` --> Green "Owned" badge (with CheckCircle icon)
-
-- **New `getClaimStatusBadge`** -- Shows claim state:
-  - `claimStatus === 'unclaimed'` --> Amber "Unclaimed" badge (with AlertTriangle icon)
-  - `claimStatus === 'claimed'` --> Primary/teal "Claimed" badge (with CheckCircle icon)
-
-### 3. Add ORIG cell in LeaderboardRow
-
-Insert a new `TableCell` for originality before the existing Status cell. The Status cell now calls the new claim status function.
-
-### 4. Mobile cards (MobileProgramCard.tsx)
-
-Update to show both badges if the mobile card currently uses `getOriginalityBadge`.
-
-## Column Layout After Change (14 columns)
-
-| # | PROJECT | TYPE | PROGRAM | SCORE | HEALTH | TREND | LIVE | DECAY | ORIG | STATUS | STAKED | ACTIVITY | Eye |
-
-Both ORIG and STATUS will be `hidden lg:table-cell` to keep the compact layout.
-
-## Files Modified
-1. `src/components/explorer/ProgramLeaderboard.tsx` -- Add ORIG header
-2. `src/components/explorer/LeaderboardRow.tsx` -- Split badge logic into two functions, add ORIG cell
-3. `src/components/explorer/MobileProgramCard.tsx` -- Update to show both badges
-
+### Files Modified
+1. `src/components/explorer/ProgramLeaderboard.tsx` -- Update 2 header labels
+2. `src/components/explorer/LeaderboardRow.tsx` -- Restructure last 2 TableCells
