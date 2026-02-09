@@ -76,10 +76,10 @@ const ProgramDetail = () => {
       <Layout>
         <div className="container mx-auto px-4 py-20 text-center lg:px-8">
           <h1 className="mb-4 font-display text-3xl font-bold text-foreground">
-            PROTOCOL NOT FOUND
+            PROJECT NOT FOUND
           </h1>
           <p className="mb-8 text-muted-foreground">
-            The protocol you're looking for doesn't exist in the registry.
+            The project you're looking for doesn't exist in the registry.
           </p>
           <div className="flex justify-center gap-4">
             <Button asChild>
@@ -90,7 +90,7 @@ const ProgramDetail = () => {
             </Button>
             <Button asChild variant="outline">
               <Link to="/claim-profile">
-                Register Protocol
+                Register Project
               </Link>
             </Button>
           </div>
@@ -100,7 +100,7 @@ const ProgramDetail = () => {
   }
   
   // Build display data from either project or claimed profile
-  const displayName = project?.program_name || claimedProfile?.projectName || 'Unknown Protocol';
+  const displayName = project?.program_name || claimedProfile?.projectName || 'Unknown Project';
   const displayProgramId = project?.program_id || claimedProfile?.programId || id || '';
   const displayScore = project?.resilience_score || claimedProfile?.score || 0;
   const displayDescription = claimedProfile?.description || project?.description;

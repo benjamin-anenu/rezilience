@@ -441,7 +441,7 @@ const ClaimProfile = () => {
       
       toast({ 
         title: unclaimedProfileId ? 'Project Claimed!' : 'Profile Created!', 
-        description: 'Your protocol is now registered in the Resilience Registry.' 
+        description: 'Your project is now registered in the Resilience Registry.' 
       });
       navigate(`/profile/${profileId}`);
       

@@ -248,7 +248,7 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
                 Team Members
               </CardTitle>
               <CardDescription className="mt-1">
-                Showcase the people building this protocol
+                Showcase the people building this project
               </CardDescription>
             </div>
             {!isAddingMember && (

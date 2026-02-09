@@ -51,7 +51,7 @@ export function DeleteProfileDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-destructive">
             <AlertTriangle className="h-5 w-5" />
-            DELETE PROTOCOL
+            DELETE PROJECT
           </AlertDialogTitle>
           <AlertDialogDescription className="space-y-4 pt-2">
             <p>You are about to permanently delete:</p>
@@ -73,7 +73,7 @@ export function DeleteProfileDialog({
                 id="confirm-name"
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
-                placeholder="Type protocol name here..."
+                placeholder="Type project name here..."
                 className="font-mono"
                 autoComplete="off"
                 disabled={isDeleting}
@@ -95,7 +95,7 @@ export function DeleteProfileDialog({
                 Deleting...
               </>
             ) : (
-              'Delete Protocol'
+              'Delete Project'
             )}
           </Button>
         </AlertDialogFooter>

@@ -179,7 +179,7 @@ export function EcosystemHeatmap() {
         ) : heatmapCells.length === 0 ? (
           <div className="rounded-sm border border-border bg-card p-8 text-center">
             <p className="text-sm text-muted-foreground">
-              No protocols match the selected filters.
+              No projects match the selected filters.
             </p>
           </div>
         ) : (
