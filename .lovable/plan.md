@@ -1,190 +1,234 @@
 
 
-# Implementation Plan: Hybrid Cron Schedule (TVL: 5m, Gov: 30m, GitHub: 2h, Deps: 6h)
+# Implementation Plan: Eye Toggle Details Row in Explorer Table
 
 ## Overview
 
-This plan implements the recommended hybrid refresh schedule that balances data freshness with API rate limits and system stability.
+Add an expandable details row to the Program Leaderboard table with an eye toggle button. When clicked, it reveals additional project metadata in a collapsible sub-row. For unclaimed profiles with private repositories (no accessible data), display padlock icons for metrics.
 
 ---
 
-## Tiered Schedule
+## Feature Summary
 
-| Dimension | Frequency | Justification |
-|-----------|-----------|---------------|
-| TVL | Every 5 minutes | DeFi prices fluctuate rapidly; real-time accuracy critical |
-| Governance | Every 30 minutes | DAO votes happen frequently; 30m catches most activity |
-| GitHub | Every 2 hours | Commits are batched; protects against rate limits |
-| Dependencies | Every 6 hours | Crates.io updates slowly; no urgency |
+### Eye Toggle Behavior
+- Add an "EYE" column at the end of the table with an `Eye` icon button
+- Clicking toggles open a details sub-row below the current row
+- When expanded, the icon changes to `EyeOff`
 
----
+### Details Row Content
 
-## Part 1: Update README Data Provenance
+| Field | Data Source | Display |
+|-------|-------------|---------|
+| GitHub Status | New field (infer from `github_analyzed_at`) | "PUBLIC" or "PRIVATE" badge |
+| Website | `website_url` | Globe icon + clickable link |
+| Contributors | `github_contributors` | Users icon + count |
+| Source/Hackathon | New column `discovery_source` | Text badge (e.g., "Breakout 2025") |
+| X Handle | `x_username` | X icon + @handle link |
 
-**File: `src/pages/Readme.tsx`**
+### Private Repo Handling
 
-Update the refresh cadences in the Data Provenance section (lines 447-466):
+For unclaimed profiles where `github_analyzed_at` is NULL (indicating we couldn't fetch data):
 
-```typescript
-<DataSourceItem
-  name="GitHub API"
-  description="Commits, Contributors, Releases, Events, Statistics endpoints"
-  refresh="Every 2 hours via cron + Manual"
-/>
-<DataSourceItem
-  name="Crates.io Registry"
-  description="Cargo.toml parsing for Rust dependency analysis"
-  refresh="Every 6 hours via cron + Manual"
-/>
-<DataSourceItem
-  name="DeFiLlama API"
-  description="TVL data for DeFi protocols via protocol name mapping"
-  refresh="Every 5 minutes (real-time)"
-/>
-<DataSourceItem
-  name="Solana RPC"
-  description="Governance transaction history for Squads/Realms addresses"
-  refresh="Every 30 minutes"
-/>
-```
+| Column | Normal Display | Private Repo Display |
+|--------|----------------|----------------------|
+| SCORE | Numeric score | `Lock` icon |
+| HEALTH | D/G/T indicators | `Lock` icon |
+| TREND | Sparkline | `Lock` icon |
+| DECAY | Percentage | `Lock` icon |
+| LIVENESS | Active/Stale/Decaying | "Private Repo" badge |
 
 ---
 
-## Part 2: Update README FAQ
+## Database Changes
 
-**File: `src/pages/Readme.tsx`**
-
-Update the FAQ answer (line 495):
-
-**From:**
-```
-"...Governance checks hourly for DAO activity, and GitHub/Dependencies refresh every 6 hours..."
-```
-
-**To:**
-```
-"Data refreshes on a tiered schedule optimized for each dimension's volatility: TVL updates every 5 minutes for real-time DeFi tracking, Governance checks every 30 minutes for DAO activity, GitHub refreshes every 2 hours, and Dependencies refresh every 6 hours. Protocol owners can also trigger a full manual refresh from their dashboard that analyzes all 4 dimensions simultaneously."
-```
-
----
-
-## Part 3: SQL for pg_cron Jobs
-
-The SQL creates 4 scheduled jobs with the hybrid frequencies:
+Add a new column to track discovery source:
 
 ```sql
--- ============================================================
--- HYBRID CRON SCHEDULE SETUP
--- TVL: 5m | Governance: 30m | GitHub: 2h | Dependencies: 6h
--- ============================================================
+ALTER TABLE claimed_profiles
+ADD COLUMN discovery_source VARCHAR(100) DEFAULT NULL;
+```
 
--- Enable required extensions (if not already enabled)
-CREATE EXTENSION IF NOT EXISTS pg_cron;
-CREATE EXTENSION IF NOT EXISTS pg_net;
+This column will store values like:
+- "Breakout 2025"
+- "Solana Foundation"
+- "Community Submission"
+- NULL (for manual claims)
 
--- ============================================================
--- JOB 1: TVL Refresh - Every 5 minutes (DeFi real-time)
--- ============================================================
-SELECT cron.schedule(
-  'refresh-tvl-realtime',
-  '*/5 * * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://gsphlwjoowqkqhgthxtp.supabase.co/functions/v1/refresh-tvl-realtime',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzcGhsd2pvb3dxa3FoZ3RoeHRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMjc1NDgsImV4cCI6MjA4NTkwMzU0OH0.Zc1lcT48v5JLCf6EpNiAtGnOTD8bv526no-f_KC-WPs'
-    ),
-    body := '{}'::jsonb
-  ) AS request_id;
-  $$
-);
+---
 
--- ============================================================
--- JOB 2: Governance Refresh - Every 30 minutes (DAO tracking)
--- ============================================================
-SELECT cron.schedule(
-  'refresh-governance-30m',
-  '*/30 * * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://gsphlwjoowqkqhgthxtp.supabase.co/functions/v1/refresh-governance-hourly',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzcGhsd2pvb3dxa3FoZ3RoeHRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMjc1NDgsImV4cCI6MjA4NTkwMzU0OH0.Zc1lcT48v5JLCf6EpNiAtGnOTD8bv526no-f_KC-WPs'
-    ),
-    body := '{}'::jsonb
-  ) AS request_id;
-  $$
-);
+## Part 1: Update ExplorerProject Interface
 
--- ============================================================
--- JOB 3: GitHub Refresh - Every 2 hours (rate-limit safe)
--- ============================================================
-SELECT cron.schedule(
-  'refresh-github-2h',
-  '0 */2 * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://gsphlwjoowqkqhgthxtp.supabase.co/functions/v1/refresh-all-profiles',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzcGhsd2pvb3dxa3FoZ3RoeHRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMjc1NDgsImV4cCI6MjA4NTkwMzU0OH0.Zc1lcT48v5JLCf6EpNiAtGnOTD8bv526no-f_KC-WPs'
-    ),
-    body := '{"dimensions": ["github"]}'::jsonb
-  ) AS request_id;
-  $$
-);
+**File: `src/hooks/useExplorerProjects.ts`**
 
--- ============================================================
--- JOB 4: Dependencies Refresh - Every 6 hours (slow-changing)
--- ============================================================
-SELECT cron.schedule(
-  'refresh-deps-6h',
-  '0 */6 * * *',
-  $$
-  SELECT net.http_post(
-    url := 'https://gsphlwjoowqkqhgthxtp.supabase.co/functions/v1/refresh-all-profiles',
-    headers := jsonb_build_object(
-      'Content-Type', 'application/json',
-      'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdzcGhsd2pvb3dxa3FoZ3RoeHRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAzMjc1NDgsImV4cCI6MjA4NTkwMzU0OH0.Zc1lcT48v5JLCf6EpNiAtGnOTD8bv526no-f_KC-WPs'
-    ),
-    body := '{"dimensions": ["dependencies"]}'::jsonb
-  ) AS request_id;
-  $$
-);
+Add new fields to the interface:
 
--- ============================================================
--- VERIFICATION: Check all scheduled jobs
--- ============================================================
-SELECT jobid, jobname, schedule, active 
-FROM cron.job 
-WHERE jobname LIKE 'refresh-%'
-ORDER BY jobname;
+```typescript
+export interface ExplorerProject {
+  // ... existing fields ...
+  
+  // New fields for details toggle
+  github_contributors: number;
+  x_username: string | null;
+  github_analyzed_at: string | null;
+  discovery_source: string | null;
+}
+```
+
+Update the query mapping to include these fields.
+
+---
+
+## Part 2: Update ProgramLeaderboard Component
+
+**File: `src/components/explorer/ProgramLeaderboard.tsx`**
+
+### Add State for Expanded Rows
+
+```typescript
+const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+const toggleRowExpansion = (projectId: string, e: React.MouseEvent) => {
+  e.stopPropagation();
+  setExpandedRows(prev => {
+    const newSet = new Set(prev);
+    if (newSet.has(projectId)) {
+      newSet.delete(projectId);
+    } else {
+      newSet.add(projectId);
+    }
+    return newSet;
+  });
+};
+```
+
+### Add Private Repo Detection
+
+```typescript
+const isPrivateRepo = (project: ExplorerProject): boolean => {
+  return project.claimStatus === 'unclaimed' && !project.github_analyzed_at;
+};
+```
+
+### Add DETAILS Column Header
+
+```typescript
+<TableHead className="w-12 text-center">DETAILS</TableHead>
+```
+
+### Add Eye Toggle Cell
+
+```typescript
+<TableCell className="text-center">
+  <Button
+    variant="ghost"
+    size="icon"
+    className="h-7 w-7"
+    onClick={(e) => toggleRowExpansion(project.id, e)}
+  >
+    {expandedRows.has(project.id) ? (
+      <EyeOff className="h-4 w-4 text-muted-foreground" />
+    ) : (
+      <Eye className="h-4 w-4 text-muted-foreground" />
+    )}
+  </Button>
+</TableCell>
+```
+
+### Add Expanded Details Row
+
+After each main row, conditionally render an expanded details row:
+
+```typescript
+{expandedRows.has(project.id) && (
+  <TableRow className="bg-muted/30 hover:bg-muted/30">
+    <TableCell colSpan={13} className="py-3">
+      <div className="flex flex-wrap items-center gap-6 px-4">
+        {/* GitHub Status */}
+        <div className="flex items-center gap-2">
+          <Github className="h-4 w-4 text-muted-foreground" />
+          <Badge variant="outline" className={isPrivateRepo(project) ? 'border-amber-500/50 text-amber-500' : 'border-primary/50 text-primary'}>
+            {isPrivateRepo(project) ? 'PRIVATE' : 'PUBLIC'}
+          </Badge>
+        </div>
+        
+        {/* Website */}
+        {project.website_url && (
+          <a href={project.website_url} target="_blank" rel="noopener noreferrer" 
+             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
+            <Globe className="h-4 w-4" />
+            <span className="underline">Website</span>
+            <ExternalLink className="h-3 w-3" />
+          </a>
+        )}
+        
+        {/* Contributors */}
+        <div className="flex items-center gap-2">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm">{project.github_contributors || '—'}</span>
+        </div>
+        
+        {/* Source/Hackathon */}
+        {project.discovery_source && (
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            <Badge variant="outline" className="border-amber-500/50 text-amber-500">
+              {project.discovery_source}
+            </Badge>
+          </div>
+        )}
+        
+        {/* X Handle */}
+        {project.x_username && (
+          <a href={`https://x.com/${project.x_username}`} target="_blank" rel="noopener noreferrer"
+             className="flex items-center gap-2 text-sm text-muted-foreground hover:text-primary">
+            <Twitter className="h-4 w-4" />
+            <span>@{project.x_username}</span>
+          </a>
+        )}
+      </div>
+    </TableCell>
+  </TableRow>
+)}
+```
+
+### Update Metric Columns for Private Repos
+
+Wrap Score, Health, Trend, Decay, and Liveness cells with private repo checks:
+
+**Score Cell:**
+```typescript
+<TableCell className="text-right">
+  {isPrivateRepo(project) ? (
+    <Lock className="h-4 w-4 text-muted-foreground mx-auto" />
+  ) : (
+    <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
+      {Math.round(project.resilience_score)}
+    </span>
+  )}
+</TableCell>
+```
+
+**Liveness Cell:**
+```typescript
+<TableCell className="hidden md:table-cell">
+  {isPrivateRepo(project) ? (
+    <Badge variant="outline" className="border-muted-foreground/50 text-muted-foreground">
+      <Lock className="mr-1 h-3 w-3" />
+      Private Repo
+    </Badge>
+  ) : (
+    getStatusBadge(project.liveness_status)
+  )}
+</TableCell>
 ```
 
 ---
 
-## Part 4: Update refresh-all-profiles to Support Dimension Filtering
+## Part 3: Update MobileProgramCard
 
-**File: `supabase/functions/refresh-all-profiles/index.ts`**
+**File: `src/components/explorer/MobileProgramCard.tsx`**
 
-Add support for the `dimensions` parameter so GitHub and Dependencies can run independently:
-
-```typescript
-// At the start of the try block, after parsing request
-const body = await req.json().catch(() => ({}));
-const requestedDimensions = body.dimensions || ['github', 'dependencies', 'governance', 'tvl'];
-
-// Then wrap each dimension call in a condition:
-if (requestedDimensions.includes('github')) {
-  // Call analyze-github-repo
-}
-if (requestedDimensions.includes('dependencies')) {
-  // Call analyze-dependencies
-}
-// etc.
-```
+Add an expandable section at the bottom of each card with the same details.
 
 ---
 
@@ -192,31 +236,51 @@ if (requestedDimensions.includes('dependencies')) {
 
 | File | Changes |
 |------|---------|
-| `src/pages/Readme.tsx` | Update Data Provenance refresh cadences + FAQ answer |
-| `supabase/functions/refresh-all-profiles/index.ts` | Add dimension filtering support |
+| `src/hooks/useExplorerProjects.ts` | Add `github_contributors`, `x_username`, `github_analyzed_at`, `discovery_source` to interface and query |
+| `src/components/explorer/ProgramLeaderboard.tsx` | Add eye toggle column, expanded details row, private repo handling |
+| `src/components/explorer/MobileProgramCard.tsx` | Add collapsible details section |
+
+## Database Migration
+
+| Change | SQL |
+|--------|-----|
+| Add discovery source column | `ALTER TABLE claimed_profiles ADD COLUMN discovery_source VARCHAR(100) DEFAULT NULL;` |
 
 ---
 
-## Summary of Refresh Cadences
+## Visual Preview
 
+**Collapsed State:**
 ```text
-┌─────────────────────────────────────────────────────────────┐
-│                  HYBRID REFRESH SCHEDULE                    │
-├─────────────────┬───────────────┬───────────────────────────┤
-│  Dimension      │  Frequency    │  Cron Expression          │
-├─────────────────┼───────────────┼───────────────────────────┤
-│  TVL            │  Every 5 min  │  */5 * * * *              │
-│  Governance     │  Every 30 min │  */30 * * * *             │
-│  GitHub         │  Every 2 hrs  │  0 */2 * * *              │
-│  Dependencies   │  Every 6 hrs  │  0 */6 * * *              │
-│  Manual Refresh │  On-demand    │  All 4 dimensions         │
-└─────────────────┴───────────────┴───────────────────────────┘
+| RANK | PROJECT    | ... | DETAILS |
+|------|------------|-----|---------|
+| #1   | Jupiter    | ... |   👁    |
+| #2   | Raydium    | ... |   👁    |
 ```
 
-This approach ensures:
-- Real-time DeFi accuracy (5-minute TVL)
-- Fresh governance data (30-minute DAO tracking)
-- Safe GitHub API usage (2-hour cycle avoids rate limits)
-- Efficient dependency checks (6-hour slow-changing data)
-- Full manual override available to protocol owners
+**Expanded State:**
+```text
+| RANK | PROJECT    | ... | DETAILS |
+|------|------------|-----|---------|
+| #1   | Jupiter    | ... |   👁‍🗨   |
+|      | 🌐 PUBLIC | 🔗 Website | 👥 42 | ✨ Breakout 2025 | 𝕏 @JupiterExchange |
+| #2   | Raydium    | ... |   👁    |
+```
+
+**Private Repo (Unclaimed):**
+```text
+| RANK | PROJECT    | SCORE | HEALTH | TREND | LIVENESS      | ... | DETAILS |
+|------|------------|-------|--------|-------|---------------|-----|---------|
+| #45  | MyProject  |  🔒   |   🔒   |  🔒   | 🔒 Private Repo | ... |   👁    |
+```
+
+---
+
+## Import Additions
+
+```typescript
+import { Eye, EyeOff, Globe, Users, ExternalLink, Lock } from 'lucide-react';
+```
+
+Note: For the X/Twitter icon, we'll use a custom SVG or the existing pattern in the codebase since Lucide doesn't have an official X icon.
 
