@@ -326,137 +326,142 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
             {(project.total_staked / 1000).toFixed(0)}K
           </span>
         </TableCell>
-        {/* Activity */}
+        {/* Last Commit */}
         <TableCell className="hidden lg:table-cell px-2 w-20">
-          {project.claimStatus === 'unclaimed' ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-5 px-2 border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-display text-[9px] uppercase"
-              onClick={handleClaimClick}
-            >
-              Claim
-            </Button>
+          {isPrivate ? (
+            <Lock className="h-3 w-3 text-muted-foreground" />
           ) : (
             <span className="font-mono text-[10px] text-muted-foreground">
               {formatDate(project.github_last_commit)}
             </span>
           )}
         </TableCell>
-        {/* Details Popover */}
-        <TableCell className="text-center">
-          <Popover>
-            <PopoverTrigger asChild>
+        {/* Action */}
+        <TableCell className="text-center px-1 w-16">
+          <div className="flex items-center justify-center gap-1">
+            {project.claimStatus === 'unclaimed' && (
               <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                onClick={(e) => e.stopPropagation()}
+                size="sm"
+                variant="outline"
+                className="h-5 px-2 border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-display text-[9px] uppercase"
+                onClick={handleClaimClick}
               >
-                <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                Claim
               </Button>
-            </PopoverTrigger>
-            <PopoverContent 
-              className="w-72 p-3 bg-popover border-border" 
-              align="end" 
-              side="left"
-              sideOffset={8}
-            >
-              <div className="space-y-3">
-                {/* GitHub Status */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Github className="h-4 w-4" />
-                    <span>GitHub</span>
-                  </div>
-                  <Badge 
-                    variant="outline" 
-                    className={isPrivate 
-                      ? 'border-amber-500/50 text-amber-500' 
-                      : 'border-primary/50 text-primary'
-                    }
-                  >
-                    {isPrivate ? 'PRIVATE' : 'PUBLIC'}
-                  </Badge>
-                </div>
-                
-                {/* Website */}
-                {project.website_url && (
-                  <a 
-                    href={project.website_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer" 
-                    className="flex items-center justify-between text-sm hover:text-primary transition-colors"
-                  >
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Globe className="h-4 w-4" />
-                      <span>Website</span>
+            )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent 
+                className="w-72 p-3 bg-popover border-border" 
+                align="end" 
+                side="left"
+                sideOffset={8}
+              >
+                <div className="space-y-3">
+                  {/* GitHub Status */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Github className="h-4 w-4" />
+                      <span>GitHub</span>
                     </div>
-                    <div className="flex items-center gap-1 text-foreground">
-                      <span className="truncate max-w-[120px]">
-                        {new URL(project.website_url).hostname}
-                      </span>
-                      <ExternalLink className="h-3 w-3" />
-                    </div>
-                  </a>
-                )}
-                
-                {/* Contributors */}
-                <div className="flex items-center justify-between text-sm">
-                  <div className="flex items-center gap-2 text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    <span>Contributors</span>
-                  </div>
-                  <span className="text-foreground">
-                    {project.github_contributors || '—'}
-                  </span>
-                </div>
-                
-                {/* Source/Hackathon */}
-                {project.discovery_source && (
-                  <div className="flex items-center justify-between text-sm gap-3">
-                    <span className="text-muted-foreground shrink-0">Source</span>
-                    <Badge variant="outline" className="border-amber-500/50 text-amber-500 max-w-[140px] truncate">
-                      {project.discovery_source}
+                    <Badge 
+                      variant="outline" 
+                      className={isPrivate 
+                        ? 'border-amber-500/50 text-amber-500' 
+                        : 'border-primary/50 text-primary'
+                      }
+                    >
+                      {isPrivate ? 'PRIVATE' : 'PUBLIC'}
                     </Badge>
                   </div>
-                )}
-                
-                {/* X Handle */}
-                {project.x_username && (
-                  <a 
-                    href={`https://x.com/${project.x_username}`} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-between text-sm hover:text-primary transition-colors"
-                  >
+                  
+                  {/* Website */}
+                  {project.website_url && (
+                    <a 
+                      href={project.website_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer" 
+                      className="flex items-center justify-between text-sm hover:text-primary transition-colors"
+                    >
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Globe className="h-4 w-4" />
+                        <span>Website</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-foreground">
+                        <span className="truncate max-w-[120px]">
+                          {new URL(project.website_url).hostname}
+                        </span>
+                        <ExternalLink className="h-3 w-3" />
+                      </div>
+                    </a>
+                  )}
+                  
+                  {/* Contributors */}
+                  <div className="flex items-center justify-between text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <XIcon className="h-4 w-4" />
-                      <span>X Handle</span>
+                      <Users className="h-4 w-4" />
+                      <span>Contributors</span>
                     </div>
-                    <span className="text-foreground">@{project.x_username}</span>
-                  </a>
-                )}
-                
-                {/* Dependency Tree Link */}
-                <div className="pt-3 mt-3 border-t border-border">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate(`/deps/${project.id}`);
-                    }}
-                    className="flex items-center justify-between w-full text-sm hover:text-primary transition-colors group"
-                  >
-                    <div className="flex items-center gap-2 text-muted-foreground group-hover:text-primary">
-                      <Network className="h-4 w-4" />
-                      <span>View Dependency Tree</span>
+                    <span className="text-foreground">
+                      {project.github_contributors || '—'}
+                    </span>
+                  </div>
+                  
+                  {/* Source/Hackathon */}
+                  {project.discovery_source && (
+                    <div className="flex items-center justify-between text-sm gap-3">
+                      <span className="text-muted-foreground shrink-0">Source</span>
+                      <Badge variant="outline" className="border-amber-500/50 text-amber-500 max-w-[140px] truncate">
+                        {project.discovery_source}
+                      </Badge>
                     </div>
-                    <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary" />
-                  </button>
+                  )}
+                  
+                  {/* X Handle */}
+                  {project.x_username && (
+                    <a 
+                      href={`https://x.com/${project.x_username}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center justify-between text-sm hover:text-primary transition-colors"
+                    >
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <XIcon className="h-4 w-4" />
+                        <span>X Handle</span>
+                      </div>
+                      <span className="text-foreground">@{project.x_username}</span>
+                    </a>
+                  )}
+                  
+                  {/* Dependency Tree Link */}
+                  <div className="pt-3 mt-3 border-t border-border">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/deps/${project.id}`);
+                      }}
+                      className="flex items-center justify-between w-full text-sm hover:text-primary transition-colors group"
+                    >
+                      <div className="flex items-center gap-2 text-muted-foreground group-hover:text-primary">
+                        <Network className="h-4 w-4" />
+                        <span>View Dependency Tree</span>
+                      </div>
+                      <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary" />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+              </PopoverContent>
+            </Popover>
+          </div>
         </TableCell>
       </TableRow>
     </React.Fragment>
