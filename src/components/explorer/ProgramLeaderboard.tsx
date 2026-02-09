@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, 
@@ -246,9 +246,8 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
             const isExpanded = expandedRows.has(project.id);
             
             return (
-              <>
+              <React.Fragment key={project.id}>
                 <TableRow
-                  key={project.id}
                   className="cursor-pointer border-border transition-colors hover:bg-muted/50"
                   onClick={(e) => handleRowClick(project, e)}
                 >
@@ -423,13 +422,12 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
                 {/* Expanded Details Row */}
                 {isExpanded && (
                   <ExpandedDetailsRow 
-                    key={`${project.id}-details`}
                     project={project} 
                     isPrivateRepo={isPrivate} 
                     colSpan={totalColumns} 
                   />
                 )}
-              </>
+              </React.Fragment>
             );
           })}
         </TableBody>
