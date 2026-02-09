@@ -3,6 +3,7 @@ import { Activity, AlertCircle, CheckCircle, ShieldCheck, TrendingUp, TrendingDo
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Sparkline } from './Sparkline';
+import { DimensionHealthIndicators } from './DimensionHealthIndicators';
 import { PROJECT_CATEGORIES } from '@/types';
 import type { ExplorerProject } from '@/hooks/useExplorerProjects';
 import type { LivenessStatus } from '@/types/database';
@@ -165,9 +166,16 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
         </div>
       </div>
 
-      {/* Decay Rate */}
+      {/* Decay Rate and Health Indicators */}
       <div className="mb-3 flex items-center justify-between text-xs">
-        <span className="uppercase tracking-wider text-muted-foreground">Decay Rate</span>
+        <div className="flex items-center gap-2">
+          <span className="uppercase tracking-wider text-muted-foreground">Health</span>
+          <DimensionHealthIndicators
+            dependencyScore={project.dependency_health_score}
+            governanceTx30d={project.governance_tx_30d}
+            tvlUsd={project.tvl_usd}
+          />
+        </div>
         <div className={cn('flex items-center gap-1 font-mono', getDecayColor(decayPercentage))}>
           <TrendingDownIcon className="h-3 w-3" />
           <span>{decayPercentage.toFixed(1)}%</span>

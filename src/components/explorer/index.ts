@@ -1,3 +1,4 @@
+export { DimensionHealthIndicators } from './DimensionHealthIndicators';
 export { EcosystemStats } from './EcosystemStats';
 export { EcosystemHeatmap } from './EcosystemHeatmap';
 export { SearchBar } from './SearchBar';
