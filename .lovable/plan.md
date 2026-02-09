@@ -1,278 +1,161 @@
 
-# Full-Spectrum Resilience Intelligence - Implementation Plan
+# Diagnostic Report and Implementation Plan
 
-## Executive Summary
+## Issue 1: GitHub Metrics Stuck at 20 Commits / 0.7 velocity
 
-This plan implements a multi-dimensional "Full-Spectrum" Resilience scoring system that extends beyond GitHub commits to measure the true persistence of a Solana project across five dimensions: **Code (GitHub)**, **Supply Chain (Crates.io)**, **Economic Impact (DeFiLlama TVL)**, **Governance (Squads/Realms)**, and **Program Activity (On-Chain)**.
+**Root Cause Identified**: The GitHub Events API has a **critical limitation**:
+- The Events API only returns the **most recent 300 events** AND events **older than 90 days** are excluded
+- More importantly, **events expire quickly** - the API only shows events from the **last ~7-10 days** of activity
+- When I checked the logs, your profile was last analyzed at `2026-02-09 03:02:01` with:
+  - `github_commits_30d: 20`
+  - `github_push_events_30d: 20` 
+  - `github_commit_velocity: 0.67` (20 commits / 30 days)
 
-The philosophy is correct: **A 48-hour-old project SHOULD score 15-30 points.** Resilience cannot be faked - it must be earned through sustained, multi-dimensional proof of work.
+**The Problem**: The edge function fetches commits from the Commits API (`/commits?since=30daysAgo`) which only counts **default branch commits**. Then it uses Events API for push events. But the Events API has a **hard limit of 20 events per page** (line 111 in analyze-github-repo):
 
----
-
-## Architecture Overview
-
-```text
-+------------------+     +---------------------+     +------------------+
-|   Frontend UI    | --> | Edge Functions      | --> | External APIs    |
-|                  |     |                     |     |                  |
-| DevelopmentTab   |     | analyze-dependencies|     | Crates.io        |
-| ResilienceCard   |     | analyze-tvl         |     | DeFiLlama        |
-| HealthDashboard  |     | analyze-governance  |     | Solana RPC       |
-+------------------+     +---------------------+     +------------------+
-         |                        |
-         v                        v
-+------------------+     +---------------------+
-|  claimed_profiles|     | score_history       |
-|  (new columns)   |     | (breakdown JSONB)   |
-+------------------+     +---------------------+
+```typescript
+eventsResponse = await fetchWithAuth(`...events?per_page=20`, githubToken)
 ```
 
----
+This means if you have 50 push events, we only see the **20 most recent** - severely undercounting your activity!
 
-## Phase 1: Database Schema Extension
-
-Add new columns to `claimed_profiles` table:
-
-| Column                     | Type      | Purpose                                      |
-|---------------------------|-----------|----------------------------------------------|
-| `dependency_health_score` | INTEGER   | 0-100 score from Crates.io analysis          |
-| `dependency_outdated_count` | INTEGER | Number of outdated dependencies              |
-| `dependency_critical_count` | INTEGER | Dependencies 6+ months behind                |
-| `dependency_analyzed_at`  | TIMESTAMP | Last analysis timestamp                      |
-| `tvl_usd`                 | NUMERIC   | Total Value Locked from DeFiLlama            |
-| `tvl_market_share`        | NUMERIC   | % of Solana TVL                              |
-| `tvl_risk_ratio`          | NUMERIC   | TVL-to-commit ratio (risk metric)            |
-| `tvl_analyzed_at`         | TIMESTAMP | Last TVL sync                                |
-| `governance_address`      | TEXT      | Squads/Realms address if applicable          |
-| `governance_tx_30d`       | INTEGER   | Governance transactions in last 30 days      |
-| `governance_analyzed_at`  | TIMESTAMP | Last governance check                        |
-| `integrated_score`        | NUMERIC   | Multi-dimensional weighted score             |
-| `score_breakdown`         | JSONB     | Detailed breakdown by dimension              |
+**Fix Required**:
+1. Increase `per_page=100` for events endpoint
+2. Paginate through events to capture full 30-day window
+3. Use the **Statistics API** (`/repos/{owner}/{repo}/stats/commit_activity`) which provides accurate weekly commit counts maintained by GitHub
 
 ---
 
-## Phase 2: Edge Functions
+## Issue 2: New Scoring System Not Taking Effect
 
-### Function 1: `analyze-dependencies`
+**Root Cause**: The `integrated_score` and `score_breakdown` fields are **empty** in the database:
+- `integrated_score: 0`
+- `score_breakdown: {}` (empty object)
 
-**Purpose**: Fetch Cargo.toml from GitHub, parse dependencies, check versions against Crates.io
+**Why?**: The `analyze-github-repo` function doesn't calculate the integrated score - it only updates `resilience_score` based on GitHub metrics alone. The multi-dimensional scoring (deps + TVL + governance) needs to be calculated **after** all dimension analyses complete.
 
-**Flow**:
-1. Fetch `Cargo.toml` from GitHub raw content
-2. Parse `[dependencies]` section
-3. For each Solana-related dependency, query Crates.io API
-4. Calculate version gap and health score
-5. Store results in `claimed_profiles`
-
-**Key Dependencies to Track**:
-- `anchor-lang` (Anchor framework)
-- `solana-program` (Solana SDK)
-- `solana-sdk` (Solana SDK)
-- `spl-token` (Token program)
-
-**Scoring Logic**:
-- 100 points: All deps up-to-date
-- -5 points: Per outdated minor version
-- -15 points: Per major version behind
-- -25 points: Critical deps (anchor/solana) > 6 months old
-
-### Function 2: `analyze-tvl`
-
-**Purpose**: Fetch TVL metrics from DeFiLlama API for DeFi protocols
-
-**Flow**:
-1. Query `https://api.llama.fi/protocol/{name}` 
-2. Extract Solana-specific TVL
-3. Get total Solana TVL for market share calculation
-4. Calculate TVL-to-commit risk ratio
-5. Store in `claimed_profiles`
-
-**Risk Ratio Scoring**:
-- TVL > $50M per commit/month = -15 (ZOMBIE TITAN)
-- TVL > $10M per commit/month = -8 (HIGH RISK)
-- TVL > $1M per commit/month = -2 (MODERATE)
-- TVL < $100K per commit/month = +10 (HEALTHY)
-
-### Function 3: `analyze-governance`
-
-**Purpose**: Check Squads/Realms multisig activity via Solana RPC
-
-**Flow**:
-1. Use existing `multisig_address` from claimed_profiles
-2. Query Solana RPC for recent transactions
-3. Count transactions in last 30/90 days
-4. Calculate governance health score
-
-**Scoring Logic**:
-- 10+ tx in 30d = +20 (VERY ACTIVE)
-- 5-9 tx in 30d = +15 (ACTIVE)
-- 1-4 tx in 30d = +10 (SOME ACTIVITY)
-- 0 tx in 30d but active in 90d = +5
-- No activity in 90d = -15 (DORMANT)
-- No activity in 180d = -25 (BRAIN DEAD)
+**Fix Required**: Update `refresh-all-profiles` to:
+1. Run all dimension analyzers
+2. Calculate the weighted integrated score: `R = 0.40×GitHub + 0.25×Deps + 0.20×Gov + 0.15×TVL`
+3. Store the result in `integrated_score` and `score_breakdown`
 
 ---
 
-## Phase 3: Integrated Scoring Formula
+## Issue 3: Where is the TVL/Jupiter Data?
 
-### Weighted Score Calculation
+**Location**: The TVL card is in the **Development tab** (DevelopmentTabContent.tsx), but it **only shows for DeFi protocols** (line 260):
 
-```text
-R = 0.40×GitHub + 0.25×Dependency + 0.20×Governance + 0.15×TVL
+```typescript
+{(category === 'defi' || tvlUsd > 0) && (
+  <TVLMetricsCard ... />
+)}
 ```
 
-Where each component is normalized to 0-100:
+**The Issue**: Your profile's category is likely not set to 'defi', so the TVL card is hidden. Also, the TVL data is `0` because:
+- `analyze-tvl` queries DeFiLlama using `protocol_name`
+- Your project "Resilience" is not a DeFi protocol listed on DeFiLlama
+- TVL is only relevant for protocols that hold user funds (DEXes, lending, etc.)
 
-| Component    | Weight | What It Measures                           |
-|-------------|--------|-------------------------------------------|
-| GitHub      | 40%    | Code activity, contributors, releases      |
-| Dependency  | 25%    | Technical debt, maintenance hygiene        |
-| Governance  | 20%    | Decentralization, DAO health               |
-| TVL Risk    | 15%    | Economic responsibility                    |
-
-### "Bootstrap" Score Profile (New Projects)
-
-A 48-hour-old project:
-- **GitHub (40%)**: ~20/100 (active but no history) = 8 points
-- **Dependency (25%)**: ~95/100 (using latest) = 23.75 points
-- **Governance (20%)**: ~0/100 (no multisig yet) = 0 points
-- **TVL (15%)**: ~0/100 (no liquidity) = 0 points
-- **TOTAL**: ~32 points
-
-This is intentional - **reputation must be earned**.
+**For Jupiter/major protocols**: They would need to be registered in claimed_profiles with `category: 'defi'` and their DeFiLlama slug matching their project name.
 
 ---
 
-## Phase 4: UI Updates
+## Implementation Plan
 
-### 4.1 DevelopmentTabContent Enhancement
+### Phase 1: Fix GitHub Event Counting (Critical)
 
-Add new cards to the Development tab:
+Update `analyze-github-repo` to properly count commits:
 
-1. **DEPENDENCY HEALTH** card
-   - Health score progress bar
-   - Outdated count / Critical count
-   - List of critical dependencies with versions
-   - "Analyze Now" button to trigger refresh
+1. **Increase events per_page** from 20 to 100
+2. **Add pagination** to fetch up to 300 events (3 pages)
+3. **Add Statistics API** as authoritative source for commit counts:
+   - Query `/repos/{owner}/{repo}/stats/commit_activity`
+   - This gives exact weekly commit counts for the last 52 weeks
+4. **Use the higher of**: Statistics API vs Events API commit counts
 
-2. **GOVERNANCE HEALTH** card (if multisig exists)
-   - Recent transaction count
-   - Last activity date
-   - Link to Squads/Realms dashboard
+### Phase 2: Fix Integrated Score Calculation
 
-3. **TVL METRICS** card (for DeFi protocols)
-   - Current TVL
-   - Market share percentage
-   - Risk ratio indicator
+Update `refresh-all-profiles` to calculate and store the integrated score:
 
-### 4.2 Score Breakdown Tooltip
+1. After all dimension analyses complete, compute:
+   ```
+   github_normalized = (github_score / 100) * 100  // Already 0-100
+   deps_normalized = dependency_health_score       // Already 0-100
+   gov_normalized = calculateGovScore(governance_tx_30d)  // 0-100
+   tvl_normalized = calculateTvlScore(tvl_risk_ratio)     // 0-100
+   
+   integrated = 0.40*github + 0.25*deps + 0.20*gov + 0.15*tvl
+   ```
+2. Store breakdown in `score_breakdown` JSONB field
+3. Store final in `integrated_score`
 
-Add a hover tooltip to the Resilience Score showing the weighted breakdown:
+### Phase 3: Add Mini Dimension Indicators to Leaderboard
+
+Add small icons to the Explorer leaderboard showing health status for each dimension:
+
+**Visual Design**:
 ```text
-GitHub Activity:     32/40
-Dependency Health:   20/25
-Governance:          15/20
-TVL Risk:            10/15
-─────────────────────
-TOTAL:               77/100
+PROJECT          SCORE   [D][G][T]   TREND
+Resilience         17    🟢 ⚫ ⚫     ↑
+Jupiter            85    🟢 🟢 🟢     →
 ```
 
----
+Where:
+- **D** = Dependency Health (🟢 healthy, 🟡 warning, 🔴 critical)
+- **G** = Governance (🟢 active, 🟡 dormant, ⚫ none)
+- **T** = TVL (🟢 healthy ratio, 🟡 risky, ⚫ N/A)
 
-## Phase 5: Integration with Refresh Cycle
-
-Modify `refresh-all-profiles` to:
-1. Call `analyze-github-repo` (existing)
-2. Call `analyze-dependencies` (new)
-3. Call `analyze-governance` if `multisig_address` exists (new)
-4. Call `analyze-tvl` if `category = 'defi'` (new)
-5. Calculate integrated score from all dimensions
-6. Store snapshot in `score_history` with full breakdown
+**Implementation**:
+1. Extend `useExplorerProjects` to fetch dimension scores
+2. Add new TableHead "HEALTH" column after SCORE
+3. Render mini indicators with tooltips
 
 ---
 
-## Implementation Order
+## Technical Changes
 
-### Step 1: Database Migration
-Add new columns to `claimed_profiles` table
+### Modified Files:
 
-### Step 2: Create `analyze-dependencies` Edge Function
-- Fetch Cargo.toml from GitHub
-- Parse and check against Crates.io
-- Calculate dependency health score
+**1. `supabase/functions/analyze-github-repo/index.ts`**
+- Change `per_page=20` to `per_page=100` for events
+- Add pagination loop to fetch up to 300 events
+- Add Statistics API call for accurate commit counts
+- Use Math.max() to pick highest commit count from all sources
 
-### Step 3: Create `analyze-tvl` Edge Function
-- Query DeFiLlama API
-- Calculate TVL metrics and risk ratio
+**2. `supabase/functions/refresh-all-profiles/index.ts`**
+- After running all analyzers, calculate integrated_score
+- Store score_breakdown with dimension values
+- Update claimed_profiles with both fields
 
-### Step 4: Create `analyze-governance` Edge Function
-- Query Solana RPC for multisig transactions
-- Calculate governance health score
+**3. `src/hooks/useExplorerProjects.ts`**
+- Add `dependency_health_score`, `governance_tx_30d`, `tvl_usd` to query
 
-### Step 5: Update `analyze-github-repo`
-- Integrate dependency analysis call
-- Calculate weighted integrated score
-- Store comprehensive breakdown in score_history
+**4. `src/components/explorer/ProgramLeaderboard.tsx`**
+- Add "HEALTH" column with mini dimension indicators
+- Add helper functions to determine indicator colors
+- Add tooltips explaining each dimension status
 
-### Step 6: Update Frontend Components
-- Add DependencyHealthCard component
-- Add GovernanceHealthCard component
-- Add TVLMetricsCard component
-- Add score breakdown tooltip to HeroBanner
-
-### Step 7: Update Types
-- Extend ClaimedProfile interface
-- Add new card component types
+**5. `src/components/explorer/MobileProgramCard.tsx`**
+- Add dimension health row for mobile consistency
 
 ---
 
-## Risk Mitigation
+## Why Your Commits Show as 20
 
-### API Rate Limits
-- **Crates.io**: 1 request/second limit - add delays
-- **DeFiLlama**: No auth required, generous limits
-- **GitHub**: Use existing token, already rate-limited
+Looking at the code flow:
+1. Events API returns max 20 events (due to `per_page=20`)
+2. Each PushEvent is counted as having `payload.size` commits
+3. But if you have 20 push events with 1 commit each = 20 commits
+4. The Commits API counts default branch commits, which may also be ~20
 
-### Data Freshness
-- Dependencies: Refresh daily (low change frequency)
-- TVL: Refresh every 6 hours (price volatility)
-- Governance: Refresh every 30 minutes with GitHub
-
-### Graceful Degradation
-- If any dimension fails to analyze, use last known value
-- Display "N/A" with explanation if no data available
-- Don't block score calculation if one dimension fails
+**The fix** increases visibility from 20 to 300 events, capturing your full 30-day activity window.
 
 ---
 
-## Success Metrics
+## Expected Outcomes After Fix
 
-1. **Zero Credit Projects**: Should score 15-30 (proves formula works)
-2. **Established Projects**: Should score 70-85 (validates earned reputation)
-3. **Zombie Titans**: High TVL + Low Activity = LOW score (exposes risk)
-4. **Healthy DeFi**: High TVL + High Activity = HIGH score (rewards diligence)
-
----
-
-## Files to Create/Modify
-
-### New Files
-- `supabase/functions/analyze-dependencies/index.ts`
-- `supabase/functions/analyze-tvl/index.ts`
-- `supabase/functions/analyze-governance/index.ts`
-- `src/components/program/DependencyHealthCard.tsx`
-- `src/components/program/GovernanceHealthCard.tsx`
-- `src/components/program/TVLMetricsCard.tsx`
-- `src/components/program/ScoreBreakdownTooltip.tsx`
-- `src/hooks/useDependencyAnalysis.ts`
-- `src/hooks/useTVLAnalysis.ts`
-- `src/hooks/useGovernanceAnalysis.ts`
-
-### Modified Files
-- `src/types/index.ts` - Add new interfaces
-- `src/types/database.ts` - Add new DB types
-- `src/components/program/tabs/DevelopmentTabContent.tsx` - Add new cards
-- `src/components/program/HeroBanner.tsx` - Add score breakdown
-- `supabase/functions/analyze-github-repo/index.ts` - Integrate new dimensions
-- `supabase/functions/refresh-all-profiles/index.ts` - Call new functions
-- `supabase/config.toml` - Register new functions
+1. **Your commit count** will reflect actual 30-day commits (likely 50-100+ based on your activity description)
+2. **Commit velocity** will update to accurate commits/day (likely 1.5-3.0)
+3. **Resilience score** will increase due to higher weighted activity
+4. **Integrated score** will show the multi-dimensional breakdown
+5. **Leaderboard** will show mini health indicators for quick assessment
