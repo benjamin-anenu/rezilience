@@ -1,187 +1,151 @@
 
-# Add Python/PyPI Support to Dependency Analyzer
+# Dependency Tree Organization and Explorer Improvements
 
 ## Overview
 
-Extend the `analyze-dependencies` edge function to parse Python project dependency files (`requirements.txt` and `pyproject.toml`) and check versions against the PyPI registry.
+This plan addresses four issues:
+1. **Stale test data** - The 121 forks and npm dependencies are from the `sindresorhus/is` test URL, not your actual project
+2. **Dependency tree layout** - The current vertical list looks cluttered with many dependencies
+3. **Table pagination** - Reduce from 100 to 60 items per page
+4. **Table columns** - Consolidate columns to prevent horizontal scrolling
 
 ---
 
-## Detection Priority
+## Issue 1: Stale Test Data (121 Forks)
 
-The analyzer will try dependency files in this order:
-1. `Cargo.toml` (Rust) - existing
-2. `package.json` (JS/TS) - existing  
-3. `requirements.txt` (Python) - new
-4. `pyproject.toml` (Python) - new
+**What happened:** When you tested with `sindresorhus/is`, the analyzer stored 14 npm dependencies and the profile picked up `github_forks: 121` from that popular repo. When we restored your URL, the forks count wasn't refreshed.
+
+**Solution:** 
+- Clear the test dependency data from the database
+- Trigger a fresh analysis of your actual `benjamin-anenu/resilience` repository
+- The forks count will update correctly during the next GitHub refresh
+
+**Requires:** Database update to clear stale data and re-run analysis
+
+---
+
+## Issue 2: Dependency Tree Layout Redesign
+
+**Current:** All dependencies stack vertically on the left with edges crossing. With 14+ nodes it looks cluttered.
+
+**Proposed:** Use a tiered radial/hierarchical layout:
+
+```text
+                    ┌─────────────┐
+                    │ CRITICAL    │  (Top row - red border)
+                    └─────────────┘
+                          │
+    ┌───────┬───────┬─────┴─────┬───────┬───────┐
+    │ dep   │ dep   │  PROJECT  │ dep   │ dep   │
+    └───────┴───────┴───────────┴───────┴───────┘
+                          │
+    ┌───────┬───────┬─────┴─────┬───────┬───────┐
+    │ dep   │ dep   │ dep       │ dep   │ dep   │
+    └───────┴───────┴───────────┴───────┴───────┘
+                    
+                    ┌─────────────┐
+                    │ GitHub      │  (Right side - forks)
+                    │ Forks       │
+                    └─────────────┘
+```
+
+**Changes to `DependencyTreeCanvas.tsx`:**
+- Project node at center
+- Critical dependencies in a row above the project
+- Outdated dependencies (red/amber) in columns left of project
+- Up-to-date dependencies in columns right of project
+- Forks node below or to the right
+- Use `dagre` layout algorithm for automatic positioning
+
+---
+
+## Issue 3: Reduce Pagination to 60 Items
+
+**File:** `src/pages/Explorer.tsx`
+
+**Change:** 
+```typescript
+// Line 17: Change from
+const ITEMS_PER_PAGE = 100;
+// to
+const ITEMS_PER_PAGE = 60;
+```
+
+---
+
+## Issue 4: Table Column Consolidation
+
+**Current columns (13 total):**
+1. RANK
+2. PROJECT  
+3. TYPE (hidden lg)
+4. PROGRAM ID (hidden lg)
+5. SCORE
+6. HEALTH (hidden xl)
+7. TREND (hidden xl)
+8. LIVENESS (hidden md)
+9. DECAY (hidden xl)
+10. STATUS (hidden lg)
+11. STAKED (hidden md)
+12. LAST ACTIVITY (hidden lg)
+13. EYE toggle
+
+**Proposed consolidation (9 columns):**
+
+| Column | Content | Visibility |
+|--------|---------|------------|
+| RANK | # + movement arrow | Always |
+| PROJECT | Name + verified badge | Always |
+| SCORE | Score number + health dots (D/G/T) | Always |
+| TREND | Sparkline | Always |
+| LIVENESS | Badge | md+ |
+| STATUS | Verified/Unclaimed badge | lg+ |
+| STAKED | Amount | lg+ |
+| ACTIVITY | Date or "Claim" button | xl+ |
+| EYE | Popover toggle | Always |
+
+**Key consolidations:**
+- Merge HEALTH dots into SCORE column (compact)
+- Remove DECAY (redundant with LIVENESS) - keep in popover
+- Remove TYPE (available in popover)
+- Remove PROGRAM ID (available in popover)
+- Move TREND to always-visible (important signal)
 
 ---
 
 ## Technical Implementation
 
-### 1. Edge Function: `supabase/functions/analyze-dependencies/index.ts`
+### Files Changed
 
-**Add critical Python dependencies list:**
-
-```typescript
-const CRITICAL_PYPI_DEPS = [
-  "solana",
-  "solders",
-  "anchorpy",
-  "base58",
-  "pynacl",
-  "httpx",
-  "aiohttp",
-  "fastapi",
-  "django",
-  "flask",
-  "pytest",
-];
-```
-
-**New functions to add:**
-
-| Function | Purpose |
-|----------|---------|
-| `fetchRequirementsTxt()` | Fetch `requirements.txt` from GitHub across common branches |
-| `fetchPyprojectToml()` | Fetch `pyproject.toml` from GitHub |
-| `parseRequirementsTxt()` | Parse dependency lines like `package==1.0.0` or `package>=1.0` |
-| `parsePyprojectToml()` | Parse `[project.dependencies]` and `[tool.poetry.dependencies]` sections |
-| `getPypiLatestVersion()` | Query `https://pypi.org/pypi/{package}/json` for latest version |
-| `getPypiDownloads()` | Use pypistats API or fallback to 0 |
-| `analyzePypiDependencies()` | Orchestrate Python dependency analysis |
-
-**Parsing Logic:**
-
-`requirements.txt` format examples:
-```text
-requests==2.31.0
-numpy>=1.24.0
-pandas~=2.0
-flask  # no version pin
--e git+https://...  # editable, skip
-```
-
-`pyproject.toml` format examples:
-```toml
-[project]
-dependencies = [
-    "requests>=2.28",
-    "pydantic==2.0.0",
-]
-
-[tool.poetry.dependencies]
-python = "^3.9"
-django = "^4.2"
-```
-
-**Update main handler flow:**
-
-```typescript
-// After npm check fails
-if (!npmResponse) {
-  console.log("No package.json found - checking for Python dependencies...");
-  
-  const pypiResponse = await analyzePypiDependencies(owner, repo, githubToken, profile_id);
-  
-  if (pypiResponse) {
-    return pypiResponse;
-  }
-  
-  // No dependency files found at all
-  return neutralResponse();
-}
-```
-
-**Update `storeDependencyGraph()` to populate `pypi_url`:**
-
-```typescript
-const rows = dependencies.map((dep) => ({
-  // ... existing fields ...
-  pypi_url: dependencyType === 'pypi' ? `https://pypi.org/project/${dep.name}/` : null,
-}));
-```
-
----
-
-### 2. Update Hook: `src/hooks/useDependencyGraph.ts`
-
-Add `pypi_url` to the data model and query:
-
-```typescript
-export interface DependencyNode {
-  // ... existing fields ...
-  pypi_url: string | null;  // Add this
-}
-
-// In the mapping function
-pypi_url: d.pypi_url,
-```
-
----
-
-### 3. Update UI Components
-
-**`DependencyTreeCanvas.tsx`**
-
-Pass `pypiUrl` to the detail panel:
-
-```typescript
-<NodeDetailPanel
-  pypiUrl={selectedDep?.pypi_url}
-  // ... existing props
-/>
-```
-
-**`NodeDetailPanel.tsx`**
-
-Add `pypiUrl` prop and update registry logic:
-
-```typescript
-interface NodeDetailPanelProps {
-  pypiUrl?: string | null;  // Add this
-  // ... existing props
-}
-
-// Update registry URL logic
-const registryUrl = nodeData.dependencyType === 'npm' 
-  ? npmUrl 
-  : nodeData.dependencyType === 'pypi' 
-    ? pypiUrl 
-    : cratesIoUrl;
-```
-
----
-
-### 4. Database
-
-No changes needed - the `pypi_url` column already exists in `dependency_graph` table.
-
----
-
-## Files Changed
-
-| File | Action |
+| File | Change |
 |------|--------|
-| `supabase/functions/analyze-dependencies/index.ts` | Add Python parsing, PyPI registry lookups |
-| `src/hooks/useDependencyGraph.ts` | Include `pypi_url` field |
-| `src/components/dependency-tree/DependencyTreeCanvas.tsx` | Pass `pypiUrl` to panel |
-| `src/components/dependency-tree/NodeDetailPanel.tsx` | Add `pypiUrl` prop |
+| `src/pages/Explorer.tsx` | Change `ITEMS_PER_PAGE` to 60 |
+| `src/components/explorer/ProgramLeaderboard.tsx` | Remove TYPE, PROGRAM ID, DECAY columns; move HEALTH into SCORE |
+| `src/components/explorer/LeaderboardRow.tsx` | Consolidate cells; show health dots inline with score |
+| `src/components/dependency-tree/DependencyTreeCanvas.tsx` | Implement tiered horizontal layout with critical deps on top |
+
+### Database Cleanup (One-time)
+
+```sql
+-- Clear test dependency data
+DELETE FROM dependency_graph 
+WHERE source_profile_id = '553dd0d0-2f62-4891-9b09-e1358c5dc541';
+
+-- Reset forks count (will be refreshed on next sync)
+UPDATE claimed_profiles 
+SET github_forks = NULL 
+WHERE id = '553dd0d0-2f62-4891-9b09-e1358c5dc541';
+```
+
+Then trigger the `analyze-dependencies` function to re-analyze your actual repo.
 
 ---
 
-## Testing
+## RLS Policy Gap (Info)
 
-After implementation:
-1. Find a Python project profile or update test profile GitHub URL to a Python repo
-2. Trigger "Analyze Dependencies Now"
-3. Verify dependencies appear with snake icon (🐍) and link to PyPI
+The dependency tree is already publicly accessible. The current RLS policies allow:
+- Unclaimed profiles: Public read
+- Verified profiles: Public read
+- Dependency graph: Full public read
 
----
-
-## Rate Limiting
-
-PyPI has generous rate limits but we will still:
-- Add 300ms delay between version lookups
-- Skip editable installs (`-e`) and local paths
-- Limit analysis to first 100 dependencies for large projects
+There is a minor gap: **claimed but unverified** profiles may not be visible to the public. If needed, we can add a policy for "claimed profiles are publicly readable" to cover this edge case.
