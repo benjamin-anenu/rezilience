@@ -1,5 +1,4 @@
 import React from 'react';
-import { Eye } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -46,10 +45,8 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
             <TableHead className="hidden lg:table-cell px-2 w-16">ORIG</TableHead>
             <TableHead className="hidden lg:table-cell px-2 w-20">STATUS</TableHead>
             <TableHead className="hidden md:table-cell text-right px-2 w-16">STAKED</TableHead>
-            <TableHead className="hidden lg:table-cell px-2 w-20">ACTIVITY</TableHead>
-            <TableHead className="w-8 px-1 text-center">
-              <Eye className="h-3.5 w-3.5 mx-auto text-muted-foreground" />
-            </TableHead>
+            <TableHead className="hidden lg:table-cell px-2 w-20">COMMIT</TableHead>
+            <TableHead className="px-1 w-16 text-center">ACTION</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
