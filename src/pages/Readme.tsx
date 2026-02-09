@@ -447,7 +447,7 @@ export default function Readme() {
                     <DataSourceItem
                       name="GitHub API"
                       description="Commits, Contributors, Releases, Events, Statistics endpoints"
-                      refresh="Every 6 hours via cron + Manual"
+                      refresh="Every 2 hours via cron + Manual"
                     />
                     <DataSourceItem
                       name="Crates.io Registry"
@@ -462,7 +462,7 @@ export default function Readme() {
                     <DataSourceItem
                       name="Solana RPC"
                       description="Governance transaction history for Squads/Realms addresses"
-                      refresh="Every hour"
+                      refresh="Every 30 minutes"
                     />
                     <DataSourceItem
                       name="OtterSec API"
@@ -492,7 +492,7 @@ export default function Readme() {
                 <FAQItem
                   value="refresh"
                   question="How often is data refreshed?"
-                  answer="Data refreshes on a tiered schedule optimized for each dimension's volatility: TVL updates every 5 minutes for real-time DeFi tracking, Governance checks hourly for DAO activity, and GitHub/Dependencies refresh every 6 hours. Protocol owners can also trigger a full manual refresh from their dashboard that analyzes all 4 dimensions simultaneously."
+                  answer="Data refreshes on a tiered schedule optimized for each dimension's volatility: TVL updates every 5 minutes for real-time DeFi tracking, Governance checks every 30 minutes for DAO activity, GitHub refreshes every 2 hours, and Dependencies refresh every 6 hours. Protocol owners can also trigger a full manual refresh from their dashboard that analyzes all 4 dimensions simultaneously."
                 />
                 <FAQItem
                   value="dispute"

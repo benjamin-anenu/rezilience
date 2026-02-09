@@ -45,17 +45,23 @@ Deno.serve(async (req) => {
   }
 
   try {
+    // Parse request body to check for selective dimension refresh
+    const body = await req.json().catch(() => ({}));
+    const requestedDimensions: string[] = body.dimensions || ['github', 'dependencies', 'governance', 'tvl'];
+    
+    console.log(`[refresh-all-profiles] Requested dimensions: ${requestedDimensions.join(', ')}`);
+
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log("Starting daily refresh of all verified profiles...");
+    console.log("Starting refresh of all verified profiles...");
 
     // Fetch all verified profiles AND unclaimed profiles with GitHub URLs
     // This ensures unclaimed profiles are actively monitored for liveness
     const { data: profiles, error: fetchError } = await supabase
       .from("claimed_profiles")
-      .select("id, project_name, github_org_url, multisig_address, category, resilience_score, dependency_health_score, governance_tx_30d, tvl_usd, tvl_risk_ratio")
+      .select("id, project_name, github_org_url, multisig_address, category, resilience_score, dependency_health_score, governance_tx_30d, tvl_usd, tvl_risk_ratio, github_commits_30d")
       .or("verified.eq.true,claim_status.eq.unclaimed")
       .not("github_org_url", "is", null);
 
@@ -65,7 +71,7 @@ Deno.serve(async (req) => {
 
     if (!profiles || profiles.length === 0) {
       return new Response(
-        JSON.stringify({ message: "No verified profiles with GitHub URLs found", updated: 0 }),
+        JSON.stringify({ message: "No verified profiles with GitHub URLs found", updated: 0, dimensions: requestedDimensions }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -82,58 +88,62 @@ Deno.serve(async (req) => {
     let errorCount = 0;
     const results: Array<{ profile: string; status: string; integrated_score?: number }> = [];
 
-    // Process each profile (with rate limiting to avoid GitHub API limits)
+    // Process each profile (with rate limiting to avoid API limits)
     for (const profile of profiles) {
       try {
         console.log(`Refreshing: ${profile.project_name} (${profile.github_org_url})`);
 
-        // Call the analyze-github-repo function for each profile
-        const gitHubResponse = await fetch(analyzeGitHubUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({
-            github_url: profile.github_org_url,
-            profile_id: profile.id,
-          }),
-        });
-
+        // === GITHUB ANALYSIS (if requested) ===
         let githubScore = profile.resilience_score || 0;
-        if (!gitHubResponse.ok) {
-          const errorText = await gitHubResponse.text();
-          console.error(`✗ GitHub analysis failed: ${profile.project_name} - ${errorText}`);
-        } else {
-          const gitHubData = await gitHubResponse.json();
-          githubScore = gitHubData?.data?.resilienceScore || githubScore;
-          console.log(`✓ GitHub analyzed: ${profile.project_name} (score: ${githubScore})`);
+        if (requestedDimensions.includes('github')) {
+          const gitHubResponse = await fetch(analyzeGitHubUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({
+              github_url: profile.github_org_url,
+              profile_id: profile.id,
+            }),
+          });
+
+          if (!gitHubResponse.ok) {
+            const errorText = await gitHubResponse.text();
+            console.error(`✗ GitHub analysis failed: ${profile.project_name} - ${errorText}`);
+          } else {
+            const gitHubData = await gitHubResponse.json();
+            githubScore = gitHubData?.data?.resilienceScore || githubScore;
+            console.log(`✓ GitHub analyzed: ${profile.project_name} (score: ${githubScore})`);
+          }
         }
 
-        // Call analyze-dependencies for Rust/Solana projects
+        // === DEPENDENCY ANALYSIS (if requested) ===
         let depsScore = profile.dependency_health_score || 50;
-        const depsResponse = await fetch(analyzeDepsUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${supabaseKey}`,
-          },
-          body: JSON.stringify({
-            github_url: profile.github_org_url,
-            profile_id: profile.id,
-          }),
-        });
+        if (requestedDimensions.includes('dependencies')) {
+          const depsResponse = await fetch(analyzeDepsUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({
+              github_url: profile.github_org_url,
+              profile_id: profile.id,
+            }),
+          });
 
-        if (depsResponse.ok) {
-          const depsData = await depsResponse.json();
-          depsScore = depsData?.health_score || depsScore;
-          console.log(`✓ Dependencies analyzed: ${profile.project_name} (score: ${depsScore})`);
+          if (depsResponse.ok) {
+            const depsData = await depsResponse.json();
+            depsScore = depsData?.health_score || depsScore;
+            console.log(`✓ Dependencies analyzed: ${profile.project_name} (score: ${depsScore})`);
+          }
         }
 
-        // Call analyze-governance if multisig_address exists
+        // === GOVERNANCE ANALYSIS (if requested) ===
         let govScore = 0;
         let govTx30d = profile.governance_tx_30d || 0;
-        if (profile.multisig_address) {
+        if (requestedDimensions.includes('governance') && profile.multisig_address) {
           const govResponse = await fetch(analyzeGovUrl, {
             method: "POST",
             headers: {
@@ -154,11 +164,11 @@ Deno.serve(async (req) => {
         }
         govScore = calculateGovernanceScore(govTx30d);
 
-        // Call analyze-tvl for DeFi protocols
+        // === TVL ANALYSIS (if requested) ===
         let tvlScore = 50; // Neutral default
         let tvlUsd = profile.tvl_usd || 0;
         let tvlRiskRatio = profile.tvl_risk_ratio || 0;
-        if (profile.category === 'defi') {
+        if (requestedDimensions.includes('tvl') && profile.category === 'defi') {
           const tvlResponse = await fetch(analyzeTvlUrl, {
             method: "POST",
             headers: {
@@ -168,7 +178,7 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               protocol_name: profile.project_name,
               profile_id: profile.id,
-              monthly_commits: 30, // Placeholder, ideally from GitHub analysis
+              monthly_commits: profile.github_commits_30d || 30,
             }),
           });
 
@@ -237,10 +247,11 @@ Deno.serve(async (req) => {
     }
 
     const summary = {
-      message: `Daily refresh complete: ${successCount} updated, ${errorCount} errors`,
+      message: `Refresh complete: ${successCount} updated, ${errorCount} errors`,
       total: profiles.length,
       success: successCount,
       errors: errorCount,
+      dimensions: requestedDimensions,
       results,
       completedAt: new Date().toISOString(),
     };
