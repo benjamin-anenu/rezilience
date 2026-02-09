@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, 
   TrendingUp, TrendingDown, Cloud, AlertTriangle, 
-  TrendingDownIcon, Eye, Lock, Github, Globe, ExternalLink, Users, Sparkles
+  TrendingDownIcon, Eye, Lock, Github, Globe, ExternalLink, Users
 } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -410,12 +410,9 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
                 
                 {/* Source/Hackathon */}
                 {project.discovery_source && (
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Sparkles className="h-4 w-4 text-amber-500" />
-                      <span>Source</span>
-                    </div>
-                    <Badge variant="outline" className="border-amber-500/50 text-amber-500">
+                  <div className="flex items-center justify-between text-sm gap-3">
+                    <span className="text-muted-foreground shrink-0">Source</span>
+                    <Badge variant="outline" className="border-amber-500/50 text-amber-500 max-w-[140px] truncate">
                       {project.discovery_source}
                     </Badge>
                   </div>
