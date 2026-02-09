@@ -350,6 +350,56 @@ export type Database = {
           },
         ]
       }
+      dependency_graph: {
+        Row: {
+          analyzed_at: string | null
+          crate_name: string
+          crates_io_dependents: number | null
+          crates_io_url: string | null
+          current_version: string | null
+          id: string
+          is_critical: boolean | null
+          is_outdated: boolean | null
+          latest_version: string | null
+          months_behind: number | null
+          source_profile_id: string
+        }
+        Insert: {
+          analyzed_at?: string | null
+          crate_name: string
+          crates_io_dependents?: number | null
+          crates_io_url?: string | null
+          current_version?: string | null
+          id?: string
+          is_critical?: boolean | null
+          is_outdated?: boolean | null
+          latest_version?: string | null
+          months_behind?: number | null
+          source_profile_id: string
+        }
+        Update: {
+          analyzed_at?: string | null
+          crate_name?: string
+          crates_io_dependents?: number | null
+          crates_io_url?: string | null
+          current_version?: string | null
+          id?: string
+          is_critical?: boolean | null
+          is_outdated?: boolean | null
+          latest_version?: string | null
+          months_behind?: number | null
+          source_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dependency_graph_source_profile_id_fkey"
+            columns: ["source_profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
