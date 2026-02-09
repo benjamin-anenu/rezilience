@@ -3,29 +3,33 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, 
   TrendingUp, TrendingDown, Cloud, AlertTriangle, 
-  TrendingDownIcon, Eye, EyeOff, Lock 
+  TrendingDownIcon, Eye, Lock, Github, Globe, ExternalLink, Users, Sparkles
 } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Sparkline } from './Sparkline';
 import { DimensionHealthIndicators } from './DimensionHealthIndicators';
-import { ExpandedDetailsRow } from './ExpandedDetailsRow';
 import { PROJECT_CATEGORIES } from '@/types';
 import type { ExplorerProject } from '@/hooks/useExplorerProjects';
 import type { LivenessStatus } from '@/types/database';
 import type { MovementType } from '@/hooks/useRankMovement';
+
+// Custom X icon since Lucide doesn't have one
+const XIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
 
 interface LeaderboardRowProps {
   project: ExplorerProject;
   index: number;
   movement: MovementType | undefined;
   scoreHistory: number[];
-  isExpanded: boolean;
-  onToggleExpand: (projectId: string, e: React.MouseEvent) => void;
-  totalColumns: number;
 }
 
 // Helper functions defined outside component to avoid recreation
@@ -149,9 +153,6 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
   index,
   movement,
   scoreHistory,
-  isExpanded,
-  onToggleExpand,
-  totalColumns,
 }: LeaderboardRowProps) {
   const navigate = useNavigate();
   
@@ -342,30 +343,108 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
             </span>
           )}
         </TableCell>
-        {/* Eye Toggle */}
+        {/* Details Popover */}
         <TableCell className="text-center">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={(e) => onToggleExpand(project.id, e)}
-          >
-            {isExpanded ? (
-              <EyeOff className="h-4 w-4 text-primary" />
-            ) : (
-              <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
-            )}
-          </Button>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent 
+              className="w-72 p-3 bg-popover border-border" 
+              align="end" 
+              side="left"
+              sideOffset={8}
+            >
+              <div className="space-y-3">
+                {/* GitHub Status */}
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Github className="h-4 w-4" />
+                    <span>GitHub</span>
+                  </div>
+                  <Badge 
+                    variant="outline" 
+                    className={isPrivate 
+                      ? 'border-amber-500/50 text-amber-500' 
+                      : 'border-primary/50 text-primary'
+                    }
+                  >
+                    {isPrivate ? 'PRIVATE' : 'PUBLIC'}
+                  </Badge>
+                </div>
+                
+                {/* Website */}
+                {project.website_url && (
+                  <a 
+                    href={project.website_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="flex items-center justify-between text-sm hover:text-primary transition-colors"
+                  >
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Globe className="h-4 w-4" />
+                      <span>Website</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-foreground">
+                      <span className="truncate max-w-[120px]">
+                        {new URL(project.website_url).hostname}
+                      </span>
+                      <ExternalLink className="h-3 w-3" />
+                    </div>
+                  </a>
+                )}
+                
+                {/* Contributors */}
+                <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Users className="h-4 w-4" />
+                    <span>Contributors</span>
+                  </div>
+                  <span className="text-foreground">
+                    {project.github_contributors || '—'}
+                  </span>
+                </div>
+                
+                {/* Source/Hackathon */}
+                {project.discovery_source && (
+                  <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Sparkles className="h-4 w-4 text-amber-500" />
+                      <span>Source</span>
+                    </div>
+                    <Badge variant="outline" className="border-amber-500/50 text-amber-500">
+                      {project.discovery_source}
+                    </Badge>
+                  </div>
+                )}
+                
+                {/* X Handle */}
+                {project.x_username && (
+                  <a 
+                    href={`https://x.com/${project.x_username}`} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-between text-sm hover:text-primary transition-colors"
+                  >
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <XIcon className="h-4 w-4" />
+                      <span>X Handle</span>
+                    </div>
+                    <span className="text-foreground">@{project.x_username}</span>
+                  </a>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
         </TableCell>
       </TableRow>
-      {/* Expanded Details Row */}
-      {isExpanded && (
-        <ExpandedDetailsRow 
-          project={project} 
-          isPrivateRepo={isPrivate} 
-          colSpan={totalColumns} 
-        />
-      )}
     </React.Fragment>
   );
 });
