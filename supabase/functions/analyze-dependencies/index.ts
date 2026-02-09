@@ -83,30 +83,209 @@ function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
 }
 
 /**
- * Fetch Cargo.toml from GitHub raw content
+ * Parse workspace members from root Cargo.toml
+ * Handles: members = ["path1", "path2"] and multiline arrays
  */
-async function fetchCargoToml(owner: string, repo: string, token: string): Promise<string | null> {
+function parseWorkspaceMembers(cargoContent: string): string[] {
+  // Check if this is a workspace Cargo.toml
+  if (!cargoContent.includes("[workspace]")) {
+    return [];
+  }
+  
+  // Match members array - handles multiline
+  const match = cargoContent.match(/members\s*=\s*\[([\s\S]*?)\]/);
+  if (!match) return [];
+  
+  const members: string[] = [];
+  const memberStrings = match[1].match(/"([^"]+)"/g);
+  if (memberStrings) {
+    for (const m of memberStrings) {
+      members.push(m.replace(/"/g, ''));
+    }
+  }
+  return members;
+}
+
+/**
+ * Fetch a file from GitHub raw content
+ */
+async function fetchGitHubFile(
+  owner: string, 
+  repo: string, 
+  branch: string, 
+  path: string, 
+  token: string
+): Promise<string | null> {
+  try {
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: "text/plain",
+        "User-Agent": "Resilience-Registry",
+      },
+    });
+    
+    if (response.ok) {
+      return await response.text();
+    }
+  } catch {
+    // Ignore errors - file doesn't exist
+  }
+  return null;
+}
+
+/**
+ * List directory contents using GitHub API
+ */
+async function listGitHubDirectory(
+  owner: string,
+  repo: string,
+  branch: string,
+  path: string,
+  token: string
+): Promise<string[]> {
+  try {
+    const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`;
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "Resilience-Registry",
+      },
+    });
+    
+    if (response.ok) {
+      const contents = await response.json();
+      if (Array.isArray(contents)) {
+        return contents
+          .filter((item: any) => item.type === 'dir')
+          .map((item: any) => item.name);
+      }
+    }
+  } catch {
+    // Directory doesn't exist or API error
+  }
+  return [];
+}
+
+/**
+ * Fetch Cargo.toml with workspace support and expanded path discovery
+ */
+async function fetchCargoToml(owner: string, repo: string, token: string): Promise<{ content: string; aggregated: boolean } | null> {
   const branches = ["main", "master", "develop"];
-  const paths = ["Cargo.toml", "programs/Cargo.toml", "program/Cargo.toml"];
   
   for (const branch of branches) {
-    for (const path of paths) {
-      try {
-        const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
-        const response = await fetch(url, {
-          headers: {
-            Authorization: `token ${token}`,
-            Accept: "text/plain",
-            "User-Agent": "Resilience-Registry",
-          },
-        });
+    // First check root for Cargo.toml
+    const rootContent = await fetchGitHubFile(owner, repo, branch, "Cargo.toml", token);
+    
+    if (rootContent) {
+      console.log(`Found root Cargo.toml at ${branch}/Cargo.toml`);
+      
+      // Check if it's a workspace
+      const workspaceMembers = parseWorkspaceMembers(rootContent);
+      
+      if (workspaceMembers.length > 0) {
+        console.log(`Detected workspace with ${workspaceMembers.length} members: ${workspaceMembers.join(', ')}`);
         
-        if (response.ok) {
-          console.log(`Found Cargo.toml at ${branch}/${path}`);
-          return await response.text();
+        // Aggregate dependencies from all workspace members
+        const allDeps = new Map<string, string>();
+        
+        for (const member of workspaceMembers) {
+          // Handle glob patterns like "programs/*"
+          if (member.includes('*')) {
+            const basePath = member.replace('/*', '').replace('*', '');
+            console.log(`Expanding glob pattern: ${member} -> listing ${basePath}`);
+            
+            const subdirs = await listGitHubDirectory(owner, repo, branch, basePath, token);
+            for (const subdir of subdirs) {
+              const memberPath = `${basePath}/${subdir}/Cargo.toml`;
+              const memberContent = await fetchGitHubFile(owner, repo, branch, memberPath, token);
+              if (memberContent) {
+                console.log(`Found member Cargo.toml: ${memberPath}`);
+                const deps = parseCargoToml(memberContent);
+                for (const [k, v] of deps) {
+                  allDeps.set(k, v);
+                }
+              }
+            }
+          } else {
+            // Direct path
+            const memberPath = `${member}/Cargo.toml`;
+            const memberContent = await fetchGitHubFile(owner, repo, branch, memberPath, token);
+            if (memberContent) {
+              console.log(`Found member Cargo.toml: ${memberPath}`);
+              const deps = parseCargoToml(memberContent);
+              for (const [k, v] of deps) {
+                allDeps.set(k, v);
+              }
+            }
+          }
         }
-      } catch {
-        continue;
+        
+        if (allDeps.size > 0) {
+          // Create a synthetic Cargo.toml with all aggregated deps
+          let synthetic = "[dependencies]\n";
+          for (const [name, version] of allDeps) {
+            synthetic += `${name} = "${version}"\n`;
+          }
+          console.log(`Aggregated ${allDeps.size} unique dependencies from workspace members`);
+          return { content: synthetic, aggregated: true };
+        }
+      }
+      
+      // Not a workspace or no deps found in members - check if root has dependencies
+      const rootDeps = parseCargoToml(rootContent);
+      if (rootDeps.size > 0) {
+        return { content: rootContent, aggregated: false };
+      }
+    }
+    
+    // If root Cargo.toml doesn't have deps, try common subdirectory patterns
+    const additionalPaths = [
+      "programs/Cargo.toml",
+      "program/Cargo.toml",
+      "sdk/Cargo.toml",
+      "cli/Cargo.toml",
+      "core/Cargo.toml",
+      "lib/Cargo.toml",
+    ];
+    
+    for (const path of additionalPaths) {
+      const content = await fetchGitHubFile(owner, repo, branch, path, token);
+      if (content) {
+        const deps = parseCargoToml(content);
+        if (deps.size > 0) {
+          console.log(`Found Cargo.toml with dependencies at ${branch}/${path}`);
+          return { content, aggregated: false };
+        }
+      }
+    }
+    
+    // Try discovering programs/* directories dynamically
+    const programDirs = await listGitHubDirectory(owner, repo, branch, "programs", token);
+    if (programDirs.length > 0) {
+      const allDeps = new Map<string, string>();
+      
+      for (const programDir of programDirs) {
+        const programCargoPath = `programs/${programDir}/Cargo.toml`;
+        const programContent = await fetchGitHubFile(owner, repo, branch, programCargoPath, token);
+        if (programContent) {
+          console.log(`Found program Cargo.toml: ${programCargoPath}`);
+          const deps = parseCargoToml(programContent);
+          for (const [k, v] of deps) {
+            allDeps.set(k, v);
+          }
+        }
+      }
+      
+      if (allDeps.size > 0) {
+        let synthetic = "[dependencies]\n";
+        for (const [name, version] of allDeps) {
+          synthetic += `${name} = "${version}"\n`;
+        }
+        console.log(`Aggregated ${allDeps.size} unique dependencies from programs/* directories`);
+        return { content: synthetic, aggregated: true };
       }
     }
   }
@@ -115,44 +294,22 @@ async function fetchCargoToml(owner: string, repo: string, token: string): Promi
 }
 
 /**
- * Fetch package.json from GitHub raw content
+ * Fetch package.json with expanded path discovery
  */
 async function fetchPackageJson(owner: string, repo: string, token: string): Promise<object | null> {
   const branches = ["main", "master", "develop"];
-  
-  for (const branch of branches) {
-    try {
-      const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/package.json`;
-      console.log(`Checking for package.json at: ${url}`);
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: "application/json",
-          "User-Agent": "Resilience-Registry",
-        },
-      });
-      
-      console.log(`Response status for ${branch}/package.json: ${response.status}`);
-      
-      if (response.ok) {
-        console.log(`Found package.json at ${branch}/package.json`);
-        return await response.json();
-      }
-    } catch (error) {
-      console.error(`Error fetching ${branch}/package.json:`, error);
-      continue;
-    }
-  }
-  console.log("No package.json found in any branch");
-  return null;
-}
-
-/**
- * Fetch requirements.txt from GitHub raw content
- */
-async function fetchRequirementsTxt(owner: string, repo: string, token: string): Promise<string | null> {
-  const branches = ["main", "master", "develop"];
-  const paths = ["requirements.txt", "requirements/base.txt", "requirements/production.txt"];
+  const paths = [
+    "package.json",
+    "app/package.json",
+    "sdk/package.json",
+    "js/package.json",
+    "client/package.json",
+    "packages/core/package.json",
+    "frontend/package.json",
+    "web/package.json",
+    "ui/package.json",
+    "packages/sdk/package.json",
+  ];
   
   for (const branch of branches) {
     for (const path of paths) {
@@ -161,17 +318,47 @@ async function fetchRequirementsTxt(owner: string, repo: string, token: string):
         const response = await fetch(url, {
           headers: {
             Authorization: `token ${token}`,
-            Accept: "text/plain",
+            Accept: "application/json",
             "User-Agent": "Resilience-Registry",
           },
         });
         
         if (response.ok) {
-          console.log(`Found ${path} at ${branch}/${path}`);
-          return await response.text();
+          console.log(`Found package.json at ${branch}/${path}`);
+          return await response.json();
         }
       } catch {
         continue;
+      }
+    }
+  }
+  
+  console.log("No package.json found in any branch or path");
+  return null;
+}
+
+/**
+ * Fetch requirements.txt with expanded path discovery
+ */
+async function fetchRequirementsTxt(owner: string, repo: string, token: string): Promise<string | null> {
+  const branches = ["main", "master", "develop"];
+  const paths = [
+    "requirements.txt",
+    "requirements/base.txt",
+    "requirements/production.txt",
+    "requirements/main.txt",
+    "backend/requirements.txt",
+    "api/requirements.txt",
+    "server/requirements.txt",
+    "app/requirements.txt",
+  ];
+  
+  for (const branch of branches) {
+    for (const path of paths) {
+      const content = await fetchGitHubFile(owner, repo, branch, path, token);
+      if (content) {
+        console.log(`Found ${path} at ${branch}/${path}`);
+        return content;
       }
     }
   }
@@ -180,28 +367,25 @@ async function fetchRequirementsTxt(owner: string, repo: string, token: string):
 }
 
 /**
- * Fetch pyproject.toml from GitHub raw content
+ * Fetch pyproject.toml with expanded path discovery
  */
 async function fetchPyprojectToml(owner: string, repo: string, token: string): Promise<string | null> {
   const branches = ["main", "master", "develop"];
+  const paths = [
+    "pyproject.toml",
+    "backend/pyproject.toml",
+    "api/pyproject.toml",
+    "server/pyproject.toml",
+    "app/pyproject.toml",
+  ];
   
   for (const branch of branches) {
-    try {
-      const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/pyproject.toml`;
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: "text/plain",
-          "User-Agent": "Resilience-Registry",
-        },
-      });
-      
-      if (response.ok) {
-        console.log(`Found pyproject.toml at ${branch}/pyproject.toml`);
-        return await response.text();
+    for (const path of paths) {
+      const content = await fetchGitHubFile(owner, repo, branch, path, token);
+      if (content) {
+        console.log(`Found pyproject.toml at ${branch}/${path}`);
+        return content;
       }
-    } catch {
-      continue;
     }
   }
   
@@ -770,10 +954,10 @@ Deno.serve(async (req) => {
 
     console.log(`📦 Analyzing dependencies for: ${owner}/${repo}`);
 
-    // First try Cargo.toml (Rust projects)
-    const cargoContent = await fetchCargoToml(owner, repo, githubToken);
+    // First try Cargo.toml (Rust projects) with workspace support
+    const cargoResult = await fetchCargoToml(owner, repo, githubToken);
     
-    if (!cargoContent) {
+    if (!cargoResult) {
       console.log("No Cargo.toml found - checking for package.json...");
       
       // Try package.json (JS/TS projects)
@@ -817,8 +1001,8 @@ Deno.serve(async (req) => {
     }
 
     // Parse Rust dependencies from Cargo.toml
-    const parsedDeps = parseCargoToml(cargoContent);
-    console.log(`Found ${parsedDeps.size} dependencies in Cargo.toml`);
+    const parsedDeps = parseCargoToml(cargoResult.content);
+    console.log(`Found ${parsedDeps.size} dependencies in Cargo.toml${cargoResult.aggregated ? ' (aggregated from workspace)' : ''}`);
 
     // Analyze each dependency against crates.io
     const dependencies: CrateDependency[] = [];
