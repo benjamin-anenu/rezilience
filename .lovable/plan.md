@@ -1,221 +1,58 @@
 
 
-# Enhanced Dependency Tree: Multi-Language + Ecosystem Impact
+# Fix: Add package.json (JS/TS) Parsing to analyze-dependencies
 
-## Executive Summary
+## Root Cause
 
-This plan addresses two critical gaps in the current implementation:
-1. **Language Expansion**: Support package.json (JS/TS) and pyproject.toml/requirements.txt (Python) in addition to Cargo.toml
-2. **Ecosystem Impact**: Show who depends on this project (forks, crates.io dependents, cross-registry links)
+The `analyze-dependencies` edge function currently only parses `Cargo.toml` (Rust projects). When analyzing a JavaScript/TypeScript project like this one (`https://github.com/benjamin-anenu/resilience`), it finds no Cargo.toml and returns zero dependencies.
 
----
-
-## Current State Analysis
-
-| Aspect | Current | Gap |
-|--------|---------|-----|
-| Rust dependencies | Working (Cargo.toml) | Only 1 project analyzed |
-| JS/TS dependencies | Missing | No package.json parsing |
-| Python dependencies | Missing | No pyproject.toml parsing |
-| GitHub forks | Data exists, UI partial | Not showing despite 214 forks |
-| Crates.io dependents | Per-crate only | Not shown at project level |
-| Cross-registry links | Missing | No matching against other profiles |
+The plan to add `package.json` support was approved but **the edge function was not updated** with that code.
 
 ---
 
-## Phase 1: Fix Current Visualization (Quick Win)
+## Solution
 
-### 1.1 Show GitHub Forks Correctly
-
-The canvas already has logic for forks but it's not rendering. Need to verify the data flow:
-
-```text
-claimed_profiles.github_forks → useDependencyGraph → DependencyTreeCanvas → Fork node
-```
-
-**Fix**: Ensure `github_forks` is properly passed and rendered even when no crate dependencies exist.
-
-### 1.2 Add "Analyze Now" Button for Empty States
-
-When no dependencies exist, show an action button to trigger analysis:
-
-```text
-┌─────────────────────────────────────────────────────────┐
-│         [Package Icon]                                  │
-│    No Dependencies Analyzed Yet                         │
-│                                                         │
-│    This project hasn't been analyzed for dependencies.  │
-│    Click below to start the analysis.                   │
-│                                                         │
-│          [🔄 Analyze Dependencies Now]                  │
-│                                                         │
-│    ────────────────────────────────────                 │
-│    ℹ️ Currently supports: Cargo.toml (Rust/Solana)      │
-│       Coming soon: package.json, requirements.txt      │
-└─────────────────────────────────────────────────────────┘
-```
+Enhance the edge function to:
+1. First try `Cargo.toml` (existing Rust logic)
+2. If not found, try `package.json` (new JS/TS logic)
+3. Store dependencies with `dependency_type = 'npm'` for npm packages
 
 ---
 
-## Phase 2: Multi-Language Dependency Support
+## File Changes
 
-### 2.1 Enhance Edge Function: analyze-dependencies
+### 1. `supabase/functions/analyze-dependencies/index.ts`
 
-Add parsing for additional package managers:
-
-| Language | File | Registry API |
-|----------|------|--------------|
-| Rust | Cargo.toml | crates.io |
-| JavaScript/TypeScript | package.json | npm registry |
-| Python | pyproject.toml, requirements.txt | PyPI |
-
-### 2.2 New Database Column
-
-Add `dependency_type` column to track the source:
-
-```sql
-ALTER TABLE dependency_graph 
-ADD COLUMN dependency_type TEXT DEFAULT 'crate';
--- Values: 'crate', 'npm', 'pypi'
-```
-
-### 2.3 Edge Function Enhancement
-
-```text
-analyze-dependencies/index.ts
-├── fetchCargoToml()      -- existing
-├── fetchPackageJson()    -- NEW: npm dependencies
-├── fetchPyProject()      -- NEW: Python dependencies
-├── parseCargoToml()      -- existing
-├── parsePackageJson()    -- NEW
-├── parsePyProject()      -- NEW
-├── getNpmLatestVersion() -- NEW: npm registry API
-├── getPyPILatestVersion()-- NEW: PyPI API
-└── storeDependencyGraph()-- enhance for type
-```
-
-### 2.4 Updated Visualization
-
-Different colors/icons for different package types:
-
-```text
-Legend:
-  🦀 Rust (crates.io)
-  📦 JavaScript (npm)
-  🐍 Python (PyPI)
-```
-
----
-
-## Phase 3: Ecosystem Impact (Reverse Dependencies)
-
-### 3.1 Right-Side Nodes: Who Depends on This Project
-
-The tree currently only shows LEFT side (what project uses). Add RIGHT side:
-
-```text
-┌───────────────────────────────────────────────────────────────────┐
-│                                                                   │
-│   [anchor-lang]──┐                            ┌──[214 Forks]      │
-│   [anchor-spl]───┤                            │                   │
-│   [solana-sdk]───┼────►[ PROJECT ]────────────┼──[629 crates.io]  │
-│   [spl-token]────┤        NAME                │  dependents       │
-│   [borsh]────────┘                            └──[3 Registry      │
-│                                                   Projects]       │
-│   INWARD DEPS                                 OUTWARD IMPACT      │
-│   (Supply Chain)                              (Ecosystem Reach)   │
-│                                                                   │
-└───────────────────────────────────────────────────────────────────┘
-```
-
-### 3.2 Cross-Registry Linking
-
-Match crate names against other `claimed_profiles` in the database:
-
-```sql
--- Find which registered projects depend on a specific crate
-SELECT DISTINCT cp.id, cp.project_name
-FROM dependency_graph dg
-JOIN claimed_profiles cp ON cp.id = dg.source_profile_id
-WHERE dg.crate_name = 'anchor-lang'
-  AND dg.source_profile_id != 'current-profile-id';
-```
-
-This creates internal links like:
-- "3 Solana projects in this registry use anchor-lang"
-- Clicking shows list of those projects
-
-### 3.3 Aggregate Ecosystem Impact Score
-
-Calculate and display:
-
-```text
-┌────────────────────────────────────────┐
-│ ECOSYSTEM IMPACT                       │
-│ ────────────────────────────────────── │
-│ GitHub Forks:           214            │
-│ crates.io Dependents:   1,200 total    │
-│ Registry Dependents:    5 projects     │
-│ ────────────────────────────────────── │
-│ Impact Score:           HIGH           │
-└────────────────────────────────────────┘
-```
-
----
-
-## Phase 4: Implementation Files
-
-### Files to Create/Modify
-
-| File | Action | Purpose |
-|------|--------|---------|
-| `supabase/functions/analyze-dependencies/index.ts` | Modify | Add package.json and pyproject.toml parsing |
-| `src/hooks/useDependencyGraph.ts` | Modify | Fetch cross-registry links |
-| `src/components/dependency-tree/DependencyTreeCanvas.tsx` | Modify | Add right-side ecosystem nodes |
-| `src/components/dependency-tree/EcosystemImpactPanel.tsx` | Create | Side panel for impact metrics |
-| `src/pages/DependencyTree.tsx` | Modify | Add "Analyze Now" button for empty states |
-| Migration | Create | Add `dependency_type` column |
-
----
-
-## Phase 5: Database Migration
-
-```sql
--- Add dependency type for multi-language support
-ALTER TABLE dependency_graph 
-ADD COLUMN IF NOT EXISTS dependency_type TEXT DEFAULT 'crate';
-
--- Add index for cross-registry queries
-CREATE INDEX IF NOT EXISTS idx_dependency_graph_crate_name 
-ON dependency_graph(crate_name);
-
--- Add npm registry URL column
-ALTER TABLE dependency_graph 
-ADD COLUMN IF NOT EXISTS npm_url TEXT;
-
--- Add PyPI URL column
-ALTER TABLE dependency_graph 
-ADD COLUMN IF NOT EXISTS pypi_url TEXT;
-```
-
----
-
-## Technical Details
-
-### package.json Parsing
+**Add new functions:**
 
 ```typescript
+// Fetch package.json from GitHub
 async function fetchPackageJson(owner: string, repo: string, token: string): Promise<object | null> {
   const branches = ["main", "master", "develop"];
   
   for (const branch of branches) {
-    const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/package.json`;
-    const response = await fetch(url, { headers: { Authorization: `token ${token}` }});
-    if (response.ok) return response.json();
+    try {
+      const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/package.json`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: "application/json",
+          "User-Agent": "Resilience-Registry",
+        },
+      });
+      
+      if (response.ok) {
+        console.log(`Found package.json at ${branch}/package.json`);
+        return await response.json();
+      }
+    } catch {
+      continue;
+    }
   }
   return null;
 }
 
+// Parse package.json dependencies
 function parsePackageJson(pkg: any): Map<string, string> {
   const deps = new Map<string, string>();
   const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
@@ -225,20 +62,51 @@ function parsePackageJson(pkg: any): Map<string, string> {
   }
   return deps;
 }
-```
 
-### npm Registry API
-
-```typescript
+// Get latest version from npm registry
 async function getNpmLatestVersion(packageName: string): Promise<string | null> {
-  const response = await fetch(`https://registry.npmjs.org/${packageName}/latest`);
-  if (!response.ok) return null;
-  const data = await response.json();
-  return data.version || null;
+  try {
+    // Handle scoped packages (@org/name)
+    const encodedName = encodeURIComponent(packageName);
+    const response = await fetch(`https://registry.npmjs.org/${encodedName}/latest`, {
+      headers: {
+        "User-Agent": "Resilience-Registry",
+        Accept: "application/json",
+      },
+    });
+    
+    if (!response.ok) {
+      console.warn(`Package ${packageName} not found on npm`);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.version || null;
+  } catch (error) {
+    console.error(`Error fetching npm package ${packageName}:`, error);
+    return null;
+  }
+}
+
+// Get npm download count as proxy for "dependents"
+async function getNpmDownloads(packageName: string): Promise<number> {
+  try {
+    const encodedName = encodeURIComponent(packageName);
+    const response = await fetch(
+      `https://api.npmjs.org/downloads/point/last-week/${encodedName}`,
+      { headers: { "User-Agent": "Resilience-Registry" } }
+    );
+    
+    if (!response.ok) return 0;
+    const data = await response.json();
+    return data.downloads || 0;
+  } catch {
+    return 0;
+  }
 }
 ```
 
-### Critical npm Dependencies (Solana Ecosystem)
+**Critical npm dependencies to track:**
 
 ```typescript
 const CRITICAL_NPM_DEPS = [
@@ -248,51 +116,168 @@ const CRITICAL_NPM_DEPS = [
   "@coral-xyz/anchor",
   "@solana/wallet-adapter-base",
   "@solana/wallet-adapter-react",
+  "react",
+  "next",
+  "typescript",
 ];
 ```
 
----
+**Update main handler to try package.json if no Cargo.toml:**
 
-## User Experience Flow
+```typescript
+// Current code ends at line 290 with "No Cargo.toml found"
+// CHANGE: Instead of returning neutral, try package.json
 
-```text
-1. User navigates to /deps/:profileId
-2. If no dependencies found:
-   a. Show empty state with "Analyze Now" button
-   b. User clicks button
-   c. Edge function runs (15-60 seconds)
-   d. Tree updates with parsed dependencies
-3. If dependencies exist:
-   a. LEFT: Show inward dependencies (supply chain)
-   b. CENTER: Project node
-   c. RIGHT: Show ecosystem impact (forks, dependents)
-4. User can click any node for details
-5. Cross-registry links open internal navigation
+if (!cargoContent) {
+  console.log("No Cargo.toml found - checking for package.json...");
+  
+  const packageJson = await fetchPackageJson(owner, repo, githubToken);
+  
+  if (packageJson) {
+    // Parse and analyze npm dependencies
+    const parsedDeps = parsePackageJson(packageJson);
+    console.log(`Found ${parsedDeps.size} npm dependencies`);
+    
+    const dependencies: CrateDependency[] = [];
+    let outdatedCount = 0;
+    let criticalCount = 0;
+    
+    for (const [name, currentVersion] of parsedDeps) {
+      // Rate limit: be gentle with npm registry
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      
+      const latestVersion = await getNpmLatestVersion(name);
+      const isCritical = CRITICAL_NPM_DEPS.includes(name);
+      
+      if (latestVersion) {
+        const monthsBehind = calculateVersionGap(currentVersion, latestVersion);
+        const isOutdated = monthsBehind > 0;
+        const downloads = await getNpmDownloads(name);
+        
+        dependencies.push({
+          name,
+          currentVersion,
+          latestVersion,
+          monthsBehind,
+          isOutdated,
+          isCritical,
+          reverseDeps: downloads, // Using downloads as proxy
+        });
+        
+        if (isOutdated) {
+          outdatedCount++;
+          if (isCritical && monthsBehind >= 3) {
+            criticalCount++;
+          }
+        }
+      }
+    }
+    
+    const healthScore = calculateHealthScore(dependencies, outdatedCount, criticalCount);
+    const result = { healthScore, totalDependencies: dependencies.length, ... };
+    
+    // Store with dependency_type = 'npm'
+    if (profile_id) {
+      await updateProfile(profile_id, result);
+      await storeDependencyGraph(profile_id, dependencies, 'npm');
+    }
+    
+    return new Response(JSON.stringify({ success: true, data: result }), ...);
+  }
+  
+  // Neither Cargo.toml nor package.json found
+  return new Response(
+    JSON.stringify({ success: true, data: { healthScore: 50, ... }, note: "No dependency files found" }),
+    ...
+  );
+}
+```
+
+**Update storeDependencyGraph to include dependency_type:**
+
+```typescript
+async function storeDependencyGraph(
+  profileId: string, 
+  dependencies: CrateDependency[], 
+  dependencyType: 'crate' | 'npm' | 'pypi' = 'crate'
+): Promise<void> {
+  // ... existing code ...
+  
+  const rows = dependencies.map((dep) => ({
+    source_profile_id: profileId,
+    crate_name: dep.name, // This column stores package name for all types
+    package_name: dep.name, // New column for clarity
+    dependency_type: dependencyType, // 'crate', 'npm', or 'pypi'
+    current_version: dep.currentVersion,
+    latest_version: dep.latestVersion,
+    months_behind: dep.monthsBehind,
+    is_critical: dep.isCritical,
+    is_outdated: dep.isOutdated,
+    crates_io_url: dependencyType === 'crate' ? `https://crates.io/crates/${dep.name}` : null,
+    npm_url: dependencyType === 'npm' ? `https://www.npmjs.com/package/${dep.name}` : null,
+    crates_io_dependents: dep.reverseDeps,
+    analyzed_at: new Date().toISOString(),
+  }));
+  
+  // ... rest of insert logic ...
+}
 ```
 
 ---
 
-## Implementation Order
+### 2. Update `useDependencyGraph.ts`
 
-| Step | Task | Priority |
-|------|------|----------|
-| 1 | Fix fork display in current canvas | Critical |
-| 2 | Add "Analyze Now" button to empty state | Critical |
-| 3 | Add dependency_type column migration | High |
-| 4 | Enhance edge function for package.json | High |
-| 5 | Update canvas for right-side ecosystem nodes | High |
-| 6 | Implement cross-registry linking query | Medium |
-| 7 | Add EcosystemImpactPanel component | Medium |
-| 8 | Add Python support (pyproject.toml) | Low |
+Include `dependency_type` and `npm_url` in the data model:
+
+```typescript
+export interface DependencyNode {
+  id: string;
+  crate_name: string;
+  current_version: string | null;
+  latest_version: string | null;
+  months_behind: number;
+  is_critical: boolean;
+  is_outdated: boolean;
+  crates_io_url: string | null;
+  npm_url: string | null; // NEW
+  crates_io_dependents: number;
+  dependency_type: 'crate' | 'npm' | 'pypi'; // NEW
+}
+```
 
 ---
 
-## Summary
+### 3. Update `DependencyNode.tsx` and `NodeDetailPanel.tsx`
 
-This plan transforms the dependency tree from a Rust-only supply chain viewer into a comprehensive **Ecosystem Intelligence Hub** that:
+Show npm icon for JS/TS dependencies and crates.io icon for Rust:
 
-1. **Supports Multiple Languages**: Rust, JavaScript/TypeScript, Python
-2. **Shows Bidirectional Impact**: What you depend on AND who depends on you
-3. **Enables Analysis on Demand**: Users can trigger fresh analysis
-4. **Links Registry Projects**: Discover connections within the Solana ecosystem
+```typescript
+// In DependencyNode.tsx
+const typeIcon = dependencyType === 'npm' ? '📦' : dependencyType === 'pypi' ? '🐍' : '🦀';
+
+// In NodeDetailPanel.tsx
+const registryUrl = dependencyType === 'npm' ? npmUrl : cratesIoUrl;
+const registryName = dependencyType === 'npm' ? 'npm' : 'crates.io';
+```
+
+---
+
+## Files Changed
+
+| File | Action |
+|------|--------|
+| `supabase/functions/analyze-dependencies/index.ts` | Add package.json parsing, npm registry lookups |
+| `src/hooks/useDependencyGraph.ts` | Include dependency_type and npm_url |
+| `src/components/dependency-tree/DependencyNode.tsx` | Show language-specific icons |
+| `src/components/dependency-tree/NodeDetailPanel.tsx` | Link to correct registry |
+
+---
+
+## After Implementation
+
+Once the edge function is updated:
+1. Click "Analyze Dependencies Now" again
+2. The function will find `package.json` in your repo
+3. It will parse all npm dependencies (react, react-router-dom, etc.)
+4. The tree will populate with your actual project dependencies
 
