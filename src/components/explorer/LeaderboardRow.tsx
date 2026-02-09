@@ -276,15 +276,11 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
         </TableCell>
         {/* Health */}
         <TableCell className="hidden xl:table-cell">
-          {isPrivate ? (
-            <Lock className="h-4 w-4 text-muted-foreground mx-auto" />
-          ) : (
-            <DimensionHealthIndicators
-              dependencyScore={project.dependency_health_score}
-              governanceTx30d={project.governance_tx_30d}
-              tvlUsd={project.tvl_usd}
-            />
-          )}
+          <DimensionHealthIndicators
+            dependencyScore={project.dependency_health_score}
+            governanceTx30d={project.governance_tx_30d}
+            tvlUsd={project.tvl_usd}
+          />
         </TableCell>
         {/* Trend */}
         <TableCell className="hidden xl:table-cell">
