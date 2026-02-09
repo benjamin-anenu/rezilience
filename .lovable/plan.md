@@ -1,39 +1,59 @@
 
+# README Page: Three Updates
 
-# Hero Section: Solana Logo + Dimension of Trust Icons
+## 1. Rename "For Protocol Builders" to "For Solana Builders"
 
-## Central Node
-Replace the `Shield` icon with an inline SVG of the official Solana logo mark (the "S" parallelogram shape). This will be rendered as a clean SVG path directly in the component -- no external assets needed. The logo will use the `primary` (teal) color to stay on-brand.
+**Files:** `src/pages/Readme.tsx` (line 401), `src/components/readme/TableOfContents.tsx` (line 28)
 
-The central node will also get a subtle double-border treatment and a stronger glow effect (`glow-signal-strong`) for a more premium, institutional feel.
+- Change `SectionHeader` title from `"For Project Builders"` to `"For Solana Builders"`
+- Update TOC entry from `"For Protocol Builders"` to `"For Solana Builders"`
 
-## Orbital Nodes -- Four Dimensions of Trust
-Each orbital node maps to a dimension from the scoring methodology, using semantically precise icons per the design system rules:
+## 2. Add "How to Improve Continuity" Card
 
-| Position | Dimension | Icon | Rationale |
+**File:** `src/pages/Readme.tsx` (after the existing "How to Join" card, around line 464)
+
+Add a second `Card` inside the "For Solana Builders" section, after the existing card closes. This new card will contain:
+
+- **Title:** "How to Improve Continuity"
+- **Subtitle:** "To Increase Your Resilience Score (Prove Continuity):"
+- **5 subsections** using an accordion or collapsible pattern for each continuity dimension:
+  1. **Brain Continuity** -- 4 bullet points (commit consistently, merge PRs, release versions, 3+ contributors)
+  2. **Nervous System Continuity** -- 4 bullet points (cargo update monthly, security advisories, monitor crates.io, test before deploying)
+  3. **Heart Continuity** -- 4 bullet points (multisig/DAO governance, vote regularly, multiple signers, publish decisions)
+  4. **Limbs Continuity** -- 4 bullet points (maintain economic activity, match maintenance to TVL, improve retention, diversify user base)
+  5. **Overall Continuity** -- 4 bullet points (build in public updates, commitment lock milestones, respond to issues, consistent activity)
+
+Each subsection will be a numbered item with bold title and bullet list, styled consistently with the existing "How to Join" step items. The existing "Improving Your Score" section (lines 436-462) will be **removed** since this new card supersedes it with much more detailed guidance.
+
+## 3. Add Product Roadmap Section
+
+**Files:** `src/pages/Readme.tsx` (new section after Data Provenance, before FAQ), `src/components/readme/TableOfContents.tsx` (add TOC entry)
+
+### TOC Update
+Add `{ id: 'roadmap', label: 'Product Roadmap', level: 1 }` between `data-provenance` and `faq`.
+
+### New Section Structure
+A new `section` with id `"roadmap"` containing 4 phase cards, each as an Accordion item for clean expand/collapse:
+
+| Phase | Title | Status Badge | Timeline |
 |---|---|---|---|
-| Top-left | Brain (Code Activity, 40%) | `GitBranch` | Represents development branching and code activity |
-| Top-right | Nervous System (Dependencies, 25%) | `Network` | Represents interconnected dependency supply chain |
-| Bottom-left | Heart (Governance, 20%) | `Heart` | Per design system: Heart = community/governance |
-| Bottom-right | Limbs (Economic, 15%) | `Coins` | Per design system: Coins = financial/staked metrics |
+| Phase 1 | Resilience Registry | COMPLETE | Months 1-3 |
+| Phase 2 | Economic Commitment Layer | IN PROGRESS | Months 4-6 |
+| Phase 3 | Ecosystem Integration | PLANNED | Months 7-12 |
+| Phase 4 | AEGIS Supply Chain Monitor | PLANNED | Months 13+ |
 
-Each orbital node will get a small label beneath it (hidden on smaller screens) showing the dimension name in `font-mono text-[10px]` for added sophistication.
+Each phase accordion item will contain:
+- **Tagline** in primary color (e.g., "Proof-of-Maintenance for All Solana Infrastructure")
+- **Description paragraph**
+- **"Ships" list** with checkmark bullets for delivered items
+- **Phase-specific extras:** Impact metrics for Phase 1, "How it works" flow for Phase 2, Use Cases for Phase 3, "How AEGIS Leverages Phases 1-3" cascade diagram for Phase 4
 
-## Additional Polish
-- Add a subtle `pulse-subtle` animation to the central Solana logo node
-- Improve connection lines with dashed stroke and slight opacity for a more technical/blueprint feel
-- Add a faint rotating ring around the central node using CSS animation for a "scanning" effect
+Uses a new `Map` icon from lucide-react for the section header. Phase 1 will default to expanded since it's complete.
 
 ## Technical Details
 
-### File modified:
-- `src/pages/...` -- No, just **`src/components/landing/HeroSection.tsx`** (lines ~136-170)
+### Files modified:
+1. **`src/pages/Readme.tsx`** -- Rename section title, replace "Improving Your Score" with detailed "How to Improve Continuity" card, add Roadmap section with 4 accordion phases
+2. **`src/components/readme/TableOfContents.tsx`** -- Update "For Protocol Builders" label to "For Solana Builders", add "Product Roadmap" entry
 
-### Changes:
-1. Replace `Shield` import with `GitBranch`, `Network`, `Heart`, `Coins` from lucide-react
-2. Replace the central Shield icon with an inline SVG Solana logo path
-3. Update the 4 orbital node icons to match the dimension mapping
-4. Add dimension labels below each orbital node
-5. Update SVG connection lines to use `strokeDasharray` for a technical look
-6. Add CSS class for a subtle rotating ring animation (inline keyframes or in index.css)
-
+### No new dependencies needed.
