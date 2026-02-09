@@ -63,6 +63,75 @@ async function fetchWithAuth(url: string, token: string): Promise<Response> {
   });
 }
 
+/**
+ * Fetches all events with pagination (up to 300 events / 3 pages)
+ * GitHub Events API returns max 100 per page, and max 300 total
+ */
+async function fetchAllEvents(owner: string, repo: string, token: string): Promise<any[]> {
+  const allEvents: any[] = [];
+  const maxPages = 3; // GitHub limits to 300 events total
+  
+  for (let page = 1; page <= maxPages; page++) {
+    const response = await fetchWithAuth(
+      `https://api.github.com/repos/${owner}/${repo}/events?per_page=100&page=${page}`,
+      token
+    );
+    
+    if (!response.ok) break;
+    
+    const events = await response.json();
+    if (!Array.isArray(events) || events.length === 0) break;
+    
+    allEvents.push(...events);
+    
+    // If we got less than 100, we've reached the end
+    if (events.length < 100) break;
+  }
+  
+  console.log(`Fetched ${allEvents.length} total events via pagination`);
+  return allEvents;
+}
+
+/**
+ * Fetches commit statistics from GitHub Stats API
+ * This is the authoritative source for weekly commit counts
+ * Returns commits in the last 30 days (roughly 4-5 weeks)
+ */
+async function fetchCommitStats(owner: string, repo: string, token: string): Promise<number> {
+  const maxRetries = 3;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const response = await fetchWithAuth(
+      `https://api.github.com/repos/${owner}/${repo}/stats/commit_activity`,
+      token
+    );
+    
+    // 202 means GitHub is computing stats - wait and retry
+    if (response.status === 202) {
+      console.log(`Stats API computing (attempt ${attempt}/${maxRetries}), waiting...`);
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      continue;
+    }
+    
+    if (!response.ok) {
+      console.log(`Stats API returned ${response.status}`);
+      return 0;
+    }
+    
+    const weeks = await response.json();
+    if (!Array.isArray(weeks) || weeks.length === 0) return 0;
+    
+    // Sum commits from the last 5 weeks (approximately 30 days)
+    const recentWeeks = weeks.slice(-5);
+    const totalCommits = recentWeeks.reduce((sum: number, week: any) => sum + (week.total || 0), 0);
+    
+    console.log(`Stats API: ${totalCommits} commits in last ~5 weeks`);
+    return totalCommits;
+  }
+  
+  return 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -103,12 +172,13 @@ Deno.serve(async (req) => {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const sinceDate = thirtyDaysAgo.toISOString();
 
-    const [repoResponse, commitsResponse, contributorsResponse, releasesResponse, eventsResponse] = await Promise.all([
+    // Fetch repo, commits, contributors, releases in parallel
+    // Events and stats fetched separately with pagination/retry logic
+    const [repoResponse, commitsResponse, contributorsResponse, releasesResponse] = await Promise.all([
       fetchWithAuth(`https://api.github.com/repos/${owner}/${repo}`, githubToken),
       fetchWithAuth(`https://api.github.com/repos/${owner}/${repo}/commits?since=${sinceDate}&per_page=100`, githubToken),
       fetchWithAuth(`https://api.github.com/repos/${owner}/${repo}/contributors?per_page=10`, githubToken),
       fetchWithAuth(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`, githubToken),
-      fetchWithAuth(`https://api.github.com/repos/${owner}/${repo}/events?per_page=20`, githubToken),
     ]);
 
     // Check if repo exists
@@ -132,7 +202,13 @@ Deno.serve(async (req) => {
 
     const repoData = await repoResponse.json();
     
-    // Parse commits
+    // Fetch events with pagination (up to 300 events)
+    const events = await fetchAllEvents(owner, repo, githubToken);
+    
+    // Fetch commit stats from Statistics API (authoritative source)
+    const statsCommits = await fetchCommitStats(owner, repo, githubToken);
+    
+    // Parse commits from Commits API (default branch only)
     let commits: any[] = [];
     if (commitsResponse.ok) {
       commits = await commitsResponse.json();
@@ -149,15 +225,8 @@ Deno.serve(async (req) => {
     if (releasesResponse.ok) {
       releases = await releasesResponse.json();
     }
-    
-    // Parse events
-    let events: any[] = [];
-    if (eventsResponse.ok) {
-      events = await eventsResponse.json();
-    }
 
     // Calculate metrics
-    // Note: commits.length only counts default branch commits - we'll augment with push events
     const defaultBranchCommits = commits.length;
     
     // === MULTI-SIGNAL ACTIVITY TRACKING ===
@@ -180,9 +249,14 @@ Deno.serve(async (req) => {
       .filter((e: any) => e.type === 'PushEvent')
       .reduce((sum: number, e: any) => sum + (e.payload?.size || 1), 0);
 
-    // Use the higher of: default branch commits OR push event commits (captures all branches)
-    const commitsLast30Days = Math.max(defaultBranchCommits, pushEventCommits);
+    // Use the HIGHEST of all three sources for accurate commit count:
+    // 1. Default branch commits (from Commits API)
+    // 2. Push event commits (from Events API - all branches)
+    // 3. Stats API commits (authoritative weekly counts)
+    const commitsLast30Days = Math.max(defaultBranchCommits, pushEventCommits, statsCommits);
     const commitVelocity = commitsLast30Days / 30; // commits per day
+
+    console.log(`Commit sources: default=${defaultBranchCommits}, pushEvents=${pushEventCommits}, stats=${statsCommits}, final=${commitsLast30Days}`);
 
     const pushedAt = new Date(repoData.pushed_at);
     const now = new Date();
@@ -336,7 +410,7 @@ Deno.serve(async (req) => {
       daysSinceLastActivity,
     };
 
-    console.log(`Analysis complete for ${owner}/${repo}: Score ${resilienceScore}, Status ${livenessStatus}, Activity=${adjustedActivity.toFixed(1)}`);
+    console.log(`Analysis complete for ${owner}/${repo}: Score ${resilienceScore}, Status ${livenessStatus}, Commits=${commitsLast30Days}, Velocity=${commitVelocity.toFixed(2)}`);
 
     // If profile_id is provided, update the claimed_profiles table
     if (profile_id) {
@@ -398,6 +472,7 @@ Deno.serve(async (req) => {
               push_events: result.pushEvents30d,
               pr_events: result.prEvents30d,
               issue_events: result.issueEvents30d,
+              commits_30d: result.commitsLast30Days,
             },
           });
 

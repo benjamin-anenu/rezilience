@@ -26,6 +26,11 @@ export interface ExplorerProject {
   claimStatus: 'claimed' | 'unclaimed' | 'pending';
   // Source tracking for routing
   isRegisteredProtocol: true;
+  // Multi-dimensional health scores
+  dependency_health_score: number;
+  governance_tx_30d: number;
+  tvl_usd: number;
+  integrated_score: number;
 }
 
 /**
@@ -96,6 +101,11 @@ export function useExplorerProjects() {
         country: (profile as { country?: string }).country || null,
         claimStatus: (profile.claim_status as 'claimed' | 'unclaimed' | 'pending') || 'claimed',
         isRegisteredProtocol: true as const,
+        // Multi-dimensional health scores
+        dependency_health_score: profile.dependency_health_score || 50,
+        governance_tx_30d: profile.governance_tx_30d || 0,
+        tvl_usd: profile.tvl_usd || 0,
+        integrated_score: profile.integrated_score || 0,
       }));
     },
   });

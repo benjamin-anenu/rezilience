@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileProgramCards } from './MobileProgramCard';
 import { Sparkline } from './Sparkline';
+import { DimensionHealthIndicators } from './DimensionHealthIndicators';
 import { useRankMovement, type MovementType } from '@/hooks/useRankMovement';
 import { PROJECT_CATEGORIES } from '@/types';
 import type { ExplorerProject } from '@/hooks/useExplorerProjects';
@@ -194,6 +195,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
             <TableHead className="hidden lg:table-cell">TYPE</TableHead>
             <TableHead className="hidden lg:table-cell">PROGRAM ID</TableHead>
             <TableHead className="text-right">SCORE</TableHead>
+            <TableHead className="hidden xl:table-cell w-16 text-center">HEALTH</TableHead>
             <TableHead className="hidden xl:table-cell w-20">TREND</TableHead>
             <TableHead className="hidden md:table-cell">LIVENESS</TableHead>
             <TableHead className="hidden xl:table-cell">DECAY</TableHead>
@@ -285,6 +287,13 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
                   <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
                     {Math.round(project.resilience_score)}
                   </span>
+                </TableCell>
+                <TableCell className="hidden xl:table-cell">
+                  <DimensionHealthIndicators
+                    dependencyScore={project.dependency_health_score}
+                    governanceTx30d={project.governance_tx_30d}
+                    tvlUsd={project.tvl_usd}
+                  />
                 </TableCell>
                 <TableCell className="hidden xl:table-cell">
                   <Sparkline values={scoreHistory} />
