@@ -1,163 +1,107 @@
 
-# Add Unclaimed Profiles from Solana Programs Directory
+# Sparkline Enhancement and Decay Column Implementation
 
-## Overview
+## Problem Analysis
 
-This plan adds 149 unclaimed profiles from the provided JSON file to the Resilience Registry. Each profile will be seeded with:
-- Valid GitHub URL for automatic metric analysis
-- Program ID (where available)
-- Category and description
-- Status: `claim_status = 'unclaimed'`, `verified = false`
+### Issue 1: Sparkline Not Updating
+The sparkline charts aren't showing meaningful movement because:
+- **Root Cause**: Most profiles were just seeded and only have 1-4 score snapshots captured over the last ~1 hour (data shows most profiles have snapshot_count of 3-5)
+- The 30-minute cron job creates snapshots, but since scores are calculated from relatively static data (stars, contributors, commit history), the values barely change between snapshots
+- When all values are nearly identical, the sparkline renders as a flat line
 
-After seeding, the 30-minute cron job will automatically analyze each profile's GitHub repository and populate resilience scores, liveness status, and trend data.
+### Issue 2: Rigid Sparkline Appearance
+The current SVG polyline uses sharp, angular joints between data points rather than smooth curves.
 
----
-
-## Data Filtering Strategy
-
-From the 150 programs in the JSON, we need to filter:
-
-**Include (approx 90-100 programs):**
-- Programs with valid GitHub URLs (not "N/A")
-- Programs with valid program IDs (not "N/A" patterns)
-
-**Exclude:**
-- Drift Protocol V2 (already exists)
-- Programs with "N/A (closed source)" GitHub URLs (e.g., Pump.fun)
-- Programs with "N/A" program IDs (SDKs, frameworks, validator clients)
-- Programs pointing to the same parent repo (e.g., multiple anza-xyz/agave entries)
+### Issue 3: Missing Decay Rate Column
+There's no visibility into how fast a project's score is decaying - the decay factor (e^(-0.05 * months)) is calculated but not displayed.
 
 ---
 
-## Implementation Approach
+## Implementation Plan
 
-### Option 1: Database Migration (Recommended)
-Create a migration SQL file with INSERT statements for all valid programs. Benefits:
-- Atomic transaction - all or nothing
-- Easily auditable
-- Can be rolled back if needed
+### Phase 1: Add Decay Rate Column
+Insert a new "DECAY" column between LIVENESS and STATUS showing the daily decay percentage.
 
-### Option 2: Edge Function for Bulk Seeding
-Create a one-time edge function to seed from JSON. Less preferred as migrations are more reliable.
+**Location**: Between columns at lines 183-184 in `ProgramLeaderboard.tsx`
+
+**Data Source**: Calculate decay rate from `github_last_activity` timestamp:
+- Formula: Daily decay = `1 - e^(-0.00167 * days)` expressed as percentage
+- Example: 30 days inactive = ~4.9% decayed
+
+**Visual Design**:
+- Column header: "DECAY"
+- Cell content: Percentage with color coding
+  - Green (0-2%): Healthy, recent activity
+  - Amber (2-10%): Moderate decay
+  - Red (10%+): Severe decay
+
+### Phase 2: Smooth Sparkline Curves
+Replace the rigid `polyline` with a smooth `path` using cubic bezier curves.
+
+**Changes to `Sparkline.tsx`**:
+- Convert point-to-point rendering to use smooth curve interpolation
+- Use `quadraticCurveTo` or `cubicBezierTo` SVG commands
+- Apply `stroke-linecap: round` for softer endpoints
+
+**Pseudo-code for smooth path generation**:
+```text
+M x0,y0
+Q (x0+x1)/2,y0 (x0+x1)/2,(y0+y1)/2
+T x1,(y0+y1)/2
+... continue for each point
+```
+
+### Phase 3: Improve Sparkline Data Context
+Add visual indicators when data is insufficient.
+
+**Changes**:
+1. Show "Building..." label when < 3 data points
+2. Add subtle dot markers at each data point for clarity
+3. Extend the query to fetch more historical points when available
 
 ---
 
 ## Technical Details
 
-### Category Mapping
-The JSON uses categories like "DeFi / DEX", "DeFi / Derivatives", etc. We'll normalize these to match the existing category format in the database:
-- "DeFi / DEX" -> "defi"
-- "DeFi / Derivatives" -> "defi"
-- "NFT / Marketplace" -> "nft"
-- "Infrastructure / Oracle" -> "infrastructure"
-- "Gaming / Infrastructure" -> "gaming"
-- etc.
+### New Files: None
 
-### Deduplication Strategy
-Many programs in the JSON share the same GitHub repo (e.g., multiple programs from anza-xyz/agave). To avoid duplicate analysis:
-- Group by unique GitHub URL
-- Select the most specific/relevant program when duplicates exist
+### Modified Files:
 
-### Programs to Seed (High-Value Selection)
+**1. `src/components/explorer/ProgramLeaderboard.tsx`**
+- Add TableHead for "DECAY" column (after LIVENESS)
+- Add TableCell rendering decay percentage
+- Add helper function `calculateDecayPercentage(lastActivityDate)`
+- Add helper function `getDecayColor(percentage)`
+- Extend `ExplorerProject` interface usage to include `github_last_activity`
 
-Based on analysis, here are the key programs to add:
+**2. `src/components/explorer/Sparkline.tsx`**
+- Replace `polyline` with `path` element
+- Implement `generateSmoothPath()` function using bezier curves
+- Add optional `showDots` prop to render point markers
+- Add minimum data threshold check with fallback display
 
-| Program | Category | GitHub |
-|---------|----------|--------|
-| SPL Token Program | Core | solana-program/token |
-| Token-2022 | Core | solana-program/token-2022 |
-| Jupiter Aggregator V6 | DeFi | jup-ag/jupiter-core |
-| Raydium AMM V4 | DeFi | raydium-io/raydium-amm |
-| Orca Whirlpools | DeFi | orca-so/whirlpools |
-| Meteora DLMM | DeFi | MeteoraAg/dlmm-sdk |
-| Phoenix V1 | DeFi | Ellipsis-Labs/phoenix-v1 |
-| OpenBook V2 | DeFi | openbook-dex/openbook-v2 |
-| Marinade Finance | DeFi | marinade-finance/liquid-staking-program |
-| Kamino Finance | DeFi | Kamino-Finance/klend |
-| MarginFi V2 | DeFi | mrgnlabs/marginfi-v2 |
-| Pyth Network | Infrastructure | pyth-network/pyth-sdk-solana |
-| Switchboard V2 | Infrastructure | switchboard-xyz/switchboard-v2 |
-| Wormhole Core Bridge | Infrastructure | wormhole-foundation/wormhole |
-| Squads Multisig V4 | Infrastructure | Squads-Protocol/v4 |
-| Metaplex Token Metadata | NFT | metaplex-foundation/mpl-token-metadata |
-| Metaplex Bubblegum | NFT | metaplex-foundation/mpl-bubblegum |
-| Magic Eden V2 | NFT | magiceden-oss |
-| Tensor Swap | NFT | tensor-foundation |
-| Realms (SPL Governance) | Governance | Mythic-Project/solana-program-library |
-| Helium Network | DePIN | helium/helium-program-library |
-| And 70+ more... |  |  |
+**3. `src/hooks/useExplorerProjects.ts`**
+- Include `github_last_activity` field in the query select and mapping
+
+**4. `src/components/explorer/MobileProgramCard.tsx`**
+- Add decay rate display for mobile consistency
 
 ---
 
-## Implementation Steps
+## Column Order After Implementation
 
-### Step 1: Create Database Migration
-Generate SQL INSERT statements for all valid programs from the JSON file.
-
-```sql
-INSERT INTO claimed_profiles (
-  project_name, description, category, program_id, 
-  github_org_url, website_url, claim_status, verified,
-  resilience_score, liveness_status
-) VALUES 
-  ('SPL Token Program', 'Standard token program...', 'infrastructure', 'TokenkegQ...', 'https://github.com/solana-program/token', 'https://spl.solana.com', 'unclaimed', false, 0, 'STALE'),
-  -- ... 90+ more entries
+```text
+RANK | PROJECT | TYPE | PROGRAM ID | SCORE | TREND | LIVENESS | DECAY | STATUS | STAKED | LAST ACTIVITY
 ```
 
-### Step 2: Deploy Migration
-Run the migration to insert all unclaimed profiles.
-
-### Step 3: Trigger Initial Analysis
-The existing 30-minute cron job (`refresh-all-profiles`) will automatically:
-1. Detect all new unclaimed profiles with GitHub URLs
-2. Call `analyze-github-repo` for each
-3. Populate resilience scores, liveness status, metrics
-4. Create score_history entries for trend charts
-
-### Step 4: Verify in Explorer
-Confirm all new profiles appear with:
-- "UNCLAIMED" badge
-- "Claim This" CTA
-- Populated metrics (after first refresh cycle)
-
 ---
 
-## Files to Modify
+## Why Sparklines Appear Static (Context)
 
-| File | Change |
-|------|--------|
-| New Migration | INSERT 90+ unclaimed profiles |
+The sparkline visualizes score snapshots from `score_history`. Current data shows:
+- Snapshots are captured every ~30 minutes
+- Most profiles have only 3-5 snapshots over ~1 hour
+- Score changes require actual GitHub activity changes (commits, stars, contributors)
+- Without new commits/activity, the decay formula produces nearly identical scores between snapshots
 
----
-
-## Post-Implementation Verification
-
-After the cron runs (or manual trigger):
-- All profiles should show real resilience scores
-- Liveness badges should reflect actual GitHub activity
-- Sparkline trends will populate over subsequent cycles
-- "UNCLAIMED" badge visible for all new entries
-
----
-
-## Risk Mitigation
-
-1. **Duplicate Prevention**: Check for existing program_id before insert
-2. **Invalid GitHub URLs**: Skip entries with "N/A" or malformed URLs
-3. **Rate Limiting**: The cron job already handles GitHub API limits gracefully
-4. **Rollback**: Can DELETE FROM claimed_profiles WHERE claim_status = 'unclaimed' AND project_name IN (...) if needed
-
----
-
-## Estimated Impact
-
-- **Registry Growth**: From 2 profiles to 90-100+ profiles
-- **Active Monitoring**: All profiles with valid GitHub URLs get automatic refresh
-- **User Value**: Builders see real-time health of major Solana protocols
-- **Claim Incentive**: Prominent projects visible but unclaimed creates urgency
-
----
-
-## Summary
-
-This implementation seeds the Resilience Registry with the majority of active Solana programs from the provided directory. The existing auto-refresh infrastructure will keep all profiles current, and builders will be incentivized to claim their projects by seeing them listed as "UNCLAIMED" with real metrics.
+**Expected Behavior**: Once profiles accumulate snapshots over days/weeks, the sparklines will show meaningful trends. The smoothing enhancement will make small variations more visible.
