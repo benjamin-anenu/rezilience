@@ -1,79 +1,134 @@
 
-# Open Health Column for Private Repos
+# Context-Aware Terminology Update: Protocol → Project/Platform
 
-## Current Issue
+## Understanding the Context
 
-Private repos (unclaimed with `github_analyzed_at = NULL`) show a Lock icon for the entire Health column, hiding valuable on-chain data:
+Based on your clarification, we need two distinct replacements:
 
-```text
-Current State:
-| Project     | Score | Health | Trend |
-|-------------|-------|--------|-------|
-| BlazeStake  | 🔒    | 🔒     | 🔒    |  <-- Has $89M TVL!
-```
-
-## Why This Makes Sense
-
-The Health column displays **3 dimensions**:
-
-| Dimension | Data Source | Requires GitHub? |
-|-----------|-------------|------------------|
-| **D** (Dependencies) | Cargo.toml parsing | Yes |
-| **G** (Governance) | Solana RPC (Squads/Realms) | No |
-| **T** (TVL) | DeFiLlama API | No |
-
-**2 of 3 health indicators are independent of GitHub access.**
-
-Real data from the database shows private repos with significant on-chain health:
-- **BlazeStake**: $89.8M TVL (healthy)
-- **Solayer**: $16.9M TVL (healthy)
-- **Dual Finance**: $436K TVL (warning)
+| Context | Current Term | New Term |
+|---------|--------------|----------|
+| Resilience as a product/service | "protocol" | "Platform" |
+| Individual registry entries | "protocol" | "project" |
 
 ---
 
-## Implementation
+## Files & Changes Summary
 
-### File to Modify
+### 1. Explorer.tsx (5 changes)
+```text
+Line 97:  "Browse verified protocols..."     → "Browse verified projects..."
+Line 142: "...registered protocols"           → "...registered projects"
+Line 172: "No Registered Protocols Yet"       → "No Registered Projects Yet"
+Line 176: "No protocols match..."             → "No projects match..."
+Line 177: "...register your protocol..."      → "...register your project..."
+```
 
-`src/components/explorer/LeaderboardRow.tsx`
+### 2. Dashboard.tsx (4 changes)
+```text
+Line 74:  "...registered protocols..."        → "...registered projects..."
+Line 130: "REGISTER PROTOCOL"                 → "REGISTER PROJECT"
+Line 146: "No Registered Protocols"           → "No Registered Projects"
+Line 149: "Register your first protocol"      → "Register your first project"
+```
 
-### Change
+### 3. ProgramDetail.tsx (4 changes)
+```text
+Line 79:  "PROTOCOL NOT FOUND"                → "PROJECT NOT FOUND"
+Line 82:  "The protocol you're looking..."    → "The project you're looking..."
+Line 93:  "Register Protocol"                 → "Register Project"
+Line 103: "Unknown Protocol"                  → "Unknown Project"
+```
 
-Remove the private repo lock for the Health column:
+### 4. DeleteProfileDialog.tsx (3 changes)
+```text
+Line 54:  "DELETE PROTOCOL"                   → "DELETE PROJECT"
+Line 76:  "Type protocol name here..."        → "Type project name here..."
+Line 98:  "Delete Protocol"                   → "Delete Project"
+```
 
-```typescript
-// Before (line ~278-285)
-<TableCell className="hidden xl:table-cell">
-  {isPrivate ? (
-    <Lock className="h-4 w-4 text-muted-foreground mx-auto" />
-  ) : (
-    <DimensionHealthIndicators ... />
-  )}
-</TableCell>
+### 5. HeroSection.tsx (3 changes)
+```text
+Line 30:  "Registered Protocols"              → "Registered Projects"
+Line 32:  "...claim your protocol."           → "...claim your project."
+Line 33:  "Verified protocols in..."          → "Verified projects in..."
+```
 
-// After - Always show health indicators
-<TableCell className="hidden xl:table-cell">
-  <DimensionHealthIndicators
-    dependencyScore={project.dependency_health_score}
-    governanceTx30d={project.governance_tx_30d}
-    tvlUsd={project.tvl_usd}
-  />
-</TableCell>
+### 6. ClaimProfile.tsx (3 changes)
+```text
+Line 444: "Your protocol is now registered"   → "Your project is now registered"
+Line 519: "Prove you own this protocol..."    → "Prove you own this project..."
+Line 520: "Register your protocol..."         → "Register your project..."
+```
+
+### 7. Readme.tsx (15+ changes)
+```text
+Line 57:  "...protocol health monitoring"     → "...project health monitoring"
+Line 122: "...protocol health registry"       → "...project health registry"
+Line 129: "...protocol's true resilience"     → "...project's true resilience"
+Line 139: "...investing in protocols"         → "...investing in projects"
+Line 145: "Protocol Builders"                 → "Project Builders"
+Line 166: "...no protocol receives..."        → "...no project receives..."
+Line 293: "...DeFi protocols..."              → "...DeFi projects..."
+Line 296: "...stake in protocol"              → "...stake in project"
+Line 370: "For Protocol Builders"             → "For Project Builders"
+Line 537: "...prove your protocol's..."       → "...prove your project's..."
+Line 550: "Browse Protocols"                  → "Browse Projects"
+```
+
+### 8. UseCasesSection.tsx (2 changes)
+```text
+Line 8:   "PROTOCOL RISK"                     → "PROJECT RISK"
+Line 10:  "DeFi protocols need to..."         → "DeFi projects need to..."
+```
+
+### 9. EcosystemHeatmap.tsx (1 change)
+```text
+Line 182: "No protocols match..."             → "No projects match..."
+```
+
+### 10. TVLMetricsCard.tsx (1 change)
+```text
+Line 31:  "Not a DeFi protocol..."            → "Not a DeFi project..."
+```
+
+### 11. RoadmapManagement.tsx (2 changes)
+```text
+Line 151: "...your protocol's progress"       → "...your project's progress"
+Line 357: "...your protocol roadmap"          → "...your project roadmap"
+```
+
+### 12. TeamManagement.tsx (2 changes)
+```text
+Line 251: "...building this protocol"         → "...building this project"
+Line 520: "Our protocol solves..."            → "Our project solves..."
+```
+
+### 13. BondSummary.tsx (1 change)
+```text
+Line 125: "The protocol does not..."          → "The project does not..."
+```
+
+### 14. TeamTabContent.tsx (2 changes)
+```text
+Line 54:  "The team behind this protocol..."  → "The team behind this project..."
+Line 186: "The team behind this protocol..."  → "The team behind this project..."
 ```
 
 ---
 
-## Result
+## Technical Notes
 
-```text
-After Change:
-| Project     | Score | Health  | Trend |
-|-------------|-------|---------|-------|
-| BlazeStake  | 🔒    | ⚫🟢🟢 | 🔒    |  <-- TVL visible!
-```
+- **Prop names unchanged**: Internal TypeScript prop names like `protocolName` remain unchanged to avoid breaking changes. Only displayed text is updated.
+- **Case sensitivity**: Using lowercase "project" in sentence context (e.g., "your project") and uppercase "PROJECT" in headers/buttons.
+- **No database changes**: This is purely a UI terminology update.
+- **Total changes**: ~45 text replacements across 14 files.
 
-- **D dot** will show gray (unknown) for private repos since `dependency_health_score` defaults to 50
-- **G dot** will show real governance health if they have DAO/multisig activity
-- **T dot** will show real TVL health from DeFiLlama
+---
 
-This gives visitors valuable on-chain intelligence even for unclaimed/private projects.
+## Summary
+
+| Metric | Count |
+|--------|-------|
+| Files to modify | 14 |
+| Text replacements | ~45 |
+| Breaking changes | 0 |
