@@ -22,11 +22,12 @@ Deno.serve(async (req) => {
 
     console.log("Starting daily refresh of all verified profiles...");
 
-    // Fetch all verified profiles with GitHub URLs
+    // Fetch all verified profiles AND unclaimed profiles with GitHub URLs
+    // This ensures unclaimed profiles are actively monitored for liveness
     const { data: profiles, error: fetchError } = await supabase
       .from("claimed_profiles")
       .select("id, project_name, github_org_url")
-      .eq("verified", true)
+      .or("verified.eq.true,claim_status.eq.unclaimed")
       .not("github_org_url", "is", null);
 
     if (fetchError) {
