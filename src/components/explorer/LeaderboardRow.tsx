@@ -1,9 +1,9 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, 
-  TrendingUp, TrendingDown, Cloud, AlertTriangle, 
-  TrendingDownIcon, Eye, Lock, Github, Globe, ExternalLink, Users, Network
+  Activity, CheckCircle, AlertCircle, ShieldCheck, 
+  TrendingUp, TrendingDown, AlertTriangle, 
+  Eye, Lock, Github, Globe, ExternalLink, Users, Network
 } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,6 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 import { Sparkline } from './Sparkline';
 import { DimensionHealthIndicators } from './DimensionHealthIndicators';
-import { PROJECT_CATEGORIES } from '@/types';
 import type { ExplorerProject } from '@/hooks/useExplorerProjects';
 import type { LivenessStatus } from '@/types/database';
 import type { MovementType } from '@/hooks/useRankMovement';
@@ -96,22 +95,6 @@ const getOriginalityBadge = (project: ExplorerProject) => {
   );
 };
 
-const getCategoryLabel = (value: string | null) => {
-  if (!value) return '—';
-  const cat = PROJECT_CATEGORIES.find(c => c.value === value);
-  return cat?.label || value;
-};
-
-const formatProgramId = (programId: string, projectId: string) => {
-  if (!programId || programId === projectId || programId.includes('-')) {
-    return { display: 'Off-chain', isOnChain: false };
-  }
-  return { 
-    display: `${programId.slice(0, 4)}...${programId.slice(-4)}`, 
-    isOnChain: true 
-  };
-};
-
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return '—';
   return new Date(dateStr).toLocaleDateString('en-US', {
@@ -119,18 +102,6 @@ const formatDate = (dateStr: string | null) => {
     month: 'short',
     day: 'numeric',
   });
-};
-
-const calculateDecayPercentage = (lastActivityDate: string | null): number => {
-  if (!lastActivityDate) return 100;
-  const days = (Date.now() - new Date(lastActivityDate).getTime()) / (1000 * 60 * 60 * 24);
-  return (1 - Math.exp(-0.00167 * days)) * 100;
-};
-
-const getDecayColor = (percentage: number): string => {
-  if (percentage <= 2) return 'text-primary';
-  if (percentage <= 10) return 'text-amber-500';
-  return 'text-destructive';
 };
 
 const getMovementIndicator = (movement: MovementType | undefined) => {
@@ -155,15 +126,7 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
   scoreHistory,
 }: LeaderboardRowProps) {
   const navigate = useNavigate();
-  
-  const programIdInfo = formatProgramId(project.program_id, project.id);
-  const decayPercentage = calculateDecayPercentage(project.github_last_activity);
   const isPrivate = isPrivateRepo(project);
-
-  const copyToClipboard = useCallback((text: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    navigator.clipboard.writeText(text);
-  }, []);
 
   const handleRowClick = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
@@ -198,15 +161,17 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
         className="cursor-pointer border-border transition-colors hover:bg-muted/50"
         onClick={handleRowClick}
       >
-        <TableCell className="font-mono text-muted-foreground">
-          <div className="flex items-center gap-1.5">
+        {/* Rank */}
+        <TableCell className="font-mono text-muted-foreground w-14">
+          <div className="flex items-center gap-1">
             <span>#{index + 1}</span>
             {getMovementIndicator(movement)}
           </div>
         </TableCell>
+        {/* Project */}
         <TableCell className="max-w-[140px]">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-primary/10">
+            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-primary/10">
               <span className="font-display text-xs font-bold text-primary">
                 {project.program_name.charAt(0)}
               </span>
@@ -235,55 +200,26 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
             )}
           </div>
         </TableCell>
-        <TableCell className="hidden lg:table-cell">
-          <Badge variant="outline" className="border-border text-xs">
-            {getCategoryLabel(project.category)}
-          </Badge>
-        </TableCell>
-        <TableCell className="hidden lg:table-cell">
-          <div className="flex items-center gap-2">
-            {programIdInfo.isOnChain ? (
-              <>
-                <code className="font-mono text-xs text-muted-foreground">
-                  {programIdInfo.display}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={(e) => copyToClipboard(project.program_id, e)}
-                >
-                  <Copy className="h-3 w-3" />
-                </Button>
-              </>
-            ) : (
-              <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground text-xs">
-                <Cloud className="mr-1 h-3 w-3" />
-                {programIdInfo.display}
-              </Badge>
-            )}
-          </div>
-        </TableCell>
-        {/* Score */}
-        <TableCell className="text-right">
+        {/* Score + Health inline */}
+        <TableCell className="text-right w-24">
           {isPrivate ? (
             <Lock className="h-4 w-4 text-muted-foreground ml-auto" />
           ) : (
-            <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
-              {Math.round(project.resilience_score)}
-            </span>
+            <div className="flex items-center justify-end gap-2">
+              <DimensionHealthIndicators
+                dependencyScore={project.dependency_health_score}
+                governanceTx30d={project.governance_tx_30d}
+                tvlUsd={project.tvl_usd}
+                compact
+              />
+              <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
+                {Math.round(project.resilience_score)}
+              </span>
+            </div>
           )}
         </TableCell>
-        {/* Health */}
-        <TableCell className="hidden xl:table-cell">
-          <DimensionHealthIndicators
-            dependencyScore={project.dependency_health_score}
-            governanceTx30d={project.governance_tx_30d}
-            tvlUsd={project.tvl_usd}
-          />
-        </TableCell>
         {/* Trend */}
-        <TableCell className="hidden xl:table-cell">
+        <TableCell className="w-20">
           {isPrivate ? (
             <Lock className="h-4 w-4 text-muted-foreground" />
           ) : (
@@ -295,43 +231,33 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
           {isPrivate ? (
             <Badge variant="outline" className="border-muted-foreground/50 text-muted-foreground">
               <Lock className="mr-1 h-3 w-3" />
-              Private Repo
+              Private
             </Badge>
           ) : (
             getStatusBadge(project.liveness_status)
           )}
         </TableCell>
-        {/* Decay */}
-        <TableCell className="hidden xl:table-cell">
-          {isPrivate ? (
-            <Lock className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <div className="flex items-center gap-1">
-              <TrendingDownIcon className={cn('h-3 w-3', getDecayColor(decayPercentage))} />
-              <span className={cn('font-mono text-sm', getDecayColor(decayPercentage))}>
-                {decayPercentage.toFixed(1)}%
-              </span>
-            </div>
-          )}
-        </TableCell>
+        {/* Status */}
         <TableCell className="hidden lg:table-cell">
           {getOriginalityBadge(project)}
         </TableCell>
-        <TableCell className="hidden md:table-cell text-right">
+        {/* Staked */}
+        <TableCell className="hidden lg:table-cell text-right">
           <span className="font-mono text-sm text-foreground">
             {(project.total_staked / 1000).toFixed(0)}K
           </span>
           <span className="ml-1 text-xs text-muted-foreground">SOL</span>
         </TableCell>
-        <TableCell className="hidden lg:table-cell">
+        {/* Activity */}
+        <TableCell className="hidden xl:table-cell">
           {project.claimStatus === 'unclaimed' ? (
             <Button
               size="sm"
               variant="outline"
-              className="h-7 border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-display text-[10px] uppercase"
+              className="h-6 border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-display text-[10px] uppercase"
               onClick={handleClaimClick}
             >
-              Claim This
+              Claim
             </Button>
           ) : (
             <span className="font-mono text-xs text-muted-foreground">

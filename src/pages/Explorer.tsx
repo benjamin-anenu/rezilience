@@ -14,7 +14,7 @@ import {
   PaginationEllipsis,
 } from '@/components/ui/pagination';
 
-const ITEMS_PER_PAGE = 100;
+const ITEMS_PER_PAGE = 60;
 
 const Explorer = () => {
   const [searchQuery, setSearchQuery] = useState('');

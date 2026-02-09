@@ -6,6 +6,7 @@ interface DimensionHealthIndicatorsProps {
   governanceTx30d: number;
   tvlUsd: number;
   className?: string;
+  compact?: boolean;
 }
 
 type HealthLevel = 'healthy' | 'warning' | 'critical' | 'none';
@@ -37,13 +38,14 @@ function getTvlHealth(tvlUsd: number): IndicatorConfig {
   return { level: 'none', color: 'text-muted-foreground', bgColor: 'bg-muted-foreground', label: 'N/A' };
 }
 
-function HealthDot({ config, dimension }: { config: IndicatorConfig; dimension: string }) {
+function HealthDot({ config, dimension, compact }: { config: IndicatorConfig; dimension: string; compact?: boolean }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <div
           className={cn(
-            'h-2.5 w-2.5 rounded-full transition-all',
+            'rounded-full transition-all',
+            compact ? 'h-2 w-2' : 'h-2.5 w-2.5',
             config.bgColor,
             config.level === 'none' && 'opacity-30'
           )}
@@ -62,16 +64,17 @@ export function DimensionHealthIndicators({
   governanceTx30d,
   tvlUsd,
   className,
+  compact = false,
 }: DimensionHealthIndicatorsProps) {
   const deps = getDependencyHealth(dependencyScore);
   const gov = getGovernanceHealth(governanceTx30d);
   const tvl = getTvlHealth(tvlUsd);
 
   return (
-    <div className={cn('flex items-center gap-1', className)}>
-      <HealthDot config={deps} dimension="Dependencies" />
-      <HealthDot config={gov} dimension="Governance" />
-      <HealthDot config={tvl} dimension="TVL" />
+    <div className={cn('flex items-center', compact ? 'gap-0.5' : 'gap-1', className)}>
+      <HealthDot config={deps} dimension="Dependencies" compact={compact} />
+      <HealthDot config={gov} dimension="Governance" compact={compact} />
+      <HealthDot config={tvl} dimension="TVL" compact={compact} />
     </div>
   );
 }
