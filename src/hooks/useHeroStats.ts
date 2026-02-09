@@ -16,11 +16,10 @@ export function useHeroStats() {
   return useQuery({
     queryKey: ['hero-stats'],
     queryFn: async (): Promise<HeroStats> => {
-      // Fetch verified profiles for registry count
+      // Fetch all profiles in the registry (not just verified ones)
       const { data: profiles, error } = await supabase
         .from('claimed_profiles')
-        .select('resilience_score, liveness_status')
-        .eq('verified', true);
+        .select('resilience_score, liveness_status');
 
       if (error) {
         console.error('Error fetching hero stats:', error);
@@ -29,9 +28,10 @@ export function useHeroStats() {
 
       const registryCount = profiles?.length || 0;
       
-      // Calculate average score
-      const averageScore = registryCount > 0
-        ? profiles.reduce((sum, p) => sum + (p.resilience_score || 0), 0) / registryCount
+      // Calculate average score across profiles with a score
+      const profilesWithScore = profiles?.filter(p => p.resilience_score && p.resilience_score > 0) || [];
+      const averageScore = profilesWithScore.length > 0
+        ? profilesWithScore.reduce((sum, p) => sum + (p.resilience_score || 0), 0) / profilesWithScore.length
         : 0;
       
       // Count active programs
