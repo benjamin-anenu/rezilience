@@ -1,269 +1,280 @@
 
-# Implementation Plan: README / Public Guide Page
+
+# Implementation Plan: Full-Spectrum Manual Refresh + Tiered Cron Jobs
 
 ## Executive Summary
 
-Transform the "DOCS" nav link into an internal "README" page that serves as a comprehensive public guide explaining the Resilience platform's purpose, scoring methodology, all visual indicators, and user flows. This will be an in-app documentation page following the Bloomberg Terminal aesthetic.
+This implementation addresses two critical gaps in the data freshness architecture:
+
+1. **Manual Refresh Gap**: Currently only triggers GitHub analysis (40% of score). Must trigger all 4 dimensions.
+2. **Stale Cron Data**: Daily refresh is too slow for volatile metrics like Governance (hourly events) and TVL (minute-by-minute fluctuations).
 
 ---
 
-## Strategic Approach
+## Part 1: Full-Spectrum Manual Refresh
 
-### Why In-App vs External Docs?
-- **Immediate accessibility** - No context-switching for users
-- **Brand consistency** - Same visual language (Bloomberg Terminal)
-- **Real examples** - Can reference actual UI elements with exact colors/icons
-- **SEO value** - Content lives on the main domain
-- **Lower maintenance** - Single source of truth
-
-### Target Audience
-1. **New visitors** - "What is this platform?"
-2. **Protocol builders** - "How do I improve my score?"
-3. **Investors/Researchers** - "How can I trust these metrics?"
-4. **Developers** - "What data sources power this?"
-
----
-
-## Technical Implementation
-
-### 1. Navigation Change
-
-**File: `src/components/layout/Navigation.tsx`**
-
-Update the `navLinks` array:
-```typescript
-// FROM:
-{ href: 'https://docs.resilience.dev', label: 'DOCS', external: true },
-
-// TO:
-{ href: '/readme', label: 'README', external: false },
-```
-
-### 2. New Page Component
-
-**File: `src/pages/Readme.tsx`** (NEW)
-
-Create a comprehensive documentation page with the following sections:
+### Current State (Broken)
 
 ```text
-Structure:
-├── Hero Section (What is Resilience?)
-├── Quick Navigation (Sticky TOC)
-├── Core Concepts
-│   ├── What is the Resilience Score?
-│   ├── Zero Proof Philosophy
-│   └── Four Dimensions of Trust
-├── Scoring Methodology
-│   ├── Integrated Score Formula
-│   ├── GitHub Activity (40%)
-│   ├── Dependency Health (25%)
-│   ├── Governance (20%)
-│   └── TVL/Economic Health (15%)
-├── Visual Indicator Reference
-│   ├── Score Colors (70+ Healthy, 40-69 Stale, <40 Decaying)
-│   ├── Health Dots (D/G/T indicators)
-│   ├── Liveness Badges (ACTIVE, STALE, DECAYING)
-│   ├── Status Icons (CheckCircle, AlertTriangle, XCircle)
-│   └── Tier Labels (TITAN, ELITE, SOLID, MODERATE, AT RISK, CRITICAL)
-├── Platform Features
-│   ├── Explorer Registry
-│   ├── Titan Watch Heatmap
-│   ├── Profile Dashboard
-│   ├── Build In Public Gallery
-│   └── Staking (Coming Soon)
-├── For Protocol Builders
-│   ├── How to Join the Registry
-│   ├── Verification Process
-│   ├── Improving Your Score
-│   └── Managing Your Profile
-├── Data Provenance
-│   ├── GitHub API Integration
-│   ├── Crates.io Dependencies
-│   ├── DeFiLlama TVL
-│   ├── Solana RPC Governance
-│   └── Refresh Cadence
-└── FAQ
+User clicks "Refresh Metrics"
+        ↓
+ProfileDetail.tsx → analyze-github-repo (ONLY)
+        ↓
+40% of score updated, 60% remains stale
 ```
 
-### 3. Route Registration
+### Target State
 
-**File: `src/App.tsx`**
+```text
+User clicks "Refresh Metrics"
+        ↓
+ProfileDetail.tsx → analyze-github-repo (40%)
+                  → analyze-dependencies (25%)
+                  → analyze-governance (20%)
+                  → analyze-tvl (15%)
+        ↓
+100% of score updated, integrated score recalculated
+```
 
-Add the new route:
+### Technical Changes
+
+**File: `src/pages/ProfileDetail.tsx`**
+
+Update `handleRefresh` function to call all 4 edge functions in parallel:
+
 ```typescript
-import Readme from "./pages/Readme";
-// ...
-<Route path="/readme" element={<Readme />} />
+const handleRefresh = async () => {
+  if (!profile?.githubOrgUrl || !profile?.id) {
+    toast({ title: 'Cannot refresh', description: 'No GitHub URL configured', variant: 'destructive' });
+    return;
+  }
+  
+  setIsRefreshing(true);
+  try {
+    // Call ALL 4 dimension analyses in parallel
+    const [githubResult, depsResult, govResult, tvlResult] = await Promise.allSettled([
+      // 1. GitHub (40%)
+      supabase.functions.invoke('analyze-github-repo', {
+        body: { github_url: profile.githubOrgUrl, profile_id: profile.id },
+      }),
+      // 2. Dependencies (25%)
+      supabase.functions.invoke('analyze-dependencies', {
+        body: { github_url: profile.githubOrgUrl, profile_id: profile.id },
+      }),
+      // 3. Governance (20%) - only if multisig configured
+      profile.governanceMetrics?.governance_address
+        ? supabase.functions.invoke('analyze-governance', {
+            body: { governance_address: profile.governanceMetrics.governance_address, profile_id: profile.id },
+          })
+        : Promise.resolve({ data: null }),
+      // 4. TVL (15%) - only for DeFi category
+      profile.category === 'defi'
+        ? supabase.functions.invoke('analyze-tvl', {
+            body: { protocol_name: profile.projectName, profile_id: profile.id, monthly_commits: profile.githubAnalytics?.commits_30d || 30 },
+          })
+        : Promise.resolve({ data: null }),
+    ]);
+
+    // Check for any errors
+    const errors = [githubResult, depsResult, govResult, tvlResult]
+      .filter((r) => r.status === 'rejected' || (r.status === 'fulfilled' && r.value.error));
+    
+    if (errors.length > 0) {
+      console.warn('Some dimension analyses failed:', errors);
+    }
+
+    // Invalidate queries to show new data
+    await queryClient.invalidateQueries({ queryKey: ['claimed-profile', profile.id] });
+    await queryClient.invalidateQueries({ queryKey: ['claimed-profiles'] });
+    
+    toast({ 
+      title: 'Full refresh complete', 
+      description: `All 4 dimensions analyzed and score recalculated.` 
+    });
+  } catch (err) {
+    console.error('Refresh exception:', err);
+    toast({ title: 'Refresh failed', description: 'Please try again later', variant: 'destructive' });
+  } finally {
+    setIsRefreshing(false);
+  }
+};
 ```
+
+### Integrated Score Recalculation
+
+The edge functions already update their respective columns. We need to ensure the integrated score is recalculated after all 4 dimensions update. This will be handled by adding a database trigger or by explicitly calling a recalculation in the last step.
+
+**Option A (Preferred)**: Create a new edge function `recalculate-integrated-score` that is called after all dimension updates.
+
+**Option B**: Move the integrated score calculation into a Postgres trigger that fires on ANY update to dimension columns.
+
+For this implementation, we'll add the recalculation logic directly to the manual refresh flow.
 
 ---
 
-## Content Design Specifications
+## Part 2: Tiered Cron Job Architecture
 
-### Brand Compliance
+### Current State
 
-| Element | Specification |
-|---------|--------------|
-| Background | `#0F1216` (Abyss) |
-| Accent | `#00C2B6` (Signal Teal) |
-| Warning | `#C24E00` (Rot) |
-| Headlines | Space Grotesk, bold, uppercase |
-| Body | Inter, regular |
-| Data/Code | JetBrains Mono |
-| Cards | `.card-lift`, `.card-premium` effects |
-
-### Visual Indicator Legend (Exact Reproduction)
-
-**Score Thresholds:**
-```
-┌─────────────────────────────────────────────────────┐
-│  SCORE RANGE    │  COLOR         │  STATUS         │
-├─────────────────┼────────────────┼─────────────────│
-│  70 - 100       │  🟢 #00C2B6    │  HEALTHY        │
-│  40 - 69        │  🟡 #F59E0B    │  STALE          │
-│  1 - 39         │  🔴 #C24E00    │  DECAYING       │
-│  0 / N/A        │  ⚫ #8B949E    │  UNKNOWN        │
-└─────────────────────────────────────────────────────┘
+```text
+refresh-all-profiles (DAILY)
+├── analyze-github-repo
+├── analyze-dependencies
+├── analyze-governance
+└── analyze-tvl
 ```
 
-**Health Dimension Dots (D/G/T):**
-```
+### Target State
+
+```text
 ┌─────────────────────────────────────────────────────────────┐
-│  DIMENSION      │  INDICATOR  │  THRESHOLDS                │
-├─────────────────┼─────────────┼────────────────────────────│
-│  Dependency (D) │  First dot  │  70+: Healthy              │
-│                 │             │  40-69: Warning            │
-│                 │             │  <40: Critical             │
-├─────────────────┼─────────────┼────────────────────────────│
-│  Governance (G) │  Second dot │  5+ tx/30d: Active         │
-│                 │             │  1-4 tx: Dormant           │
-│                 │             │  0 tx: None                │
-├─────────────────┼─────────────┼────────────────────────────│
-│  TVL (T)        │  Third dot  │  >$10M: Healthy            │
-│                 │             │  $100K-$10M: Moderate      │
-│                 │             │  <$100K or N/A: Low        │
-└─────────────────────────────────────────────────────────────┘
+│                     CRON SCHEDULE                            │
+├─────────────────┬───────────────┬───────────────────────────┤
+│  Dimension      │  Frequency    │  Justification            │
+├─────────────────┼───────────────┼───────────────────────────┤
+│  GitHub         │  Every 6 hrs  │  Commits are batched      │
+│  Dependencies   │  Daily        │  Crates.io updates slowly │
+│  Governance     │  Hourly       │  DAO votes happen fast    │
+│  TVL            │  Every 5 min  │  DeFi fluctuates rapidly  │
+└─────────────────┴───────────────┴───────────────────────────┘
 ```
 
-**Icons Used in Platform:**
-| Icon | Lucide Name | Purpose |
-|------|-------------|---------|
-| Activity | `Activity` | Liveness monitoring |
-| Fingerprint | `Fingerprint` | Bytecode originality |
-| Shield | `Shield` | Verification/Governance |
-| Package | `Package` | Dependencies |
-| DollarSign | `DollarSign` | TVL/Economic metrics |
-| CheckCircle | `CheckCircle` | Healthy status |
-| AlertTriangle | `AlertTriangle` | Warning/Needs attention |
-| XCircle | `XCircle` | Critical/No data |
-| RefreshCw | `RefreshCw` | Refresh action |
-| TrendingUp | `TrendingUp` | Growth metrics |
+### Technical Implementation
 
-### Scoring Formula Display
+**New Edge Functions**:
 
-```
-┌───────────────────────────────────────────────────────────┐
-│                 INTEGRATED RESILIENCE SCORE               │
-│                                                           │
-│   R = 0.40×GitHub + 0.25×Deps + 0.20×Gov + 0.15×TVL      │
-│                                                           │
-│   ┌─────────────┬────────┬─────────────────────────────┐ │
-│   │  DIMENSION  │ WEIGHT │  WHAT IT MEASURES           │ │
-│   ├─────────────┼────────┼─────────────────────────────┤ │
-│   │  GitHub     │  40%   │  Code activity, commits,    │ │
-│   │             │        │  contributors, velocity     │ │
-│   ├─────────────┼────────┼─────────────────────────────┤ │
-│   │  Dependency │  25%   │  Supply chain health,       │ │
-│   │             │        │  outdated/critical crates   │ │
-│   ├─────────────┼────────┼─────────────────────────────┤ │
-│   │  Governance │  20%   │  Multisig/DAO activity,     │ │
-│   │             │        │  decentralization level     │ │
-│   ├─────────────┼────────┼─────────────────────────────┤ │
-│   │  TVL        │  15%   │  Economic impact,           │ │
-│   │             │        │  risk ratio (TVL/commits)   │ │
-│   └─────────────┴────────┴─────────────────────────────┘ │
-└───────────────────────────────────────────────────────────┘
-```
+1. **`refresh-governance-hourly`** - Loops through all profiles with `multisig_address`, calls `analyze-governance`
+2. **`refresh-tvl-realtime`** - Loops through all DeFi profiles, calls `analyze-tvl`
 
-### Decay Formula Display
+**SQL for pg_cron Jobs**:
 
-```
-DECAY RATE = (1 - e^(-0.00167 × days)) × 100%
+```sql
+-- Governance: Every hour at minute 0
+SELECT cron.schedule(
+  'refresh-governance-hourly',
+  '0 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://gsphlwjoowqkqhgthxtp.supabase.co/functions/v1/refresh-governance-hourly',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer <SERVICE_ROLE_KEY>"}'::jsonb,
+    body := '{}'::jsonb
+  );
+  $$
+);
 
-Where:
-- λ = 0.05/month (or 0.00167/day)
-- days = Days since last commit
+-- TVL: Every 5 minutes
+SELECT cron.schedule(
+  'refresh-tvl-realtime',
+  '*/5 * * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://gsphlwjoowqkqhgthxtp.supabase.co/functions/v1/refresh-tvl-realtime',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer <SERVICE_ROLE_KEY>"}'::jsonb,
+    body := '{}'::jsonb
+  );
+  $$
+);
 
-Examples:
-- 30 days inactive → 4.9% decay
-- 90 days inactive → 13.9% decay
-- 180 days inactive → 25.9% decay
+-- GitHub: Every 6 hours
+SELECT cron.schedule(
+  'refresh-github-6h',
+  '0 */6 * * *',
+  $$
+  SELECT net.http_post(
+    url := 'https://gsphlwjoowqkqhgthxtp.supabase.co/functions/v1/refresh-all-profiles',
+    headers := '{"Content-Type": "application/json", "Authorization": "Bearer <SERVICE_ROLE_KEY>"}'::jsonb,
+    body := '{"dimensions": ["github", "dependencies"]}'::jsonb
+  );
+  $$
+);
 ```
 
 ---
 
-## Component Architecture
+## Part 3: Update README Documentation
 
-### New Components Needed
+### Current Data Provenance Section (Lines 446-472)
 
-1. **`src/pages/Readme.tsx`** - Main page component
-2. **`src/components/readme/TableOfContents.tsx`** - Sticky navigation
-3. **`src/components/readme/ScoreExplainer.tsx`** - Interactive score visualization
-4. **`src/components/readme/IndicatorLegend.tsx`** - Visual reference cards
-5. **`src/components/readme/FormulaDisplay.tsx`** - Math formula blocks
-6. **`src/components/readme/index.ts`** - Barrel export
+```typescript
+<DataSourceItem
+  name="GitHub API"
+  description="..."
+  refresh="Every 30 minutes via cron"  // INCORRECT
+/>
+<DataSourceItem
+  name="Crates.io Registry"
+  refresh="On profile update"  // INCORRECT
+/>
+<DataSourceItem
+  name="DeFiLlama API"
+  refresh="Daily"  // INCORRECT
+/>
+<DataSourceItem
+  name="Solana RPC"
+  refresh="On profile update"  // INCORRECT
+/>
+```
 
-### Reusable Existing Components
+### Updated Data Provenance Section
 
-- `Card`, `Badge`, `Progress` from UI library
-- `Accordion` for FAQ section
-- `Tabs` for category switching
-- `DimensionHealthIndicators` for live examples
+```typescript
+<DataSourceItem
+  name="GitHub API"
+  description="Commits, Contributors, Releases, Events, Statistics endpoints"
+  refresh="Every 6 hours via cron + Manual"
+/>
+<DataSourceItem
+  name="Crates.io Registry"
+  description="Cargo.toml parsing for Rust dependency analysis"
+  refresh="Every 6 hours via cron + Manual"
+/>
+<DataSourceItem
+  name="DeFiLlama API"
+  description="TVL data for DeFi protocols via protocol name mapping"
+  refresh="Every 5 minutes (real-time)"
+/>
+<DataSourceItem
+  name="Solana RPC"
+  description="Governance transaction history for Squads/Realms addresses"
+  refresh="Every hour"
+/>
+<DataSourceItem
+  name="OtterSec API"
+  description="Bytecode fingerprinting for originality classification"
+  refresh="On verification request (static)"
+/>
+```
+
+### Update FAQ Answer
+
+**Current (Line 495)**:
+```
+"GitHub metrics are refreshed every 30 minutes via automated cron jobs. TVL data updates daily."
+```
+
+**Updated**:
+```
+"Data refreshes on a tiered schedule optimized for each dimension's volatility: TVL updates every 5 minutes for real-time DeFi tracking, Governance checks hourly for DAO activity, and GitHub/Dependencies refresh every 6 hours. Protocol owners can also trigger a full manual refresh from their dashboard."
+```
 
 ---
 
-## Content Sections Detail
+## Files to Create/Modify
 
-### Section 1: Hero
-- Large headline: "RESILIENCE README"
-- Subtitle: "The definitive guide to decentralized protocol health"
-- 3-stat banner: Registry Size | Avg Score | Active Projects
-- CTA: "Explore the Registry" + "Join as Builder"
+### New Files
 
-### Section 2: Core Philosophy
-- "Zero Proof" baseline explanation
-- "Reputation cannot be forked" philosophy
-- Multi-dimensional trust model diagram
+| File | Purpose |
+|------|---------|
+| `supabase/functions/refresh-governance-hourly/index.ts` | Hourly governance cron job |
+| `supabase/functions/refresh-tvl-realtime/index.ts` | 5-minute TVL cron job |
 
-### Section 3: Scoring Deep Dive
-- Interactive breakdown with actual color bars
-- Live example using real score breakdown
-- Hover effects matching main platform
+### Modified Files
 
-### Section 4: Visual Reference (Critical)
-This must exactly match production:
-- Color swatches with hex codes
-- Icon grid with Lucide names
-- Badge variants with class names
-- Example cards with exact styling
-
-### Section 5: User Flows
-**For Visitors:**
-1. Browse Explorer → Click project → View Dashboard
-2. Filter by status/category → Compare scores
-
-**For Builders:**
-1. Connect X account → Link GitHub → Verify ownership
-2. Complete profile → Get analyzed → Improve score
-3. Add Build In Public posts → Engage community
-
-### Section 6: FAQ
-Using Accordion component:
-- "How often is data refreshed?"
-- "Can I dispute my score?"
-- "What if my project isn't on GitHub?"
-- "How does staking work?"
-- "Is this data public?"
+| File | Changes |
+|------|---------|
+| `src/pages/ProfileDetail.tsx` | Update `handleRefresh` to call all 4 edge functions |
+| `src/pages/Readme.tsx` | Update Data Provenance section with new refresh cadences |
+| `supabase/config.toml` | Add new edge functions with `verify_jwt = false` |
 
 ---
 
@@ -271,50 +282,25 @@ Using Accordion component:
 
 | Case | Handling |
 |------|----------|
-| Mobile responsiveness | Collapsible TOC, stacked cards |
-| Long content scrolling | Sticky TOC with active state |
-| External links | Open in new tab with icon |
-| Code snippets | Syntax highlighting with JetBrains Mono |
-| Deep linking | Anchor IDs on all sections |
-| SEO | Proper heading hierarchy, meta tags |
-| Accessibility | Proper contrast, focus states |
-
----
-
-## Breaking Changes Avoided
-
-1. **External docs link** - Users expecting docs.resilience.dev will now go to /readme (inform via redirect or notice)
-2. **Route conflicts** - `/readme` does not conflict with existing routes
-3. **Navigation order** - Kept as first nav item for discoverability
-
----
-
-## Files to Create/Modify
-
-### New Files:
-- `src/pages/Readme.tsx` - Main documentation page
-- `src/components/readme/TableOfContents.tsx` - Navigation component
-- `src/components/readme/IndicatorLegend.tsx` - Visual reference
-- `src/components/readme/index.ts` - Exports
-
-### Modified Files:
-- `src/components/layout/Navigation.tsx` - Change DOCS to README
-- `src/App.tsx` - Add /readme route
+| No governance address | Skip governance refresh (neutral score) |
+| Non-DeFi category | Skip TVL refresh (neutral score) |
+| Edge function timeout | Promise.allSettled catches failures, partial refresh succeeds |
+| Rate limiting (GitHub) | 2-second delay between profiles in cron job |
+| DeFiLlama API down | Returns 0 TVL, doesn't crash |
+| Solana RPC congestion | Returns last known governance tx count |
 
 ---
 
 ## Implementation Sequence
 
-1. Create basic page structure with Layout wrapper
-2. Build TableOfContents with smooth scroll
-3. Add Hero section with ecosystem stats
-4. Build Core Concepts section
-5. Add Scoring Methodology with visual formulas
-6. Create IndicatorLegend component
-7. Add Platform Features overview
-8. Add Builder Guide section
-9. Add Data Provenance section
-10. Add FAQ with Accordion
-11. Update Navigation link
-12. Add route to App.tsx
-13. Test all anchor links and mobile responsiveness
+1. Create `refresh-governance-hourly` edge function
+2. Create `refresh-tvl-realtime` edge function
+3. Update `supabase/config.toml` with new function configs
+4. Update `ProfileDetail.tsx` with full-spectrum manual refresh
+5. Update `Readme.tsx` Data Provenance section
+6. Update `Readme.tsx` FAQ answer
+7. Deploy edge functions
+8. Create pg_cron SQL jobs (via Cloud SQL editor)
+9. Test manual refresh end-to-end
+10. Monitor cron job execution logs
+
