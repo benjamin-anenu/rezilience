@@ -43,9 +43,12 @@ import {
   DimensionBreakdown,
 } from '@/components/readme';
 import { useHeroStats } from '@/hooks/useHeroStats';
+import { useRoadmapStats } from '@/hooks/useRoadmapStats';
+import { Clock } from 'lucide-react';
 
 export default function Readme() {
   const { data: stats } = useHeroStats();
+  const { data: roadmapStats } = useRoadmapStats();
 
   return (
     <Layout>
@@ -565,7 +568,7 @@ export default function Readme() {
                 <AccordionItem value="phase-1" className="border border-border rounded-sm bg-card/50">
                   <AccordionTrigger className="px-6 hover:no-underline">
                     <div className="flex items-center gap-3 flex-1">
-                      <Badge className="bg-chart-4/20 text-chart-4 border-chart-4/30 font-mono text-xs">COMPLETE</Badge>
+                      <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 font-mono text-xs">IN PROGRESS</Badge>
                       <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Phase 1: Resilience Registry</span>
                       <span className="text-xs text-muted-foreground ml-auto mr-4 font-mono">Months 1-3</span>
                     </div>
@@ -577,30 +580,34 @@ export default function Readme() {
                     </p>
                     <div className="space-y-2 mb-6">
                       {[
-                        'Automated scoring for 2,847+ protocols',
-                        'GitHub + Crates.io + DeFiLlama + Solana RPC integration',
-                        'Public Explorer with sortable leaderboard',
-                        'Heartbeat Dashboard with continuity trends',
-                        'X integration for builder profiles',
-                        'Verified builder badges ("Ownership Handshake")',
-                        'Zero-proof baseline scoring methodology',
-                        'Tier classification (TITAN to CRITICAL)',
-                        'Continuity decay calculations',
-                        'Health dimension indicators',
+                        { text: 'Automated scoring for 500+ Solana projects', ongoing: true },
+                        { text: 'GitHub + Crates.io + DeFiLlama + Solana RPC integration' },
+                        { text: 'Public Explorer with sortable leaderboard' },
+                        { text: 'Heartbeat Dashboard with continuity trends' },
+                        { text: 'X integration for builder profiles' },
+                        { text: 'Verified builder badges ("Ownership Handshake")' },
+                        { text: 'Zero-proof baseline scoring methodology' },
+                        { text: 'Tier classification (TITAN to CRITICAL)' },
+                        { text: 'Continuity decay calculations' },
+                        { text: 'Health dimension indicators' },
                       ].map((item, i) => (
                         <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle2 className="h-4 w-4 text-chart-4 shrink-0" />
-                          <span>{item}</span>
+                          {item.ongoing ? (
+                            <Clock className="h-4 w-4 text-yellow-500 shrink-0" />
+                          ) : (
+                            <CheckCircle2 className="h-4 w-4 text-chart-4 shrink-0" />
+                          )}
+                          <span>{item.text}</span>
                         </div>
                       ))}
                     </div>
                     <div className="rounded-sm bg-muted/30 p-4 border border-border">
                       <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">IMPACT</p>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div><p className="font-mono text-lg font-bold text-primary">500+</p><p className="text-xs text-muted-foreground">Verified Scores</p></div>
-                        <div><p className="font-mono text-lg font-bold text-primary">5,000+</p><p className="text-xs text-muted-foreground">Monthly Visitors</p></div>
-                        <div><p className="font-mono text-lg font-bold text-primary">50+</p><p className="text-xs text-muted-foreground">Claimed Profiles</p></div>
-                        <div><p className="font-mono text-lg font-bold text-primary">$200K</p><p className="text-xs text-muted-foreground">Solana Grant</p></div>
+                        <div><p className="font-mono text-lg font-bold text-primary">{roadmapStats?.scoredProjects ?? '—'}</p><p className="text-xs text-muted-foreground">Scored Projects</p></div>
+                        <div><p className="font-mono text-lg font-bold text-primary">{roadmapStats?.claimedProfiles ?? '—'}</p><p className="text-xs text-muted-foreground">Claimed Profiles</p></div>
+                        <div><p className="font-mono text-lg font-bold text-primary">{roadmapStats?.unclaimedProfiles ?? '—'}</p><p className="text-xs text-muted-foreground">Unclaimed Profiles</p></div>
+                        <div><p className="font-mono text-lg font-bold text-yellow-500">Application Ongoing</p><p className="text-xs text-muted-foreground">Solana Grant</p></div>
                       </div>
                     </div>
                   </AccordionContent>
@@ -610,7 +617,7 @@ export default function Readme() {
                 <AccordionItem value="phase-2" className="border border-border rounded-sm bg-card/50">
                   <AccordionTrigger className="px-6 hover:no-underline">
                     <div className="flex items-center gap-3 flex-1">
-                      <Badge className="bg-primary/20 text-primary border-primary/30 font-mono text-xs">IN PROGRESS</Badge>
+                      <Badge variant="outline" className="font-mono text-xs">PLANNED</Badge>
                       <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Phase 2: Economic Commitment Layer</span>
                       <span className="text-xs text-muted-foreground ml-auto mr-4 font-mono">Months 4-6</span>
                     </div>
@@ -631,7 +638,7 @@ export default function Readme() {
                         'Continuity leaderboard (top-maintained projects)',
                       ].map((item, i) => (
                         <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                          <CheckCircle2 className="h-4 w-4 text-muted-foreground/50 shrink-0" />
                           <span>{item}</span>
                         </div>
                       ))}
