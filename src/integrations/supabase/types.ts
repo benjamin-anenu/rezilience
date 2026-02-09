@@ -108,6 +108,10 @@ export type Database = {
           claimer_wallet: string | null
           country: string | null
           created_at: string
+          dependency_analyzed_at: string | null
+          dependency_critical_count: number | null
+          dependency_health_score: number | null
+          dependency_outdated_count: number | null
           description: string | null
           discord_url: string | null
           discovered_at: string | null
@@ -134,7 +138,12 @@ export type Database = {
           github_top_contributors: Json | null
           github_topics: Json | null
           github_username: string | null
+          governance_address: string | null
+          governance_analyzed_at: string | null
+          governance_last_activity: string | null
+          governance_tx_30d: number | null
           id: string
+          integrated_score: number | null
           liveness_status: string | null
           logo_url: string | null
           media_assets: Json | null
@@ -145,10 +154,15 @@ export type Database = {
           project_id: string | null
           project_name: string
           resilience_score: number | null
+          score_breakdown: Json | null
           squads_version: string | null
           staking_pitch: string | null
           team_members: Json | null
           telegram_url: string | null
+          tvl_analyzed_at: string | null
+          tvl_market_share: number | null
+          tvl_risk_ratio: number | null
+          tvl_usd: number | null
           twitter_engagement_rate: number | null
           twitter_followers: number | null
           twitter_last_synced: string | null
@@ -175,6 +189,10 @@ export type Database = {
           claimer_wallet?: string | null
           country?: string | null
           created_at?: string
+          dependency_analyzed_at?: string | null
+          dependency_critical_count?: number | null
+          dependency_health_score?: number | null
+          dependency_outdated_count?: number | null
           description?: string | null
           discord_url?: string | null
           discovered_at?: string | null
@@ -201,7 +219,12 @@ export type Database = {
           github_top_contributors?: Json | null
           github_topics?: Json | null
           github_username?: string | null
+          governance_address?: string | null
+          governance_analyzed_at?: string | null
+          governance_last_activity?: string | null
+          governance_tx_30d?: number | null
           id?: string
+          integrated_score?: number | null
           liveness_status?: string | null
           logo_url?: string | null
           media_assets?: Json | null
@@ -212,10 +235,15 @@ export type Database = {
           project_id?: string | null
           project_name: string
           resilience_score?: number | null
+          score_breakdown?: Json | null
           squads_version?: string | null
           staking_pitch?: string | null
           team_members?: Json | null
           telegram_url?: string | null
+          tvl_analyzed_at?: string | null
+          tvl_market_share?: number | null
+          tvl_risk_ratio?: number | null
+          tvl_usd?: number | null
           twitter_engagement_rate?: number | null
           twitter_followers?: number | null
           twitter_last_synced?: string | null
@@ -242,6 +270,10 @@ export type Database = {
           claimer_wallet?: string | null
           country?: string | null
           created_at?: string
+          dependency_analyzed_at?: string | null
+          dependency_critical_count?: number | null
+          dependency_health_score?: number | null
+          dependency_outdated_count?: number | null
           description?: string | null
           discord_url?: string | null
           discovered_at?: string | null
@@ -268,7 +300,12 @@ export type Database = {
           github_top_contributors?: Json | null
           github_topics?: Json | null
           github_username?: string | null
+          governance_address?: string | null
+          governance_analyzed_at?: string | null
+          governance_last_activity?: string | null
+          governance_tx_30d?: number | null
           id?: string
+          integrated_score?: number | null
           liveness_status?: string | null
           logo_url?: string | null
           media_assets?: Json | null
@@ -279,10 +316,15 @@ export type Database = {
           project_id?: string | null
           project_name?: string
           resilience_score?: number | null
+          score_breakdown?: Json | null
           squads_version?: string | null
           staking_pitch?: string | null
           team_members?: Json | null
           telegram_url?: string | null
+          tvl_analyzed_at?: string | null
+          tvl_market_share?: number | null
+          tvl_risk_ratio?: number | null
+          tvl_usd?: number | null
           twitter_engagement_rate?: number | null
           twitter_followers?: number | null
           twitter_last_synced?: string | null

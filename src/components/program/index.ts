@@ -14,4 +14,8 @@ export { StickyCTA } from './StickyCTA';
 export { BuildInPublicSection } from './BuildInPublicSection';
 export { TwitterPulseSection } from './TwitterPulseSection';
 export { ProgramTabs } from './ProgramTabs';
+export { DependencyHealthCard } from './DependencyHealthCard';
+export { GovernanceHealthCard } from './GovernanceHealthCard';
+export { TVLMetricsCard } from './TVLMetricsCard';
+export { ScoreBreakdownTooltip } from './ScoreBreakdownTooltip';
 export * from './tabs';

@@ -182,6 +182,40 @@ export interface GitHubAnalytics {
   github_last_activity?: string;
 }
 
+// Multi-Dimensional Scoring Metrics
+export interface DependencyMetrics {
+  dependency_health_score?: number;
+  dependency_outdated_count?: number;
+  dependency_critical_count?: number;
+  dependency_analyzed_at?: string;
+}
+
+export interface GovernanceMetrics {
+  governance_address?: string;
+  governance_tx_30d?: number;
+  governance_last_activity?: string;
+  governance_analyzed_at?: string;
+}
+
+export interface TVLMetrics {
+  tvl_usd?: number;
+  tvl_market_share?: number;
+  tvl_risk_ratio?: number;
+  tvl_analyzed_at?: string;
+}
+
+export interface ScoreBreakdown {
+  github: number;
+  dependency: number;
+  governance: number;
+  tvl: number;
+}
+
+export interface IntegratedScoreMetrics {
+  integrated_score?: number;
+  score_breakdown?: ScoreBreakdown;
+}
+
 // Build In Public Video (Twitter video links)
 export interface BuildInPublicVideo {
   id: string;
@@ -289,6 +323,13 @@ export interface ClaimedProfile {
   multisigAddress?: string;
   squadsVersion?: 'v3' | 'v4';
   multisigVerifiedVia?: 'member_signature' | 'transaction_proof' | 'manual_review';
+  
+  // Multi-Dimensional Scoring (Full-Spectrum Resilience)
+  dependencyMetrics?: DependencyMetrics;
+  governanceMetrics?: GovernanceMetrics;
+  tvlMetrics?: TVLMetrics;
+  integratedScore?: number;
+  scoreBreakdown?: ScoreBreakdown;
 }
 
 // Form data for multi-step claim flow
