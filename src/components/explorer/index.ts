@@ -6,3 +6,4 @@ export { ProgramLeaderboard } from './ProgramLeaderboard';
 export { MobileProgramCard, MobileProgramCards } from './MobileProgramCard';
 export { Sparkline } from './Sparkline';
 export { ExpandedDetailsRow } from './ExpandedDetailsRow';
+export { LeaderboardRow } from './LeaderboardRow';
