@@ -11,13 +11,18 @@ interface NodeDetailPanelProps {
   nodeData: DependencyNodeData | null;
   cratesIoUrl?: string | null;
   npmUrl?: string | null;
+  pypiUrl?: string | null;
 }
 
-export function NodeDetailPanel({ open, onClose, nodeData, cratesIoUrl, npmUrl }: NodeDetailPanelProps) {
+export function NodeDetailPanel({ open, onClose, nodeData, cratesIoUrl, npmUrl, pypiUrl }: NodeDetailPanelProps) {
   if (!nodeData) return null;
 
   // Determine registry URL and name based on dependency type
-  const registryUrl = nodeData.dependencyType === 'npm' ? npmUrl : cratesIoUrl;
+  const registryUrl = nodeData.dependencyType === 'npm' 
+    ? npmUrl 
+    : nodeData.dependencyType === 'pypi' 
+      ? pypiUrl 
+      : cratesIoUrl;
   const registryName = nodeData.dependencyType === 'npm' ? 'npm' : nodeData.dependencyType === 'pypi' ? 'PyPI' : 'crates.io';
   const typeIcon = nodeData.dependencyType === 'npm' ? '📦' : nodeData.dependencyType === 'pypi' ? '🐍' : '🦀';
 

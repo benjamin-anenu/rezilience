@@ -49,6 +49,21 @@ const CRITICAL_NPM_DEPS = [
   "typescript",
 ];
 
+// Critical Python/PyPI dependencies to track
+const CRITICAL_PYPI_DEPS = [
+  "solana",
+  "solders",
+  "anchorpy",
+  "base58",
+  "pynacl",
+  "httpx",
+  "aiohttp",
+  "fastapi",
+  "django",
+  "flask",
+  "pytest",
+];
+
 /**
  * Parse GitHub URL to owner/repo
  */
@@ -133,6 +148,67 @@ async function fetchPackageJson(owner: string, repo: string, token: string): Pro
 }
 
 /**
+ * Fetch requirements.txt from GitHub raw content
+ */
+async function fetchRequirementsTxt(owner: string, repo: string, token: string): Promise<string | null> {
+  const branches = ["main", "master", "develop"];
+  const paths = ["requirements.txt", "requirements/base.txt", "requirements/production.txt"];
+  
+  for (const branch of branches) {
+    for (const path of paths) {
+      try {
+        const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
+        const response = await fetch(url, {
+          headers: {
+            Authorization: `token ${token}`,
+            Accept: "text/plain",
+            "User-Agent": "Resilience-Registry",
+          },
+        });
+        
+        if (response.ok) {
+          console.log(`Found ${path} at ${branch}/${path}`);
+          return await response.text();
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+  
+  return null;
+}
+
+/**
+ * Fetch pyproject.toml from GitHub raw content
+ */
+async function fetchPyprojectToml(owner: string, repo: string, token: string): Promise<string | null> {
+  const branches = ["main", "master", "develop"];
+  
+  for (const branch of branches) {
+    try {
+      const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/pyproject.toml`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: "text/plain",
+          "User-Agent": "Resilience-Registry",
+        },
+      });
+      
+      if (response.ok) {
+        console.log(`Found pyproject.toml at ${branch}/pyproject.toml`);
+        return await response.text();
+      }
+    } catch {
+      continue;
+    }
+  }
+  
+  return null;
+}
+
+/**
  * Parse package.json dependencies
  */
 function parsePackageJson(pkg: any): Map<string, string> {
@@ -142,6 +218,103 @@ function parsePackageJson(pkg: any): Map<string, string> {
   for (const [name, version] of Object.entries(allDeps)) {
     deps.set(name, String(version).replace(/[\^~>=<]/g, ''));
   }
+  return deps;
+}
+
+/**
+ * Parse requirements.txt file
+ * Handles formats: package==1.0.0, package>=1.0.0, package~=1.0, package
+ * Skips: comments, editable installs (-e), local paths, URLs
+ */
+function parseRequirementsTxt(content: string): Map<string, string> {
+  const deps = new Map<string, string>();
+  const lines = content.split("\n");
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    
+    // Skip empty lines, comments, editable installs, URLs, and local paths
+    if (!trimmed || 
+        trimmed.startsWith("#") || 
+        trimmed.startsWith("-e") || 
+        trimmed.startsWith("-r") ||
+        trimmed.startsWith("git+") ||
+        trimmed.startsWith("http") ||
+        trimmed.startsWith("./") ||
+        trimmed.startsWith("../")) {
+      continue;
+    }
+    
+    // Match patterns: package==1.0.0, package>=1.0.0, package~=1.0, package<=1.0
+    const match = trimmed.match(/^([a-zA-Z0-9_-]+(?:\[[^\]]+\])?)\s*([=<>~!]+)?\s*([0-9][^;\s#]*)?/);
+    
+    if (match) {
+      const packageName = match[1].replace(/\[.*\]/, '').toLowerCase(); // Remove extras like [security]
+      const version = match[3] || "latest";
+      deps.set(packageName, version.replace(/[\^~>=<!=]/g, ''));
+    }
+  }
+  
+  return deps;
+}
+
+/**
+ * Parse pyproject.toml dependencies
+ * Handles both PEP 621 format and Poetry format
+ */
+function parsePyprojectToml(content: string): Map<string, string> {
+  const deps = new Map<string, string>();
+  
+  // Match PEP 621 [project.dependencies] format
+  const projectDepsMatch = content.match(/\[project\][\s\S]*?dependencies\s*=\s*\[([\s\S]*?)\]/);
+  if (projectDepsMatch) {
+    const depsBlock = projectDepsMatch[1];
+    const depsStrings = depsBlock.match(/"([^"]+)"/g);
+    if (depsStrings) {
+      for (const depStr of depsStrings) {
+        const cleaned = depStr.replace(/"/g, '');
+        const match = cleaned.match(/^([a-zA-Z0-9_-]+(?:\[[^\]]+\])?)\s*([=<>~!]+)?\s*([0-9][^,;\s]*)?/);
+        if (match) {
+          const packageName = match[1].replace(/\[.*\]/, '').toLowerCase();
+          const version = match[3] || "latest";
+          deps.set(packageName, version.replace(/[\^~>=<!=]/g, ''));
+        }
+      }
+    }
+  }
+  
+  // Match Poetry [tool.poetry.dependencies] format
+  const poetryMatch = content.match(/\[tool\.poetry\.dependencies\]([\s\S]*?)(?=\[|$)/);
+  if (poetryMatch) {
+    const poetrySection = poetryMatch[1];
+    const lines = poetrySection.split("\n");
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith("#")) continue;
+      
+      // Skip python version specification
+      if (trimmed.startsWith("python")) continue;
+      
+      // Match: package = "^1.0.0" or package = { version = "^1.0" }
+      const simpleMatch = trimmed.match(/^([a-zA-Z0-9_-]+)\s*=\s*"([^"]+)"/);
+      const complexMatch = trimmed.match(/^([a-zA-Z0-9_-]+)\s*=\s*\{/);
+      
+      if (simpleMatch) {
+        const packageName = simpleMatch[1].toLowerCase();
+        const version = simpleMatch[2].replace(/[\^~>=<!=]/g, '');
+        deps.set(packageName, version);
+      } else if (complexMatch) {
+        const versionMatch = trimmed.match(/version\s*=\s*"([^"]+)"/);
+        if (versionMatch) {
+          const packageName = complexMatch[1].toLowerCase();
+          const version = versionMatch[1].replace(/[\^~>=<!=]/g, '');
+          deps.set(packageName, version);
+        }
+      }
+    }
+  }
+  
   return deps;
 }
 
@@ -186,6 +359,50 @@ async function getNpmDownloads(packageName: string): Promise<number> {
     if (!response.ok) return 0;
     const data = await response.json();
     return data.downloads || 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Get latest version from PyPI registry
+ */
+async function getPypiLatestVersion(packageName: string): Promise<string | null> {
+  try {
+    const response = await fetch(`https://pypi.org/pypi/${packageName}/json`, {
+      headers: {
+        "User-Agent": "Resilience-Registry",
+        Accept: "application/json",
+      },
+    });
+    
+    if (!response.ok) {
+      console.warn(`Package ${packageName} not found on PyPI`);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.info?.version || null;
+  } catch (error) {
+    console.error(`Error fetching PyPI package ${packageName}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get PyPI download count as proxy for ecosystem impact
+ * Uses pypistats.org API
+ */
+async function getPypiDownloads(packageName: string): Promise<number> {
+  try {
+    const response = await fetch(
+      `https://pypistats.org/api/packages/${packageName}/recent`,
+      { headers: { "User-Agent": "Resilience-Registry" } }
+    );
+    
+    if (!response.ok) return 0;
+    const data = await response.json();
+    return data.data?.last_week || 0;
   } catch {
     return 0;
   }
@@ -334,6 +551,108 @@ function calculateHealthScore(
 }
 
 /**
+ * Analyze Python dependencies from requirements.txt or pyproject.toml
+ */
+async function analyzePypiDependencies(
+  owner: string,
+  repo: string,
+  githubToken: string,
+  profileId: string | null
+): Promise<Response | null> {
+  // Try requirements.txt first
+  let content = await fetchRequirementsTxt(owner, repo, githubToken);
+  let parsedDeps: Map<string, string>;
+  let sourceFile = "requirements.txt";
+  
+  if (content) {
+    parsedDeps = parseRequirementsTxt(content);
+  } else {
+    // Try pyproject.toml
+    content = await fetchPyprojectToml(owner, repo, githubToken);
+    if (!content) {
+      return null; // No Python dependency files found
+    }
+    parsedDeps = parsePyprojectToml(content);
+    sourceFile = "pyproject.toml";
+  }
+  
+  if (parsedDeps.size === 0) {
+    console.log(`Found ${sourceFile} but no dependencies parsed`);
+    return null;
+  }
+  
+  console.log(`Found ${parsedDeps.size} Python dependencies in ${sourceFile}`);
+  
+  const dependencies: CrateDependency[] = [];
+  let outdatedCount = 0;
+  let criticalCount = 0;
+  
+  // Limit to first 100 dependencies for large projects
+  const depEntries = Array.from(parsedDeps.entries()).slice(0, 100);
+  
+  for (const [name, currentVersion] of depEntries) {
+    // Rate limit: 300ms between requests (PyPI is generous but be polite)
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    
+    const latestVersion = await getPypiLatestVersion(name);
+    const isCritical = CRITICAL_PYPI_DEPS.includes(name);
+    
+    if (latestVersion) {
+      const monthsBehind = currentVersion === "latest" 
+        ? 0 
+        : calculateVersionGap(currentVersion, latestVersion);
+      const isOutdated = monthsBehind > 0;
+      
+      // Get download count as ecosystem impact proxy
+      const downloads = await getPypiDownloads(name);
+      
+      dependencies.push({
+        name,
+        currentVersion: currentVersion === "latest" ? latestVersion : currentVersion,
+        latestVersion,
+        monthsBehind,
+        isOutdated,
+        isCritical,
+        reverseDeps: downloads,
+      });
+      
+      if (isOutdated) {
+        outdatedCount++;
+        if (isCritical && monthsBehind >= 3) {
+          criticalCount++;
+        }
+      }
+    }
+  }
+  
+  // Calculate health score
+  const healthScore = calculateHealthScore(dependencies, outdatedCount, criticalCount);
+  
+  const result: DependencyAnalysisResult = {
+    healthScore,
+    totalDependencies: dependencies.length,
+    outdatedCount,
+    criticalCount,
+    dependencies: dependencies.sort((a, b) => b.monthsBehind - a.monthsBehind),
+    analyzedAt: new Date().toISOString(),
+    dependencyType: 'pypi',
+  };
+  
+  console.log(`✅ Python/PyPI dependency analysis complete: ${healthScore}/100 health, ${outdatedCount} outdated, ${criticalCount} critical`);
+  
+  // Update profile and store in dependency_graph table
+  if (profileId) {
+    await updateProfile(profileId, result);
+    await storeDependencyGraph(profileId, dependencies, 'pypi');
+  }
+  
+  return new Response(
+    JSON.stringify({ success: true, data: result }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
+/**
  * Analyze npm dependencies from package.json
  */
 async function analyzeNpmDependencies(
@@ -464,8 +783,17 @@ Deno.serve(async (req) => {
         return npmResponse;
       }
       
-      // Neither Cargo.toml nor package.json found
-      console.log("No dependency files found (Cargo.toml or package.json)");
+      console.log("No package.json found - checking for Python dependencies...");
+      
+      // Try Python (requirements.txt or pyproject.toml)
+      const pypiResponse = await analyzePypiDependencies(owner, repo, githubToken, profile_id);
+      
+      if (pypiResponse) {
+        return pypiResponse;
+      }
+      
+      // No dependency files found at all
+      console.log("No dependency files found (Cargo.toml, package.json, requirements.txt, or pyproject.toml)");
       
       const result: DependencyAnalysisResult = {
         healthScore: 50, // Neutral - can't analyze
@@ -483,7 +811,7 @@ Deno.serve(async (req) => {
       }
       
       return new Response(
-        JSON.stringify({ success: true, data: result, note: "No dependency files found (Cargo.toml or package.json)" }),
+        JSON.stringify({ success: true, data: result, note: "No dependency files found" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -627,6 +955,7 @@ async function storeDependencyGraph(
     is_outdated: dep.isOutdated,
     crates_io_url: dependencyType === 'crate' ? `https://crates.io/crates/${dep.name}` : null,
     npm_url: dependencyType === 'npm' ? `https://www.npmjs.com/package/${dep.name}` : null,
+    pypi_url: dependencyType === 'pypi' ? `https://pypi.org/project/${dep.name}/` : null,
     crates_io_dependents: dep.reverseDeps,
     analyzed_at: new Date().toISOString(),
   }));

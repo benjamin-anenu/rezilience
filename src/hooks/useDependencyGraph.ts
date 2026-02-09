@@ -11,6 +11,7 @@ export interface DependencyNode {
   is_outdated: boolean;
   crates_io_url: string | null;
   npm_url: string | null;
+  pypi_url: string | null;
   crates_io_dependents: number;
   dependency_type: 'crate' | 'npm' | 'pypi';
 }
@@ -66,6 +67,7 @@ export function useDependencyGraph(profileId: string | undefined) {
           months_behind: d.months_behind || 0,
           is_critical: d.is_critical || false,
           npm_url: d.npm_url,
+          pypi_url: d.pypi_url,
           dependency_type: (d.dependency_type || 'crate') as 'crate' | 'npm' | 'pypi',
           is_outdated: d.is_outdated || false,
           crates_io_url: d.crates_io_url,
