@@ -62,6 +62,21 @@ interface DBClaimedProfile {
   // Team fields
   team_members: Json | null;
   staking_pitch: string | null;
+  // Intelligence metrics
+  dependency_health_score: number | null;
+  dependency_outdated_count: number | null;
+  dependency_critical_count: number | null;
+  dependency_analyzed_at: string | null;
+  governance_tx_30d: number | null;
+  governance_address: string | null;
+  governance_last_activity: string | null;
+  governance_analyzed_at: string | null;
+  tvl_usd: number | null;
+  tvl_market_share: number | null;
+  tvl_risk_ratio: number | null;
+  tvl_analyzed_at: string | null;
+  integrated_score: number | null;
+  score_breakdown: Json | null;
 }
 
 // Transform database format to frontend ClaimedProfile format
@@ -128,6 +143,29 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
     // Team Section
     teamMembers: (Array.isArray(db.team_members) ? db.team_members : []) as unknown as TeamMember[],
     stakingPitch: db.staking_pitch || undefined,
+    // Intelligence metrics
+    scoreBreakdown: (db.score_breakdown && typeof db.score_breakdown === 'object' && !Array.isArray(db.score_breakdown)) 
+      ? db.score_breakdown as unknown as ClaimedProfile['scoreBreakdown']
+      : undefined,
+    dependencyMetrics: {
+      dependency_health_score: db.dependency_health_score ?? 50,
+      dependency_outdated_count: db.dependency_outdated_count ?? 0,
+      dependency_critical_count: db.dependency_critical_count ?? 0,
+      dependency_analyzed_at: db.dependency_analyzed_at || undefined,
+    },
+    governanceMetrics: {
+      governance_address: db.governance_address || undefined,
+      governance_tx_30d: db.governance_tx_30d ?? 0,
+      governance_last_activity: db.governance_last_activity || undefined,
+      governance_analyzed_at: db.governance_analyzed_at || undefined,
+    },
+    tvlMetrics: {
+      tvl_usd: db.tvl_usd ?? 0,
+      tvl_market_share: db.tvl_market_share ?? 0,
+      tvl_risk_ratio: db.tvl_risk_ratio ?? 0,
+      tvl_analyzed_at: db.tvl_analyzed_at || undefined,
+    },
+    integratedScore: db.integrated_score ?? db.resilience_score ?? 0,
   };
 }
 

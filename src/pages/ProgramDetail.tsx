@@ -171,6 +171,7 @@ const ProgramDetail = () => {
                 verifiedAt={claimedProfile?.verifiedAt}
                 description={displayDescription}
                 logoUrl={displayLogoUrl}
+                scoreBreakdown={claimedProfile?.scoreBreakdown}
               />
             </div>
 
@@ -207,6 +208,20 @@ const ProgramDetail = () => {
                     bytecodeVerifiedAt={claimedProfile?.bytecodeVerifiedAt}
                     programId={displayProgramId}
                     profileId={claimedProfile?.id}
+                    dependencyHealthScore={claimedProfile?.dependencyMetrics?.dependency_health_score}
+                    dependencyOutdatedCount={claimedProfile?.dependencyMetrics?.dependency_outdated_count}
+                    dependencyCriticalCount={claimedProfile?.dependencyMetrics?.dependency_critical_count}
+                    dependencyAnalyzedAt={claimedProfile?.dependencyMetrics?.dependency_analyzed_at}
+                    governanceAddress={claimedProfile?.governanceMetrics?.governance_address}
+                    governanceTx30d={claimedProfile?.governanceMetrics?.governance_tx_30d}
+                    governanceLastActivity={claimedProfile?.governanceMetrics?.governance_last_activity}
+                    governanceAnalyzedAt={claimedProfile?.governanceMetrics?.governance_analyzed_at}
+                    tvlUsd={claimedProfile?.tvlMetrics?.tvl_usd}
+                    tvlMarketShare={claimedProfile?.tvlMetrics?.tvl_market_share}
+                    tvlRiskRatio={claimedProfile?.tvlMetrics?.tvl_risk_ratio}
+                    tvlAnalyzedAt={claimedProfile?.tvlMetrics?.tvl_analyzed_at}
+                    protocolName={displayName}
+                    category={claimedProfile?.category}
                   />
                 ),
                 team: (

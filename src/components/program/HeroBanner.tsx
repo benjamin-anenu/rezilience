@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import type { Program } from '@/types';
+import type { Program, ScoreBreakdown } from '@/types';
+import { ScoreBreakdownTooltip } from './ScoreBreakdownTooltip';
 
 interface HeroBannerProps {
   program: Program;
@@ -21,6 +22,8 @@ interface HeroBannerProps {
   isOwner?: boolean;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  // Score breakdown for tooltip
+  scoreBreakdown?: ScoreBreakdown;
 }
 
 export function HeroBanner({
@@ -37,6 +40,7 @@ export function HeroBanner({
   isOwner,
   onRefresh,
   isRefreshing,
+  scoreBreakdown,
 }: HeroBannerProps) {
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -363,56 +367,58 @@ export function HeroBanner({
             </TooltipProvider>
           </div>
 
-          {/* Right Side: Animated Score Ring */}
+          {/* Right Side: Animated Score Ring with Breakdown Tooltip */}
           <div className="flex flex-col items-center">
-            <div className={cn(
-              "relative flex h-40 w-40 items-center justify-center rounded-full sm:h-48 sm:w-48",
-              getScoreGlow(program.score)
-            )}>
-              {/* Background ring */}
-              <svg className="absolute inset-0 h-full w-full -rotate-90">
-                <circle
-                  cx="50%"
-                  cy="50%"
-                  r="45%"
-                  fill="none"
-                  stroke="hsl(var(--border))"
-                  strokeWidth="4"
-                />
-                {/* Animated progress ring */}
-                <circle
-                  cx="50%"
-                  cy="50%"
-                  r="45%"
-                  fill="none"
-                  stroke="hsl(var(--primary))"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  className="transition-all duration-1000 ease-out"
-                  style={{
-                    filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.5))'
-                  }}
-                />
-              </svg>
-              
-              {/* Score content */}
-              <div className="z-10 text-center">
-                <p className="mb-1 font-display text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Resilience
-                </p>
-                <p className={cn(
-                  'font-mono text-5xl font-bold sm:text-6xl',
-                  getScoreColor(program.score)
-                )}>
-                  {program.score}
-                </p>
-                <p className="mt-1 text-[10px] text-muted-foreground">
-                  / 100
-                </p>
+            <ScoreBreakdownTooltip breakdown={scoreBreakdown} totalScore={program.score}>
+              <div className={cn(
+                "relative flex h-40 w-40 cursor-help items-center justify-center rounded-full sm:h-48 sm:w-48",
+                getScoreGlow(program.score)
+              )}>
+                {/* Background ring */}
+                <svg className="absolute inset-0 h-full w-full -rotate-90">
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r="45%"
+                    fill="none"
+                    stroke="hsl(var(--border))"
+                    strokeWidth="4"
+                  />
+                  {/* Animated progress ring */}
+                  <circle
+                    cx="50%"
+                    cy="50%"
+                    r="45%"
+                    fill="none"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    className="transition-all duration-1000 ease-out"
+                    style={{
+                      filter: 'drop-shadow(0 0 6px hsl(var(--primary) / 0.5))'
+                    }}
+                  />
+                </svg>
+                
+                {/* Score content */}
+                <div className="z-10 text-center">
+                  <p className="mb-1 font-display text-[10px] uppercase tracking-wider text-muted-foreground">
+                    Resilience
+                  </p>
+                  <p className={cn(
+                    'font-mono text-5xl font-bold sm:text-6xl',
+                    getScoreColor(program.score)
+                  )}>
+                    {program.score}
+                  </p>
+                  <p className="mt-1 text-[10px] text-muted-foreground">
+                    / 100
+                  </p>
+                </div>
               </div>
-            </div>
+            </ScoreBreakdownTooltip>
 
             {/* Score explanation tooltip */}
             <Tooltip>
