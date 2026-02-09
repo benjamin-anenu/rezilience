@@ -26,6 +26,8 @@ const tocItems: TOCItem[] = [
   { id: 'tier-labels', label: 'Tier Labels', level: 2 },
   { id: 'features', label: 'Platform Features', level: 1 },
   { id: 'for-builders', label: 'For Solana Builders', level: 1 },
+  { id: 'authority-verification', label: 'Authority Verification', level: 2 },
+  { id: 'claim-blacklist', label: 'Claim Blacklist', level: 2 },
   { id: 'data-provenance', label: 'Data Provenance', level: 1 },
   { id: 'roadmap', label: 'Product Roadmap', level: 1 },
   { id: 'faq', label: 'FAQ', level: 1 },
