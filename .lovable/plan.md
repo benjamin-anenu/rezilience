@@ -1,93 +1,124 @@
 
-# Auto-Analyze Unclaimed Profiles with GitHub URLs
+# Add Unclaimed Profiles from Solana Programs Directory
 
-## The Problem
+## Overview
 
-Currently, unclaimed profiles like Drift Protocol V2 sit in the registry with:
-- `resilience_score: 0`
-- `liveness_status: STALE`
-- `github_analyzed_at: null`
+This plan adds 149 unclaimed profiles from the provided JSON file to the Resilience Registry. Each profile will be seeded with:
+- Valid GitHub URL for automatic metric analysis
+- Program ID (where available)
+- Category and description
+- Status: `claim_status = 'unclaimed'`, `verified = false`
 
-This gives users no visibility into the actual health of these projects, making the registry look incomplete and the data stale.
-
-## The Solution
-
-Automatically analyze unclaimed profiles that have a public GitHub URL, keeping their metrics fresh just like claimed profiles. This provides:
-
-1. **Accurate Discovery** - Users see real liveness status (ACTIVE/STALE/DECAYING) for unclaimed projects
-2. **Trend Tracking** - Score history is captured for sparkline charts in Explorer
-3. **Informed Claims** - Builders see current health before claiming
-4. **Active Registry** - No "dead" entries with zero scores
+After seeding, the 30-minute cron job will automatically analyze each profile's GitHub repository and populate resilience scores, liveness status, and trend data.
 
 ---
 
-## Technical Approach
+## Data Filtering Strategy
 
-### Option A: Extend Existing Cron Job (Recommended)
+From the 150 programs in the JSON, we need to filter:
 
-Modify `refresh-all-profiles` to also include unclaimed profiles with GitHub URLs:
+**Include (approx 90-100 programs):**
+- Programs with valid GitHub URLs (not "N/A")
+- Programs with valid program IDs (not "N/A" patterns)
 
-**Current Query:**
-```sql
-SELECT id, project_name, github_org_url 
-FROM claimed_profiles 
-WHERE verified = true 
-AND github_org_url IS NOT NULL
-```
-
-**New Query:**
-```sql
-SELECT id, project_name, github_org_url 
-FROM claimed_profiles 
-WHERE (verified = true OR claim_status = 'unclaimed')
-AND github_org_url IS NOT NULL
-```
-
-This is the simplest approach - one line change in the edge function.
-
-### Option B: Immediate Analysis on Insert (Additional)
-
-When seeding a new unclaimed profile, trigger an immediate analysis so it appears with real data right away:
-
-1. Add a database trigger or modify the seed process
-2. Call `analyze-github-repo` immediately after insert
-3. Profile shows up with real metrics from day one
+**Exclude:**
+- Drift Protocol V2 (already exists)
+- Programs with "N/A (closed source)" GitHub URLs (e.g., Pump.fun)
+- Programs with "N/A" program IDs (SDKs, frameworks, validator clients)
+- Programs pointing to the same parent repo (e.g., multiple anza-xyz/agave entries)
 
 ---
 
-## Implementation Details
+## Implementation Approach
 
-### Part 1: Update refresh-all-profiles
+### Option 1: Database Migration (Recommended)
+Create a migration SQL file with INSERT statements for all valid programs. Benefits:
+- Atomic transaction - all or nothing
+- Easily auditable
+- Can be rolled back if needed
 
-**File:** `supabase/functions/refresh-all-profiles/index.ts`
+### Option 2: Edge Function for Bulk Seeding
+Create a one-time edge function to seed from JSON. Less preferred as migrations are more reliable.
 
-Change line 29 from:
-```typescript
-.eq("verified", true)
+---
+
+## Technical Details
+
+### Category Mapping
+The JSON uses categories like "DeFi / DEX", "DeFi / Derivatives", etc. We'll normalize these to match the existing category format in the database:
+- "DeFi / DEX" -> "defi"
+- "DeFi / Derivatives" -> "defi"
+- "NFT / Marketplace" -> "nft"
+- "Infrastructure / Oracle" -> "infrastructure"
+- "Gaming / Infrastructure" -> "gaming"
+- etc.
+
+### Deduplication Strategy
+Many programs in the JSON share the same GitHub repo (e.g., multiple programs from anza-xyz/agave). To avoid duplicate analysis:
+- Group by unique GitHub URL
+- Select the most specific/relevant program when duplicates exist
+
+### Programs to Seed (High-Value Selection)
+
+Based on analysis, here are the key programs to add:
+
+| Program | Category | GitHub |
+|---------|----------|--------|
+| SPL Token Program | Core | solana-program/token |
+| Token-2022 | Core | solana-program/token-2022 |
+| Jupiter Aggregator V6 | DeFi | jup-ag/jupiter-core |
+| Raydium AMM V4 | DeFi | raydium-io/raydium-amm |
+| Orca Whirlpools | DeFi | orca-so/whirlpools |
+| Meteora DLMM | DeFi | MeteoraAg/dlmm-sdk |
+| Phoenix V1 | DeFi | Ellipsis-Labs/phoenix-v1 |
+| OpenBook V2 | DeFi | openbook-dex/openbook-v2 |
+| Marinade Finance | DeFi | marinade-finance/liquid-staking-program |
+| Kamino Finance | DeFi | Kamino-Finance/klend |
+| MarginFi V2 | DeFi | mrgnlabs/marginfi-v2 |
+| Pyth Network | Infrastructure | pyth-network/pyth-sdk-solana |
+| Switchboard V2 | Infrastructure | switchboard-xyz/switchboard-v2 |
+| Wormhole Core Bridge | Infrastructure | wormhole-foundation/wormhole |
+| Squads Multisig V4 | Infrastructure | Squads-Protocol/v4 |
+| Metaplex Token Metadata | NFT | metaplex-foundation/mpl-token-metadata |
+| Metaplex Bubblegum | NFT | metaplex-foundation/mpl-bubblegum |
+| Magic Eden V2 | NFT | magiceden-oss |
+| Tensor Swap | NFT | tensor-foundation |
+| Realms (SPL Governance) | Governance | Mythic-Project/solana-program-library |
+| Helium Network | DePIN | helium/helium-program-library |
+| And 70+ more... |  |  |
+
+---
+
+## Implementation Steps
+
+### Step 1: Create Database Migration
+Generate SQL INSERT statements for all valid programs from the JSON file.
+
+```sql
+INSERT INTO claimed_profiles (
+  project_name, description, category, program_id, 
+  github_org_url, website_url, claim_status, verified,
+  resilience_score, liveness_status
+) VALUES 
+  ('SPL Token Program', 'Standard token program...', 'infrastructure', 'TokenkegQ...', 'https://github.com/solana-program/token', 'https://spl.solana.com', 'unclaimed', false, 0, 'STALE'),
+  -- ... 90+ more entries
 ```
 
-To:
-```typescript
-.or("verified.eq.true,claim_status.eq.unclaimed")
-```
+### Step 2: Deploy Migration
+Run the migration to insert all unclaimed profiles.
 
-This single change ensures:
-- All verified (claimed) profiles get refreshed
-- All unclaimed profiles with GitHub URLs get refreshed
-- Score history is captured for trend charts
-- Liveness status stays accurate
+### Step 3: Trigger Initial Analysis
+The existing 30-minute cron job (`refresh-all-profiles`) will automatically:
+1. Detect all new unclaimed profiles with GitHub URLs
+2. Call `analyze-github-repo` for each
+3. Populate resilience scores, liveness status, metrics
+4. Create score_history entries for trend charts
 
-### Part 2: Immediate Analysis for New Unclaimed Profiles
-
-Create a utility function to analyze a profile immediately after seeding:
-
-**Approach:** When inserting unclaimed profiles (like Drift), immediately call the analyze function to populate metrics.
-
-For the existing Drift Protocol entry, we can trigger a manual analysis to populate its data now.
-
-### Part 3: Auto-Refresh on Explorer View (Optional Enhancement)
-
-The Explorer page could trigger background refreshes for stale unclaimed profiles when they're viewed, similar to how the profile detail page works.
+### Step 4: Verify in Explorer
+Confirm all new profiles appear with:
+- "UNCLAIMED" badge
+- "Claim This" CTA
+- Populated metrics (after first refresh cycle)
 
 ---
 
@@ -95,59 +126,38 @@ The Explorer page could trigger background refreshes for stale unclaimed profile
 
 | File | Change |
 |------|--------|
-| `supabase/functions/refresh-all-profiles/index.ts` | Update query to include unclaimed profiles |
-
-## Files to Create (Optional)
-
-| File | Purpose |
-|------|---------|
-| `supabase/functions/seed-unclaimed-profile/index.ts` | Helper to seed + immediately analyze unclaimed profiles |
+| New Migration | INSERT 90+ unclaimed profiles |
 
 ---
 
-## Immediate Action: Analyze Drift Protocol
+## Post-Implementation Verification
 
-After updating the cron job, we can immediately trigger an analysis for Drift Protocol V2 to populate its real metrics:
-
-```
-POST /analyze-github-repo
-{
-  "github_url": "https://github.com/drift-labs/protocol-v2",
-  "profile_id": "27bb7693-d7c8-47a1-b8da-f0d7a9730f7a"
-}
-```
-
-This will:
-- Calculate the real resilience score
-- Determine liveness status (likely ACTIVE given Drift's activity)
-- Populate all GitHub metrics (stars, forks, contributors, etc.)
-- Create a score history entry for trend charts
+After the cron runs (or manual trigger):
+- All profiles should show real resilience scores
+- Liveness badges should reflect actual GitHub activity
+- Sparkline trends will populate over subsequent cycles
+- "UNCLAIMED" badge visible for all new entries
 
 ---
 
-## Expected Outcome
+## Risk Mitigation
 
-After implementation, Drift Protocol V2 in the Explorer will show:
-- Real resilience score (likely 60-80+ given their activity)
-- Accurate liveness badge (likely "ACTIVE")
-- Stars, forks, contributors data
-- Sparkline trend chart (after a few cron cycles)
-- "UNCLAIMED" badge still visible
-- "Claim This" CTA still available
+1. **Duplicate Prevention**: Check for existing program_id before insert
+2. **Invalid GitHub URLs**: Skip entries with "N/A" or malformed URLs
+3. **Rate Limiting**: The cron job already handles GitHub API limits gracefully
+4. **Rollback**: Can DELETE FROM claimed_profiles WHERE claim_status = 'unclaimed' AND project_name IN (...) if needed
 
 ---
 
-## Testing Checklist
+## Estimated Impact
 
-- Verify refresh-all-profiles includes unclaimed profiles
-- Trigger manual analysis for Drift Protocol
-- Confirm Drift shows real metrics in Explorer
-- Verify score history is being captured
-- Check sparkline chart shows data after refresh cycles
-- Ensure claimed profiles still refresh normally
+- **Registry Growth**: From 2 profiles to 90-100+ profiles
+- **Active Monitoring**: All profiles with valid GitHub URLs get automatic refresh
+- **User Value**: Builders see real-time health of major Solana protocols
+- **Claim Incentive**: Prominent projects visible but unclaimed creates urgency
 
 ---
 
 ## Summary
 
-This is a minimal change (one line in the cron job) with maximum impact. All unclaimed profiles with GitHub URLs will be actively monitored, making the registry feel alive and providing real value to users browsing for projects to claim or support.
+This implementation seeds the Resilience Registry with the majority of active Solana programs from the provided directory. The existing auto-refresh infrastructure will keep all profiles current, and builders will be incentivized to claim their projects by seeing them listed as "UNCLAIMED" with real metrics.
