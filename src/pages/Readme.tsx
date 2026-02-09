@@ -412,7 +412,8 @@ export default function Readme() {
             {/* For Builders Section */}
             <section id="for-builders" className="scroll-mt-24">
               <SectionHeader icon={Rocket} title="For Solana Builders" />
-              
+               
+              <div id="join-registry" className="scroll-mt-24">
               <Card className="card-premium">
                 <CardContent className="pt-6">
                   <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground mb-4">
@@ -475,6 +476,7 @@ export default function Readme() {
 
                 </CardContent>
               </Card>
+              </div>
 
               {/* Claim a Project on Registry Card */}
               <div id="authority-verification" className="scroll-mt-24">
@@ -643,7 +645,7 @@ export default function Readme() {
                     <div className="flex items-center gap-3 mb-6">
                       <Ban className="h-5 w-5 text-destructive" />
                       <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
-                        Anti-Abuse: Claim Blacklist
+                        Anti-Abuse: Blacklist
                       </h3>
                     </div>
                     <p className="text-muted-foreground text-sm mb-6">
@@ -693,6 +695,7 @@ export default function Readme() {
               </div>
 
               {/* How to Improve Continuity Card */}
+              <div id="improve-continuity" className="scroll-mt-24">
               <Card className="card-premium mt-6">
                 <CardContent className="pt-6">
                   <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground mb-2">
@@ -805,6 +808,7 @@ export default function Readme() {
                   </Accordion>
                 </CardContent>
               </Card>
+              </div>
             </section>
 
             {/* Product Roadmap Section */}
