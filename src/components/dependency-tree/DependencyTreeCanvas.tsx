@@ -30,6 +30,7 @@ export function DependencyTreeCanvas({ data }: DependencyTreeCanvasProps) {
   const [selectedNode, setSelectedNode] = useState<{
     data: DependencyNodeData;
     cratesIoUrl?: string | null;
+    npmUrl?: string | null;
   } | null>(null);
 
   // Generate nodes and edges from data
@@ -73,6 +74,7 @@ export function DependencyTreeCanvas({ data }: DependencyTreeCanvasProps) {
           isCritical: dep.is_critical,
           isOutdated: dep.is_outdated,
           dependents: dep.crates_io_dependents,
+          dependencyType: dep.dependency_type,
         },
       });
 
@@ -146,6 +148,7 @@ export function DependencyTreeCanvas({ data }: DependencyTreeCanvasProps) {
       setSelectedNode({
         data: node.data,
         cratesIoUrl: dep?.crates_io_url,
+        npmUrl: dep?.npm_url,
       });
     },
     [data.dependencies]
@@ -175,6 +178,7 @@ export function DependencyTreeCanvas({ data }: DependencyTreeCanvasProps) {
         onClose={() => setSelectedNode(null)}
         nodeData={selectedNode?.data || null}
         cratesIoUrl={selectedNode?.cratesIoUrl}
+        npmUrl={selectedNode?.npmUrl}
       />
     </div>
   );

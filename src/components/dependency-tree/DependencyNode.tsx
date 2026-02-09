@@ -13,6 +13,7 @@ export type DependencyNodeData = {
   isOutdated?: boolean;
   dependents?: number;
   forks?: number;
+  dependencyType?: 'crate' | 'npm' | 'pypi';
 };
 
 const getStatusColor = (data: DependencyNodeData) => {
@@ -33,6 +34,12 @@ const getStatusIcon = (data: DependencyNodeData) => {
   return <AlertTriangle className="h-4 w-4 text-amber-500" />;
 };
 
+const getTypeIcon = (dependencyType?: 'crate' | 'npm' | 'pypi') => {
+  if (dependencyType === 'npm') return '📦';
+  if (dependencyType === 'pypi') return '🐍';
+  return '🦀';
+};
+
 export const DependencyNode = memo(function DependencyNode({ 
   data,
   selected,
@@ -41,6 +48,7 @@ export const DependencyNode = memo(function DependencyNode({
   const statusIcon = getStatusIcon(data);
   const isProject = data.type === 'project';
   const isDependent = data.type === 'dependent';
+  const typeIcon = data.type === 'dependency' ? getTypeIcon(data.dependencyType) : null;
 
   return (
     <div
@@ -72,6 +80,11 @@ export const DependencyNode = memo(function DependencyNode({
         <div className="mt-0.5">{statusIcon}</div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
+            {typeIcon && (
+              <span className="text-sm" title={data.dependencyType === 'npm' ? 'NPM Package' : data.dependencyType === 'pypi' ? 'PyPI Package' : 'Rust Crate'}>
+                {typeIcon}
+              </span>
+            )}
             <span className={cn(
               'font-medium truncate',
               isProject ? 'text-lg' : 'text-sm'

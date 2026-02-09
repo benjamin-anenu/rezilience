@@ -23,9 +23,10 @@ interface DependencyAnalysisResult {
   criticalCount: number;
   dependencies: CrateDependency[];
   analyzedAt: string;
+  dependencyType: 'crate' | 'npm' | 'pypi';
 }
 
-// Critical Solana dependencies to track
+// Critical Solana/Rust dependencies to track
 const CRITICAL_DEPS = [
   "anchor-lang",
   "anchor-spl",
@@ -33,6 +34,19 @@ const CRITICAL_DEPS = [
   "solana-sdk",
   "spl-token",
   "solana-client",
+];
+
+// Critical npm dependencies to track
+const CRITICAL_NPM_DEPS = [
+  "@solana/web3.js",
+  "@solana/spl-token",
+  "@project-serum/anchor",
+  "@coral-xyz/anchor",
+  "@solana/wallet-adapter-base",
+  "@solana/wallet-adapter-react",
+  "react",
+  "next",
+  "typescript",
 ];
 
 /**
@@ -83,6 +97,93 @@ async function fetchCargoToml(owner: string, repo: string, token: string): Promi
   }
   
   return null;
+}
+
+/**
+ * Fetch package.json from GitHub raw content
+ */
+async function fetchPackageJson(owner: string, repo: string, token: string): Promise<object | null> {
+  const branches = ["main", "master", "develop"];
+  
+  for (const branch of branches) {
+    try {
+      const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/package.json`;
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `token ${token}`,
+          Accept: "application/json",
+          "User-Agent": "Resilience-Registry",
+        },
+      });
+      
+      if (response.ok) {
+        console.log(`Found package.json at ${branch}/package.json`);
+        return await response.json();
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+/**
+ * Parse package.json dependencies
+ */
+function parsePackageJson(pkg: any): Map<string, string> {
+  const deps = new Map<string, string>();
+  const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
+  
+  for (const [name, version] of Object.entries(allDeps)) {
+    deps.set(name, String(version).replace(/[\^~>=<]/g, ''));
+  }
+  return deps;
+}
+
+/**
+ * Get latest version from npm registry
+ */
+async function getNpmLatestVersion(packageName: string): Promise<string | null> {
+  try {
+    // Handle scoped packages (@org/name)
+    const encodedName = encodeURIComponent(packageName);
+    const response = await fetch(`https://registry.npmjs.org/${encodedName}/latest`, {
+      headers: {
+        "User-Agent": "Resilience-Registry",
+        Accept: "application/json",
+      },
+    });
+    
+    if (!response.ok) {
+      console.warn(`Package ${packageName} not found on npm`);
+      return null;
+    }
+    
+    const data = await response.json();
+    return data.version || null;
+  } catch (error) {
+    console.error(`Error fetching npm package ${packageName}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Get npm download count as proxy for "dependents"
+ */
+async function getNpmDownloads(packageName: string): Promise<number> {
+  try {
+    const encodedName = encodeURIComponent(packageName);
+    const response = await fetch(
+      `https://api.npmjs.org/downloads/point/last-week/${encodedName}`,
+      { headers: { "User-Agent": "Resilience-Registry" } }
+    );
+    
+    if (!response.ok) return 0;
+    const data = await response.json();
+    return data.downloads || 0;
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -227,6 +328,89 @@ function calculateHealthScore(
   return Math.max(0, Math.round(score));
 }
 
+/**
+ * Analyze npm dependencies from package.json
+ */
+async function analyzeNpmDependencies(
+  owner: string,
+  repo: string,
+  githubToken: string,
+  profileId: string | null
+): Promise<Response | null> {
+  const packageJson = await fetchPackageJson(owner, repo, githubToken);
+  
+  if (!packageJson) {
+    return null; // No package.json found
+  }
+  
+  // Parse and analyze npm dependencies
+  const parsedDeps = parsePackageJson(packageJson);
+  console.log(`Found ${parsedDeps.size} npm dependencies in package.json`);
+  
+  const dependencies: CrateDependency[] = [];
+  let outdatedCount = 0;
+  let criticalCount = 0;
+  
+  for (const [name, currentVersion] of parsedDeps) {
+    // Rate limit: be gentle with npm registry (500ms between requests)
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    
+    const latestVersion = await getNpmLatestVersion(name);
+    const isCritical = CRITICAL_NPM_DEPS.includes(name);
+    
+    if (latestVersion) {
+      const monthsBehind = calculateVersionGap(currentVersion, latestVersion);
+      const isOutdated = monthsBehind > 0;
+      
+      // Get download count as ecosystem impact proxy
+      const downloads = await getNpmDownloads(name);
+      
+      dependencies.push({
+        name,
+        currentVersion,
+        latestVersion,
+        monthsBehind,
+        isOutdated,
+        isCritical,
+        reverseDeps: downloads,
+      });
+      
+      if (isOutdated) {
+        outdatedCount++;
+        if (isCritical && monthsBehind >= 3) {
+          criticalCount++;
+        }
+      }
+    }
+  }
+  
+  // Calculate health score
+  const healthScore = calculateHealthScore(dependencies, outdatedCount, criticalCount);
+  
+  const result: DependencyAnalysisResult = {
+    healthScore,
+    totalDependencies: dependencies.length,
+    outdatedCount,
+    criticalCount,
+    dependencies: dependencies.sort((a, b) => b.monthsBehind - a.monthsBehind),
+    analyzedAt: new Date().toISOString(),
+    dependencyType: 'npm',
+  };
+  
+  console.log(`✅ NPM dependency analysis complete: ${healthScore}/100 health, ${outdatedCount} outdated, ${criticalCount} critical`);
+  
+  // Update profile and store in dependency_graph table
+  if (profileId) {
+    await updateProfile(profileId, result);
+    await storeDependencyGraph(profileId, dependencies, 'npm');
+  }
+  
+  return new Response(
+    JSON.stringify({ success: true, data: result }),
+    { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+  );
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -262,13 +446,22 @@ Deno.serve(async (req) => {
 
     console.log(`📦 Analyzing dependencies for: ${owner}/${repo}`);
 
-    // Fetch Cargo.toml
+    // First try Cargo.toml (Rust projects)
     const cargoContent = await fetchCargoToml(owner, repo, githubToken);
     
     if (!cargoContent) {
-      console.log("No Cargo.toml found - not a Rust/Solana project");
+      console.log("No Cargo.toml found - checking for package.json...");
       
-      // Return neutral score for non-Rust projects
+      // Try package.json (JS/TS projects)
+      const npmResponse = await analyzeNpmDependencies(owner, repo, githubToken, profile_id);
+      
+      if (npmResponse) {
+        return npmResponse;
+      }
+      
+      // Neither Cargo.toml nor package.json found
+      console.log("No dependency files found (Cargo.toml or package.json)");
+      
       const result: DependencyAnalysisResult = {
         healthScore: 50, // Neutral - can't analyze
         totalDependencies: 0,
@@ -276,6 +469,7 @@ Deno.serve(async (req) => {
         criticalCount: 0,
         dependencies: [],
         analyzedAt: new Date().toISOString(),
+        dependencyType: 'crate',
       };
       
       // Update profile if provided
@@ -284,12 +478,12 @@ Deno.serve(async (req) => {
       }
       
       return new Response(
-        JSON.stringify({ success: true, data: result, note: "No Cargo.toml found" }),
+        JSON.stringify({ success: true, data: result, note: "No dependency files found (Cargo.toml or package.json)" }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Parse dependencies
+    // Parse Rust dependencies from Cargo.toml
     const parsedDeps = parseCargoToml(cargoContent);
     console.log(`Found ${parsedDeps.size} dependencies in Cargo.toml`);
 
@@ -341,14 +535,15 @@ Deno.serve(async (req) => {
       criticalCount,
       dependencies: dependencies.sort((a, b) => b.monthsBehind - a.monthsBehind),
       analyzedAt: new Date().toISOString(),
+      dependencyType: 'crate',
     };
 
-    console.log(`✅ Dependency analysis complete: ${healthScore}/100 health, ${outdatedCount} outdated, ${criticalCount} critical`);
+    console.log(`✅ Rust dependency analysis complete: ${healthScore}/100 health, ${outdatedCount} outdated, ${criticalCount} critical`);
 
     // Update profile and store in dependency_graph table
     if (profile_id) {
       await updateProfile(profile_id, result);
-      await storeDependencyGraph(profile_id, dependencies);
+      await storeDependencyGraph(profile_id, dependencies, 'crate');
     }
 
     return new Response(
@@ -396,7 +591,11 @@ async function updateProfile(profileId: string, result: DependencyAnalysisResult
 /**
  * Store individual dependencies in dependency_graph table
  */
-async function storeDependencyGraph(profileId: string, dependencies: CrateDependency[]): Promise<void> {
+async function storeDependencyGraph(
+  profileId: string, 
+  dependencies: CrateDependency[],
+  dependencyType: 'crate' | 'npm' | 'pypi' = 'crate'
+): Promise<void> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   
@@ -410,16 +609,19 @@ async function storeDependencyGraph(profileId: string, dependencies: CrateDepend
     .delete()
     .eq("source_profile_id", profileId);
 
-  // Insert new dependencies
+  // Insert new dependencies with type-specific fields
   const rows = dependencies.map((dep) => ({
     source_profile_id: profileId,
     crate_name: dep.name,
+    package_name: dep.name,
+    dependency_type: dependencyType,
     current_version: dep.currentVersion,
     latest_version: dep.latestVersion,
     months_behind: dep.monthsBehind,
     is_critical: dep.isCritical,
     is_outdated: dep.isOutdated,
-    crates_io_url: `https://crates.io/crates/${dep.name}`,
+    crates_io_url: dependencyType === 'crate' ? `https://crates.io/crates/${dep.name}` : null,
+    npm_url: dependencyType === 'npm' ? `https://www.npmjs.com/package/${dep.name}` : null,
     crates_io_dependents: dep.reverseDeps,
     analyzed_at: new Date().toISOString(),
   }));
@@ -432,7 +634,7 @@ async function storeDependencyGraph(profileId: string, dependencies: CrateDepend
     if (error) {
       console.error("Error storing dependency_graph:", error);
     } else {
-      console.log(`Stored ${rows.length} dependencies in dependency_graph`);
+      console.log(`Stored ${rows.length} ${dependencyType} dependencies in dependency_graph`);
     }
   }
 }
