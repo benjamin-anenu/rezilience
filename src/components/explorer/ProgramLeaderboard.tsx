@@ -141,7 +141,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
       case 'down':
         return <TrendingDown className="h-3 w-3 text-destructive" />;
       case 'new':
-        return <Sparkles className="h-3 w-3 text-amber-500" />;
+        return null;
       default:
         return null;
     }
