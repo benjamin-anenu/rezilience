@@ -64,33 +64,34 @@ const getStatusBadge = (status: LivenessStatus) => {
 };
 
 const getOriginalityBadge = (project: ExplorerProject) => {
-  if (project.claimStatus === 'unclaimed') {
-    return (
-      <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-amber-500/50 bg-amber-500/10 text-amber-500">
-        <AlertTriangle className="mr-0.5 h-2.5 w-2.5" />
-        Unclaim
-      </Badge>
-    );
-  }
-  
   if (project.is_fork) {
     return (
-      <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-destructive/50 text-destructive">
-        Fork
-      </Badge>
-    );
-  }
-  if (project.verified) {
-    return (
-      <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-primary/50 text-primary">
-        <CheckCircle className="mr-0.5 h-2.5 w-2.5" />
-        OK
+      <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-destructive/50 bg-destructive/10 text-destructive">
+        Forked
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-muted-foreground/50 text-muted-foreground">
-      Unver
+    <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-primary/50 bg-primary/10 text-primary">
+      <CheckCircle className="mr-0.5 h-2.5 w-2.5" />
+      Owned
+    </Badge>
+  );
+};
+
+const getClaimStatusBadge = (project: ExplorerProject) => {
+  if (project.claimStatus === 'unclaimed') {
+    return (
+      <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-amber-500/50 bg-amber-500/10 text-amber-500">
+        <AlertTriangle className="mr-0.5 h-2.5 w-2.5" />
+        Unclaimed
+      </Badge>
+    );
+  }
+  return (
+    <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-primary/50 bg-primary/10 text-primary">
+      <CheckCircle className="mr-0.5 h-2.5 w-2.5" />
+      Claimed
     </Badge>
   );
 };
@@ -311,9 +312,13 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
             </div>
           )}
         </TableCell>
-        {/* Status */}
-        <TableCell className="hidden lg:table-cell px-2 w-20">
+        {/* Originality */}
+        <TableCell className="hidden lg:table-cell px-2 w-16">
           {getOriginalityBadge(project)}
+        </TableCell>
+        {/* Claim Status */}
+        <TableCell className="hidden lg:table-cell px-2 w-20">
+          {getClaimStatusBadge(project)}
         </TableCell>
         {/* Staked */}
         <TableCell className="hidden md:table-cell text-right px-2 w-16">
