@@ -106,10 +106,10 @@ export function useEcosystemStats() {
   return useQuery({
     queryKey: ['ecosystem-stats'],
     queryFn: async (): Promise<DBEcosystemStats> => {
+      // Fetch all profiles in the registry (not just verified ones)
       const { data, error } = await supabase
         .from('claimed_profiles')
-        .select('resilience_score, liveness_status')
-        .eq('verified', true);
+        .select('resilience_score, liveness_status, verified');
 
       if (error) {
         console.error('Error fetching ecosystem stats:', error);
@@ -119,9 +119,13 @@ export function useEcosystemStats() {
       const profiles = data || [];
       const programsIndexed = profiles.length;
       const totalStaked = 0; // Phase 2 feature - no staking data yet
-      const averageScore = programsIndexed > 0
-        ? profiles.reduce((sum, p) => sum + (p.resilience_score || 0), 0) / programsIndexed
+      
+      // Calculate average score across all profiles with a score
+      const profilesWithScore = profiles.filter(p => p.resilience_score && p.resilience_score > 0);
+      const averageScore = profilesWithScore.length > 0
+        ? profilesWithScore.reduce((sum, p) => sum + (p.resilience_score || 0), 0) / profilesWithScore.length
         : 0;
+      
       const activePrograms = profiles.filter(p => p.liveness_status === 'ACTIVE').length;
 
       return {
