@@ -34,19 +34,15 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
       <Table className="data-table">
         <TableHeader>
           <TableRow className="border-border hover:bg-transparent">
-            <TableHead className="w-16">RANK</TableHead>
+            <TableHead className="w-14">RANK</TableHead>
             <TableHead className="max-w-[140px]">PROJECT</TableHead>
-            <TableHead className="hidden lg:table-cell">TYPE</TableHead>
-            <TableHead className="hidden lg:table-cell">PROGRAM ID</TableHead>
-            <TableHead className="text-right">SCORE</TableHead>
-            <TableHead className="hidden xl:table-cell w-16 text-center">HEALTH</TableHead>
-            <TableHead className="hidden xl:table-cell w-20">TREND</TableHead>
+            <TableHead className="text-right w-24">SCORE</TableHead>
+            <TableHead className="w-20">TREND</TableHead>
             <TableHead className="hidden md:table-cell">LIVENESS</TableHead>
-            <TableHead className="hidden xl:table-cell">DECAY</TableHead>
             <TableHead className="hidden lg:table-cell">STATUS</TableHead>
-            <TableHead className="hidden md:table-cell text-right">STAKED</TableHead>
-            <TableHead className="hidden lg:table-cell">LAST ACTIVITY</TableHead>
-            <TableHead className="w-12 text-center">
+            <TableHead className="hidden lg:table-cell text-right">STAKED</TableHead>
+            <TableHead className="hidden xl:table-cell">ACTIVITY</TableHead>
+            <TableHead className="w-10 text-center">
               <Eye className="h-4 w-4 mx-auto text-muted-foreground" />
             </TableHead>
           </TableRow>

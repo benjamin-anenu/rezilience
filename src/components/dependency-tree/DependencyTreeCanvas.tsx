@@ -34,16 +34,21 @@ export function DependencyTreeCanvas({ data }: DependencyTreeCanvasProps) {
     pypiUrl?: string | null;
   } | null>(null);
 
-  // Generate nodes and edges from data
+  // Generate nodes and edges from data with organized tiered layout
   const { initialNodes, edges } = useMemo(() => {
     const nodesArr: Node<DependencyNodeData>[] = [];
     const edgesArr: Edge[] = [];
 
     // Center position for the main project
-    const centerX = 500;
-    const centerY = 300;
+    const centerX = 600;
+    const centerY = 350;
 
-    // Main project node
+    // Categorize dependencies
+    const criticalDeps = data.dependencies.filter(d => d.is_critical);
+    const outdatedDeps = data.dependencies.filter(d => !d.is_critical && d.is_outdated);
+    const healthyDeps = data.dependencies.filter(d => !d.is_critical && !d.is_outdated);
+
+    // Main project node at center
     nodesArr.push({
       id: 'project',
       type: 'dependency',
@@ -55,17 +60,22 @@ export function DependencyTreeCanvas({ data }: DependencyTreeCanvasProps) {
       },
     });
 
-    // Dependencies on the left
-    const deps = data.dependencies;
-    const depSpacing = 80;
-    const depStartY = centerY - ((deps.length - 1) * depSpacing) / 2;
+    const nodeWidth = 180;
+    const nodeHeight = 80;
+    const horizontalGap = 30;
+    const verticalGap = 40;
 
-    deps.forEach((dep, index) => {
+    // Critical dependencies - row above the project (top tier)
+    const criticalRowY = centerY - 180;
+    const criticalRowWidth = criticalDeps.length * (nodeWidth + horizontalGap) - horizontalGap;
+    const criticalStartX = centerX - criticalRowWidth / 2 + nodeWidth / 2;
+
+    criticalDeps.forEach((dep, index) => {
       const nodeId = `dep-${dep.id}`;
       nodesArr.push({
         id: nodeId,
         type: 'dependency',
-        position: { x: centerX - 350, y: depStartY + index * depSpacing },
+        position: { x: criticalStartX + index * (nodeWidth + horizontalGap) - nodeWidth / 2, y: criticalRowY },
         data: {
           label: dep.crate_name,
           type: 'dependency',
@@ -84,32 +94,99 @@ export function DependencyTreeCanvas({ data }: DependencyTreeCanvasProps) {
         source: nodeId,
         target: 'project',
         type: 'smoothstep',
-        animated: dep.is_critical,
-        style: { 
-          stroke: dep.is_outdated 
-            ? dep.months_behind >= 6 
-              ? 'hsl(var(--destructive))' 
-              : 'hsl(45 93% 47%)' // amber
-            : 'hsl(var(--muted-foreground))',
-          strokeWidth: dep.is_critical ? 2 : 1,
-        },
+        animated: true,
+        style: { stroke: 'hsl(var(--destructive))', strokeWidth: 2 },
         markerEnd: {
           type: MarkerType.ArrowClosed,
-          color: dep.is_outdated 
-            ? dep.months_behind >= 6 
-              ? 'hsl(var(--destructive))' 
-              : 'hsl(45 93% 47%)'
-            : 'hsl(var(--muted-foreground))',
+          color: 'hsl(var(--destructive))',
         },
       });
     });
 
-    // Forks/Dependents on the right (placeholder for future crates.io reverse deps)
+    // Outdated dependencies - left column
+    const outdatedColX = centerX - 280;
+    const outdatedColHeight = outdatedDeps.length * (nodeHeight + verticalGap) - verticalGap;
+    const outdatedStartY = centerY - outdatedColHeight / 2 + nodeHeight / 2;
+
+    outdatedDeps.forEach((dep, index) => {
+      const nodeId = `dep-${dep.id}`;
+      nodesArr.push({
+        id: nodeId,
+        type: 'dependency',
+        position: { x: outdatedColX - nodeWidth / 2, y: outdatedStartY + index * (nodeHeight + verticalGap) - nodeHeight / 2 },
+        data: {
+          label: dep.crate_name,
+          type: 'dependency',
+          version: dep.current_version,
+          latestVersion: dep.latest_version,
+          monthsBehind: dep.months_behind,
+          isCritical: dep.is_critical,
+          isOutdated: dep.is_outdated,
+          dependents: dep.crates_io_dependents,
+          dependencyType: dep.dependency_type,
+        },
+      });
+
+      const edgeColor = (dep.months_behind || 0) >= 6 
+        ? 'hsl(var(--destructive))' 
+        : 'hsl(45 93% 47%)';
+
+      edgesArr.push({
+        id: `edge-${nodeId}`,
+        source: nodeId,
+        target: 'project',
+        type: 'smoothstep',
+        style: { stroke: edgeColor, strokeWidth: 1 },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: edgeColor,
+        },
+      });
+    });
+
+    // Healthy dependencies - right column
+    const healthyColX = centerX + 280;
+    const healthyColHeight = healthyDeps.length * (nodeHeight + verticalGap) - verticalGap;
+    const healthyStartY = centerY - healthyColHeight / 2 + nodeHeight / 2;
+
+    healthyDeps.forEach((dep, index) => {
+      const nodeId = `dep-${dep.id}`;
+      nodesArr.push({
+        id: nodeId,
+        type: 'dependency',
+        position: { x: healthyColX - nodeWidth / 2, y: healthyStartY + index * (nodeHeight + verticalGap) - nodeHeight / 2 },
+        data: {
+          label: dep.crate_name,
+          type: 'dependency',
+          version: dep.current_version,
+          latestVersion: dep.latest_version,
+          monthsBehind: dep.months_behind,
+          isCritical: dep.is_critical,
+          isOutdated: dep.is_outdated,
+          dependents: dep.crates_io_dependents,
+          dependencyType: dep.dependency_type,
+        },
+      });
+
+      edgesArr.push({
+        id: `edge-${nodeId}`,
+        source: nodeId,
+        target: 'project',
+        type: 'smoothstep',
+        style: { stroke: 'hsl(var(--primary))', strokeWidth: 1 },
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: 'hsl(var(--primary))',
+        },
+      });
+    });
+
+    // Forks/Dependents below the project
     if (data.githubForks > 0) {
       nodesArr.push({
         id: 'forks',
         type: 'dependency',
-        position: { x: centerX + 350, y: centerY },
+        position: { x: centerX - nodeWidth / 2, y: centerY + 180 },
         data: {
           label: 'GitHub Forks',
           type: 'dependent',
