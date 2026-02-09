@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import logo from '@/assets/logo.png';
 
 const navLinks = [
-  { href: 'https://docs.resilience.dev', label: 'DOCS', external: true },
+  { href: '/readme', label: 'README', external: false },
   { href: '/explorer', label: 'EXPLORER', external: false },
   { href: 'https://grants.resilience.dev', label: 'GRANTS', external: true },
   { href: '/staking', label: 'STAKING', external: false },

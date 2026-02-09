@@ -15,6 +15,7 @@ import XCallback from "./pages/XCallback";
 import Dashboard from "./pages/Dashboard";
 import Staking from "./pages/Staking";
 import MyBonds from "./pages/MyBonds";
+import Readme from "./pages/Readme";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/readme" element={<Readme />} />
               <Route path="/explorer" element={<Explorer />} />
               <Route path="/program/:id" element={<ProgramDetail />} />
               <Route path="/profile/:id" element={<ProfileDetail />} />
