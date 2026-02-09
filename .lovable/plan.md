@@ -1,179 +1,75 @@
 
+# Fix Dependency Analysis: Parameter Name + Enhanced Parsing
 
-# Fix Dependency Analysis: Support Workspace Cargo.toml and Nested Structures
+## Problems Identified
 
-## Problem Identified
+1. **Parameter name mismatch**: The frontend hook (`useDependencyGraph`) likely sends `profileId` (camelCase), but the edge function expects `profile_id` (snake_case). This causes database writes to silently fail.
 
-The dependency analyzer is **failing for almost all projects** because:
+2. **Incomplete Cargo.toml parsing**: Currently only parses the `[dependencies]` section. Missing:
+   - `[workspace.dependencies]` (shared dependencies)
+   - `[dev-dependencies]`
+   - `[build-dependencies]`
+   - Workspace inheritance like `package.workspace = true`
 
-1. **Workspace Cargo.toml** - Many Solana projects use Cargo workspaces where the root `Cargo.toml` only has `[workspace]` with `members = [...]` but no `[dependencies]` section
+3. **OpenBook V2 showing only 3 deps**: The workspace Cargo.toml likely defines shared dependencies in `[workspace.dependencies]`, which are then inherited by member crates using `workspace = true` syntax.
 
-2. **Nested dependency files** - Files are often in subdirectories like:
-   - `programs/protocol-name/Cargo.toml`
-   - `sdk/package.json`
-   - `js/package.json`
-   - `app/package.json`
-   - `client/package.json`
-
-3. **Your Resilience repo** - The analyzer couldn't find any dependency files because they may be in a subdirectory
+4. **Resilience repo structure**: The analyzer cannot find any dependency files. Need to confirm your repo's actual file structure.
 
 ---
 
-## Current Paths Checked
+## Solution 1: Fix Parameter Extraction
 
-| Type | Paths |
-|------|-------|
-| Cargo.toml | `Cargo.toml`, `programs/Cargo.toml`, `program/Cargo.toml` |
-| package.json | `package.json` (root only) |
-| Python | `requirements.txt`, `pyproject.toml` (root only) |
+Update the edge function to accept both parameter naming conventions:
 
----
-
-## Solution: Expand Path Discovery
-
-### Enhanced Path Lists
-
-```text
-Cargo.toml paths:
-- Cargo.toml (root - check for workspace members)
-- programs/*/Cargo.toml (glob pattern simulation)
-- program/Cargo.toml
-- sdk/Cargo.toml
-- cli/Cargo.toml
-
-package.json paths:
-- package.json
-- app/package.json
-- sdk/package.json
-- js/package.json
-- client/package.json
-- packages/core/package.json
-
-Python paths:
-- requirements.txt
-- requirements/base.txt
-- requirements/production.txt
-- pyproject.toml
-- backend/requirements.txt
-- api/requirements.txt
+```typescript
+const { github_url, profile_id, profileId } = await req.json();
+const finalProfileId = profile_id || profileId;
 ```
 
-### Parse Workspace Members
+Then use `finalProfileId` throughout the function.
 
-When root `Cargo.toml` has `[workspace]`, extract member paths and fetch their `Cargo.toml` files:
+---
+
+## Solution 2: Enhanced Cargo.toml Parsing
+
+### Parse `[workspace.dependencies]`
+
+Many workspaces define shared dependencies at the root:
 
 ```toml
-[workspace]
-members = [
-    "programs/my-protocol",
-    "programs/token",
-    "sdk",
-]
+[workspace.dependencies]
+anchor-lang = "0.30.0"
+solana-program = "1.18.0"
 ```
 
-The analyzer will then check each member path for dependencies.
+Member crates then use:
+
+```toml
+[dependencies]
+anchor-lang.workspace = true
+```
+
+### Updated parsing logic:
+
+1. Check for `[workspace.dependencies]` in root Cargo.toml
+2. Parse those shared dependencies
+3. When parsing member Cargo.toml files, resolve `workspace = true` references
+4. Aggregate all unique dependencies
 
 ---
 
-## Technical Implementation
+## Solution 3: Verify Resilience Repo Structure
 
-### File: `supabase/functions/analyze-dependencies/index.ts`
+To debug your Resilience project, I need to know the actual file structure. The analyzer checks these paths:
 
-**1. Add workspace parsing function:**
+| Type | Paths Checked |
+|------|--------------|
+| Cargo.toml | Root, programs/*, program/, sdk/, cli/, core/, lib/ |
+| package.json | Root, app/, sdk/, js/, client/, packages/core/, frontend/, web/, ui/, packages/sdk/ |
+| requirements.txt | Root, requirements/base.txt, backend/, api/, server/, app/ |
+| pyproject.toml | Root, backend/, api/, server/, app/ |
 
-```typescript
-function parseWorkspaceMembers(cargoContent: string): string[] {
-  const match = cargoContent.match(/members\s*=\s*\[([\s\S]*?)\]/);
-  if (!match) return [];
-  
-  const members: string[] = [];
-  const memberStrings = match[1].match(/"([^"]+)"/g);
-  if (memberStrings) {
-    for (const m of memberStrings) {
-      members.push(m.replace(/"/g, ''));
-    }
-  }
-  return members;
-}
-```
-
-**2. Update fetchCargoToml to handle workspaces:**
-
-```typescript
-async function fetchCargoToml(owner: string, repo: string, token: string): Promise<string | null> {
-  const branches = ["main", "master", "develop"];
-  const rootPaths = ["Cargo.toml"];
-  const additionalPaths = [
-    "programs/Cargo.toml",
-    "program/Cargo.toml", 
-    "sdk/Cargo.toml",
-    "cli/Cargo.toml"
-  ];
-  
-  for (const branch of branches) {
-    // First check root for workspace
-    const rootUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/Cargo.toml`;
-    const rootResponse = await fetch(rootUrl, { headers: {...} });
-    
-    if (rootResponse.ok) {
-      const rootContent = await rootResponse.text();
-      
-      // Check if it's a workspace
-      if (rootContent.includes("[workspace]")) {
-        const members = parseWorkspaceMembers(rootContent);
-        if (members.length > 0) {
-          // Aggregate dependencies from all members
-          const allDeps = new Map<string, string>();
-          for (const member of members) {
-            const memberContent = await fetchMemberCargoToml(owner, repo, branch, member, token);
-            if (memberContent) {
-              const deps = parseCargoToml(memberContent);
-              for (const [k, v] of deps) {
-                allDeps.set(k, v);
-              }
-            }
-          }
-          // Return combined result
-          return createCombinedCargoToml(allDeps);
-        }
-      }
-      
-      // Not a workspace - parse normally
-      return rootContent;
-    }
-    
-    // Check additional paths
-    for (const path of additionalPaths) {
-      // ... existing logic
-    }
-  }
-  return null;
-}
-```
-
-**3. Expand package.json paths:**
-
-```typescript
-async function fetchPackageJson(owner: string, repo: string, token: string): Promise<object | null> {
-  const branches = ["main", "master", "develop"];
-  const paths = [
-    "package.json",
-    "app/package.json",
-    "sdk/package.json",
-    "js/package.json",
-    "client/package.json",
-    "packages/core/package.json",
-    "frontend/package.json",
-  ];
-  
-  for (const branch of branches) {
-    for (const path of paths) {
-      // Try each path
-    }
-  }
-  return null;
-}
-```
+**If your dependencies are in a different location**, we need to add that path to the discovery list.
 
 ---
 
@@ -181,24 +77,28 @@ async function fetchPackageJson(owner: string, repo: string, token: string): Pro
 
 | File | Change |
 |------|--------|
-| `supabase/functions/analyze-dependencies/index.ts` | Add workspace parsing, expand path discovery, aggregate dependencies from multiple sources |
+| `supabase/functions/analyze-dependencies/index.ts` | Accept both `profile_id` and `profileId` parameters; add `[workspace.dependencies]` parsing; resolve `workspace = true` inheritance |
 
 ---
 
 ## Expected Outcomes
 
-After this fix:
-
-| Project | Current Result | Expected Result |
-|---------|---------------|-----------------|
-| OpenBook V2 | 0 dependencies | 15+ crates from workspace members |
-| Metaplex Core | 0 dependencies | 20+ crates from mpl-core program |
-| Drift Protocol | 0 dependencies | 30+ crates from programs/* |
-| Resilience | Not found | Dependencies from wherever they exist |
+| Project | Before | After |
+|---------|--------|-------|
+| OpenBook V2 | 3 dependencies | 25-40+ dependencies |
+| Drift Protocol | 0 dependencies | 30+ dependencies |
+| Resilience | 0 dependencies | Depends on actual file structure |
 
 ---
 
-## Re-run Analysis
+## Questions
 
-After deployment, trigger a full refresh to re-analyze all projects with the improved path discovery.
+Before implementing, I need one piece of information:
 
+**What type of project is your Resilience repository?**
+- Is it a Rust/Solana project with Cargo.toml?
+- Is it a JavaScript/TypeScript project with package.json?
+- Is it a Python project?
+- Where are your "3rd party API" dependencies defined?
+
+If you can share a screenshot of your repo's root folder structure or tell me where your dependencies are located, I can ensure the analyzer finds them.
