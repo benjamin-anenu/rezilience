@@ -48,10 +48,11 @@ Deno.serve(async (req) => {
     // Parse request body for selective dimension refresh and batch params
     const body = await req.json().catch(() => ({}));
     const requestedDimensions: string[] = body.dimensions || ['github', 'dependencies', 'governance', 'tvl'];
-    const batchSize: number = Math.min(Math.max(body.batch_size || 10, 1), 50);
+    const batchSize: number = Math.min(Math.max(body.batch_size || 5, 1), 50);
     const offset: number = Math.max(body.offset || 0, 0);
+    const autoChain: boolean = body.auto_chain !== false; // default true
     
-    console.log(`[refresh-all-profiles] Dimensions: ${requestedDimensions.join(', ')}, batch_size: ${batchSize}, offset: ${offset}`);
+    console.log(`[refresh-all-profiles] Dimensions: ${requestedDimensions.join(', ')}, batch_size: ${batchSize}, offset: ${offset}, auto_chain: ${autoChain}`);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -275,6 +276,25 @@ Deno.serve(async (req) => {
     };
 
     console.log(summary.message);
+
+    // Self-chain: fire-and-forget the next batch if there are more profiles
+    if (hasMore && autoChain) {
+      const selfUrl = `${supabaseUrl}/functions/v1/refresh-all-profiles`;
+      console.log(`🔗 Auto-chaining next batch: offset ${nextOffset}`);
+      fetch(selfUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          batch_size: batchSize,
+          offset: nextOffset,
+          dimensions: requestedDimensions,
+          auto_chain: true,
+        }),
+      }).catch((err) => console.error("Auto-chain failed:", err));
+    }
 
     return new Response(JSON.stringify(summary), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
