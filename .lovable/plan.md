@@ -1,41 +1,39 @@
 
 
-# README Page: Expandable Dimension Cards + Updated Overview Description
+# Hero Section: Solana Logo + Dimension of Trust Icons
 
-## Change 1: Make "Four Dimensions of Trust" Cards Expandable
+## Central Node
+Replace the `Shield` icon with an inline SVG of the official Solana logo mark (the "S" parallelogram shape). This will be rendered as a clean SVG path directly in the component -- no external assets needed. The logo will use the `primary` (teal) color to stay on-brand.
 
-Currently the 4 `DimensionCard` components (Brain, Nervous System, Heart, Limbs) at lines 186-214 are static cards with brief descriptions. These will be converted to expandable cards using the existing Collapsible component (or Accordion), with a chevron icon indicating expandability.
+The central node will also get a subtle double-border treatment and a stronger glow effect (`glow-signal-strong`) for a more premium, institutional feel.
 
-### What changes:
+## Orbital Nodes -- Four Dimensions of Trust
+Each orbital node maps to a dimension from the scoring methodology, using semantically precise icons per the design system rules:
 
-**Modify the `DimensionCard` component** (lines 577-612) to accept an `expandedContent` prop (array of bullet points + a question line) and use `Collapsible` from Radix to toggle visibility. Add a `ChevronDown` icon that rotates when expanded.
+| Position | Dimension | Icon | Rationale |
+|---|---|---|---|
+| Top-left | Brain (Code Activity, 40%) | `GitBranch` | Represents development branching and code activity |
+| Top-right | Nervous System (Dependencies, 25%) | `Network` | Represents interconnected dependency supply chain |
+| Bottom-left | Heart (Governance, 20%) | `Heart` | Per design system: Heart = community/governance |
+| Bottom-right | Limbs (Economic, 15%) | `Coins` | Per design system: Coins = financial/staked metrics |
 
-**Update the 4 `DimensionCard` usages** (lines 186-214) to pass the detailed content:
+Each orbital node will get a small label beneath it (hidden on smaller screens) showing the dimension name in `font-mono text-[10px]` for added sophistication.
 
-- **Brain (40%):** Question: "Is development continuously happening?" Bullets: GitHub commits, Pull requests, Release frequency, Contributor consistency, Days since last commit
-- **Nervous System (25%):** Question: "Is the dependency supply chain being continuously maintained?" Bullets: Crates.io version freshness, Security advisory tracking, Maintenance lag, Vulnerability response
-- **Heart (20%):** Question: "Is governance continuously participating?" Bullets: Multisig/DAO transaction frequency, Last governance action, Decentralization level, Governance participation rate
-- **Limbs (15%):** Question: "Is there sustained economic commitment?" Bullets: TVL, Risk ratio, Market share, User activity
-
-### Visual behavior:
-- Cards show the existing icon, title, subtitle, weight badge, and short description by default
-- A small chevron icon (rotating on open) signals expandability
-- Clicking anywhere on the card toggles the expanded content below the description
-- Expanded content shows the guiding question in primary color, followed by bullet points
-
-## Change 2: Update Overview Description
-
-Replace the text at lines 121-125 from the current description to:
-
-**New text:**
-> **Resilience** is a decentralized assurance layer and indexing service that combines off-chain development signals (GitHub, dependencies, bytecode) with on-chain infrastructure activity to create immutable, verifiable proof-of-maintenance and continuity for Solana projects.
-
-The heading "Resilience: Decentralized Assurance Layer for Solana" won't be added as a separate heading since the Overview section already has a section header. Only the paragraph content will be updated.
+## Additional Polish
+- Add a subtle `pulse-subtle` animation to the central Solana logo node
+- Improve connection lines with dashed stroke and slight opacity for a more technical/blueprint feel
+- Add a faint rotating ring around the central node using CSS animation for a "scanning" effect
 
 ## Technical Details
 
-### Files modified:
-1. **`src/pages/Readme.tsx`** -- Update `DimensionCard` component to support collapsible content, update the 4 card usages with expanded data, and update the overview paragraph text.
+### File modified:
+- `src/pages/...` -- No, just **`src/components/landing/HeroSection.tsx`** (lines ~136-170)
 
-### No new dependencies needed -- uses existing `Collapsible` from `@radix-ui/react-collapsible` and `ChevronDown` from `lucide-react` (both already imported/available).
+### Changes:
+1. Replace `Shield` import with `GitBranch`, `Network`, `Heart`, `Coins` from lucide-react
+2. Replace the central Shield icon with an inline SVG Solana logo path
+3. Update the 4 orbital node icons to match the dimension mapping
+4. Add dimension labels below each orbital node
+5. Update SVG connection lines to use `strokeDasharray` for a technical look
+6. Add CSS class for a subtle rotating ring animation (inline keyframes or in index.css)
 
