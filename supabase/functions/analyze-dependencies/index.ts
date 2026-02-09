@@ -108,6 +108,7 @@ async function fetchPackageJson(owner: string, repo: string, token: string): Pro
   for (const branch of branches) {
     try {
       const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/package.json`;
+      console.log(`Checking for package.json at: ${url}`);
       const response = await fetch(url, {
         headers: {
           Authorization: `token ${token}`,
@@ -116,14 +117,18 @@ async function fetchPackageJson(owner: string, repo: string, token: string): Pro
         },
       });
       
+      console.log(`Response status for ${branch}/package.json: ${response.status}`);
+      
       if (response.ok) {
         console.log(`Found package.json at ${branch}/package.json`);
         return await response.json();
       }
-    } catch {
+    } catch (error) {
+      console.error(`Error fetching ${branch}/package.json:`, error);
       continue;
     }
   }
+  console.log("No package.json found in any branch");
   return null;
 }
 
