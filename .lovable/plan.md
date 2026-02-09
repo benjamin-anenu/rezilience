@@ -1,151 +1,204 @@
 
-# Dependency Tree Organization and Explorer Improvements
 
-## Overview
+# Fix Dependency Analysis: Support Workspace Cargo.toml and Nested Structures
 
-This plan addresses four issues:
-1. **Stale test data** - The 121 forks and npm dependencies are from the `sindresorhus/is` test URL, not your actual project
-2. **Dependency tree layout** - The current vertical list looks cluttered with many dependencies
-3. **Table pagination** - Reduce from 100 to 60 items per page
-4. **Table columns** - Consolidate columns to prevent horizontal scrolling
+## Problem Identified
 
----
+The dependency analyzer is **failing for almost all projects** because:
 
-## Issue 1: Stale Test Data (121 Forks)
+1. **Workspace Cargo.toml** - Many Solana projects use Cargo workspaces where the root `Cargo.toml` only has `[workspace]` with `members = [...]` but no `[dependencies]` section
 
-**What happened:** When you tested with `sindresorhus/is`, the analyzer stored 14 npm dependencies and the profile picked up `github_forks: 121` from that popular repo. When we restored your URL, the forks count wasn't refreshed.
+2. **Nested dependency files** - Files are often in subdirectories like:
+   - `programs/protocol-name/Cargo.toml`
+   - `sdk/package.json`
+   - `js/package.json`
+   - `app/package.json`
+   - `client/package.json`
 
-**Solution:** 
-- Clear the test dependency data from the database
-- Trigger a fresh analysis of your actual `benjamin-anenu/resilience` repository
-- The forks count will update correctly during the next GitHub refresh
-
-**Requires:** Database update to clear stale data and re-run analysis
+3. **Your Resilience repo** - The analyzer couldn't find any dependency files because they may be in a subdirectory
 
 ---
 
-## Issue 2: Dependency Tree Layout Redesign
+## Current Paths Checked
 
-**Current:** All dependencies stack vertically on the left with edges crossing. With 14+ nodes it looks cluttered.
+| Type | Paths |
+|------|-------|
+| Cargo.toml | `Cargo.toml`, `programs/Cargo.toml`, `program/Cargo.toml` |
+| package.json | `package.json` (root only) |
+| Python | `requirements.txt`, `pyproject.toml` (root only) |
 
-**Proposed:** Use a tiered radial/hierarchical layout:
+---
+
+## Solution: Expand Path Discovery
+
+### Enhanced Path Lists
 
 ```text
-                    ┌─────────────┐
-                    │ CRITICAL    │  (Top row - red border)
-                    └─────────────┘
-                          │
-    ┌───────┬───────┬─────┴─────┬───────┬───────┐
-    │ dep   │ dep   │  PROJECT  │ dep   │ dep   │
-    └───────┴───────┴───────────┴───────┴───────┘
-                          │
-    ┌───────┬───────┬─────┴─────┬───────┬───────┐
-    │ dep   │ dep   │ dep       │ dep   │ dep   │
-    └───────┴───────┴───────────┴───────┴───────┘
-                    
-                    ┌─────────────┐
-                    │ GitHub      │  (Right side - forks)
-                    │ Forks       │
-                    └─────────────┘
+Cargo.toml paths:
+- Cargo.toml (root - check for workspace members)
+- programs/*/Cargo.toml (glob pattern simulation)
+- program/Cargo.toml
+- sdk/Cargo.toml
+- cli/Cargo.toml
+
+package.json paths:
+- package.json
+- app/package.json
+- sdk/package.json
+- js/package.json
+- client/package.json
+- packages/core/package.json
+
+Python paths:
+- requirements.txt
+- requirements/base.txt
+- requirements/production.txt
+- pyproject.toml
+- backend/requirements.txt
+- api/requirements.txt
 ```
 
-**Changes to `DependencyTreeCanvas.tsx`:**
-- Project node at center
-- Critical dependencies in a row above the project
-- Outdated dependencies (red/amber) in columns left of project
-- Up-to-date dependencies in columns right of project
-- Forks node below or to the right
-- Use `dagre` layout algorithm for automatic positioning
+### Parse Workspace Members
 
----
+When root `Cargo.toml` has `[workspace]`, extract member paths and fetch their `Cargo.toml` files:
 
-## Issue 3: Reduce Pagination to 60 Items
-
-**File:** `src/pages/Explorer.tsx`
-
-**Change:** 
-```typescript
-// Line 17: Change from
-const ITEMS_PER_PAGE = 100;
-// to
-const ITEMS_PER_PAGE = 60;
+```toml
+[workspace]
+members = [
+    "programs/my-protocol",
+    "programs/token",
+    "sdk",
+]
 ```
 
----
-
-## Issue 4: Table Column Consolidation
-
-**Current columns (13 total):**
-1. RANK
-2. PROJECT  
-3. TYPE (hidden lg)
-4. PROGRAM ID (hidden lg)
-5. SCORE
-6. HEALTH (hidden xl)
-7. TREND (hidden xl)
-8. LIVENESS (hidden md)
-9. DECAY (hidden xl)
-10. STATUS (hidden lg)
-11. STAKED (hidden md)
-12. LAST ACTIVITY (hidden lg)
-13. EYE toggle
-
-**Proposed consolidation (9 columns):**
-
-| Column | Content | Visibility |
-|--------|---------|------------|
-| RANK | # + movement arrow | Always |
-| PROJECT | Name + verified badge | Always |
-| SCORE | Score number + health dots (D/G/T) | Always |
-| TREND | Sparkline | Always |
-| LIVENESS | Badge | md+ |
-| STATUS | Verified/Unclaimed badge | lg+ |
-| STAKED | Amount | lg+ |
-| ACTIVITY | Date or "Claim" button | xl+ |
-| EYE | Popover toggle | Always |
-
-**Key consolidations:**
-- Merge HEALTH dots into SCORE column (compact)
-- Remove DECAY (redundant with LIVENESS) - keep in popover
-- Remove TYPE (available in popover)
-- Remove PROGRAM ID (available in popover)
-- Move TREND to always-visible (important signal)
+The analyzer will then check each member path for dependencies.
 
 ---
 
 ## Technical Implementation
 
-### Files Changed
+### File: `supabase/functions/analyze-dependencies/index.ts`
 
-| File | Change |
-|------|--------|
-| `src/pages/Explorer.tsx` | Change `ITEMS_PER_PAGE` to 60 |
-| `src/components/explorer/ProgramLeaderboard.tsx` | Remove TYPE, PROGRAM ID, DECAY columns; move HEALTH into SCORE |
-| `src/components/explorer/LeaderboardRow.tsx` | Consolidate cells; show health dots inline with score |
-| `src/components/dependency-tree/DependencyTreeCanvas.tsx` | Implement tiered horizontal layout with critical deps on top |
+**1. Add workspace parsing function:**
 
-### Database Cleanup (One-time)
-
-```sql
--- Clear test dependency data
-DELETE FROM dependency_graph 
-WHERE source_profile_id = '553dd0d0-2f62-4891-9b09-e1358c5dc541';
-
--- Reset forks count (will be refreshed on next sync)
-UPDATE claimed_profiles 
-SET github_forks = NULL 
-WHERE id = '553dd0d0-2f62-4891-9b09-e1358c5dc541';
+```typescript
+function parseWorkspaceMembers(cargoContent: string): string[] {
+  const match = cargoContent.match(/members\s*=\s*\[([\s\S]*?)\]/);
+  if (!match) return [];
+  
+  const members: string[] = [];
+  const memberStrings = match[1].match(/"([^"]+)"/g);
+  if (memberStrings) {
+    for (const m of memberStrings) {
+      members.push(m.replace(/"/g, ''));
+    }
+  }
+  return members;
+}
 ```
 
-Then trigger the `analyze-dependencies` function to re-analyze your actual repo.
+**2. Update fetchCargoToml to handle workspaces:**
+
+```typescript
+async function fetchCargoToml(owner: string, repo: string, token: string): Promise<string | null> {
+  const branches = ["main", "master", "develop"];
+  const rootPaths = ["Cargo.toml"];
+  const additionalPaths = [
+    "programs/Cargo.toml",
+    "program/Cargo.toml", 
+    "sdk/Cargo.toml",
+    "cli/Cargo.toml"
+  ];
+  
+  for (const branch of branches) {
+    // First check root for workspace
+    const rootUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/Cargo.toml`;
+    const rootResponse = await fetch(rootUrl, { headers: {...} });
+    
+    if (rootResponse.ok) {
+      const rootContent = await rootResponse.text();
+      
+      // Check if it's a workspace
+      if (rootContent.includes("[workspace]")) {
+        const members = parseWorkspaceMembers(rootContent);
+        if (members.length > 0) {
+          // Aggregate dependencies from all members
+          const allDeps = new Map<string, string>();
+          for (const member of members) {
+            const memberContent = await fetchMemberCargoToml(owner, repo, branch, member, token);
+            if (memberContent) {
+              const deps = parseCargoToml(memberContent);
+              for (const [k, v] of deps) {
+                allDeps.set(k, v);
+              }
+            }
+          }
+          // Return combined result
+          return createCombinedCargoToml(allDeps);
+        }
+      }
+      
+      // Not a workspace - parse normally
+      return rootContent;
+    }
+    
+    // Check additional paths
+    for (const path of additionalPaths) {
+      // ... existing logic
+    }
+  }
+  return null;
+}
+```
+
+**3. Expand package.json paths:**
+
+```typescript
+async function fetchPackageJson(owner: string, repo: string, token: string): Promise<object | null> {
+  const branches = ["main", "master", "develop"];
+  const paths = [
+    "package.json",
+    "app/package.json",
+    "sdk/package.json",
+    "js/package.json",
+    "client/package.json",
+    "packages/core/package.json",
+    "frontend/package.json",
+  ];
+  
+  for (const branch of branches) {
+    for (const path of paths) {
+      // Try each path
+    }
+  }
+  return null;
+}
+```
 
 ---
 
-## RLS Policy Gap (Info)
+## Files Changed
 
-The dependency tree is already publicly accessible. The current RLS policies allow:
-- Unclaimed profiles: Public read
-- Verified profiles: Public read
-- Dependency graph: Full public read
+| File | Change |
+|------|--------|
+| `supabase/functions/analyze-dependencies/index.ts` | Add workspace parsing, expand path discovery, aggregate dependencies from multiple sources |
 
-There is a minor gap: **claimed but unverified** profiles may not be visible to the public. If needed, we can add a policy for "claimed profiles are publicly readable" to cover this edge case.
+---
+
+## Expected Outcomes
+
+After this fix:
+
+| Project | Current Result | Expected Result |
+|---------|---------------|-----------------|
+| OpenBook V2 | 0 dependencies | 15+ crates from workspace members |
+| Metaplex Core | 0 dependencies | 20+ crates from mpl-core program |
+| Drift Protocol | 0 dependencies | 30+ crates from programs/* |
+| Resilience | Not found | Dependencies from wherever they exist |
+
+---
+
+## Re-run Analysis
+
+After deployment, trigger a full refresh to re-analyze all projects with the improved path discovery.
+
