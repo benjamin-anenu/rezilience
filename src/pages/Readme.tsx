@@ -15,6 +15,11 @@ import {
   Brain,
   Heart,
   Coins,
+  Map,
+  CheckCircle2,
+  ArrowRight,
+  Network,
+  GitBranch,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
@@ -398,7 +403,7 @@ export default function Readme() {
 
             {/* For Builders Section */}
             <section id="for-builders" className="scroll-mt-24">
-              <SectionHeader icon={Rocket} title="For Project Builders" />
+              <SectionHeader icon={Rocket} title="For Solana Builders" />
               
               <Card className="card-premium">
                 <CardContent className="pt-6">
@@ -433,35 +438,317 @@ export default function Readme() {
                     />
                   </ol>
 
-                  <div className="mt-8 pt-6 border-t border-border">
-                    <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground mb-4">
-                      Improving Your Score
-                    </h3>
-                    <ul className="space-y-2 text-muted-foreground">
-                      <li className="flex items-start gap-2">
-                        <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-1" />
-                        Maintain consistent commit activity (avoid long gaps)
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-1" />
-                        Keep dependencies updated and address security advisories
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-1" />
-                        Use a multisig or DAO for governance (Squads, Realms)
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-1" />
-                        Publish releases regularly instead of just pushing commits
-                      </li>
-                      <li className="flex items-start gap-2">
-                        <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-1" />
-                        Engage multiple contributors (3+ for ACTIVE status)
-                      </li>
-                    </ul>
-                  </div>
                 </CardContent>
               </Card>
+
+              {/* How to Improve Continuity Card */}
+              <Card className="card-premium mt-6">
+                <CardContent className="pt-6">
+                  <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground mb-2">
+                    How to Improve Continuity
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    To Increase Your Resilience Score (Prove Continuity):
+                  </p>
+
+                  <Accordion type="multiple" className="space-y-2">
+                    <AccordionItem value="brain" className="border border-border rounded-sm px-4 bg-card/50">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary shrink-0">1</div>
+                          <div className="flex items-center gap-2">
+                            <Brain className="h-4 w-4 text-primary" />
+                            <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Brain Continuity</span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ul className="space-y-2 text-sm text-muted-foreground ml-12">
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Commit code consistently (every 2-3 days)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Merge PRs regularly (not batch updates)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Release versions formally (not just commits)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Maintain 3+ active contributors (team continuity)</li>
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="nervous" className="border border-border rounded-sm px-4 bg-card/50">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary shrink-0">2</div>
+                          <div className="flex items-center gap-2">
+                            <Network className="h-4 w-4 text-primary" />
+                            <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Nervous System Continuity</span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ul className="space-y-2 text-sm text-muted-foreground ml-12">
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Run <code className="font-mono text-primary">cargo update</code> monthly (keep dependencies fresh)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Address security advisories immediately (not delayed)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Monitor crates.io for new versions (stay current)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Test updated dependencies before deploying</li>
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="heart" className="border border-border rounded-sm px-4 bg-card/50">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary shrink-0">3</div>
+                          <div className="flex items-center gap-2">
+                            <Heart className="h-4 w-4 text-primary" />
+                            <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Heart Continuity</span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ul className="space-y-2 text-sm text-muted-foreground ml-12">
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Use multisig or DAO governance (Squads, Realms)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Vote on proposals regularly (5+ votes/month)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Maintain multiple signers (decentralization)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Publish governance decisions publicly</li>
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="limbs" className="border border-border rounded-sm px-4 bg-card/50">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary shrink-0">4</div>
+                          <div className="flex items-center gap-2">
+                            <Coins className="h-4 w-4 text-primary" />
+                            <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Limbs Continuity</span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ul className="space-y-2 text-sm text-muted-foreground ml-12">
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Maintain economic activity (actual usage, not fake TVL)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Match maintenance effort to TVL (responsible risk)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Track and improve user retention</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Diversify user base (not one whale)</li>
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="overall" className="border border-border rounded-sm px-4 bg-card/50">
+                      <AccordionTrigger className="hover:no-underline">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary shrink-0">5</div>
+                          <div className="flex items-center gap-2">
+                            <GitBranch className="h-4 w-4 text-primary" />
+                            <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Overall Continuity</span>
+                          </div>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <ul className="space-y-2 text-sm text-muted-foreground ml-12">
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Post "Building in Public" updates (X/Twitter)</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Set Commitment Lock milestones publicly</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Respond to issues and community questions</li>
+                          <li className="flex items-start gap-2"><ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />Maintain consistent activity (not sporadic)</li>
+                        </ul>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
+                </CardContent>
+              </Card>
+            </section>
+
+            {/* Product Roadmap Section */}
+            <section id="roadmap" className="scroll-mt-24">
+              <SectionHeader icon={Map} title="Product Roadmap" />
+
+              <Accordion type="single" collapsible defaultValue="phase-1" className="space-y-4">
+                {/* Phase 1 */}
+                <AccordionItem value="phase-1" className="border border-border rounded-sm bg-card/50">
+                  <AccordionTrigger className="px-6 hover:no-underline">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Badge className="bg-chart-4/20 text-chart-4 border-chart-4/30 font-mono text-xs">COMPLETE</Badge>
+                      <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Phase 1: Resilience Registry</span>
+                      <span className="text-xs text-muted-foreground ml-auto mr-4 font-mono">Months 1-3</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6">
+                    <p className="text-sm text-primary font-medium mb-3">"Proof-of-Maintenance for All Solana Infrastructure"</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Public good foundation layer that creates transparency around project continuity across Solana.
+                    </p>
+                    <div className="space-y-2 mb-6">
+                      {[
+                        'Automated scoring for 2,847+ protocols',
+                        'GitHub + Crates.io + DeFiLlama + Solana RPC integration',
+                        'Public Explorer with sortable leaderboard',
+                        'Heartbeat Dashboard with continuity trends',
+                        'X integration for builder profiles',
+                        'Verified builder badges ("Ownership Handshake")',
+                        'Zero-proof baseline scoring methodology',
+                        'Tier classification (TITAN to CRITICAL)',
+                        'Continuity decay calculations',
+                        'Health dimension indicators',
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className="h-4 w-4 text-chart-4 shrink-0" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-sm bg-muted/30 p-4 border border-border">
+                      <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">IMPACT</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div><p className="font-mono text-lg font-bold text-primary">500+</p><p className="text-xs text-muted-foreground">Verified Scores</p></div>
+                        <div><p className="font-mono text-lg font-bold text-primary">5,000+</p><p className="text-xs text-muted-foreground">Monthly Visitors</p></div>
+                        <div><p className="font-mono text-lg font-bold text-primary">50+</p><p className="text-xs text-muted-foreground">Claimed Profiles</p></div>
+                        <div><p className="font-mono text-lg font-bold text-primary">$200K</p><p className="text-xs text-muted-foreground">Solana Grant</p></div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Phase 2 */}
+                <AccordionItem value="phase-2" className="border border-border rounded-sm bg-card/50">
+                  <AccordionTrigger className="px-6 hover:no-underline">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Badge className="bg-primary/20 text-primary border-primary/30 font-mono text-xs">IN PROGRESS</Badge>
+                      <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Phase 2: Economic Commitment Layer</span>
+                      <span className="text-xs text-muted-foreground ml-auto mr-4 font-mono">Months 4-6</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6">
+                    <p className="text-sm text-primary font-medium mb-3">"Skin-in-the-Game for Builders & Believers"</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Freemium model where developers earn yield by maintaining continuity.
+                    </p>
+                    <div className="space-y-2 mb-6">
+                      {[
+                        'Staking mechanism (lock tokens on projects)',
+                        'Conditional yield (5-15% annual based on Resilience Score continuity)',
+                        'Yield pauses if score drops (incentive alignment)',
+                        '"Building in Public" gallery (X posts + embedded videos)',
+                        'Commitment Lock feature (public milestone tracking)',
+                        'Portfolio tracking for stakers',
+                        'Continuity leaderboard (top-maintained projects)',
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-sm bg-muted/30 p-4 border border-border">
+                      <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">HOW IT WORKS</p>
+                      <div className="space-y-3">
+                        {[
+                          { step: '1', text: 'Developer maintains protocol → Resilience Score stays healthy' },
+                          { step: '2', text: 'Investor stakes on developer → Earns yield continuously' },
+                          { step: '3', text: 'Maintenance stops → Score drops → Yield pauses' },
+                        ].map((item, i) => (
+                          <div key={i} className="flex items-center gap-3 text-sm">
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary shrink-0">{item.step}</div>
+                            <span className="text-muted-foreground">{item.text}</span>
+                          </div>
+                        ))}
+                        <div className="flex items-center gap-3 text-sm mt-2 pt-2 border-t border-border">
+                          <ArrowRight className="h-4 w-4 text-primary shrink-0" />
+                          <span className="text-foreground font-medium">Outcome: Aligned incentives between builders and believers</span>
+                        </div>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Phase 3 */}
+                <AccordionItem value="phase-3" className="border border-border rounded-sm bg-card/50">
+                  <AccordionTrigger className="px-6 hover:no-underline">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Badge variant="outline" className="font-mono text-xs">PLANNED</Badge>
+                      <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Phase 3: Ecosystem Integration</span>
+                      <span className="text-xs text-muted-foreground ml-auto mr-4 font-mono">Months 7-12</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6">
+                    <p className="text-sm text-primary font-medium mb-3">"Infrastructure API for Continuity Management"</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Enterprise SaaS layer where wallets, DEXs, and institutions consume Resilience continuity data in real-time.
+                    </p>
+                    <div className="space-y-2 mb-6">
+                      {[
+                        'Enterprise API with webhooks (real-time score updates)',
+                        'Continuity alerts (instant notifications of changes)',
+                        'Wallet integration (show continuity status during swaps)',
+                        'DEX integration (risk warnings for low-continuity projects)',
+                        'Enterprise dashboard (API keys, alerts, compliance)',
+                        'Compliance reporting (prove your continuity to regulators)',
+                        'White-label dashboard (projects embed their continuity)',
+                        'Historical continuity charts (90+ days of trend data)',
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-sm bg-muted/30 p-4 border border-border">
+                      <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">USE CASES</p>
+                      <div className="space-y-2 text-sm text-muted-foreground">
+                        <p><strong className="text-foreground">Phantom:</strong> Show Resilience Score and continuity on token interactions</p>
+                        <p><strong className="text-foreground">Jupiter:</strong> Warn traders if they're swapping low-continuity tokens</p>
+                        <p><strong className="text-foreground">Institutions:</strong> Monitor continuous commitment of portfolio projects</p>
+                        <p><strong className="text-foreground">Audit Firms:</strong> Define scope based on continuity dependencies</p>
+                        <p><strong className="text-foreground">Protocols:</strong> Showcase continuity history to investors</p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+
+                {/* Phase 4 */}
+                <AccordionItem value="phase-4" className="border border-border rounded-sm bg-card/50">
+                  <AccordionTrigger className="px-6 hover:no-underline">
+                    <div className="flex items-center gap-3 flex-1">
+                      <Badge variant="outline" className="font-mono text-xs">PLANNED</Badge>
+                      <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Phase 4: AEGIS Supply Chain Monitor</span>
+                      <span className="text-xs text-muted-foreground ml-auto mr-4 font-mono">Months 13+</span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="px-6">
+                    <p className="text-sm text-primary font-medium mb-3">"Real-Time Continuity Cascade Detection"</p>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      Enterprise risk management layer that maps live CPI dependencies and prevents cascading failures across Solana.
+                    </p>
+                    <div className="space-y-2 mb-6">
+                      {[
+                        'Geyser plugin for real-time CPI indexing',
+                        'Graph database of all on-chain dependencies',
+                        'Continuity cascade detection',
+                        'Supply chain continuity alerts',
+                        'Institutional risk dashboard',
+                        'Compliance reporting (prove you\'re not exposed)',
+                        'Audit scope definition (based on continuity dependencies)',
+                        'Risk scoring (which protocols are most at-risk?)',
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="rounded-sm bg-muted/30 p-4 border border-border">
+                      <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">HOW AEGIS LEVERAGES PHASES 1-3</p>
+                      <div className="space-y-2 font-mono text-sm">
+                        <p className="text-muted-foreground">Phase 1: <span className="text-foreground">Immutable Continuity History</span></p>
+                        <div className="pl-4 text-muted-foreground/50">↓</div>
+                        <p className="text-muted-foreground">Phase 2: <span className="text-foreground">Economic Continuity Signals</span></p>
+                        <div className="pl-4 text-muted-foreground/50">↓</div>
+                        <p className="text-muted-foreground">Phase 3: <span className="text-foreground">Real-Time API Infrastructure</span></p>
+                        <div className="pl-4 text-muted-foreground/50">↓</div>
+                        <p className="text-primary font-medium">Phase 4: Cascade Risk Prediction</p>
+                        <p className="text-xs text-muted-foreground mt-1">(combines all signals to prevent failures)</p>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </section>
 
             {/* Data Provenance Section */}

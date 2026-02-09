@@ -25,8 +25,9 @@ const tocItems: TOCItem[] = [
   { id: 'status-icons', label: 'Status Icons', level: 2 },
   { id: 'tier-labels', label: 'Tier Labels', level: 2 },
   { id: 'features', label: 'Platform Features', level: 1 },
-  { id: 'for-builders', label: 'For Protocol Builders', level: 1 },
+  { id: 'for-builders', label: 'For Solana Builders', level: 1 },
   { id: 'data-provenance', label: 'Data Provenance', level: 1 },
+  { id: 'roadmap', label: 'Product Roadmap', level: 1 },
   { id: 'faq', label: 'FAQ', level: 1 },
 ];
 
