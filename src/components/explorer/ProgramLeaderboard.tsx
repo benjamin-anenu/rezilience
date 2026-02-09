@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, TrendingUp, TrendingDown, Minus, Sparkles, Cloud, AlertTriangle } from 'lucide-react';
+import { Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, TrendingUp, TrendingDown, Minus, Sparkles, Cloud, AlertTriangle, TrendingDownIcon } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -134,6 +134,21 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
     });
   };
 
+  // Calculate decay percentage from github_last_activity
+  // Formula: Daily decay = 1 - e^(-0.00167 * days) expressed as percentage
+  const calculateDecayPercentage = (lastActivityDate: string | null): number => {
+    if (!lastActivityDate) return 100; // Max decay if no activity
+    const days = (Date.now() - new Date(lastActivityDate).getTime()) / (1000 * 60 * 60 * 24);
+    return (1 - Math.exp(-0.00167 * days)) * 100;
+  };
+
+  // Color coding for decay percentage
+  const getDecayColor = (percentage: number): string => {
+    if (percentage <= 2) return 'text-primary'; // Green - healthy
+    if (percentage <= 10) return 'text-amber-500'; // Amber - moderate
+    return 'text-destructive'; // Red - severe
+  };
+
   const getMovementIndicator = (movement: MovementType | undefined) => {
     switch (movement) {
       case 'up':
@@ -181,16 +196,18 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
             <TableHead className="text-right">SCORE</TableHead>
             <TableHead className="hidden xl:table-cell w-20">TREND</TableHead>
             <TableHead className="hidden md:table-cell">LIVENESS</TableHead>
+            <TableHead className="hidden xl:table-cell">DECAY</TableHead>
             <TableHead className="hidden lg:table-cell">STATUS</TableHead>
             <TableHead className="hidden md:table-cell text-right">STAKED</TableHead>
             <TableHead className="hidden lg:table-cell">LAST ACTIVITY</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {projects.map((project, index) => {
+        {projects.map((project, index) => {
             const programIdInfo = formatProgramId(project.program_id, project.id);
             const movement = rankData?.movements[project.id];
             const scoreHistory = rankData?.scoreHistories[project.id] || [project.resilience_score];
+            const decayPercentage = calculateDecayPercentage(project.github_last_activity);
             
             return (
               <TableRow
@@ -274,6 +291,14 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
                   {getStatusBadge(project.liveness_status)}
+                </TableCell>
+                <TableCell className="hidden xl:table-cell">
+                  <div className="flex items-center gap-1">
+                    <TrendingDownIcon className={cn('h-3 w-3', getDecayColor(decayPercentage))} />
+                    <span className={cn('font-mono text-sm', getDecayColor(decayPercentage))}>
+                      {decayPercentage.toFixed(1)}%
+                    </span>
+                  </div>
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
                   {getOriginalityBadge(project)}

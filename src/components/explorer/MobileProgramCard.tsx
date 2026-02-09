@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { Activity, AlertCircle, CheckCircle, ShieldCheck, TrendingUp, TrendingDown, Minus, Sparkles } from 'lucide-react';
+import { Activity, AlertCircle, CheckCircle, ShieldCheck, TrendingUp, TrendingDown, Minus, Sparkles, TrendingDownIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { Sparkline } from './Sparkline';
@@ -19,16 +19,31 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
   const navigate = useNavigate();
 
   const getScoreColor = (score: number) => {
-    if (score >= 85) return 'text-primary';
-    if (score >= 70) return 'text-foreground';
+    if (score >= 70) return 'text-primary';
+    if (score >= 40) return 'text-amber-500';
     return 'text-destructive';
   };
 
   const getProgressColor = (score: number) => {
-    if (score >= 85) return 'bg-primary';
-    if (score >= 70) return 'bg-foreground';
+    if (score >= 70) return 'bg-primary';
+    if (score >= 40) return 'bg-amber-500';
     return 'bg-destructive';
   };
+
+  // Calculate decay percentage from github_last_activity
+  const calculateDecayPercentage = (lastActivityDate: string | null): number => {
+    if (!lastActivityDate) return 100;
+    const days = (Date.now() - new Date(lastActivityDate).getTime()) / (1000 * 60 * 60 * 24);
+    return (1 - Math.exp(-0.00167 * days)) * 100;
+  };
+
+  const getDecayColor = (percentage: number): string => {
+    if (percentage <= 2) return 'text-primary';
+    if (percentage <= 10) return 'text-amber-500';
+    return 'text-destructive';
+  };
+
+  const decayPercentage = calculateDecayPercentage(project.github_last_activity);
 
   const getStatusBadge = (status: LivenessStatus) => {
     switch (status) {
@@ -147,6 +162,15 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
             className={cn('h-full transition-all', getProgressColor(project.resilience_score))}
             style={{ width: `${project.resilience_score}%` }}
           />
+        </div>
+      </div>
+
+      {/* Decay Rate */}
+      <div className="mb-3 flex items-center justify-between text-xs">
+        <span className="uppercase tracking-wider text-muted-foreground">Decay Rate</span>
+        <div className={cn('flex items-center gap-1 font-mono', getDecayColor(decayPercentage))}>
+          <TrendingDownIcon className="h-3 w-3" />
+          <span>{decayPercentage.toFixed(1)}%</span>
         </div>
       </div>
 

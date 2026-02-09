@@ -14,6 +14,7 @@ export interface ExplorerProject {
   verified: boolean;
   github_org_url: string | null;
   github_last_commit: string | null;
+  github_last_activity: string | null;
   resilience_score: number;
   liveness_status: LivenessStatus;
   is_fork: boolean;
@@ -86,6 +87,7 @@ export function useExplorerProjects() {
         verified: profile.verified,
         github_org_url: profile.github_org_url,
         github_last_commit: profile.github_last_commit,
+        github_last_activity: profile.github_last_activity,
         resilience_score: profile.resilience_score || 0,
         liveness_status: (profile.liveness_status as LivenessStatus) || 'STALE',
         is_fork: profile.github_is_fork || false,
