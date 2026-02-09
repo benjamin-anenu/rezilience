@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import { Eye } from 'lucide-react';
 import {
   Table,
@@ -19,33 +19,15 @@ interface ProgramLeaderboardProps {
 
 export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
   const isMobile = useIsMobile();
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Fetch rank movements and score histories
   const profileIds = projects.map(p => p.id);
   const { data: rankData } = useRankMovement(profileIds);
 
-  // Memoized toggle handler to prevent recreation on each render
-  const toggleRowExpansion = useCallback((projectId: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpandedRows(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(projectId)) {
-        newSet.delete(projectId);
-      } else {
-        newSet.add(projectId);
-      }
-      return newSet;
-    });
-  }, []);
-
   // Render mobile cards on small screens
   if (isMobile) {
     return <MobileProgramCards projects={projects} rankData={rankData} />;
   }
-
-  // Total number of columns for colspan
-  const totalColumns = 13;
 
   return (
     <div className="rounded-sm border border-border">
@@ -77,9 +59,6 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
               index={index}
               movement={rankData?.movements[project.id]}
               scoreHistory={rankData?.scoreHistories[project.id] || [project.resilience_score]}
-              isExpanded={expandedRows.has(project.id)}
-              onToggleExpand={toggleRowExpansion}
-              totalColumns={totalColumns}
             />
           ))}
         </TableBody>
