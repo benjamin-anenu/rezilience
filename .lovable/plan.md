@@ -1,64 +1,73 @@
 
 
-# Add "Claiming & Verification" Documentation to README
+# Restructure README: Registration vs. Claiming
 
-## Location
+## The Problem
 
-Inside the existing **"For Solana Builders"** section (`id="for-builders"`), between the current "How to Join the Registry" steps card and the "How to Improve Continuity" accordion card. This is the natural home because:
-- It's already where builders learn about joining the registry
-- The existing 5 steps are a high-level overview; this new section provides the deep-dive on the most critical step (authority verification)
-- It flows logically: Join -> Verify -> Improve
+The current README has three separate sections that blur the distinction between **registering a new project** and **claiming a pre-listed project**. The user wants:
 
-## New Content: Two New Cards
+1. **"How to Register"** -- Expanded to fully explain the off-chain GitHub verification (public URL analysis vs OAuth for private repos)
+2. **"Authority Verification"** renamed to **"Claim a Project on Registry"** -- This is specifically for projects already listed in the registry (pre-seeded). It should cover BOTH on-chain (wallet authority handshake) AND off-chain (GitHub OAuth) claim paths
+3. **Blacklist** applies to both claim paths
 
-### Card 1: "Authority Verification (Ownership Handshake)"
-A detailed walkthrough of the cryptographic verification process, structured as a visual step-by-step flow:
+## What Changes
 
-1. **Connect Wallet** -- Connect the Solana wallet that holds the program's upgrade authority
-2. **Eligibility Check** -- System checks if the wallet has been blacklisted from claiming this project
-3. **On-Chain Authority Lookup** -- Fetches the program's `upgradeAuthority` from Solana RPC via the `programData` account
-4. **Authority Match** -- Three possible outcomes:
-   - **Direct Match** -- Wallet IS the upgrade authority (proceed to signing)
-   - **Multisig Detected** -- Authority is a Squads multisig; user can verify as a member or open Squads dashboard
-   - **Mismatch** -- Wallet does NOT match; failed attempt is recorded
-5. **SIWS Signature** -- Sign a structured "Resilience Registry Claim" message (no on-chain transaction) to cryptographically prove ownership
-6. **Profile Locked** -- Authority wallet is permanently associated with the profile
+### Card 1: "How to Join the Registry" (EXPAND existing, lines ~410-450)
 
-Also includes a callout box explaining:
-- Immutable programs (no upgrade authority) cannot be claimed via this flow
-- Multisig support covers Squads v3 and v4
-- The signature does NOT authorize any blockchain transaction
+Expand the 5 steps to give more detail on the GitHub verification sub-paths in Step 2:
 
-### Card 2: "Anti-Abuse: Claim Blacklist"
-Documents the security system that prevents unauthorized claims:
+1. **Connect X Account** -- Authenticate via X (Twitter) OAuth 2.0 PKCE to establish builder identity
+2. **Link GitHub Repository** -- Expanded into two clearly documented sub-paths:
+   - **Public repo path**: Paste the URL, system runs instant server-side analysis (stars, forks, contributors, commit velocity, liveness). No GitHub login required. Enables "Direct Submit"
+   - **Private repo path**: Click "Connect GitHub" to initiate OAuth handshake. System requests `read:user`, `read:org`, and `repo` scopes. Server-side token exchange fetches metrics securely. Org owners must grant the Resilience OAuth App access for org-owned repos
+3. **Complete Profile** -- Description, category, team, social links, media
+4. **Verify Authority (Optional)** -- For on-chain programs only; sign with program authority wallet
+5. **Get Analyzed** -- System computes Resilience Score using the same formula (GitHub x Deps x Gov x TVL)
 
-- Every failed authority verification is recorded (wallet + project pair)
-- After **3 failed attempts**: Warning displayed showing remaining attempts
-- After **5 failed attempts**: Wallet is **permanently blocked** from claiming that specific project
-- Blacklist is per-project, per-wallet (not global)
-- Legitimate owners who are blocked can contact support with proof of ownership
+Add a callout box under Step 2 with the public vs private repo distinction and the org-level access note.
 
-Includes a visual escalation table:
+### Card 2: Rename "Authority Verification" to "Claim a Project on Registry" (lines ~452-552)
 
-| Attempts | System Response |
-|----------|----------------|
-| 1-2 | Silent tracking |
-| 3-4 | Warning: "X attempts remaining" |
-| 5+ | Permanent ban for this project |
+This section is for projects **already listed** in the registry (pre-seeded with metadata). Restructure to cover both claim paths:
 
-## Table of Contents Update
+**Intro paragraph**: Explain that the registry is pre-seeded with 166+ Solana protocols. When you claim one, the system pre-populates your registration with existing metadata. But to prevent unauthorized claims, verification is required.
 
-Add two new sub-items under "For Solana Builders" in `TableOfContents.tsx`:
-- `{ id: 'authority-verification', label: 'Authority Verification', level: 2 }`
-- `{ id: 'claim-blacklist', label: 'Claim Blacklist', level: 2 }`
+**Two verification paths presented side by side or sequentially:**
 
-## Screenshots
+**Path A: On-Chain Programs (has Program ID)**
+- Steps 1-6 remain as-is (Connect Wallet, Eligibility Check, On-Chain Lookup, Authority Match, SIWS Signature, Profile Locked)
+- Outcome: VERIFIED TITAN badge
 
-Unfortunately, I cannot take screenshots and embed them as static images in the README page. However, since this is a live app, I will instead include a prominent CTA button linking directly to `/claim-profile` so readers can experience the flow themselves.
+**Path B: Off-Chain Projects (no Program ID)**
+- Step 1: Connect X Account (establish identity)
+- Step 2: Connect GitHub via OAuth -- system verifies the connected GitHub account owns or has admin access to the repository linked to the pre-seeded profile
+- Step 3: Repository match confirmed -- GitHub username/org matches the repo owner
+- Step 4: Profile claimed -- project transitions from "unclaimed" to "claimed" with an "Off-chain" badge
+- Outcome: Claimed badge (no VERIFIED TITAN since there is no on-chain authority to verify)
+
+**Callout box updates:**
+- Off-chain claims require GitHub OAuth (cannot use public URL paste alone, since ownership must be proven)
+- On-chain claims require the authority wallet
+- Both paths are subject to the blacklist system
+
+### Card 3: "Anti-Abuse: Claim Blacklist" (lines ~554-608)
+
+Update the intro text to clarify it covers both on-chain and off-chain claim attempts. Minor text tweak only.
+
+### Table of Contents Update
+
+Rename the `authority-verification` entry label from "Authority Verification" to "Claim a Project" in `TableOfContents.tsx`. Add the `offchain-verification` entry is not needed since both paths live under the same card now.
 
 ## Files Modified
 
-1. **`src/pages/Readme.tsx`** -- Add two new cards inside the `for-builders` section (between lines ~445 and ~448)
-2. **`src/components/readme/TableOfContents.tsx`** -- Add 2 new TOC entries after the "For Solana Builders" item
-3. **`src/pages/Readme.tsx`** -- Add `Shield`, `Ban`, `KeyRound`, `Wallet` to the icon imports (some may already be imported)
+1. **`src/pages/Readme.tsx`**
+   - Expand Step 2 in "How to Join the Registry" with public/private repo sub-paths and callout
+   - Rename "Authority Verification (Ownership Handshake)" to "Claim a Project on Registry"
+   - Add intro paragraph about pre-seeded registry
+   - Add "Path B: Off-Chain Projects" section after the existing on-chain steps
+   - Update blacklist intro text to mention both paths
+   - Add `Globe` icon to imports
+
+2. **`src/components/readme/TableOfContents.tsx`**
+   - Rename `authority-verification` label from "Authority Verification" to "Claim a Project"
 
