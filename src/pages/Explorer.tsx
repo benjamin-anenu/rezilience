@@ -1,9 +1,20 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/layout';
 import { EcosystemStats, EcosystemHeatmap, SearchBar, ProgramLeaderboard } from '@/components/explorer';
 import { useExplorerProjects } from '@/hooks/useExplorerProjects';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+  PaginationEllipsis,
+} from '@/components/ui/pagination';
+
+const ITEMS_PER_PAGE = 100;
 
 const Explorer = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -11,6 +22,7 @@ const Explorer = () => {
   const [verificationFilter, setVerificationFilter] = useState('all');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
 
   const { data: projects, isLoading, error } = useExplorerProjects();
 
@@ -40,6 +52,36 @@ const Explorer = () => {
       return matchesSearch && matchesStatus && matchesVerification && matchesCategory && matchesCountry;
     });
   }, [projects, searchQuery, statusFilter, verificationFilter, categoryFilter, countryFilter]);
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPrograms.length / ITEMS_PER_PAGE);
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const endIndex = startIndex + ITEMS_PER_PAGE;
+  const paginatedPrograms = filteredPrograms.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter, verificationFilter, categoryFilter, countryFilter]);
+
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 3) pages.push('ellipsis');
+      
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      
+      if (currentPage < totalPages - 2) pages.push('ellipsis');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
 
   return (
     <Layout>
@@ -97,7 +139,7 @@ const Explorer = () => {
               <Skeleton className="h-5 w-32" />
             ) : (
               <p className="text-sm text-muted-foreground">
-                Showing <span className="font-mono text-foreground">{filteredPrograms.length}</span> registered protocols
+                Showing <span className="font-mono text-foreground">{startIndex + 1}-{Math.min(endIndex, filteredPrograms.length)}</span> of <span className="font-mono text-foreground">{filteredPrograms.length}</span> registered protocols
               </p>
             )}
           </div>
@@ -139,8 +181,47 @@ const Explorer = () => {
           )}
 
           {/* Leaderboard */}
-          {!isLoading && !error && filteredPrograms.length > 0 && (
-            <ProgramLeaderboard projects={filteredPrograms} />
+          {!isLoading && !error && paginatedPrograms.length > 0 && (
+            <ProgramLeaderboard projects={paginatedPrograms} />
+          )}
+
+          {/* Pagination Controls */}
+          {!isLoading && !error && totalPages > 1 && (
+            <div className="mt-6">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      className={currentPage === 1 ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                  
+                  {getPageNumbers().map((page, idx) => (
+                    <PaginationItem key={idx}>
+                      {page === 'ellipsis' ? (
+                        <PaginationEllipsis />
+                      ) : (
+                        <PaginationLink
+                          onClick={() => setCurrentPage(page)}
+                          isActive={currentPage === page}
+                          className="cursor-pointer"
+                        >
+                          {page}
+                        </PaginationLink>
+                      )}
+                    </PaginationItem>
+                  ))}
+                  
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      className={currentPage === totalPages ? 'pointer-events-none opacity-50' : 'cursor-pointer'}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+            </div>
           )}
             </TabsContent>
           </Tabs>
