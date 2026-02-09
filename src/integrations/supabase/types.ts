@@ -115,6 +115,7 @@ export type Database = {
           description: string | null
           discord_url: string | null
           discovered_at: string | null
+          discovery_source: string | null
           github_access_token: string | null
           github_analyzed_at: string | null
           github_commit_velocity: number | null
@@ -196,6 +197,7 @@ export type Database = {
           description?: string | null
           discord_url?: string | null
           discovered_at?: string | null
+          discovery_source?: string | null
           github_access_token?: string | null
           github_analyzed_at?: string | null
           github_commit_velocity?: number | null
@@ -277,6 +279,7 @@ export type Database = {
           description?: string | null
           discord_url?: string | null
           discovered_at?: string | null
+          discovery_source?: string | null
           github_access_token?: string | null
           github_analyzed_at?: string | null
           github_commit_velocity?: number | null

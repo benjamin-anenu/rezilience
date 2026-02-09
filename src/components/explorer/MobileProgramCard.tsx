@@ -1,6 +1,12 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, AlertCircle, CheckCircle, ShieldCheck, TrendingUp, TrendingDown, Minus, Sparkles, TrendingDownIcon } from 'lucide-react';
+import { 
+  Activity, AlertCircle, CheckCircle, ShieldCheck, TrendingUp, 
+  TrendingDown, Sparkles, TrendingDownIcon, ChevronDown, ChevronUp,
+  Globe, Users, ExternalLink, Lock, Github
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Sparkline } from './Sparkline';
 import { DimensionHealthIndicators } from './DimensionHealthIndicators';
@@ -8,6 +14,13 @@ import { PROJECT_CATEGORIES } from '@/types';
 import type { ExplorerProject } from '@/hooks/useExplorerProjects';
 import type { LivenessStatus } from '@/types/database';
 import type { MovementType } from '@/hooks/useRankMovement';
+
+// Custom X icon since Lucide doesn't have one
+const XIcon = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+  </svg>
+);
 
 interface MobileProgramCardProps {
   project: ExplorerProject;
@@ -18,6 +31,10 @@ interface MobileProgramCardProps {
 
 export function MobileProgramCard({ project, rank, movement, scoreHistory }: MobileProgramCardProps) {
   const navigate = useNavigate();
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Detect private repo (unclaimed + no github analysis)
+  const isPrivateRepo = project.claimStatus === 'unclaimed' && !project.github_analyzed_at;
 
   const getScoreColor = (score: number) => {
     if (score >= 70) return 'text-primary';
@@ -86,7 +103,7 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
       case 'new':
         return <Sparkles className="h-3 w-3 text-amber-500" />;
       default:
-        return <Minus className="h-3 w-3 text-muted-foreground" />;
+        return null;
     }
   };
 
@@ -95,6 +112,11 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
       ? project.program_id 
       : project.id;
     navigate(`/program/${routeId}`);
+  };
+
+  const toggleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsExpanded(!isExpanded);
   };
 
   return (
@@ -114,7 +136,14 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
               {getCategoryLabel(project.category)}
             </Badge>
           )}
-          {getStatusBadge(project.liveness_status)}
+          {isPrivateRepo ? (
+            <Badge variant="outline" className="border-muted-foreground/50 text-muted-foreground text-xs">
+              <Lock className="mr-1 h-3 w-3" />
+              Private
+            </Badge>
+          ) : (
+            getStatusBadge(project.liveness_status)
+          )}
         </div>
       </div>
 
@@ -152,34 +181,50 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
             Resilience Score
           </span>
           <div className="flex items-center gap-3">
-            <Sparkline values={scoreHistory || [project.resilience_score]} width={50} height={16} />
-            <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
-              {Math.round(project.resilience_score)}/100
-            </span>
+            {isPrivateRepo ? (
+              <Lock className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <>
+                <Sparkline values={scoreHistory || [project.resilience_score]} width={50} height={16} />
+                <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
+                  {Math.round(project.resilience_score)}/100
+                </span>
+              </>
+            )}
           </div>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-          <div 
-            className={cn('h-full transition-all', getProgressColor(project.resilience_score))}
-            style={{ width: `${project.resilience_score}%` }}
-          />
-        </div>
+        {!isPrivateRepo && (
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div 
+              className={cn('h-full transition-all', getProgressColor(project.resilience_score))}
+              style={{ width: `${project.resilience_score}%` }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Decay Rate and Health Indicators */}
       <div className="mb-3 flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
           <span className="uppercase tracking-wider text-muted-foreground">Health</span>
-          <DimensionHealthIndicators
-            dependencyScore={project.dependency_health_score}
-            governanceTx30d={project.governance_tx_30d}
-            tvlUsd={project.tvl_usd}
-          />
+          {isPrivateRepo ? (
+            <Lock className="h-3 w-3 text-muted-foreground" />
+          ) : (
+            <DimensionHealthIndicators
+              dependencyScore={project.dependency_health_score}
+              governanceTx30d={project.governance_tx_30d}
+              tvlUsd={project.tvl_usd}
+            />
+          )}
         </div>
-        <div className={cn('flex items-center gap-1 font-mono', getDecayColor(decayPercentage))}>
-          <TrendingDownIcon className="h-3 w-3" />
-          <span>{decayPercentage.toFixed(1)}%</span>
-        </div>
+        {isPrivateRepo ? (
+          <Lock className="h-3 w-3 text-muted-foreground" />
+        ) : (
+          <div className={cn('flex items-center gap-1 font-mono', getDecayColor(decayPercentage))}>
+            <TrendingDownIcon className="h-3 w-3" />
+            <span>{decayPercentage.toFixed(1)}%</span>
+          </div>
+        )}
       </div>
 
       {/* Bottom Stats Row */}
@@ -199,6 +244,111 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
             <span>Unverified</span>
           )}
         </span>
+      </div>
+
+      {/* Details Toggle Button */}
+      <div className="mt-3 pt-3 border-t border-border">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full h-7 text-xs text-muted-foreground hover:text-primary"
+          onClick={toggleExpand}
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="h-3 w-3 mr-1" />
+              Hide Details
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-3 w-3 mr-1" />
+              Show Details
+            </>
+          )}
+        </Button>
+
+        {/* Expanded Details */}
+        {isExpanded && (
+          <div className="mt-3 pt-3 border-t border-border space-y-3" onClick={(e) => e.stopPropagation()}>
+            {/* GitHub Status */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Github className="h-4 w-4" />
+                <span className="text-xs">GitHub</span>
+              </div>
+              <Badge 
+                variant="outline" 
+                className={isPrivateRepo 
+                  ? 'border-amber-500/50 text-amber-500 text-xs' 
+                  : 'border-primary/50 text-primary text-xs'
+                }
+              >
+                {isPrivateRepo ? 'PRIVATE' : 'PUBLIC'}
+              </Badge>
+            </div>
+
+            {/* Website */}
+            {project.website_url && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Globe className="h-4 w-4" />
+                  <span className="text-xs">Website</span>
+                </div>
+                <a 
+                  href={project.website_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                >
+                  Visit
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </div>
+            )}
+
+            {/* Contributors */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <Users className="h-4 w-4" />
+                <span className="text-xs">Contributors</span>
+              </div>
+              <span className="text-xs text-foreground">
+                {project.github_contributors || '—'}
+              </span>
+            </div>
+
+            {/* Source/Hackathon */}
+            {project.discovery_source && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Sparkles className="h-4 w-4 text-amber-500" />
+                  <span className="text-xs">Source</span>
+                </div>
+                <Badge variant="outline" className="border-amber-500/50 text-amber-500 text-xs">
+                  {project.discovery_source}
+                </Badge>
+              </div>
+            )}
+
+            {/* X Handle */}
+            {project.x_username && (
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <XIcon className="h-4 w-4" />
+                  <span className="text-xs">X Handle</span>
+                </div>
+                <a 
+                  href={`https://x.com/${project.x_username}`} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-primary hover:underline"
+                >
+                  @{project.x_username}
+                </a>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
