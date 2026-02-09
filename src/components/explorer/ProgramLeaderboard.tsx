@@ -141,14 +141,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
       case 'down':
         return <TrendingDown className="h-3 w-3 text-destructive" />;
       case 'new':
-        return (
-          <Tooltip>
-            <TooltipTrigger>
-              <Sparkles className="h-3 w-3 text-amber-500" />
-            </TooltipTrigger>
-            <TooltipContent>New entry</TooltipContent>
-          </Tooltip>
-        );
+        return <Sparkles className="h-3 w-3 text-amber-500" />;
       default:
         return <Minus className="h-3 w-3 text-muted-foreground" />;
     }
@@ -230,8 +223,10 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
                     </Tooltip>
                     {project.verified && (
                       <Tooltip>
-                        <TooltipTrigger>
-                          <ShieldCheck className="h-4 w-4 shrink-0 text-primary" />
+                        <TooltipTrigger asChild>
+                          <span className="shrink-0">
+                            <ShieldCheck className="h-4 w-4 text-primary" />
+                          </span>
                         </TooltipTrigger>
                         <TooltipContent>
                           <p>Verified Project</p>
