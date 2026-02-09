@@ -1,300 +1,153 @@
 
-# Unclaimed Profiles System + Failed Claim Blacklist
+# Auto-Analyze Unclaimed Profiles with GitHub URLs
 
-## Overview
+## The Problem
 
-This plan implements two key features:
-1. **Unclaimed Profiles**: Pre-seeded projects that appear in the registry with an "UNCLAIMED" badge, waiting to be claimed by their rightful owners
-2. **Claim Attempt Blacklist**: A security mechanism that tracks failed claim attempts and blacklists wallets that repeatedly fail authority verification for specific projects
+Currently, unclaimed profiles like Drift Protocol V2 sit in the registry with:
+- `resilience_score: 0`
+- `liveness_status: STALE`
+- `github_analyzed_at: null`
 
----
+This gives users no visibility into the actual health of these projects, making the registry look incomplete and the data stale.
 
-## Current State Analysis
+## The Solution
 
-The database already has the infrastructure for unclaimed profiles:
-- `claim_status` column exists with values: `'claimed'`, `'unclaimed'`, `'pending'`
-- `verified` boolean exists (should be `false` for unclaimed profiles)
-- `x_user_id` is nullable (unclaimed profiles have no owner)
+Automatically analyze unclaimed profiles that have a public GitHub URL, keeping their metrics fresh just like claimed profiles. This provides:
 
-Currently, the Explorer only shows `verified = true` profiles. Unclaimed profiles need:
-- `claim_status = 'unclaimed'`
-- `verified = false` (no owner has claimed yet)
-- Display in Explorer with special "UNCLAIMED" badge
-- "CLAIM THIS PROJECT" CTA that leads to claim flow
+1. **Accurate Discovery** - Users see real liveness status (ACTIVE/STALE/DECAYING) for unclaimed projects
+2. **Trend Tracking** - Score history is captured for sparkline charts in Explorer
+3. **Informed Claims** - Builders see current health before claiming
+4. **Active Registry** - No "dead" entries with zero scores
 
 ---
 
-## Technical Implementation
+## Technical Approach
 
-### Part 1: Unclaimed Profile Data Model
+### Option A: Extend Existing Cron Job (Recommended)
 
-**Key Fields for Unclaimed Profiles**:
-```text
-claim_status = 'unclaimed'
-verified = false
-x_user_id = NULL (no owner)
-claimer_wallet = NULL
-authority_verified_at = NULL
+Modify `refresh-all-profiles` to also include unclaimed profiles with GitHub URLs:
 
--- Pre-populated data (from seed):
-project_name
-description
-category
-program_id
-github_org_url
-website_url
-```
-
-**When Claimed Successfully**:
-```text
-claim_status = 'claimed'
-verified = true
-x_user_id = <claimer's X ID>
-claimer_wallet = <verified authority wallet>
-authority_verified_at = <timestamp>
-```
-
-### Part 2: Blacklist Table for Failed Claims
-
-**New Table: `claim_blacklist`**
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | UUID | Primary key |
-| profile_id | UUID | The unclaimed profile being claimed |
-| wallet_address | VARCHAR | The wallet that failed verification |
-| attempt_count | INTEGER | Number of failed attempts |
-| first_attempt_at | TIMESTAMP | First failed attempt time |
-| last_attempt_at | TIMESTAMP | Most recent failed attempt time |
-| is_permanent_ban | BOOLEAN | If true, wallet is globally banned |
-| created_at | TIMESTAMP | Record creation time |
-
-**RLS Policies**:
-- Read: Only backend functions can read (service role)
-- Write: Only backend functions can write (via edge function)
-
-### Part 3: Updated Explorer to Show Unclaimed Profiles
-
-**File**: `src/hooks/useExplorerProjects.ts`
-
-Modify to fetch both:
-- `verified = true` (claimed profiles)
-- `claim_status = 'unclaimed'` (pre-seeded unclaimed profiles)
-
-Add new field to `ExplorerProject`:
-```typescript
-claimStatus: 'claimed' | 'unclaimed' | 'pending';
-```
-
-### Part 4: UI Updates for Unclaimed Badge
-
-**File**: `src/components/explorer/ProgramLeaderboard.tsx`
-
-Add "UNCLAIMED" badge for profiles where `claim_status === 'unclaimed'`:
-- Amber/Yellow colored badge
-- "CLAIM THIS PROJECT" CTA button
-- Clicking routes to `/claim-profile?program_id={id}&project={name}`
-
-### Part 5: Claim Flow for Pre-Seeded Projects
-
-When a user clicks "CLAIM THIS PROJECT" on an unclaimed profile:
-
-1. Route to `/claim-profile` with pre-populated data
-2. User authenticates with X (Step 1)
-3. User reviews/updates core identity (Step 2) - pre-populated from seed
-4. User connects wallet and verifies authority (Step 2b)
-5. **Blacklist Check**: Before verification, check if wallet is blacklisted for this profile
-6. If authority verification **fails**:
-   - Record attempt in `claim_blacklist`
-   - If `attempt_count >= 3`: Show "You are not the owner. Further attempts may result in permanent ban."
-   - If `attempt_count >= 5`: Permanently blacklist wallet for this project
-7. If authority verification **succeeds**:
-   - Update existing profile (not create new)
-   - Set `claim_status = 'claimed'`, `verified = true`
-   - Clear any blacklist entries for this wallet/profile combo
-
-### Part 6: Edge Function Updates
-
-**New Edge Function: `check-claim-blacklist`**
-
-```text
-POST /check-claim-blacklist
-Body: { profile_id: string, wallet_address: string }
-Response: { 
-  isBlacklisted: boolean,
-  attemptCount: number,
-  isPermanentBan: boolean,
-  message?: string
-}
-```
-
-**Updated: `verify-program-authority`**
-
-After verification failure, record the attempt:
-1. Check if wallet is already permanently banned
-2. If not, increment attempt count
-3. Return appropriate warning message based on attempt count
-
-### Part 7: Insert Drift Protocol as Unclaimed
-
-**SQL Insert**:
+**Current Query:**
 ```sql
-INSERT INTO claimed_profiles (
-  project_name,
-  description,
-  category,
-  program_id,
-  github_org_url,
-  website_url,
-  claim_status,
-  verified,
-  resilience_score,
-  liveness_status
-) VALUES (
-  'Drift Protocol V2',
-  'Perpetual futures, spot DEX, and lending with cross-margin',
-  'defi',
-  'dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH',
-  'https://github.com/drift-labs/protocol-v2',
-  'https://drift.trade',
-  'unclaimed',
-  false,
-  0,
-  'STALE'
-);
+SELECT id, project_name, github_org_url 
+FROM claimed_profiles 
+WHERE verified = true 
+AND github_org_url IS NOT NULL
 ```
+
+**New Query:**
+```sql
+SELECT id, project_name, github_org_url 
+FROM claimed_profiles 
+WHERE (verified = true OR claim_status = 'unclaimed')
+AND github_org_url IS NOT NULL
+```
+
+This is the simplest approach - one line change in the edge function.
+
+### Option B: Immediate Analysis on Insert (Additional)
+
+When seeding a new unclaimed profile, trigger an immediate analysis so it appears with real data right away:
+
+1. Add a database trigger or modify the seed process
+2. Call `analyze-github-repo` immediately after insert
+3. Profile shows up with real metrics from day one
 
 ---
 
-## Files to Create
+## Implementation Details
 
-1. `supabase/functions/check-claim-blacklist/index.ts` - Check if wallet is blacklisted
-2. `supabase/functions/record-claim-attempt/index.ts` - Record failed claim attempt
+### Part 1: Update refresh-all-profiles
+
+**File:** `supabase/functions/refresh-all-profiles/index.ts`
+
+Change line 29 from:
+```typescript
+.eq("verified", true)
+```
+
+To:
+```typescript
+.or("verified.eq.true,claim_status.eq.unclaimed")
+```
+
+This single change ensures:
+- All verified (claimed) profiles get refreshed
+- All unclaimed profiles with GitHub URLs get refreshed
+- Score history is captured for trend charts
+- Liveness status stays accurate
+
+### Part 2: Immediate Analysis for New Unclaimed Profiles
+
+Create a utility function to analyze a profile immediately after seeding:
+
+**Approach:** When inserting unclaimed profiles (like Drift), immediately call the analyze function to populate metrics.
+
+For the existing Drift Protocol entry, we can trigger a manual analysis to populate its data now.
+
+### Part 3: Auto-Refresh on Explorer View (Optional Enhancement)
+
+The Explorer page could trigger background refreshes for stale unclaimed profiles when they're viewed, similar to how the profile detail page works.
+
+---
 
 ## Files to Modify
 
-1. `src/hooks/useExplorerProjects.ts` - Include unclaimed profiles in query
-2. `src/components/explorer/ProgramLeaderboard.tsx` - Add UNCLAIMED badge and CTA
-3. `src/pages/ClaimProfile.tsx` - Handle claiming pre-seeded profiles (update vs insert)
-4. `src/components/claim/AuthorityVerificationModal.tsx` - Check blacklist before verification
-5. `supabase/functions/verify-program-authority/index.ts` - Record failed attempts
-6. `src/hooks/useClaimedProfiles.ts` - Add hook for unclaimed profile by ID
+| File | Change |
+|------|--------|
+| `supabase/functions/refresh-all-profiles/index.ts` | Update query to include unclaimed profiles |
+
+## Files to Create (Optional)
+
+| File | Purpose |
+|------|---------|
+| `supabase/functions/seed-unclaimed-profile/index.ts` | Helper to seed + immediately analyze unclaimed profiles |
 
 ---
 
-## Database Changes Required
+## Immediate Action: Analyze Drift Protocol
 
-1. **New table: `claim_blacklist`** - Tracks failed claim attempts per wallet/project
-2. **Enable RLS** on `claim_blacklist` - Service role only access
-3. **Insert Drift Protocol** as first unclaimed profile
+After updating the cron job, we can immediately trigger an analysis for Drift Protocol V2 to populate its real metrics:
 
----
-
-## User Flow Diagram
-
-```text
-UNCLAIMED PROFILE IN REGISTRY
-         |
-         v
-   [CLAIM THIS PROJECT]
-         |
-         v
-   X Authentication
-         |
-         v
-   Connect Wallet
-         |
-         v
-   +------------------+
-   | Check Blacklist  |
-   +------------------+
-         |
-    +----+----+
-    |         |
- Banned    OK
-    |         |
-    v         v
- [STOP]   Verify Authority
-          |
-     +----+----+
-     |         |
-  FAIL      SUCCESS
-     |         |
-     v         v
- Record     Update Profile:
- Attempt    - verified = true
-     |      - claim_status = 'claimed'
-     v      - x_user_id = <user>
- Show Warning
- (3+ attempts: stern warning)
- (5+ attempts: permanent ban)
+```
+POST /analyze-github-repo
+{
+  "github_url": "https://github.com/drift-labs/protocol-v2",
+  "profile_id": "27bb7693-d7c8-47a1-b8da-f0d7a9730f7a"
+}
 ```
 
----
-
-## Badge States in Explorer
-
-| State | Badge | Color | CTA |
-|-------|-------|-------|-----|
-| Unclaimed | UNCLAIMED | Amber/Yellow | CLAIM THIS PROJECT |
-| Claimed (Authority) | VERIFIED TITAN | Cyan | View Profile |
-| Claimed (Multisig) | VERIFIED TITAN (MS) | Cyan | View Profile |
-| Claimed (No Authority) | REGISTERED | Grey | View Profile |
+This will:
+- Calculate the real resilience score
+- Determine liveness status (likely ACTIVE given Drift's activity)
+- Populate all GitHub metrics (stars, forks, contributors, etc.)
+- Create a score history entry for trend charts
 
 ---
 
-## Security Considerations
+## Expected Outcome
 
-1. **Rate Limiting**: Blacklist prevents brute-force claim attempts
-2. **Wallet-Specific**: Blacklist is per-wallet per-project, not global (unless permanent ban)
-3. **Clear Path**: Legitimate owners are not affected by other users' failed attempts
-4. **Service Role Only**: Blacklist table is not accessible from client
-5. **Audit Trail**: All attempts are logged with timestamps
-
----
-
-## Implementation Phases
-
-**Phase A (COMPLETED)**:
-1. ✅ Create `claim_blacklist` table with RLS
-2. ✅ Insert Drift Protocol as unclaimed 
-3. ✅ Update Explorer to show unclaimed profiles (useExplorerProjects.ts)
-4. ✅ Add UNCLAIMED badge and CTA (ProgramLeaderboard.tsx)
-5. ✅ Add new RLS policy for reading unclaimed profiles
-
-**Phase B (COMPLETED)**:
-6. ✅ Create blacklist check edge function (check-claim-blacklist)
-7. ✅ Create record attempt edge function (record-claim-attempt)
-8. ✅ Add useClaimBlacklist hook for frontend integration
-9. ✅ Update ClaimProfile to handle pre-seeded projects (update vs insert)
-10. ✅ Integrate blacklist checks into authority verification flow
-11. ✅ Show warning messages for repeated failures
-12. ✅ Add useUnclaimedProfile hook for fetching pre-seeded data
+After implementation, Drift Protocol V2 in the Explorer will show:
+- Real resilience score (likely 60-80+ given their activity)
+- Accurate liveness badge (likely "ACTIVE")
+- Stars, forks, contributors data
+- Sparkline trend chart (after a few cron cycles)
+- "UNCLAIMED" badge still visible
+- "Claim This" CTA still available
 
 ---
 
 ## Testing Checklist
 
-- Verify Drift Protocol appears in Explorer with UNCLAIMED badge
-- Verify clicking "CLAIM THIS PROJECT" routes to claim flow with pre-populated data
-- Test successful claim converts unclaimed to claimed profile
-- Test failed authority verification records blacklist entry
-- Test 3rd failed attempt shows warning message
-- Test 5th failed attempt triggers permanent ban
-- Test banned wallet cannot attempt claim again
-- Test different wallet can still claim same project
-- Test legitimate owner can claim after others have been blacklisted
+- Verify refresh-all-profiles includes unclaimed profiles
+- Trigger manual analysis for Drift Protocol
+- Confirm Drift shows real metrics in Explorer
+- Verify score history is being captured
+- Check sparkline chart shows data after refresh cycles
+- Ensure claimed profiles still refresh normally
 
 ---
 
-## Estimated Implementation Time
+## Summary
 
-- Database Migration (blacklist table): 30 minutes
-- Insert Drift Protocol: 15 minutes
-- Explorer Updates (badge, CTA): 1-2 hours
-- Blacklist Edge Functions: 2-3 hours
-- ClaimProfile Updates: 2-3 hours
-- Authority Modal Integration: 1-2 hours
-- Testing: 2-3 hours
-
-**Total**: 1-1.5 days of focused development
+This is a minimal change (one line in the cron job) with maximum impact. All unclaimed profiles with GitHub URLs will be actively monitored, making the registry feel alive and providing real value to users browsing for projects to claim or support.
