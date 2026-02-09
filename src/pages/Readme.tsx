@@ -10,11 +10,13 @@ import {
   HelpCircle,
   ExternalLink,
   ChevronRight,
+  ChevronDown,
   Zap,
   Brain,
   Heart,
   Coins,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -119,9 +121,9 @@ export default function Readme() {
               <Card className="card-premium">
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground leading-relaxed mb-4">
-                    <strong className="text-foreground">Resilience</strong> is a decentralized project health registry 
-                    for the Solana ecosystem. We aggregate on-chain and off-chain data to create transparent, 
-                    real-time trust signals for infrastructure projects.
+                    <strong className="text-foreground">Resilience</strong> is a decentralized assurance layer and indexing 
+                    service that combines off-chain development signals (GitHub, dependencies, bytecode) with on-chain 
+                    infrastructure activity to create immutable, verifiable proof-of-maintenance and continuity for Solana projects.
                   </p>
                   <p className="text-muted-foreground leading-relaxed mb-4">
                     Our core belief: <strong className="text-primary">"Reputation cannot be forked."</strong> While 
@@ -189,6 +191,14 @@ export default function Readme() {
                     subtitle="Code Activity"
                     description="GitHub commits, contributors, PRs, and release velocity"
                     weight="40%"
+                    question="Is development continuously happening?"
+                    bullets={[
+                      "GitHub commits (sustained activity)",
+                      "Pull requests (ongoing code review)",
+                      "Release frequency (regular deployments)",
+                      "Contributor consistency (team continuity)",
+                      "Days since last commit (recency signal)",
+                    ]}
                   />
                   <DimensionCard
                     icon={Zap}
@@ -196,6 +206,13 @@ export default function Readme() {
                     subtitle="Dependencies"
                     description="Supply chain health, outdated crates, vulnerabilities"
                     weight="25%"
+                    question="Is the dependency supply chain being continuously maintained?"
+                    bullets={[
+                      "Crates.io version freshness (not rotting dependencies)",
+                      "Security advisory tracking (staying current)",
+                      "Maintenance lag (how behind are you?)",
+                      "Vulnerability response (do they fix critical issues?)",
+                    ]}
                   />
                   <DimensionCard
                     icon={Heart}
@@ -203,6 +220,13 @@ export default function Readme() {
                     subtitle="Governance"
                     description="Multisig/DAO activity, decentralization level"
                     weight="20%"
+                    question="Is governance continuously participating?"
+                    bullets={[
+                      "Multisig/DAO transaction frequency (active governance)",
+                      "Last governance action (recency)",
+                      "Decentralization level (not founder-controlled)",
+                      "Governance participation rate (are people actually voting?)",
+                    ]}
                   />
                   <DimensionCard
                     icon={Coins}
@@ -210,6 +234,13 @@ export default function Readme() {
                     subtitle="Economic"
                     description="TVL, market share, risk ratios"
                     weight="15%"
+                    question="Is there sustained economic commitment?"
+                    bullets={[
+                      "TVL (economic stake in the project)",
+                      "Risk ratio (TVL relative to maintenance effort)",
+                      "Market share (is it growing or declining?)",
+                      "User activity (is the protocol actually being used?)",
+                    ]}
                   />
                 </div>
               </div>
@@ -580,15 +611,25 @@ function DimensionCard({
   subtitle,
   description,
   weight,
+  question,
+  bullets,
 }: {
   icon: typeof Brain;
   title: string;
   subtitle: string;
   description: string;
   weight: string;
+  question?: string;
+  bullets?: string[];
 }) {
+  const [open, setOpen] = useState(false);
+  const isExpandable = question && bullets && bullets.length > 0;
+
   return (
-    <Card className="card-premium">
+    <Card
+      className={`card-premium ${isExpandable ? 'cursor-pointer' : ''}`}
+      onClick={() => isExpandable && setOpen(!open)}
+    >
       <CardContent className="pt-6">
         <div className="flex items-start gap-4">
           <div className="rounded-sm bg-primary/10 p-2 shrink-0">
@@ -599,14 +640,34 @@ function DimensionCard({
               <h4 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">
                 {title}
               </h4>
-              <Badge variant="outline" className="font-mono text-xs">
-                {weight}
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="font-mono text-xs">
+                  {weight}
+                </Badge>
+                {isExpandable && (
+                  <ChevronDown
+                    className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+                  />
+                )}
+              </div>
             </div>
             <p className="text-sm text-primary mb-1">{subtitle}</p>
             <p className="text-xs text-muted-foreground">{description}</p>
           </div>
         </div>
+        {isExpandable && open && (
+          <div className="mt-4 pt-4 border-t border-border">
+            <p className="text-sm font-medium text-primary mb-3">{question}</p>
+            <ul className="space-y-1.5">
+              {bullets.map((bullet, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
+                  <span className="text-primary mt-0.5">•</span>
+                  <span>{bullet}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
