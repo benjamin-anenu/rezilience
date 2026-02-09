@@ -95,6 +95,7 @@ export interface DBEcosystemStats {
   averageScore: number;
   totalStaked: number;
   activePrograms: number;
+  totalTvl: number;
 }
 
 // Registered protocol (verified builder profile in the registry)
