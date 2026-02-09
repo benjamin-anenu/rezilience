@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Shield, Activity, Fingerprint, Lock, Info } from 'lucide-react';
+import { ArrowRight, Activity, Lock, Info, GitBranch, Network, Heart, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -143,31 +143,51 @@ export function HeroSection() {
           {/* Right content - Abstract geometric illustration */}
           <div className="relative hidden lg:flex lg:items-center lg:justify-center">
             <div className="relative h-96 w-96">
-              {/* Central node */}
-              <div className="absolute left-1/2 top-1/2 flex h-24 w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-sm border border-primary bg-primary/20 glow-signal">
-                <Shield className="h-10 w-10 text-primary" />
+              {/* Rotating scanning ring */}
+              <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/10" style={{ animation: 'spin 12s linear infinite' }} />
+              <div className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-primary/5" style={{ animation: 'spin 20s linear infinite reverse' }} />
+
+              {/* Central node - Solana logo */}
+              <div className="absolute left-1/2 top-1/2 flex h-24 w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-sm border-2 border-primary bg-primary/10 glow-signal-strong pulse-subtle">
+                <svg viewBox="0 0 397.7 311.7" className="h-10 w-10" fill="none">
+                  <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z" fill="hsl(var(--primary))" />
+                  <path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z" fill="hsl(var(--primary))" />
+                  <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z" fill="hsl(var(--primary))" />
+                </svg>
               </div>
 
-              {/* Orbital nodes */}
-              <div className="absolute left-0 top-1/4 flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
-                <Activity className="h-6 w-6 text-muted-foreground" />
+              {/* Orbital nodes - Dimensions of Trust */}
+              <div className="absolute left-0 top-1/4 flex flex-col items-center gap-1.5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
+                  <GitBranch className="h-6 w-6 text-primary" />
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground">CODE 40%</span>
               </div>
-              <div className="absolute right-0 top-1/4 flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
-                <Fingerprint className="h-6 w-6 text-muted-foreground" />
+              <div className="absolute right-0 top-1/4 flex flex-col items-center gap-1.5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
+                  <Network className="h-6 w-6 text-primary" />
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground">DEPS 25%</span>
               </div>
-              <div className="absolute bottom-0 left-1/4 flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
-                <Shield className="h-6 w-6 text-muted-foreground" />
+              <div className="absolute bottom-0 left-1/4 flex flex-col items-center gap-1.5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
+                  <Heart className="h-6 w-6 text-primary" />
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground">GOV 20%</span>
               </div>
-              <div className="absolute bottom-0 right-1/4 flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
-                <Activity className="h-6 w-6 text-muted-foreground" />
+              <div className="absolute bottom-0 right-1/4 flex flex-col items-center gap-1.5">
+                <div className="flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
+                  <Coins className="h-6 w-6 text-primary" />
+                </div>
+                <span className="font-mono text-[10px] text-muted-foreground">ECON 15%</span>
               </div>
 
-              {/* Connection lines */}
+              {/* Connection lines - dashed blueprint style */}
               <svg className="absolute inset-0 h-full w-full" style={{ zIndex: -1 }}>
-                <line x1="48" y1="96" x2="160" y2="160" stroke="hsl(var(--border))" strokeWidth="1" />
-                <line x1="336" y1="96" x2="224" y2="160" stroke="hsl(var(--border))" strokeWidth="1" />
-                <line x1="96" y1="336" x2="160" y2="224" stroke="hsl(var(--border))" strokeWidth="1" />
-                <line x1="288" y1="336" x2="224" y2="224" stroke="hsl(var(--border))" strokeWidth="1" />
+                <line x1="48" y1="96" x2="160" y2="160" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
+                <line x1="336" y1="96" x2="224" y2="160" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
+                <line x1="96" y1="336" x2="160" y2="224" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
+                <line x1="288" y1="336" x2="224" y2="224" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
               </svg>
             </div>
           </div>
