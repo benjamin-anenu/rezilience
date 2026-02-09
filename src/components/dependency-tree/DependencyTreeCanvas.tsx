@@ -31,6 +31,7 @@ export function DependencyTreeCanvas({ data }: DependencyTreeCanvasProps) {
     data: DependencyNodeData;
     cratesIoUrl?: string | null;
     npmUrl?: string | null;
+    pypiUrl?: string | null;
   } | null>(null);
 
   // Generate nodes and edges from data
@@ -149,6 +150,7 @@ export function DependencyTreeCanvas({ data }: DependencyTreeCanvasProps) {
         data: node.data,
         cratesIoUrl: dep?.crates_io_url,
         npmUrl: dep?.npm_url,
+        pypiUrl: dep?.pypi_url,
       });
     },
     [data.dependencies]
@@ -179,6 +181,7 @@ export function DependencyTreeCanvas({ data }: DependencyTreeCanvasProps) {
         nodeData={selectedNode?.data || null}
         cratesIoUrl={selectedNode?.cratesIoUrl}
         npmUrl={selectedNode?.npmUrl}
+        pypiUrl={selectedNode?.pypiUrl}
       />
     </div>
   );
