@@ -1,264 +1,161 @@
 
+# Add Python/PyPI Support to Dependency Analyzer
 
-# Fix: Add package.json (JS/TS) Parsing to analyze-dependencies
+## Overview
 
-## Root Cause
-
-The `analyze-dependencies` edge function currently only parses `Cargo.toml` (Rust projects). When analyzing a JavaScript/TypeScript project like this one (`https://github.com/benjamin-anenu/resilience`), it finds no Cargo.toml and returns zero dependencies.
-
-The plan to add `package.json` support was approved but **the edge function was not updated** with that code.
+Extend the `analyze-dependencies` edge function to parse Python project dependency files (`requirements.txt` and `pyproject.toml`) and check versions against the PyPI registry.
 
 ---
 
-## Solution
+## Detection Priority
 
-Enhance the edge function to:
-1. First try `Cargo.toml` (existing Rust logic)
-2. If not found, try `package.json` (new JS/TS logic)
-3. Store dependencies with `dependency_type = 'npm'` for npm packages
+The analyzer will try dependency files in this order:
+1. `Cargo.toml` (Rust) - existing
+2. `package.json` (JS/TS) - existing  
+3. `requirements.txt` (Python) - new
+4. `pyproject.toml` (Python) - new
 
 ---
 
-## File Changes
+## Technical Implementation
 
-### 1. `supabase/functions/analyze-dependencies/index.ts`
+### 1. Edge Function: `supabase/functions/analyze-dependencies/index.ts`
 
-**Add new functions:**
-
-```typescript
-// Fetch package.json from GitHub
-async function fetchPackageJson(owner: string, repo: string, token: string): Promise<object | null> {
-  const branches = ["main", "master", "develop"];
-  
-  for (const branch of branches) {
-    try {
-      const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/package.json`;
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `token ${token}`,
-          Accept: "application/json",
-          "User-Agent": "Resilience-Registry",
-        },
-      });
-      
-      if (response.ok) {
-        console.log(`Found package.json at ${branch}/package.json`);
-        return await response.json();
-      }
-    } catch {
-      continue;
-    }
-  }
-  return null;
-}
-
-// Parse package.json dependencies
-function parsePackageJson(pkg: any): Map<string, string> {
-  const deps = new Map<string, string>();
-  const allDeps = { ...pkg.dependencies, ...pkg.devDependencies };
-  
-  for (const [name, version] of Object.entries(allDeps)) {
-    deps.set(name, String(version).replace(/[\^~>=<]/g, ''));
-  }
-  return deps;
-}
-
-// Get latest version from npm registry
-async function getNpmLatestVersion(packageName: string): Promise<string | null> {
-  try {
-    // Handle scoped packages (@org/name)
-    const encodedName = encodeURIComponent(packageName);
-    const response = await fetch(`https://registry.npmjs.org/${encodedName}/latest`, {
-      headers: {
-        "User-Agent": "Resilience-Registry",
-        Accept: "application/json",
-      },
-    });
-    
-    if (!response.ok) {
-      console.warn(`Package ${packageName} not found on npm`);
-      return null;
-    }
-    
-    const data = await response.json();
-    return data.version || null;
-  } catch (error) {
-    console.error(`Error fetching npm package ${packageName}:`, error);
-    return null;
-  }
-}
-
-// Get npm download count as proxy for "dependents"
-async function getNpmDownloads(packageName: string): Promise<number> {
-  try {
-    const encodedName = encodeURIComponent(packageName);
-    const response = await fetch(
-      `https://api.npmjs.org/downloads/point/last-week/${encodedName}`,
-      { headers: { "User-Agent": "Resilience-Registry" } }
-    );
-    
-    if (!response.ok) return 0;
-    const data = await response.json();
-    return data.downloads || 0;
-  } catch {
-    return 0;
-  }
-}
-```
-
-**Critical npm dependencies to track:**
+**Add critical Python dependencies list:**
 
 ```typescript
-const CRITICAL_NPM_DEPS = [
-  "@solana/web3.js",
-  "@solana/spl-token",
-  "@project-serum/anchor",
-  "@coral-xyz/anchor",
-  "@solana/wallet-adapter-base",
-  "@solana/wallet-adapter-react",
-  "react",
-  "next",
-  "typescript",
+const CRITICAL_PYPI_DEPS = [
+  "solana",
+  "solders",
+  "anchorpy",
+  "base58",
+  "pynacl",
+  "httpx",
+  "aiohttp",
+  "fastapi",
+  "django",
+  "flask",
+  "pytest",
 ];
 ```
 
-**Update main handler to try package.json if no Cargo.toml:**
+**New functions to add:**
+
+| Function | Purpose |
+|----------|---------|
+| `fetchRequirementsTxt()` | Fetch `requirements.txt` from GitHub across common branches |
+| `fetchPyprojectToml()` | Fetch `pyproject.toml` from GitHub |
+| `parseRequirementsTxt()` | Parse dependency lines like `package==1.0.0` or `package>=1.0` |
+| `parsePyprojectToml()` | Parse `[project.dependencies]` and `[tool.poetry.dependencies]` sections |
+| `getPypiLatestVersion()` | Query `https://pypi.org/pypi/{package}/json` for latest version |
+| `getPypiDownloads()` | Use pypistats API or fallback to 0 |
+| `analyzePypiDependencies()` | Orchestrate Python dependency analysis |
+
+**Parsing Logic:**
+
+`requirements.txt` format examples:
+```text
+requests==2.31.0
+numpy>=1.24.0
+pandas~=2.0
+flask  # no version pin
+-e git+https://...  # editable, skip
+```
+
+`pyproject.toml` format examples:
+```toml
+[project]
+dependencies = [
+    "requests>=2.28",
+    "pydantic==2.0.0",
+]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+django = "^4.2"
+```
+
+**Update main handler flow:**
 
 ```typescript
-// Current code ends at line 290 with "No Cargo.toml found"
-// CHANGE: Instead of returning neutral, try package.json
-
-if (!cargoContent) {
-  console.log("No Cargo.toml found - checking for package.json...");
+// After npm check fails
+if (!npmResponse) {
+  console.log("No package.json found - checking for Python dependencies...");
   
-  const packageJson = await fetchPackageJson(owner, repo, githubToken);
+  const pypiResponse = await analyzePypiDependencies(owner, repo, githubToken, profile_id);
   
-  if (packageJson) {
-    // Parse and analyze npm dependencies
-    const parsedDeps = parsePackageJson(packageJson);
-    console.log(`Found ${parsedDeps.size} npm dependencies`);
-    
-    const dependencies: CrateDependency[] = [];
-    let outdatedCount = 0;
-    let criticalCount = 0;
-    
-    for (const [name, currentVersion] of parsedDeps) {
-      // Rate limit: be gentle with npm registry
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      
-      const latestVersion = await getNpmLatestVersion(name);
-      const isCritical = CRITICAL_NPM_DEPS.includes(name);
-      
-      if (latestVersion) {
-        const monthsBehind = calculateVersionGap(currentVersion, latestVersion);
-        const isOutdated = monthsBehind > 0;
-        const downloads = await getNpmDownloads(name);
-        
-        dependencies.push({
-          name,
-          currentVersion,
-          latestVersion,
-          monthsBehind,
-          isOutdated,
-          isCritical,
-          reverseDeps: downloads, // Using downloads as proxy
-        });
-        
-        if (isOutdated) {
-          outdatedCount++;
-          if (isCritical && monthsBehind >= 3) {
-            criticalCount++;
-          }
-        }
-      }
-    }
-    
-    const healthScore = calculateHealthScore(dependencies, outdatedCount, criticalCount);
-    const result = { healthScore, totalDependencies: dependencies.length, ... };
-    
-    // Store with dependency_type = 'npm'
-    if (profile_id) {
-      await updateProfile(profile_id, result);
-      await storeDependencyGraph(profile_id, dependencies, 'npm');
-    }
-    
-    return new Response(JSON.stringify({ success: true, data: result }), ...);
+  if (pypiResponse) {
+    return pypiResponse;
   }
   
-  // Neither Cargo.toml nor package.json found
-  return new Response(
-    JSON.stringify({ success: true, data: { healthScore: 50, ... }, note: "No dependency files found" }),
-    ...
-  );
+  // No dependency files found at all
+  return neutralResponse();
 }
 ```
 
-**Update storeDependencyGraph to include dependency_type:**
+**Update `storeDependencyGraph()` to populate `pypi_url`:**
 
 ```typescript
-async function storeDependencyGraph(
-  profileId: string, 
-  dependencies: CrateDependency[], 
-  dependencyType: 'crate' | 'npm' | 'pypi' = 'crate'
-): Promise<void> {
-  // ... existing code ...
-  
-  const rows = dependencies.map((dep) => ({
-    source_profile_id: profileId,
-    crate_name: dep.name, // This column stores package name for all types
-    package_name: dep.name, // New column for clarity
-    dependency_type: dependencyType, // 'crate', 'npm', or 'pypi'
-    current_version: dep.currentVersion,
-    latest_version: dep.latestVersion,
-    months_behind: dep.monthsBehind,
-    is_critical: dep.isCritical,
-    is_outdated: dep.isOutdated,
-    crates_io_url: dependencyType === 'crate' ? `https://crates.io/crates/${dep.name}` : null,
-    npm_url: dependencyType === 'npm' ? `https://www.npmjs.com/package/${dep.name}` : null,
-    crates_io_dependents: dep.reverseDeps,
-    analyzed_at: new Date().toISOString(),
-  }));
-  
-  // ... rest of insert logic ...
-}
+const rows = dependencies.map((dep) => ({
+  // ... existing fields ...
+  pypi_url: dependencyType === 'pypi' ? `https://pypi.org/project/${dep.name}/` : null,
+}));
 ```
 
 ---
 
-### 2. Update `useDependencyGraph.ts`
+### 2. Update Hook: `src/hooks/useDependencyGraph.ts`
 
-Include `dependency_type` and `npm_url` in the data model:
+Add `pypi_url` to the data model and query:
 
 ```typescript
 export interface DependencyNode {
-  id: string;
-  crate_name: string;
-  current_version: string | null;
-  latest_version: string | null;
-  months_behind: number;
-  is_critical: boolean;
-  is_outdated: boolean;
-  crates_io_url: string | null;
-  npm_url: string | null; // NEW
-  crates_io_dependents: number;
-  dependency_type: 'crate' | 'npm' | 'pypi'; // NEW
+  // ... existing fields ...
+  pypi_url: string | null;  // Add this
 }
+
+// In the mapping function
+pypi_url: d.pypi_url,
 ```
 
 ---
 
-### 3. Update `DependencyNode.tsx` and `NodeDetailPanel.tsx`
+### 3. Update UI Components
 
-Show npm icon for JS/TS dependencies and crates.io icon for Rust:
+**`DependencyTreeCanvas.tsx`**
+
+Pass `pypiUrl` to the detail panel:
 
 ```typescript
-// In DependencyNode.tsx
-const typeIcon = dependencyType === 'npm' ? '📦' : dependencyType === 'pypi' ? '🐍' : '🦀';
-
-// In NodeDetailPanel.tsx
-const registryUrl = dependencyType === 'npm' ? npmUrl : cratesIoUrl;
-const registryName = dependencyType === 'npm' ? 'npm' : 'crates.io';
+<NodeDetailPanel
+  pypiUrl={selectedDep?.pypi_url}
+  // ... existing props
+/>
 ```
+
+**`NodeDetailPanel.tsx`**
+
+Add `pypiUrl` prop and update registry logic:
+
+```typescript
+interface NodeDetailPanelProps {
+  pypiUrl?: string | null;  // Add this
+  // ... existing props
+}
+
+// Update registry URL logic
+const registryUrl = nodeData.dependencyType === 'npm' 
+  ? npmUrl 
+  : nodeData.dependencyType === 'pypi' 
+    ? pypiUrl 
+    : cratesIoUrl;
+```
+
+---
+
+### 4. Database
+
+No changes needed - the `pypi_url` column already exists in `dependency_graph` table.
 
 ---
 
@@ -266,18 +163,25 @@ const registryName = dependencyType === 'npm' ? 'npm' : 'crates.io';
 
 | File | Action |
 |------|--------|
-| `supabase/functions/analyze-dependencies/index.ts` | Add package.json parsing, npm registry lookups |
-| `src/hooks/useDependencyGraph.ts` | Include dependency_type and npm_url |
-| `src/components/dependency-tree/DependencyNode.tsx` | Show language-specific icons |
-| `src/components/dependency-tree/NodeDetailPanel.tsx` | Link to correct registry |
+| `supabase/functions/analyze-dependencies/index.ts` | Add Python parsing, PyPI registry lookups |
+| `src/hooks/useDependencyGraph.ts` | Include `pypi_url` field |
+| `src/components/dependency-tree/DependencyTreeCanvas.tsx` | Pass `pypiUrl` to panel |
+| `src/components/dependency-tree/NodeDetailPanel.tsx` | Add `pypiUrl` prop |
 
 ---
 
-## After Implementation
+## Testing
 
-Once the edge function is updated:
-1. Click "Analyze Dependencies Now" again
-2. The function will find `package.json` in your repo
-3. It will parse all npm dependencies (react, react-router-dom, etc.)
-4. The tree will populate with your actual project dependencies
+After implementation:
+1. Find a Python project profile or update test profile GitHub URL to a Python repo
+2. Trigger "Analyze Dependencies Now"
+3. Verify dependencies appear with snake icon (🐍) and link to PyPI
 
+---
+
+## Rate Limiting
+
+PyPI has generous rate limits but we will still:
+- Add 300ms delay between version lookups
+- Skip editable installs (`-e`) and local paths
+- Limit analysis to first 100 dependencies for large projects
