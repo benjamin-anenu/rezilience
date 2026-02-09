@@ -1,146 +1,53 @@
 
 
-# Fix Dependency Analysis: Handle Invalid URLs and Add Debug Logging
+# Update Org-Only GitHub URLs for 23 Profiles
 
-## Problems Identified
+## Overview
 
-| Issue | Description | Affected Projects |
-|-------|-------------|-------------------|
-| Org-only URLs | URLs like `github.com/step-finance` have no repo name | ~10+ profiles |
-| Private/Deleted repos | Repos don't exist publicly or are archived | Jupiter, Jet Protocol |
-| No error logging | Failed GitHub API calls are silently swallowed | All failed analyses |
-| Resilience project | Uses Deno URL imports, not package.json | Your project |
+23 profiles currently point to GitHub organization pages instead of specific repositories. This prevents dependency analysis from working. Each will be updated via SQL UPDATE statements to point to the correct main repository.
 
-## Solution Overview
+## URL Mapping
 
-### Fix 1: Validate URLs Before Analysis
+| # | Project | Current (org-only) | New (specific repo) | Notes |
+|---|---------|-------------------|---------------------|-------|
+| 1 | Arcium | github.com/arcium-hq | github.com/arcium-hq/elusiv | Elusiv Solana program library (Rust) |
+| 2 | BlockMesh | github.com/block-mesh | github.com/block-mesh/block-mesh-monorepo | Main monorepo |
+| 3 | Corbits | github.com/corbits-tech | *(keep as-is)* | No public repos found |
+| 4 | Credix | github.com/credix-finance | github.com/credix-finance/credix-app-v2 | Archived but only public repo with code |
+| 5 | deBridge | github.com/debridge-finance | github.com/debridge-finance/debridge-solana-sdk | Solana SDK |
+| 6 | Dual Finance | github.com/dual-finance | github.com/Dual-Finance/staking-options | Core staking program (Rust, 6 stars) |
+| 7 | Hubble Protocol | github.com/hubble-exchange | github.com/hubbleprotocol/hubble-common | Correct org is hubbleprotocol, not hubble-exchange |
+| 8 | Lifinity V2 | github.com/Lifinity-Labs | github.com/Lifinity-Labs/flare-staking | Most active repo (TypeScript) |
+| 9 | Magic Eden V2 | github.com/magiceden-oss | github.com/me-foundation/magicdrop | magiceden-oss has no public repos; me-foundation does |
+| 10 | Magicblock Engine | github.com/magicblock-labs | github.com/magicblock-labs/Solana.Unity-SDK | Main SDK (highest stars) |
+| 11 | Nosana | github.com/nosana-ci | github.com/nosana-ci/nosana-programs | Nosana Program Library (Rust) |
+| 12 | OpenSOL | github.com/opensol-project | *(keep as-is)* | No public repos found under this org |
+| 13 | Sanctum | github.com/sanctum-solana | github.com/igneous-labs/S | Sanctum's main code is under igneous-labs org |
+| 14 | Solayer | github.com/solayer-labs | github.com/solayer-labs/solayer-pm | Project management / main public repo |
+| 15 | Step Finance | github.com/step-finance | github.com/step-finance/step-staking | Core staking program (62 stars) |
+| 16 | Supersize | github.com/supersize-gg | github.com/supersizegg/supersize-programs | Note: org is "supersizegg" not "supersize-gg" |
+| 17 | Symmetry | github.com/symmetry-protocol | github.com/symmetry-protocol/baskets-ui | Main UI repo |
+| 18 | Tensor Swap | github.com/tensor-foundation | github.com/tensor-foundation/tensorswap-sdk | Core SDK |
+| 19 | Torque | github.com/torque-labs | github.com/torque-labs/torque-poc | Advertising protocol PoC |
+| 20 | Tulip Protocol | github.com/sol-farm | github.com/sol-farm/tulipv2-sdk | Tulip V2 vaults SDK (Rust, 19 stars) |
+| 21 | Txtx | github.com/txtx | github.com/txtx/txtx | Main repo: "Terraform for web3" |
+| 22 | Urani | github.com/urani-labs | github.com/urani-trade/urani-swap-ts | Note: code is under urani-trade org |
+| 23 | UXD Protocol | github.com/UXDProtocol | github.com/UXDProtocol/uxd-program | Core Solana program |
 
-Add URL validation to reject org-only URLs with a clear error message:
+## Profiles Skipped (no valid repo found)
 
-```text
-Input:  https://github.com/step-finance
-Result: Error - "URL points to GitHub organization, not a repository"
+- **Corbits** - No public repositories found under corbits-tech
+- **OpenSOL** - No public repositories found under opensol-project
 
-Input:  https://github.com/step-finance/step-program  
-Result: Proceed with analysis
-```
+These 2 will keep their current org-only URLs. The analyzer will now return a clear error message for them instead of silently failing.
 
-### Fix 2: Add Debug Logging for GitHub API Errors
+## Implementation
 
-Currently, failed GitHub API calls return null with no logging. We need to log the HTTP status code to understand why requests fail:
+Run 21 individual UPDATE statements against the `claimed_profiles` table using the data insertion tool (not migrations, since this is data, not schema).
 
-```text
-Before: (silent failure)
-After:  "GitHub API error for jet-lab/jet-v2 main/Cargo.toml: 404 Not Found"
-```
+## Expected Impact
 
-### Fix 3: Handle Resilience (Deno Projects)
-
-For your Resilience project specifically, the dependencies are defined via URL imports in edge function files. Options:
-
-1. **Mark as "N/A"** - Deno projects don't use traditional package manifests
-2. **Parse import statements** - Scan for `npm:package@version` in `.ts` files (complex)
-3. **Link to connected Supabase project** - Use the main app's `package.json` instead
-
-Recommended: Option 1 for now, as the frontend already has a `package.json` that was analyzed separately.
-
-## Technical Changes
-
-### File: `supabase/functions/analyze-dependencies/index.ts`
-
-**1. Enhance parseGitHubUrl to detect org-only URLs:**
-
-```typescript
-function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
-  // Check for org-only URLs first
-  const orgOnlyPattern = /github\.com\/([^\/]+)\/?$/;
-  if (orgOnlyPattern.test(url)) {
-    console.error(`Invalid URL: ${url} points to org, not repo`);
-    return null;
-  }
-  
-  // Normal repo pattern
-  const patterns = [
-    /github\.com\/([^\/]+)\/([^\/\?#]+)/,
-  ];
-  // ... existing logic
-}
-```
-
-**2. Add HTTP status logging to fetchGitHubFile:**
-
-```typescript
-async function fetchGitHubFile(
-  owner: string, repo: string, branch: string, path: string, token: string
-): Promise<string | null> {
-  const url = `https://raw.githubusercontent.com/${owner}/${repo}/${branch}/${path}`;
-  const response = await fetch(url, { headers: {...} });
-  
-  if (!response.ok) {
-    // Only log once per repo for first branch attempt
-    if (branch === "main") {
-      console.log(`GitHub ${response.status} for ${owner}/${repo}/${branch}/${path}`);
-    }
-    return null;
-  }
-  return await response.text();
-}
-```
-
-**3. Return informative error for org-only URLs:**
-
-```typescript
-// In main handler
-const parsed = parseGitHubUrl(github_url);
-if (!parsed) {
-  // Check if it's an org-only URL
-  if (/github\.com\/[^\/]+\/?$/.test(github_url)) {
-    return new Response(
-      JSON.stringify({ 
-        success: false, 
-        error: "URL points to GitHub organization, not a specific repository" 
-      }),
-      { status: 400, headers: corsHeaders }
-    );
-  }
-  // ... existing invalid URL handling
-}
-```
-
-## Expected Outcomes
-
-| Scenario | Before | After |
-|----------|--------|-------|
-| Org-only URL | Silent failure, score=50 | Clear error: "URL points to org" |
-| Private repo | Silent failure, score=50 | Logged: "GitHub 404 for owner/repo" |
-| Deleted repo | Silent failure, score=50 | Logged: "GitHub 404 for owner/repo" |
-| Valid public repo | Works | Works (no change) |
-
-## Files Changed
-
-| File | Change |
-|------|--------|
-| `supabase/functions/analyze-dependencies/index.ts` | Add URL validation, HTTP status logging, informative error messages |
-
-## Data Cleanup Recommendation
-
-After fixing the code, we should identify and flag profiles with invalid URLs:
-
-```sql
--- Find profiles with org-only URLs (no repo path)
-SELECT id, project_name, github_org_url 
-FROM claimed_profiles 
-WHERE github_org_url ~ '^https?://github\.com/[^/]+/?$';
-```
-
-These profiles need their `github_org_url` updated to point to actual repositories.
-
-## For Your Resilience Project
-
-Since this is a Lovable project with Deno edge functions, the dependency analysis will continue showing "No files found" which is correct. The frontend portion of this project (React/Vite) does have a `package.json`, but your Resilience profile points to the GitHub repo which may be private.
-
-To get dependency data for Resilience, you could:
-1. Make the GitHub repo public (if appropriate)
-2. Update the URL to point to a specific public repo with dependencies
-3. Accept that Deno projects don't have traditional manifests
+- 21 profiles will gain dependency analysis capability
+- Next time `refresh-all-profiles` runs or manual analysis is triggered, dependencies will populate
+- 2 profiles (Corbits, OpenSOL) will remain without dependency data until valid repos are identified
 
