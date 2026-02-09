@@ -38,3 +38,9 @@ verify_jwt = false
 
 [functions.analyze-governance]
 verify_jwt = false
+
+[functions.refresh-governance-hourly]
+verify_jwt = false
+
+[functions.refresh-tvl-realtime]
+verify_jwt = false
