@@ -1,5 +1,10 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, TrendingUp, TrendingDown, Minus, Sparkles, Cloud, AlertTriangle, TrendingDownIcon } from 'lucide-react';
+import { 
+  Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, 
+  TrendingUp, TrendingDown, Sparkles, Cloud, AlertTriangle, 
+  TrendingDownIcon, Eye, EyeOff, Lock 
+} from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -16,6 +21,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { MobileProgramCards } from './MobileProgramCard';
 import { Sparkline } from './Sparkline';
 import { DimensionHealthIndicators } from './DimensionHealthIndicators';
+import { ExpandedDetailsRow } from './ExpandedDetailsRow';
 import { useRankMovement, type MovementType } from '@/hooks/useRankMovement';
 import { PROJECT_CATEGORIES } from '@/types';
 import type { ExplorerProject } from '@/hooks/useExplorerProjects';
@@ -28,10 +34,30 @@ interface ProgramLeaderboardProps {
 export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   // Fetch rank movements and score histories
   const profileIds = projects.map(p => p.id);
   const { data: rankData } = useRankMovement(profileIds);
+
+  // Toggle row expansion
+  const toggleRowExpansion = (projectId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedRows(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
+  };
+
+  // Detect private repo (unclaimed + no github analysis)
+  const isPrivateRepo = (project: ExplorerProject): boolean => {
+    return project.claimStatus === 'unclaimed' && !project.github_analyzed_at;
+  };
 
   // Render mobile cards on small screens
   if (isMobile) {
@@ -164,7 +190,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
   };
 
   const handleRowClick = (project: ExplorerProject, e: React.MouseEvent) => {
-    // Prevent navigation if clicking on the Claim button
+    // Prevent navigation if clicking on a button
     if ((e.target as HTMLElement).closest('button')) return;
     
     // For unclaimed profiles, navigate to claim flow
@@ -185,6 +211,9 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
     navigate(`/program/${routeId}`);
   };
 
+  // Total number of columns for colspan
+  const totalColumns = 13;
+
   return (
     <div className="rounded-sm border border-border">
       <Table className="data-table">
@@ -202,6 +231,9 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
             <TableHead className="hidden lg:table-cell">STATUS</TableHead>
             <TableHead className="hidden md:table-cell text-right">STAKED</TableHead>
             <TableHead className="hidden lg:table-cell">LAST ACTIVITY</TableHead>
+            <TableHead className="w-12 text-center">
+              <Eye className="h-4 w-4 mx-auto text-muted-foreground" />
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -210,138 +242,194 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
             const movement = rankData?.movements[project.id];
             const scoreHistory = rankData?.scoreHistories[project.id] || [project.resilience_score];
             const decayPercentage = calculateDecayPercentage(project.github_last_activity);
+            const isPrivate = isPrivateRepo(project);
+            const isExpanded = expandedRows.has(project.id);
             
             return (
-              <TableRow
-                key={project.id}
-                className="cursor-pointer border-border transition-colors hover:bg-muted/50"
-                onClick={(e) => handleRowClick(project, e)}
-              >
-                <TableCell className="font-mono text-muted-foreground">
-                  <div className="flex items-center gap-1.5">
-                    <span>#{index + 1}</span>
-                    {getMovementIndicator(movement)}
-                  </div>
-                </TableCell>
-                <TableCell className="max-w-[140px]">
-                  <div className="flex items-center gap-2">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-primary/10">
-                      <span className="font-display text-xs font-bold text-primary">
-                        {project.program_name.charAt(0)}
-                      </span>
+              <>
+                <TableRow
+                  key={project.id}
+                  className="cursor-pointer border-border transition-colors hover:bg-muted/50"
+                  onClick={(e) => handleRowClick(project, e)}
+                >
+                  <TableCell className="font-mono text-muted-foreground">
+                    <div className="flex items-center gap-1.5">
+                      <span>#{index + 1}</span>
+                      {getMovementIndicator(movement)}
                     </div>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <span className="truncate font-medium text-foreground cursor-default">
-                          {project.program_name}
+                  </TableCell>
+                  <TableCell className="max-w-[140px]">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-sm bg-primary/10">
+                        <span className="font-display text-xs font-bold text-primary">
+                          {project.program_name.charAt(0)}
                         </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{project.program_name}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                    {project.verified && (
+                      </div>
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="shrink-0">
-                            <ShieldCheck className="h-4 w-4 text-primary" />
+                          <span className="truncate font-medium text-foreground cursor-default">
+                            {project.program_name}
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>
-                          <p>Verified Project</p>
+                          <p>{project.program_name}</p>
                         </TooltipContent>
                       </Tooltip>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  <Badge variant="outline" className="border-border text-xs">
-                    {getCategoryLabel(project.category)}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  <div className="flex items-center gap-2">
-                    {programIdInfo.isOnChain ? (
-                      <>
-                        <code className="font-mono text-xs text-muted-foreground">
+                      {project.verified && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="shrink-0">
+                              <ShieldCheck className="h-4 w-4 text-primary" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Verified Project</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <Badge variant="outline" className="border-border text-xs">
+                      {getCategoryLabel(project.category)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    <div className="flex items-center gap-2">
+                      {programIdInfo.isOnChain ? (
+                        <>
+                          <code className="font-mono text-xs text-muted-foreground">
+                            {programIdInfo.display}
+                          </code>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={(e) => copyToClipboard(project.program_id, e)}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </>
+                      ) : (
+                        <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground text-xs">
+                          <Cloud className="mr-1 h-3 w-3" />
                           {programIdInfo.display}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={(e) => copyToClipboard(project.program_id, e)}
-                        >
-                          <Copy className="h-3 w-3" />
-                        </Button>
-                      </>
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                  {/* Score - Lock for private repos */}
+                  <TableCell className="text-right">
+                    {isPrivate ? (
+                      <Lock className="h-4 w-4 text-muted-foreground ml-auto" />
                     ) : (
-                      <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground text-xs">
-                        <Cloud className="mr-1 h-3 w-3" />
-                        {programIdInfo.display}
-                      </Badge>
+                      <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
+                        {Math.round(project.resilience_score)}
+                      </span>
                     )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
-                    {Math.round(project.resilience_score)}
-                  </span>
-                </TableCell>
-                <TableCell className="hidden xl:table-cell">
-                  <DimensionHealthIndicators
-                    dependencyScore={project.dependency_health_score}
-                    governanceTx30d={project.governance_tx_30d}
-                    tvlUsd={project.tvl_usd}
-                  />
-                </TableCell>
-                <TableCell className="hidden xl:table-cell">
-                  <Sparkline values={scoreHistory} />
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {getStatusBadge(project.liveness_status)}
-                </TableCell>
-                <TableCell className="hidden xl:table-cell">
-                  <div className="flex items-center gap-1">
-                    <TrendingDownIcon className={cn('h-3 w-3', getDecayColor(decayPercentage))} />
-                    <span className={cn('font-mono text-sm', getDecayColor(decayPercentage))}>
-                      {decayPercentage.toFixed(1)}%
+                  </TableCell>
+                  {/* Health - Lock for private repos */}
+                  <TableCell className="hidden xl:table-cell">
+                    {isPrivate ? (
+                      <Lock className="h-4 w-4 text-muted-foreground mx-auto" />
+                    ) : (
+                      <DimensionHealthIndicators
+                        dependencyScore={project.dependency_health_score}
+                        governanceTx30d={project.governance_tx_30d}
+                        tvlUsd={project.tvl_usd}
+                      />
+                    )}
+                  </TableCell>
+                  {/* Trend - Lock for private repos */}
+                  <TableCell className="hidden xl:table-cell">
+                    {isPrivate ? (
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <Sparkline values={scoreHistory} />
+                    )}
+                  </TableCell>
+                  {/* Liveness - Private Repo badge for private repos */}
+                  <TableCell className="hidden md:table-cell">
+                    {isPrivate ? (
+                      <Badge variant="outline" className="border-muted-foreground/50 text-muted-foreground">
+                        <Lock className="mr-1 h-3 w-3" />
+                        Private Repo
+                      </Badge>
+                    ) : (
+                      getStatusBadge(project.liveness_status)
+                    )}
+                  </TableCell>
+                  {/* Decay - Lock for private repos */}
+                  <TableCell className="hidden xl:table-cell">
+                    {isPrivate ? (
+                      <Lock className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <TrendingDownIcon className={cn('h-3 w-3', getDecayColor(decayPercentage))} />
+                        <span className={cn('font-mono text-sm', getDecayColor(decayPercentage))}>
+                          {decayPercentage.toFixed(1)}%
+                        </span>
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {getOriginalityBadge(project)}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-right">
+                    <span className="font-mono text-sm text-foreground">
+                      {(project.total_staked / 1000).toFixed(0)}K
                     </span>
-                  </div>
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  {getOriginalityBadge(project)}
-                </TableCell>
-                <TableCell className="hidden md:table-cell text-right">
-                  <span className="font-mono text-sm text-foreground">
-                    {(project.total_staked / 1000).toFixed(0)}K
-                  </span>
-                  <span className="ml-1 text-xs text-muted-foreground">SOL</span>
-                </TableCell>
-                <TableCell className="hidden lg:table-cell">
-                  {project.claimStatus === 'unclaimed' ? (
+                    <span className="ml-1 text-xs text-muted-foreground">SOL</span>
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {project.claimStatus === 'unclaimed' ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-display text-[10px] uppercase"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const params = new URLSearchParams({
+                            profile_id: project.id,
+                            project: project.program_name,
+                          });
+                          navigate(`/claim-profile?${params.toString()}`);
+                        }}
+                      >
+                        Claim This
+                      </Button>
+                    ) : (
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {formatDate(project.github_last_commit)}
+                      </span>
+                    )}
+                  </TableCell>
+                  {/* Eye Toggle */}
+                  <TableCell className="text-center">
                     <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-display text-[10px] uppercase"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        const params = new URLSearchParams({
-                          profile_id: project.id,
-                          project: project.program_name,
-                        });
-                        navigate(`/claim-profile?${params.toString()}`);
-                      }}
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={(e) => toggleRowExpansion(project.id, e)}
                     >
-                      Claim This
+                      {isExpanded ? (
+                        <EyeOff className="h-4 w-4 text-primary" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground hover:text-primary" />
+                      )}
                     </Button>
-                  ) : (
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {formatDate(project.github_last_commit)}
-                    </span>
-                  )}
-                </TableCell>
-              </TableRow>
+                  </TableCell>
+                </TableRow>
+                {/* Expanded Details Row */}
+                {isExpanded && (
+                  <ExpandedDetailsRow 
+                    key={`${project.id}-details`}
+                    project={project} 
+                    isPrivateRepo={isPrivate} 
+                    colSpan={totalColumns} 
+                  />
+                )}
+              </>
             );
           })}
         </TableBody>

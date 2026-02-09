@@ -31,6 +31,11 @@ export interface ExplorerProject {
   governance_tx_30d: number;
   tvl_usd: number;
   integrated_score: number;
+  // Details toggle fields
+  github_contributors: number;
+  x_username: string | null;
+  github_analyzed_at: string | null;
+  discovery_source: string | null;
 }
 
 /**
@@ -106,6 +111,11 @@ export function useExplorerProjects() {
         governance_tx_30d: profile.governance_tx_30d || 0,
         tvl_usd: profile.tvl_usd || 0,
         integrated_score: profile.integrated_score || 0,
+        // Details toggle fields
+        github_contributors: profile.github_contributors || 0,
+        x_username: profile.x_username || null,
+        github_analyzed_at: profile.github_analyzed_at || null,
+        discovery_source: (profile as { discovery_source?: string }).discovery_source || null,
       }));
     },
   });
