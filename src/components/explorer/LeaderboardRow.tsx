@@ -1,8 +1,8 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Activity, CheckCircle, AlertCircle, ShieldCheck, 
-  TrendingUp, TrendingDown, AlertTriangle, 
+  Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, 
+  TrendingUp, TrendingDown, Cloud, AlertTriangle, TrendingDownIcon,
   Eye, Lock, Github, Globe, ExternalLink, Users, Network
 } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
@@ -42,22 +42,22 @@ const getStatusBadge = (status: LivenessStatus) => {
   switch (status) {
     case 'ACTIVE':
       return (
-        <Badge variant="outline" className="border-primary/50 bg-primary/10 text-primary">
-          <Activity className="mr-1 h-3 w-3" />
-          Active
+        <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-primary/50 bg-primary/10 text-primary">
+          <Activity className="mr-0.5 h-2.5 w-2.5" />
+          Live
         </Badge>
       );
     case 'STALE':
       return (
-        <Badge variant="outline" className="border-muted-foreground/50 bg-muted text-muted-foreground">
+        <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-muted-foreground/50 bg-muted text-muted-foreground">
           Stale
         </Badge>
       );
     case 'DECAYING':
       return (
-        <Badge variant="outline" className="border-destructive/50 bg-destructive/10 text-destructive">
-          <AlertCircle className="mr-1 h-3 w-3" />
-          Decaying
+        <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-destructive/50 bg-destructive/10 text-destructive">
+          <AlertCircle className="mr-0.5 h-2.5 w-2.5" />
+          Decay
         </Badge>
       );
   }
@@ -66,42 +66,77 @@ const getStatusBadge = (status: LivenessStatus) => {
 const getOriginalityBadge = (project: ExplorerProject) => {
   if (project.claimStatus === 'unclaimed') {
     return (
-      <Badge variant="outline" className="border-amber-500/50 bg-amber-500/10 text-amber-500">
-        <AlertTriangle className="mr-1 h-3 w-3" />
-        Unclaimed
+      <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-amber-500/50 bg-amber-500/10 text-amber-500">
+        <AlertTriangle className="mr-0.5 h-2.5 w-2.5" />
+        Unclaim
       </Badge>
     );
   }
   
   if (project.is_fork) {
     return (
-      <Badge variant="outline" className="border-destructive/50 text-destructive">
+      <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-destructive/50 text-destructive">
         Fork
       </Badge>
     );
   }
   if (project.verified) {
     return (
-      <Badge variant="outline" className="border-primary/50 text-primary">
-        <CheckCircle className="mr-1 h-3 w-3" />
-        Verified
+      <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-primary/50 text-primary">
+        <CheckCircle className="mr-0.5 h-2.5 w-2.5" />
+        OK
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="border-muted-foreground/50 text-muted-foreground">
-      Unverified
+    <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-muted-foreground/50 text-muted-foreground">
+      Unver
     </Badge>
   );
 };
 
+const getCategoryLabel = (value: string | null) => {
+  if (!value) return '—';
+  // Short labels for compact display
+  const shortLabels: Record<string, string> = {
+    'defi': 'DeFi',
+    'nft': 'NFT',
+    'gaming': 'Game',
+    'infrastructure': 'Infra',
+    'social': 'Social',
+    'dao': 'DAO',
+    'payments': 'Pay',
+    'other': 'Other',
+  };
+  return shortLabels[value] || value.slice(0, 5);
+};
+
+const formatProgramId = (programId: string, projectId: string) => {
+  if (!programId || programId === projectId || programId.includes('-')) {
+    return { display: '—', isOnChain: false };
+  }
+  return { 
+    display: `${programId.slice(0, 3)}..${programId.slice(-3)}`, 
+    isOnChain: true 
+  };
+};
+
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
+  const date = new Date(dateStr);
+  return `${date.getMonth() + 1}/${date.getDate()}`;
+};
+
+const calculateDecayPercentage = (lastActivityDate: string | null): number => {
+  if (!lastActivityDate) return 100;
+  const days = (Date.now() - new Date(lastActivityDate).getTime()) / (1000 * 60 * 60 * 24);
+  return (1 - Math.exp(-0.00167 * days)) * 100;
+};
+
+const getDecayColor = (percentage: number): string => {
+  if (percentage <= 2) return 'text-primary';
+  if (percentage <= 10) return 'text-amber-500';
+  return 'text-destructive';
 };
 
 const getMovementIndicator = (movement: MovementType | undefined) => {
@@ -127,6 +162,13 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
 }: LeaderboardRowProps) {
   const navigate = useNavigate();
   const isPrivate = isPrivateRepo(project);
+  const programIdInfo = formatProgramId(project.program_id, project.id);
+  const decayPercentage = calculateDecayPercentage(project.github_last_activity);
+
+  const copyToClipboard = useCallback((text: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(text);
+  }, []);
 
   const handleRowClick = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
@@ -162,23 +204,23 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
         onClick={handleRowClick}
       >
         {/* Rank */}
-        <TableCell className="font-mono text-muted-foreground w-14">
-          <div className="flex items-center gap-1">
-            <span>#{index + 1}</span>
+        <TableCell className="font-mono text-muted-foreground px-2 w-12">
+          <div className="flex items-center gap-0.5">
+            <span className="text-xs">#{index + 1}</span>
             {getMovementIndicator(movement)}
           </div>
         </TableCell>
         {/* Project */}
-        <TableCell className="max-w-[140px]">
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-sm bg-primary/10">
-              <span className="font-display text-xs font-bold text-primary">
+        <TableCell className="max-w-[120px] px-2">
+          <div className="flex items-center gap-1.5">
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-primary/10">
+              <span className="font-display text-[10px] font-bold text-primary">
                 {project.program_name.charAt(0)}
               </span>
             </div>
             <Tooltip>
               <TooltipTrigger asChild>
-                <span className="truncate font-medium text-foreground cursor-default">
+                <span className="truncate text-sm font-medium text-foreground cursor-default">
                   {project.program_name}
                 </span>
               </TooltipTrigger>
@@ -187,80 +229,111 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
               </TooltipContent>
             </Tooltip>
             {project.verified && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="shrink-0">
-                    <ShieldCheck className="h-4 w-4 text-primary" />
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Verified Project</p>
-                </TooltipContent>
-              </Tooltip>
+              <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-primary" />
             )}
           </div>
         </TableCell>
-        {/* Score + Health inline */}
-        <TableCell className="text-right w-24">
-          {isPrivate ? (
-            <Lock className="h-4 w-4 text-muted-foreground ml-auto" />
+        {/* Type */}
+        <TableCell className="hidden lg:table-cell px-2 w-16">
+          <span className="text-xs text-muted-foreground">
+            {getCategoryLabel(project.category)}
+          </span>
+        </TableCell>
+        {/* Program ID */}
+        <TableCell className="hidden lg:table-cell px-2 w-20">
+          {programIdInfo.isOnChain ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className="font-mono text-[10px] text-muted-foreground hover:text-foreground"
+                  onClick={(e) => copyToClipboard(project.program_id, e)}
+                >
+                  {programIdInfo.display}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="font-mono text-xs">{project.program_id}</p>
+                <p className="text-xs text-muted-foreground">Click to copy</p>
+              </TooltipContent>
+            </Tooltip>
           ) : (
-            <div className="flex items-center justify-end gap-2">
-              <DimensionHealthIndicators
-                dependencyScore={project.dependency_health_score}
-                governanceTx30d={project.governance_tx_30d}
-                tvlUsd={project.tvl_usd}
-                compact
-              />
-              <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
-                {Math.round(project.resilience_score)}
-              </span>
-            </div>
+            <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
+              <Cloud className="h-3 w-3" />
+              Off
+            </span>
           )}
         </TableCell>
-        {/* Trend */}
-        <TableCell className="w-20">
+        {/* Score */}
+        <TableCell className="text-right px-2 w-14">
           {isPrivate ? (
-            <Lock className="h-4 w-4 text-muted-foreground" />
+            <Lock className="h-3.5 w-3.5 text-muted-foreground ml-auto" />
           ) : (
-            <Sparkline values={scoreHistory} />
+            <span className={cn('font-mono text-sm font-bold', getScoreColor(project.resilience_score))}>
+              {Math.round(project.resilience_score)}
+            </span>
+          )}
+        </TableCell>
+        {/* Health */}
+        <TableCell className="hidden xl:table-cell px-1 w-12">
+          <DimensionHealthIndicators
+            dependencyScore={project.dependency_health_score}
+            governanceTx30d={project.governance_tx_30d}
+            tvlUsd={project.tvl_usd}
+            compact
+          />
+        </TableCell>
+        {/* Trend */}
+        <TableCell className="hidden xl:table-cell px-1 w-16">
+          {isPrivate ? (
+            <Lock className="h-3 w-3 text-muted-foreground" />
+          ) : (
+            <Sparkline values={scoreHistory} width={50} height={16} />
           )}
         </TableCell>
         {/* Liveness */}
-        <TableCell className="hidden md:table-cell">
+        <TableCell className="hidden md:table-cell px-2 w-16">
           {isPrivate ? (
-            <Badge variant="outline" className="border-muted-foreground/50 text-muted-foreground">
-              <Lock className="mr-1 h-3 w-3" />
-              Private
-            </Badge>
+            <Lock className="h-3 w-3 text-muted-foreground" />
           ) : (
             getStatusBadge(project.liveness_status)
           )}
         </TableCell>
+        {/* Decay */}
+        <TableCell className="hidden xl:table-cell px-1 w-14">
+          {isPrivate ? (
+            <Lock className="h-3 w-3 text-muted-foreground" />
+          ) : (
+            <div className="flex items-center gap-0.5">
+              <TrendingDownIcon className={cn('h-3 w-3', getDecayColor(decayPercentage))} />
+              <span className={cn('font-mono text-[10px]', getDecayColor(decayPercentage))}>
+                {decayPercentage.toFixed(0)}%
+              </span>
+            </div>
+          )}
+        </TableCell>
         {/* Status */}
-        <TableCell className="hidden lg:table-cell">
+        <TableCell className="hidden lg:table-cell px-2 w-20">
           {getOriginalityBadge(project)}
         </TableCell>
         {/* Staked */}
-        <TableCell className="hidden lg:table-cell text-right">
-          <span className="font-mono text-sm text-foreground">
+        <TableCell className="hidden md:table-cell text-right px-2 w-16">
+          <span className="font-mono text-xs text-foreground">
             {(project.total_staked / 1000).toFixed(0)}K
           </span>
-          <span className="ml-1 text-xs text-muted-foreground">SOL</span>
         </TableCell>
         {/* Activity */}
-        <TableCell className="hidden xl:table-cell">
+        <TableCell className="hidden lg:table-cell px-2 w-20">
           {project.claimStatus === 'unclaimed' ? (
             <Button
               size="sm"
               variant="outline"
-              className="h-6 border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-display text-[10px] uppercase"
+              className="h-5 px-2 border-amber-500/50 text-amber-500 hover:bg-amber-500/10 font-display text-[9px] uppercase"
               onClick={handleClaimClick}
             >
               Claim
             </Button>
           ) : (
-            <span className="font-mono text-xs text-muted-foreground">
+            <span className="font-mono text-[10px] text-muted-foreground">
               {formatDate(project.github_last_commit)}
             </span>
           )}

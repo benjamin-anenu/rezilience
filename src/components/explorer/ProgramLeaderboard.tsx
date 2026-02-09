@@ -34,16 +34,20 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
       <Table className="data-table">
         <TableHeader>
           <TableRow className="border-border hover:bg-transparent">
-            <TableHead className="w-14">RANK</TableHead>
-            <TableHead className="max-w-[140px]">PROJECT</TableHead>
-            <TableHead className="text-right w-24">SCORE</TableHead>
-            <TableHead className="w-20">TREND</TableHead>
-            <TableHead className="hidden md:table-cell">LIVENESS</TableHead>
-            <TableHead className="hidden lg:table-cell">STATUS</TableHead>
-            <TableHead className="hidden lg:table-cell text-right">STAKED</TableHead>
-            <TableHead className="hidden xl:table-cell">ACTIVITY</TableHead>
-            <TableHead className="w-10 text-center">
-              <Eye className="h-4 w-4 mx-auto text-muted-foreground" />
+            <TableHead className="w-12 px-2">#</TableHead>
+            <TableHead className="max-w-[120px] px-2">PROJECT</TableHead>
+            <TableHead className="hidden lg:table-cell px-2 w-16">TYPE</TableHead>
+            <TableHead className="hidden lg:table-cell px-2 w-20">PROGRAM</TableHead>
+            <TableHead className="text-right px-2 w-14">SCORE</TableHead>
+            <TableHead className="hidden xl:table-cell px-1 w-12 text-center">H</TableHead>
+            <TableHead className="hidden xl:table-cell px-1 w-16">TREND</TableHead>
+            <TableHead className="hidden md:table-cell px-2 w-16">LIVE</TableHead>
+            <TableHead className="hidden xl:table-cell px-1 w-14">DECAY</TableHead>
+            <TableHead className="hidden lg:table-cell px-2 w-20">STATUS</TableHead>
+            <TableHead className="hidden md:table-cell text-right px-2 w-16">STAKED</TableHead>
+            <TableHead className="hidden lg:table-cell px-2 w-20">ACTIVITY</TableHead>
+            <TableHead className="w-8 px-1 text-center">
+              <Eye className="h-3.5 w-3.5 mx-auto text-muted-foreground" />
             </TableHead>
           </TableRow>
         </TableHeader>
