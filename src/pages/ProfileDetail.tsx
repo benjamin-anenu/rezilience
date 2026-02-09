@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -19,22 +20,54 @@ import { RoadmapManagement } from '@/components/profile/tabs/RoadmapManagement';
 import { PROJECT_CATEGORIES } from '@/types';
 import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
 import { useAuth } from '@/context/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
 
 const ProfileDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const { data: profile, isLoading, error, refetch } = useClaimedProfile(id || '');
+  const { data: profile, isLoading, error } = useClaimedProfile(id || '');
 
   // Check if current user is the owner
   const isOwner = user?.id && profile?.xUserId && user.id === profile.xUserId;
 
   const handleRefresh = async () => {
+    if (!profile?.githubOrgUrl || !profile?.id) {
+      toast({ title: 'Cannot refresh', description: 'No GitHub URL configured', variant: 'destructive' });
+      return;
+    }
+    
     setIsRefreshing(true);
-    await refetch();
-    setIsRefreshing(false);
+    try {
+      // Call edge function to actually refresh data from GitHub
+      const { data, error } = await supabase.functions.invoke('analyze-github-repo', {
+        body: { github_url: profile.githubOrgUrl, profile_id: profile.id },
+      });
+      
+      if (error) {
+        console.error('Refresh error:', error);
+        toast({ title: 'Refresh failed', description: error.message, variant: 'destructive' });
+        return;
+      }
+      
+      // Invalidate queries to show new data
+      await queryClient.invalidateQueries({ queryKey: ['claimed-profile', profile.id] });
+      await queryClient.invalidateQueries({ queryKey: ['claimed-profiles'] });
+      
+      toast({ 
+        title: 'Metrics refreshed', 
+        description: `Score: ${data?.data?.resilienceScore ?? 'calculated'}` 
+      });
+    } catch (err) {
+      console.error('Refresh exception:', err);
+      toast({ title: 'Refresh failed', description: 'Please try again later', variant: 'destructive' });
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const getCategoryLabel = (value: string) => {
