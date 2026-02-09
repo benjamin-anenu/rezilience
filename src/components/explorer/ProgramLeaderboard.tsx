@@ -36,10 +36,10 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
           <TableRow className="border-border hover:bg-transparent">
             <TableHead className="w-12 px-2">#</TableHead>
             <TableHead className="max-w-[120px] px-2">PROJECT</TableHead>
-            <TableHead className="hidden lg:table-cell px-2 w-16">TYPE</TableHead>
-            <TableHead className="hidden lg:table-cell px-2 w-20">PROGRAM</TableHead>
+            <TableHead className="hidden lg:table-cell px-2 w-20">TYPE</TableHead>
+            <TableHead className="hidden lg:table-cell px-2 w-24">PROGRAM</TableHead>
             <TableHead className="text-right px-2 w-14">SCORE</TableHead>
-            <TableHead className="hidden xl:table-cell px-1 w-12 text-center">H</TableHead>
+            <TableHead className="hidden xl:table-cell px-1 w-14 text-center">HEALTH</TableHead>
             <TableHead className="hidden xl:table-cell px-1 w-16">TREND</TableHead>
             <TableHead className="hidden md:table-cell px-2 w-16">LIVE</TableHead>
             <TableHead className="hidden xl:table-cell px-1 w-14">DECAY</TableHead>
