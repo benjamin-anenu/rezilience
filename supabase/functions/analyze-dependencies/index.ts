@@ -170,9 +170,9 @@ async function listGitHubDirectory(
 }
 
 /**
- * Fetch Cargo.toml with workspace support and expanded path discovery
+ * Fetch Cargo.toml with workspace support, [workspace.dependencies], and expanded path discovery
  */
-async function fetchCargoToml(owner: string, repo: string, token: string): Promise<{ content: string; aggregated: boolean } | null> {
+async function fetchCargoToml(owner: string, repo: string, token: string): Promise<{ content: string; aggregated: boolean; workspaceDeps?: Map<string, string> } | null> {
   const branches = ["main", "master", "develop"];
   
   for (const branch of branches) {
@@ -182,6 +182,9 @@ async function fetchCargoToml(owner: string, repo: string, token: string): Promi
     if (rootContent) {
       console.log(`Found root Cargo.toml at ${branch}/Cargo.toml`);
       
+      // Parse [workspace.dependencies] for shared version definitions
+      const workspaceDeps = parseWorkspaceDependencies(rootContent);
+      
       // Check if it's a workspace
       const workspaceMembers = parseWorkspaceMembers(rootContent);
       
@@ -190,6 +193,11 @@ async function fetchCargoToml(owner: string, repo: string, token: string): Promi
         
         // Aggregate dependencies from all workspace members
         const allDeps = new Map<string, string>();
+        
+        // First, include all [workspace.dependencies] as they're available to all members
+        for (const [name, version] of workspaceDeps) {
+          allDeps.set(name, version);
+        }
         
         for (const member of workspaceMembers) {
           // Handle glob patterns like "programs/*"
@@ -203,7 +211,8 @@ async function fetchCargoToml(owner: string, repo: string, token: string): Promi
               const memberContent = await fetchGitHubFile(owner, repo, branch, memberPath, token);
               if (memberContent) {
                 console.log(`Found member Cargo.toml: ${memberPath}`);
-                const deps = parseCargoToml(memberContent);
+                // Pass workspaceDeps to resolve workspace = true references
+                const deps = parseCargoToml(memberContent, workspaceDeps);
                 for (const [k, v] of deps) {
                   allDeps.set(k, v);
                 }
@@ -215,7 +224,8 @@ async function fetchCargoToml(owner: string, repo: string, token: string): Promi
             const memberContent = await fetchGitHubFile(owner, repo, branch, memberPath, token);
             if (memberContent) {
               console.log(`Found member Cargo.toml: ${memberPath}`);
-              const deps = parseCargoToml(memberContent);
+              // Pass workspaceDeps to resolve workspace = true references
+              const deps = parseCargoToml(memberContent, workspaceDeps);
               for (const [k, v] of deps) {
                 allDeps.set(k, v);
               }
@@ -229,15 +239,25 @@ async function fetchCargoToml(owner: string, repo: string, token: string): Promi
           for (const [name, version] of allDeps) {
             synthetic += `${name} = "${version}"\n`;
           }
-          console.log(`Aggregated ${allDeps.size} unique dependencies from workspace members`);
-          return { content: synthetic, aggregated: true };
+          console.log(`Aggregated ${allDeps.size} unique dependencies from workspace (including ${workspaceDeps.size} from [workspace.dependencies])`);
+          return { content: synthetic, aggregated: true, workspaceDeps };
         }
       }
       
       // Not a workspace or no deps found in members - check if root has dependencies
-      const rootDeps = parseCargoToml(rootContent);
+      const rootDeps = parseCargoToml(rootContent, workspaceDeps);
       if (rootDeps.size > 0) {
-        return { content: rootContent, aggregated: false };
+        return { content: rootContent, aggregated: false, workspaceDeps };
+      }
+      
+      // If root has [workspace.dependencies] but no [dependencies], that's still useful
+      if (workspaceDeps.size > 0) {
+        let synthetic = "[dependencies]\n";
+        for (const [name, version] of workspaceDeps) {
+          synthetic += `${name} = "${version}"\n`;
+        }
+        console.log(`Using ${workspaceDeps.size} dependencies from [workspace.dependencies] only`);
+        return { content: synthetic, aggregated: true, workspaceDeps };
       }
     }
     
@@ -593,9 +613,46 @@ async function getPypiDownloads(packageName: string): Promise<number> {
 }
 
 /**
- * Parse [dependencies] section from Cargo.toml
+ * Parse [workspace.dependencies] section from Cargo.toml
+ * Returns shared dependencies defined at workspace level
  */
-function parseCargoToml(content: string): Map<string, string> {
+function parseWorkspaceDependencies(content: string): Map<string, string> {
+  const deps = new Map<string, string>();
+  
+  // Match [workspace.dependencies] section
+  const workspaceDepMatch = content.match(/\[workspace\.dependencies\]([\s\S]*?)(?=\[|$)/);
+  if (!workspaceDepMatch) return deps;
+  
+  const depSection = workspaceDepMatch[1];
+  const lines = depSection.split("\n");
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    
+    // Match: name = "version" or name = { version = "..." }
+    const simpleMatch = trimmed.match(/^([a-z0-9_-]+)\s*=\s*"([^"]+)"/i);
+    const complexMatch = trimmed.match(/^([a-z0-9_-]+)\s*=\s*\{/i);
+    
+    if (simpleMatch) {
+      deps.set(simpleMatch[1], simpleMatch[2]);
+    } else if (complexMatch) {
+      const versionMatch = trimmed.match(/version\s*=\s*"([^"]+)"/);
+      if (versionMatch) {
+        deps.set(complexMatch[1], versionMatch[1]);
+      }
+    }
+  }
+  
+  console.log(`Parsed ${deps.size} workspace-level dependencies from [workspace.dependencies]`);
+  return deps;
+}
+
+/**
+ * Parse [dependencies] section from Cargo.toml
+ * Optionally resolves workspace = true inheritance using workspaceDeps
+ */
+function parseCargoToml(content: string, workspaceDeps?: Map<string, string>): Map<string, string> {
   const deps = new Map<string, string>();
   
   // Match [dependencies] section
@@ -609,12 +666,25 @@ function parseCargoToml(content: string): Map<string, string> {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith("#")) continue;
     
-    // Match: name = "version" or name = { version = "..." }
+    // Match: name = "version" or name = { version = "..." } or name.workspace = true
     const simpleMatch = trimmed.match(/^([a-z0-9_-]+)\s*=\s*"([^"]+)"/i);
     const complexMatch = trimmed.match(/^([a-z0-9_-]+)\s*=\s*\{/i);
+    const workspaceInheritMatch = trimmed.match(/^([a-z0-9_-]+)\.workspace\s*=\s*true/i);
+    const inlineWorkspaceMatch = trimmed.match(/^([a-z0-9_-]+)\s*=\s*\{[^}]*workspace\s*=\s*true[^}]*\}/i);
     
     if (simpleMatch) {
       deps.set(simpleMatch[1], simpleMatch[2]);
+    } else if (workspaceInheritMatch || inlineWorkspaceMatch) {
+      // Handle workspace = true inheritance (e.g., anchor-lang.workspace = true)
+      const depName = (workspaceInheritMatch || inlineWorkspaceMatch)![1];
+      if (workspaceDeps && workspaceDeps.has(depName)) {
+        deps.set(depName, workspaceDeps.get(depName)!);
+        console.log(`Resolved ${depName} from workspace.dependencies: ${workspaceDeps.get(depName)}`);
+      } else {
+        // Mark as workspace-inherited but version unknown - will check crates.io for latest
+        deps.set(depName, "workspace");
+        console.log(`Found workspace-inherited dep: ${depName} (version will be fetched from crates.io)`);
+      }
     } else if (complexMatch) {
       const versionMatch = trimmed.match(/version\s*=\s*"([^"]+)"/);
       if (versionMatch) {
@@ -925,7 +995,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { github_url, profile_id } = await req.json();
+    // Accept both snake_case and camelCase parameter names for compatibility
+    const body = await req.json();
+    const github_url = body.github_url;
+    const profile_id = body.profile_id || body.profileId; // Handle both naming conventions
 
     if (!github_url) {
       return new Response(
@@ -933,6 +1006,8 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+    
+    console.log(`Received request - github_url: ${github_url}, profile_id: ${profile_id || 'not provided'}`);
 
     const parsed = parseGitHubUrl(github_url);
     if (!parsed) {
@@ -1000,8 +1075,8 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Parse Rust dependencies from Cargo.toml
-    const parsedDeps = parseCargoToml(cargoResult.content);
+    // Parse Rust dependencies from Cargo.toml (pass workspace deps for inheritance resolution)
+    const parsedDeps = parseCargoToml(cargoResult.content, cargoResult.workspaceDeps);
     console.log(`Found ${parsedDeps.size} dependencies in Cargo.toml${cargoResult.aggregated ? ' (aggregated from workspace)' : ''}`);
 
     // Analyze each dependency against crates.io
@@ -1017,7 +1092,9 @@ Deno.serve(async (req) => {
       const isCritical = CRITICAL_DEPS.includes(name);
       
       if (latestVersion) {
-        const monthsBehind = calculateVersionGap(currentVersion, latestVersion);
+        // If version is "workspace", use latest from crates.io as current (best effort)
+        const resolvedVersion = currentVersion === "workspace" ? latestVersion : currentVersion;
+        const monthsBehind = currentVersion === "workspace" ? 0 : calculateVersionGap(resolvedVersion, latestVersion);
         const isOutdated = monthsBehind > 0;
         
         // Fetch reverse dependency count for ecosystem impact
@@ -1025,7 +1102,7 @@ Deno.serve(async (req) => {
         
         dependencies.push({
           name,
-          currentVersion,
+          currentVersion: resolvedVersion,
           latestVersion,
           monthsBehind,
           isOutdated,
