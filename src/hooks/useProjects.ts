@@ -109,7 +109,7 @@ export function useEcosystemStats() {
       // Fetch all profiles in the registry (not just verified ones)
       const { data, error } = await supabase
         .from('claimed_profiles')
-        .select('resilience_score, liveness_status, verified');
+        .select('resilience_score, liveness_status, verified, tvl_usd');
 
       if (error) {
         console.error('Error fetching ecosystem stats:', error);
@@ -127,12 +127,18 @@ export function useEcosystemStats() {
         : 0;
       
       const activePrograms = profiles.filter(p => p.liveness_status === 'ACTIVE').length;
+      
+      // Sum up TVL from all projects that have TVL data
+      const totalTvl = profiles
+        .filter(p => p.tvl_usd && p.tvl_usd > 0)
+        .reduce((sum, p) => sum + (p.tvl_usd || 0), 0);
 
       return {
         programsIndexed,
         averageScore: Math.round(averageScore * 10) / 10,
         totalStaked,
         activePrograms,
+        totalTvl,
       };
     },
     staleTime: 1000 * 60 * 5,

@@ -6,6 +6,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function EcosystemStats() {
   const { data: stats, isLoading, error } = useEcosystemStats();
 
+  const formatTvl = (tvl: number): string => {
+    if (tvl >= 1_000_000_000) return `$${(tvl / 1_000_000_000).toFixed(1)}B`;
+    if (tvl >= 1_000_000) return `$${(tvl / 1_000_000).toFixed(1)}M`;
+    if (tvl >= 1_000) return `$${(tvl / 1_000).toFixed(0)}K`;
+    return `$${tvl.toFixed(0)}`;
+  };
+
   const statItems = [
     {
       icon: Database,
@@ -24,23 +31,30 @@ export function EcosystemStats() {
     {
       icon: Coins,
       label: 'Projected TVL',
-      value: stats ? `$${(stats.totalStaked / 1000).toFixed(0)}K` : '—',
+      value: '$0K',
       tooltip: 'Estimated total value locked based on current staking commitments from early partners.',
       showBadge: true,
+    },
+    {
+      icon: Coins,
+      label: 'Indexed TVL',
+      value: stats ? formatTvl(stats.totalTvl) : '—',
+      tooltip: 'Total value locked across all indexed projects with available TVL data from DeFiLlama.',
+      showBadge: false,
     },
     {
       icon: Activity,
       label: 'Verified Active',
       value: stats?.activePrograms.toLocaleString() ?? '—',
-      tooltip: 'Programs with verified on-chain activity within the last 30 days.',
+      tooltip: 'Projects with verified on-chain activity within the last 30 days.',
       showBadge: false,
     },
   ];
 
   if (isLoading) {
     return (
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        {[...Array(5)].map((_, i) => (
           <div key={i} className="flex items-center gap-4 rounded-sm border border-border bg-card p-4">
             <Skeleton className="h-10 w-10 rounded-sm" />
             <div className="space-y-2">
@@ -63,7 +77,7 @@ export function EcosystemStats() {
  
   return (
     <TooltipProvider>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {statItems.map((stat) => (
           <div
             key={stat.label}
