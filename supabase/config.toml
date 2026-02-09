@@ -29,3 +29,12 @@ verify_jwt = false
 
 [functions.record-claim-attempt]
 verify_jwt = false
+
+[functions.analyze-dependencies]
+verify_jwt = false
+
+[functions.analyze-tvl]
+verify_jwt = false
+
+[functions.analyze-governance]
+verify_jwt = false

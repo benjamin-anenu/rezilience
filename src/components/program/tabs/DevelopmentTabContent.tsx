@@ -6,6 +6,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { PublicGitHubMetrics } from '../PublicGitHubMetrics';
 import { AnalyticsCharts } from '../AnalyticsCharts';
 import { RecentEvents } from '../RecentEvents';
+import { DependencyHealthCard } from '../DependencyHealthCard';
+import { GovernanceHealthCard } from '../GovernanceHealthCard';
+import { TVLMetricsCard } from '../TVLMetricsCard';
 import { useBytecodeVerification, getBytecodeStatusInfo } from '@/hooks/useBytecodeVerification';
 import { formatDistanceToNow } from 'date-fns';
 import type { GitHubAnalytics, Program } from '@/types';
@@ -20,6 +23,21 @@ interface DevelopmentTabContentProps {
   bytecodeVerifiedAt?: string | null;
   programId?: string | null;
   profileId?: string;
+  // New multi-dimensional scoring props
+  dependencyHealthScore?: number;
+  dependencyOutdatedCount?: number;
+  dependencyCriticalCount?: number;
+  dependencyAnalyzedAt?: string | null;
+  governanceAddress?: string | null;
+  governanceTx30d?: number;
+  governanceLastActivity?: string | null;
+  governanceAnalyzedAt?: string | null;
+  tvlUsd?: number;
+  tvlMarketShare?: number;
+  tvlRiskRatio?: number;
+  tvlAnalyzedAt?: string | null;
+  protocolName?: string;
+  category?: string;
 }
 
 export function DevelopmentTabContent({
@@ -32,6 +50,21 @@ export function DevelopmentTabContent({
   bytecodeVerifiedAt,
   programId,
   profileId,
+  // Multi-dimensional props with defaults
+  dependencyHealthScore = 50,
+  dependencyOutdatedCount = 0,
+  dependencyCriticalCount = 0,
+  dependencyAnalyzedAt,
+  governanceAddress,
+  governanceTx30d = 0,
+  governanceLastActivity,
+  governanceAnalyzedAt,
+  tvlUsd = 0,
+  tvlMarketShare = 0,
+  tvlRiskRatio = 0,
+  tvlAnalyzedAt,
+  protocolName,
+  category,
 }: DevelopmentTabContentProps) {
   const { verifyBytecode, isVerifying } = useBytecodeVerification();
 
@@ -204,6 +237,36 @@ export function DevelopmentTabContent({
           ))}
         </div>
       </TooltipProvider>
+
+      {/* Multi-Dimensional Health Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* Dependency Health */}
+        <DependencyHealthCard
+          healthScore={dependencyHealthScore}
+          outdatedCount={dependencyOutdatedCount}
+          criticalCount={dependencyCriticalCount}
+          analyzedAt={dependencyAnalyzedAt}
+        />
+
+        {/* Governance Health */}
+        <GovernanceHealthCard
+          governanceAddress={governanceAddress}
+          transactions30d={governanceTx30d}
+          lastActivity={governanceLastActivity}
+          analyzedAt={governanceAnalyzedAt}
+        />
+
+        {/* TVL Metrics - Only show for DeFi protocols */}
+        {(category === 'defi' || tvlUsd > 0) && (
+          <TVLMetricsCard
+            tvlUsd={tvlUsd}
+            marketShare={tvlMarketShare}
+            riskRatio={tvlRiskRatio}
+            protocolName={protocolName}
+            analyzedAt={tvlAnalyzedAt}
+          />
+        )}
+      </div>
     </div>
   );
 }
