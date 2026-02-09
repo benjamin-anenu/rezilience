@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, 
   TrendingUp, TrendingDown, Cloud, AlertTriangle, 
-  TrendingDownIcon, Eye, Lock, Github, Globe, ExternalLink, Users
+  TrendingDownIcon, Eye, Lock, Github, Globe, ExternalLink, Users, Network
 } from 'lucide-react';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -433,6 +433,23 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
                     <span className="text-foreground">@{project.x_username}</span>
                   </a>
                 )}
+                
+                {/* Dependency Tree Link */}
+                <div className="pt-3 mt-3 border-t border-border">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate(`/deps/${project.id}`);
+                    }}
+                    className="flex items-center justify-between w-full text-sm hover:text-primary transition-colors group"
+                  >
+                    <div className="flex items-center gap-2 text-muted-foreground group-hover:text-primary">
+                      <Network className="h-4 w-4" />
+                      <span>View Dependency Tree</span>
+                    </div>
+                    <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary" />
+                  </button>
+                </div>
               </div>
             </PopoverContent>
           </Popover>

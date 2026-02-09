@@ -16,6 +16,7 @@ import Dashboard from "./pages/Dashboard";
 import Staking from "./pages/Staking";
 import MyBonds from "./pages/MyBonds";
 import Readme from "./pages/Readme";
+import DependencyTree from "./pages/DependencyTree";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -40,6 +41,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/staking" element={<Staking />} />
               <Route path="/my-bonds" element={<MyBonds />} />
+              <Route path="/deps/:id" element={<DependencyTree />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

@@ -13,6 +13,7 @@ interface CrateDependency {
   monthsBehind: number;
   isOutdated: boolean;
   isCritical: boolean;
+  reverseDeps: number;
 }
 
 interface DependencyAnalysisResult {
@@ -141,6 +142,27 @@ async function getLatestCrateVersion(crateName: string): Promise<string | null> 
   } catch (error) {
     console.error(`Error fetching crate ${crateName}:`, error);
     return null;
+  }
+}
+
+/**
+ * Get reverse dependency count from crates.io
+ */
+async function getCrateReverseDeps(crateName: string): Promise<number> {
+  try {
+    const response = await fetch(`https://crates.io/api/v1/crates/${crateName}/reverse_dependencies?per_page=1`, {
+      headers: {
+        "User-Agent": "Resilience-Registry (contact@resilience.fi)",
+        Accept: "application/json",
+      },
+    });
+    
+    if (!response.ok) return 0;
+    
+    const data = await response.json();
+    return data.meta?.total || 0;
+  } catch {
+    return 0;
   }
 }
 
@@ -287,6 +309,9 @@ Deno.serve(async (req) => {
         const monthsBehind = calculateVersionGap(currentVersion, latestVersion);
         const isOutdated = monthsBehind > 0;
         
+        // Fetch reverse dependency count for ecosystem impact
+        const reverseDeps = await getCrateReverseDeps(name);
+        
         dependencies.push({
           name,
           currentVersion,
@@ -294,6 +319,7 @@ Deno.serve(async (req) => {
           monthsBehind,
           isOutdated,
           isCritical,
+          reverseDeps,
         });
         
         if (isOutdated) {
@@ -319,9 +345,10 @@ Deno.serve(async (req) => {
 
     console.log(`✅ Dependency analysis complete: ${healthScore}/100 health, ${outdatedCount} outdated, ${criticalCount} critical`);
 
-    // Update profile if provided
+    // Update profile and store in dependency_graph table
     if (profile_id) {
       await updateProfile(profile_id, result);
+      await storeDependencyGraph(profile_id, dependencies);
     }
 
     return new Response(
@@ -363,5 +390,49 @@ async function updateProfile(profileId: string, result: DependencyAnalysisResult
     console.error("Error updating claimed_profiles:", error);
   } else {
     console.log(`Updated profile ${profileId} with dependency analysis`);
+  }
+}
+
+/**
+ * Store individual dependencies in dependency_graph table
+ */
+async function storeDependencyGraph(profileId: string, dependencies: CrateDependency[]): Promise<void> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  
+  if (!supabaseUrl || !supabaseKey) return;
+  
+  const supabase = createClient(supabaseUrl, supabaseKey);
+
+  // First, delete existing dependencies for this profile
+  await supabase
+    .from("dependency_graph")
+    .delete()
+    .eq("source_profile_id", profileId);
+
+  // Insert new dependencies
+  const rows = dependencies.map((dep) => ({
+    source_profile_id: profileId,
+    crate_name: dep.name,
+    current_version: dep.currentVersion,
+    latest_version: dep.latestVersion,
+    months_behind: dep.monthsBehind,
+    is_critical: dep.isCritical,
+    is_outdated: dep.isOutdated,
+    crates_io_url: `https://crates.io/crates/${dep.name}`,
+    crates_io_dependents: dep.reverseDeps,
+    analyzed_at: new Date().toISOString(),
+  }));
+
+  if (rows.length > 0) {
+    const { error } = await supabase
+      .from("dependency_graph")
+      .insert(rows);
+
+    if (error) {
+      console.error("Error storing dependency_graph:", error);
+    } else {
+      console.log(`Stored ${rows.length} dependencies in dependency_graph`);
+    }
   }
 }
