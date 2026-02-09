@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { LivenessStatus } from '@/types/database';
 
@@ -44,8 +44,9 @@ export interface ExplorerProject {
  */
 export function useExplorerProjects() {
   const queryClient = useQueryClient();
+  const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Set up real-time subscription to claimed_profiles changes
+  // Set up real-time subscription to claimed_profiles changes with debouncing
   useEffect(() => {
     const channel = supabase
       .channel('explorer-realtime')
@@ -58,8 +59,14 @@ export function useExplorerProjects() {
         },
         (payload) => {
           console.log('Explorer: Detected claimed_profiles change', payload.eventType);
-          // Invalidate the query to trigger a refetch
-          queryClient.invalidateQueries({ queryKey: ['explorer-projects'] });
+          
+          // Debounce: Only invalidate after 2 seconds of no changes
+          if (debounceRef.current) {
+            clearTimeout(debounceRef.current);
+          }
+          debounceRef.current = setTimeout(() => {
+            queryClient.invalidateQueries({ queryKey: ['explorer-projects'] });
+          }, 2000);
         }
       )
       .subscribe((status) => {
@@ -67,6 +74,9 @@ export function useExplorerProjects() {
       });
 
     return () => {
+      if (debounceRef.current) {
+        clearTimeout(debounceRef.current);
+      }
       supabase.removeChannel(channel);
     };
   }, [queryClient]);
