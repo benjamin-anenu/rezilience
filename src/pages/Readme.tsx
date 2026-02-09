@@ -20,6 +20,11 @@ import {
   ArrowRight,
   Network,
   GitBranch,
+  Shield,
+  Ban,
+  KeyRound,
+  Wallet,
+  AlertTriangle,
 } from 'lucide-react';
 import { useState } from 'react';
 import { Layout } from '@/components/layout/Layout';
@@ -443,6 +448,164 @@ export default function Readme() {
 
                 </CardContent>
               </Card>
+
+              {/* Authority Verification Card */}
+              <div id="authority-verification" className="scroll-mt-24">
+                <Card className="card-premium mt-6">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <Shield className="h-5 w-5 text-primary" />
+                      <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
+                        Authority Verification (Ownership Handshake)
+                      </h3>
+                    </div>
+                    <p className="text-muted-foreground text-sm mb-6">
+                      To earn the <Badge variant="outline" className="font-mono text-xs mx-1">VERIFIED TITAN</Badge> badge,
+                      builders must cryptographically prove they control the program's upgrade authority. Here's how the handshake works:
+                    </p>
+
+                    <div className="space-y-4">
+                      <VerificationStep
+                        number={1}
+                        icon={Wallet}
+                        title="Connect Wallet"
+                        description="Connect the Solana wallet that holds the program's upgrade authority."
+                      />
+                      <VerificationStep
+                        number={2}
+                        icon={Shield}
+                        title="Eligibility Check"
+                        description="System checks if the wallet has been blacklisted from claiming this project."
+                      />
+                      <VerificationStep
+                        number={3}
+                        icon={Database}
+                        title="On-Chain Authority Lookup"
+                        description="Fetches the program's upgradeAuthority from Solana RPC via the programData account."
+                      />
+                      <div className="ml-10 rounded-sm border border-border bg-muted/20 p-4">
+                        <p className="font-mono text-xs text-primary mb-3 uppercase tracking-wider">Authority Match — Three Outcomes:</p>
+                        <div className="space-y-2 text-sm">
+                          <div className="flex items-start gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-chart-4 shrink-0 mt-0.5" />
+                            <span className="text-muted-foreground">
+                              <strong className="text-foreground">Direct Match</strong> — Wallet IS the upgrade authority → proceed to signing
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <Users className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                            <span className="text-muted-foreground">
+                              <strong className="text-foreground">Multisig Detected</strong> — Authority is a Squads multisig; verify as member or open Squads dashboard
+                            </span>
+                          </div>
+                          <div className="flex items-start gap-2">
+                            <Ban className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                            <span className="text-muted-foreground">
+                              <strong className="text-foreground">Mismatch</strong> — Wallet does NOT match; failed attempt is recorded
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <VerificationStep
+                        number={5}
+                        icon={KeyRound}
+                        title="SIWS Signature"
+                        description='Sign a structured "Resilience Registry Claim" message (no on-chain transaction) to cryptographically prove ownership.'
+                      />
+                      <VerificationStep
+                        number={6}
+                        icon={Shield}
+                        title="Profile Locked"
+                        description="Authority wallet is permanently associated with the profile. You are now a VERIFIED TITAN."
+                      />
+                    </div>
+
+                    {/* Callout box */}
+                    <div className="mt-6 rounded-sm border border-primary/20 bg-primary/5 p-4">
+                      <p className="font-mono text-xs text-primary mb-2 uppercase tracking-wider">Important Notes</p>
+                      <ul className="space-y-1.5 text-sm text-muted-foreground">
+                        <li className="flex items-start gap-2">
+                          <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          Immutable programs (no upgrade authority) cannot be claimed via this flow
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          Multisig support covers Squads v3 and v4
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          The signature does NOT authorize any blockchain transaction
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div className="mt-6">
+                      <Button asChild size="sm" className="font-display uppercase tracking-wider">
+                        <Link to="/claim-profile">
+                          <Rocket className="mr-2 h-4 w-4" />
+                          Try the Verification Flow
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Anti-Abuse: Claim Blacklist Card */}
+              <div id="claim-blacklist" className="scroll-mt-24">
+                <Card className="card-premium mt-6">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3 mb-6">
+                      <Ban className="h-5 w-5 text-destructive" />
+                      <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
+                        Anti-Abuse: Claim Blacklist
+                      </h3>
+                    </div>
+                    <p className="text-muted-foreground text-sm mb-6">
+                      Every failed authority verification is recorded per wallet-project pair. This system prevents unauthorized claims while allowing legitimate owners to retry.
+                    </p>
+
+                    {/* Escalation table */}
+                    <div className="rounded-sm border border-border overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border bg-muted/30">
+                            <th className="px-4 py-2 text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">Attempts</th>
+                            <th className="px-4 py-2 text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">System Response</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-border">
+                            <td className="px-4 py-3 font-mono text-foreground">1–2</td>
+                            <td className="px-4 py-3 text-muted-foreground">Silent tracking — no user-facing warning</td>
+                          </tr>
+                          <tr className="border-b border-border">
+                            <td className="px-4 py-3 font-mono text-yellow-500">3–4</td>
+                            <td className="px-4 py-3 text-muted-foreground flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0" />
+                              Warning: "X attempts remaining before permanent block"
+                            </td>
+                          </tr>
+                          <tr>
+                            <td className="px-4 py-3 font-mono text-destructive">5+</td>
+                            <td className="px-4 py-3 text-muted-foreground flex items-center gap-2">
+                              <Ban className="h-4 w-4 text-destructive shrink-0" />
+                              Permanent ban for this wallet-project pair
+                            </td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="mt-4 rounded-sm bg-muted/30 p-4 border border-border">
+                      <p className="text-sm text-muted-foreground">
+                        <strong className="text-foreground">Note:</strong> The blacklist is per-project, per-wallet — it does not affect other projects.
+                        Legitimate owners who are blocked can contact support with proof of ownership for manual review.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
 
               {/* How to Improve Continuity Card */}
               <Card className="card-premium mt-6">
@@ -1043,6 +1206,35 @@ function StepItem({
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
     </li>
+  );
+}
+
+function VerificationStep({
+  number,
+  icon: Icon,
+  title,
+  description,
+}: {
+  number: number;
+  icon: typeof Shield;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="flex items-start gap-4">
+      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 font-mono text-sm font-bold text-primary shrink-0">
+        {number}
+      </div>
+      <div className="flex items-start gap-3 flex-1">
+        <Icon className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+        <div>
+          <h4 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">
+            {title}
+          </h4>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
