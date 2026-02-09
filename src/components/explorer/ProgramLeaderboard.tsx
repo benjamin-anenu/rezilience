@@ -38,8 +38,8 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
   }
 
   const getScoreColor = (score: number) => {
-    if (score >= 85) return 'text-primary';
-    if (score >= 70) return 'text-foreground';
+    if (score >= 70) return 'text-primary';
+    if (score >= 40) return 'text-amber-500';
     return 'text-destructive';
   };
 
