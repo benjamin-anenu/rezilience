@@ -447,27 +447,27 @@ export default function Readme() {
                     <DataSourceItem
                       name="GitHub API"
                       description="Commits, Contributors, Releases, Events, Statistics endpoints"
-                      refresh="Every 30 minutes via cron"
+                      refresh="Every 6 hours via cron + Manual"
                     />
                     <DataSourceItem
                       name="Crates.io Registry"
                       description="Cargo.toml parsing for Rust dependency analysis"
-                      refresh="On profile update"
+                      refresh="Every 6 hours via cron + Manual"
                     />
                     <DataSourceItem
                       name="DeFiLlama API"
                       description="TVL data for DeFi protocols via protocol name mapping"
-                      refresh="Daily"
+                      refresh="Every 5 minutes (real-time)"
                     />
                     <DataSourceItem
                       name="Solana RPC"
-                      description="Program bytecode verification, governance transaction history"
-                      refresh="On profile update"
+                      description="Governance transaction history for Squads/Realms addresses"
+                      refresh="Every hour"
                     />
                     <DataSourceItem
                       name="OtterSec API"
                       description="Bytecode fingerprinting for originality classification"
-                      refresh="On verification request"
+                      refresh="On verification request (static)"
                     />
                   </div>
 
@@ -492,7 +492,7 @@ export default function Readme() {
                 <FAQItem
                   value="refresh"
                   question="How often is data refreshed?"
-                  answer="GitHub metrics are refreshed every 30 minutes via automated cron jobs. TVL data updates daily. Bytecode verification and dependency analysis run on-demand when profiles are updated."
+                  answer="Data refreshes on a tiered schedule optimized for each dimension's volatility: TVL updates every 5 minutes for real-time DeFi tracking, Governance checks hourly for DAO activity, and GitHub/Dependencies refresh every 6 hours. Protocol owners can also trigger a full manual refresh from their dashboard that analyzes all 4 dimensions simultaneously."
                 />
                 <FAQItem
                   value="dispute"

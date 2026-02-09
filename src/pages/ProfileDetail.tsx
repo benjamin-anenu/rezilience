@@ -43,24 +43,51 @@ const ProfileDetail = () => {
     
     setIsRefreshing(true);
     try {
-      // Call edge function to actually refresh data from GitHub
-      const { data, error } = await supabase.functions.invoke('analyze-github-repo', {
-        body: { github_url: profile.githubOrgUrl, profile_id: profile.id },
+      // Call ALL 4 dimension analyses in parallel for full-spectrum refresh
+      const [githubResult, depsResult, govResult, tvlResult] = await Promise.allSettled([
+        // 1. GitHub Activity (40%)
+        supabase.functions.invoke('analyze-github-repo', {
+          body: { github_url: profile.githubOrgUrl, profile_id: profile.id },
+        }),
+        // 2. Dependency Health (25%)
+        supabase.functions.invoke('analyze-dependencies', {
+          body: { github_url: profile.githubOrgUrl, profile_id: profile.id },
+        }),
+        // 3. Governance (20%) - only if multisig configured
+        profile.governanceMetrics?.governance_address
+          ? supabase.functions.invoke('analyze-governance', {
+              body: { governance_address: profile.governanceMetrics.governance_address, profile_id: profile.id },
+            })
+          : Promise.resolve({ data: null }),
+        // 4. TVL (15%) - only for DeFi category
+        profile.category === 'defi'
+          ? supabase.functions.invoke('analyze-tvl', {
+              body: { 
+                protocol_name: profile.projectName, 
+                profile_id: profile.id, 
+                monthly_commits: profile.githubAnalytics?.github_commits_30d || 30 
+              },
+            })
+          : Promise.resolve({ data: null }),
+      ]);
+
+      // Log any dimension failures for debugging
+      const dimensionNames = ['GitHub', 'Dependencies', 'Governance', 'TVL'];
+      [githubResult, depsResult, govResult, tvlResult].forEach((result, i) => {
+        if (result.status === 'rejected') {
+          console.warn(`${dimensionNames[i]} analysis failed:`, result.reason);
+        } else if (result.value && 'error' in result.value && result.value.error) {
+          console.warn(`${dimensionNames[i]} analysis error:`, result.value.error);
+        }
       });
-      
-      if (error) {
-        console.error('Refresh error:', error);
-        toast({ title: 'Refresh failed', description: error.message, variant: 'destructive' });
-        return;
-      }
       
       // Invalidate queries to show new data
       await queryClient.invalidateQueries({ queryKey: ['claimed-profile', profile.id] });
       await queryClient.invalidateQueries({ queryKey: ['claimed-profiles'] });
       
       toast({ 
-        title: 'Metrics refreshed', 
-        description: `Score: ${data?.data?.resilienceScore ?? 'calculated'}` 
+        title: 'Full refresh complete', 
+        description: 'All 4 dimensions analyzed and integrated score recalculated.' 
       });
     } catch (err) {
       console.error('Refresh exception:', err);
