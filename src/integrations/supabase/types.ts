@@ -357,11 +357,15 @@ export type Database = {
           crates_io_dependents: number | null
           crates_io_url: string | null
           current_version: string | null
+          dependency_type: string | null
           id: string
           is_critical: boolean | null
           is_outdated: boolean | null
           latest_version: string | null
           months_behind: number | null
+          npm_url: string | null
+          package_name: string | null
+          pypi_url: string | null
           source_profile_id: string
         }
         Insert: {
@@ -370,11 +374,15 @@ export type Database = {
           crates_io_dependents?: number | null
           crates_io_url?: string | null
           current_version?: string | null
+          dependency_type?: string | null
           id?: string
           is_critical?: boolean | null
           is_outdated?: boolean | null
           latest_version?: string | null
           months_behind?: number | null
+          npm_url?: string | null
+          package_name?: string | null
+          pypi_url?: string | null
           source_profile_id: string
         }
         Update: {
@@ -383,11 +391,15 @@ export type Database = {
           crates_io_dependents?: number | null
           crates_io_url?: string | null
           current_version?: string | null
+          dependency_type?: string | null
           id?: string
           is_critical?: boolean | null
           is_outdated?: boolean | null
           latest_version?: string | null
           months_behind?: number | null
+          npm_url?: string | null
+          package_name?: string | null
+          pypi_url?: string | null
           source_profile_id?: string
         }
         Relationships: [
