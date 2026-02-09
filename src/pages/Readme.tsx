@@ -422,13 +422,40 @@ export default function Readme() {
                     <StepItem
                       number={1}
                       title="Connect X Account"
-                      description="Authenticate via X (Twitter) to establish your builder identity."
+                      description="Authenticate via X (Twitter) OAuth 2.0 PKCE to establish your builder identity."
                     />
                     <StepItem
                       number={2}
                       title="Link GitHub Repository"
-                      description="Submit your public repo URL for instant analysis, or connect via OAuth for private repos."
+                      description="Submit your repository for analysis. Two paths available depending on repo visibility:"
                     />
+                  </ol>
+
+                  {/* Public vs Private repo callout */}
+                  <div className="ml-10 mt-2 mb-4 rounded-sm border border-border bg-muted/20 p-4">
+                    <p className="font-mono text-xs text-primary mb-3 uppercase tracking-wider">GitHub Verification — Two Paths:</p>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex items-start gap-2">
+                        <GitBranch className="h-4 w-4 text-chart-4 shrink-0 mt-0.5" />
+                        <span className="text-muted-foreground">
+                          <strong className="text-foreground">Public Repo</strong> — Paste the URL and the system runs instant server-side analysis (stars, forks, contributors, commit velocity, liveness status). No GitHub login required. Enables <Badge variant="outline" className="font-mono text-xs mx-1">DIRECT SUBMIT</Badge>.
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <KeyRound className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                        <span className="text-muted-foreground">
+                          <strong className="text-foreground">Private Repo</strong> — Click "Connect GitHub" to initiate OAuth handshake. System requests <code className="font-mono text-primary">read:user</code>, <code className="font-mono text-primary">read:org</code>, and <code className="font-mono text-primary">repo</code> scopes. Server-side token exchange fetches metrics securely.
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-border">
+                      <p className="text-xs text-muted-foreground">
+                        <strong className="text-yellow-500">Org Note:</strong> For organization-owned private repos, the org owner must grant the Resilience OAuth App access in GitHub Organization settings for the repository to be visible.
+                      </p>
+                    </div>
+                  </div>
+
+                  <ol className="space-y-4" start={3}>
                     <StepItem
                       number={3}
                       title="Complete Profile"
@@ -437,104 +464,162 @@ export default function Readme() {
                     <StepItem
                       number={4}
                       title="Verify Authority (Optional)"
-                      description="Sign a message with your program authority wallet for cryptographic verification."
+                      description="For on-chain programs only — sign a message with your program authority wallet for cryptographic verification."
                     />
                     <StepItem
                       number={5}
                       title="Get Analyzed"
-                      description="Our system fetches metrics from GitHub, crates.io, DeFiLlama, and Solana RPC."
+                      description="System computes your Resilience Score using the same formula: R = 0.40 × GitHub + 0.25 × Deps + 0.20 × Gov + 0.15 × TVL."
                     />
                   </ol>
 
                 </CardContent>
               </Card>
 
-              {/* Authority Verification Card */}
+              {/* Claim a Project on Registry Card */}
               <div id="authority-verification" className="scroll-mt-24">
                 <Card className="card-premium mt-6">
                   <CardContent className="pt-6">
                     <div className="flex items-center gap-3 mb-6">
                       <Shield className="h-5 w-5 text-primary" />
                       <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
-                        Authority Verification (Ownership Handshake)
+                        Claim a Project on Registry
                       </h3>
                     </div>
-                    <p className="text-muted-foreground text-sm mb-6">
-                      To earn the <Badge variant="outline" className="font-mono text-xs mx-1">VERIFIED TITAN</Badge> badge,
-                      builders must cryptographically prove they control the program's upgrade authority. Here's how the handshake works:
+                    <p className="text-muted-foreground text-sm mb-4">
+                      The Resilience Registry is pre-seeded with <strong className="text-foreground">166+ Solana protocols</strong> (including 82 major protocols and 84 Colosseum startups). When you claim a pre-listed project, the system pre-populates your registration with existing metadata. To prevent unauthorized claims, verification is required via one of two paths:
                     </p>
 
-                    <div className="space-y-4">
-                      <VerificationStep
-                        number={1}
-                        icon={Wallet}
-                        title="Connect Wallet"
-                        description="Connect the Solana wallet that holds the program's upgrade authority."
-                      />
-                      <VerificationStep
-                        number={2}
-                        icon={Shield}
-                        title="Eligibility Check"
-                        description="System checks if the wallet has been blacklisted from claiming this project."
-                      />
-                      <VerificationStep
-                        number={3}
-                        icon={Database}
-                        title="On-Chain Authority Lookup"
-                        description="Fetches the program's upgradeAuthority from Solana RPC via the programData account."
-                      />
-                      <div className="ml-10 rounded-sm border border-border bg-muted/20 p-4">
-                        <p className="font-mono text-xs text-primary mb-3 uppercase tracking-wider">Authority Match — Three Outcomes:</p>
-                        <div className="space-y-2 text-sm">
-                          <div className="flex items-start gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-chart-4 shrink-0 mt-0.5" />
-                            <span className="text-muted-foreground">
-                              <strong className="text-foreground">Direct Match</strong> — Wallet IS the upgrade authority → proceed to signing
-                            </span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <Users className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
-                            <span className="text-muted-foreground">
-                              <strong className="text-foreground">Multisig Detected</strong> — Authority is a Squads multisig; verify as member or open Squads dashboard
-                            </span>
-                          </div>
-                          <div className="flex items-start gap-2">
-                            <Ban className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
-                            <span className="text-muted-foreground">
-                              <strong className="text-foreground">Mismatch</strong> — Wallet does NOT match; failed attempt is recorded
-                            </span>
+                    {/* Path A: On-Chain */}
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Badge variant="outline" className="font-mono text-xs">PATH A</Badge>
+                        <h4 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">On-Chain Programs (has Program ID)</h4>
+                      </div>
+                      <div className="space-y-4">
+                        <VerificationStep
+                          number={1}
+                          icon={Wallet}
+                          title="Connect Wallet"
+                          description="Connect the Solana wallet that holds the program's upgrade authority."
+                        />
+                        <VerificationStep
+                          number={2}
+                          icon={Shield}
+                          title="Eligibility Check"
+                          description="System checks if the wallet has been blacklisted from claiming this project."
+                        />
+                        <VerificationStep
+                          number={3}
+                          icon={Database}
+                          title="On-Chain Authority Lookup"
+                          description="Fetches the program's upgradeAuthority from Solana RPC via the programData account."
+                        />
+                        <div className="ml-10 rounded-sm border border-border bg-muted/20 p-4">
+                          <p className="font-mono text-xs text-primary mb-3 uppercase tracking-wider">Authority Match — Three Outcomes:</p>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-start gap-2">
+                              <CheckCircle2 className="h-4 w-4 text-chart-4 shrink-0 mt-0.5" />
+                              <span className="text-muted-foreground">
+                                <strong className="text-foreground">Direct Match</strong> — Wallet IS the upgrade authority → proceed to signing
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <Users className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                              <span className="text-muted-foreground">
+                                <strong className="text-foreground">Multisig Detected</strong> — Authority is a Squads multisig; verify as member or open Squads dashboard
+                              </span>
+                            </div>
+                            <div className="flex items-start gap-2">
+                              <Ban className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
+                              <span className="text-muted-foreground">
+                                <strong className="text-foreground">Mismatch</strong> — Wallet does NOT match; failed attempt is recorded
+                              </span>
+                            </div>
                           </div>
                         </div>
+                        <VerificationStep
+                          number={5}
+                          icon={KeyRound}
+                          title="SIWS Signature"
+                          description='Sign a structured "Resilience Registry Claim" message (no on-chain transaction) to cryptographically prove ownership.'
+                        />
+                        <VerificationStep
+                          number={6}
+                          icon={Shield}
+                          title="Profile Locked"
+                          description="Authority wallet is permanently associated with the profile. You are now a VERIFIED TITAN."
+                        />
                       </div>
-                      <VerificationStep
-                        number={5}
-                        icon={KeyRound}
-                        title="SIWS Signature"
-                        description='Sign a structured "Resilience Registry Claim" message (no on-chain transaction) to cryptographically prove ownership.'
-                      />
-                      <VerificationStep
-                        number={6}
-                        icon={Shield}
-                        title="Profile Locked"
-                        description="Authority wallet is permanently associated with the profile. You are now a VERIFIED TITAN."
-                      />
+                      <div className="mt-4 ml-10 rounded-sm bg-chart-4/10 border border-chart-4/20 px-4 py-2">
+                        <p className="text-sm text-muted-foreground">
+                          <strong className="text-chart-4">Outcome:</strong> <Badge variant="outline" className="font-mono text-xs mx-1">VERIFIED TITAN</Badge> badge
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Path B: Off-Chain */}
+                    <div className="mb-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Badge variant="outline" className="font-mono text-xs">PATH B</Badge>
+                        <h4 className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Off-Chain Projects (no Program ID)</h4>
+                      </div>
+                      <div className="space-y-4">
+                        <VerificationStep
+                          number={1}
+                          icon={Users}
+                          title="Connect X Account"
+                          description="Establish primary identity via X (Twitter) OAuth 2.0 PKCE."
+                        />
+                        <VerificationStep
+                          number={2}
+                          icon={GitBranch}
+                          title="Connect GitHub via OAuth"
+                          description="System verifies the connected GitHub account owns or has admin access to the repository linked to the pre-seeded profile."
+                        />
+                        <VerificationStep
+                          number={3}
+                          icon={CheckCircle2}
+                          title="Repository Match Confirmed"
+                          description="GitHub username or organization matches the repo owner listed in the registry entry."
+                        />
+                        <VerificationStep
+                          number={4}
+                          icon={Shield}
+                          title="Profile Claimed"
+                          description='Project transitions from "unclaimed" to "claimed" with an Off-chain badge.'
+                        />
+                      </div>
+                      <div className="mt-4 ml-10 rounded-sm bg-primary/10 border border-primary/20 px-4 py-2">
+                        <p className="text-sm text-muted-foreground">
+                          <strong className="text-primary">Outcome:</strong> <Badge variant="outline" className="font-mono text-xs mx-1">CLAIMED</Badge> badge (no VERIFIED TITAN since there is no on-chain authority to verify)
+                        </p>
+                      </div>
                     </div>
 
                     {/* Callout box */}
-                    <div className="mt-6 rounded-sm border border-primary/20 bg-primary/5 p-4">
+                    <div className="rounded-sm border border-primary/20 bg-primary/5 p-4">
                       <p className="font-mono text-xs text-primary mb-2 uppercase tracking-wider">Important Notes</p>
                       <ul className="space-y-1.5 text-sm text-muted-foreground">
                         <li className="flex items-start gap-2">
                           <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                          Immutable programs (no upgrade authority) cannot be claimed via this flow
+                          Off-chain claims require GitHub OAuth — public URL paste alone is not sufficient since ownership must be proven
                         </li>
                         <li className="flex items-start gap-2">
                           <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                          Multisig support covers Squads v3 and v4
+                          On-chain claims require the authority wallet (upgrade authority or Squads multisig member)
                         </li>
                         <li className="flex items-start gap-2">
                           <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                          The signature does NOT authorize any blockchain transaction
+                          Both paths are subject to the claim blacklist system (see below)
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          Immutable programs (no upgrade authority) cannot be claimed via Path A
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <ChevronRight className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                          The SIWS signature does NOT authorize any blockchain transaction
                         </li>
                       </ul>
                     </div>
@@ -543,7 +628,7 @@ export default function Readme() {
                       <Button asChild size="sm" className="font-display uppercase tracking-wider">
                         <Link to="/claim-profile">
                           <Rocket className="mr-2 h-4 w-4" />
-                          Try the Verification Flow
+                          Claim Your Project
                         </Link>
                       </Button>
                     </div>
@@ -562,7 +647,7 @@ export default function Readme() {
                       </h3>
                     </div>
                     <p className="text-muted-foreground text-sm mb-6">
-                      Every failed authority verification is recorded per wallet-project pair. This system prevents unauthorized claims while allowing legitimate owners to retry.
+                      Every failed claim verification — whether on-chain (wallet authority mismatch) or off-chain (GitHub ownership mismatch) — is recorded per identity-project pair. This system prevents unauthorized claims while allowing legitimate owners to retry.
                     </p>
 
                     {/* Escalation table */}
