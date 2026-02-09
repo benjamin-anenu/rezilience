@@ -67,7 +67,15 @@ const CRITICAL_PYPI_DEPS = [
 /**
  * Parse GitHub URL to owner/repo
  */
-function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
+function parseGitHubUrl(url: string): { owner: string; repo: string } | { orgOnly: true; org: string } | null {
+  // Detect org-only URLs (e.g. github.com/step-finance or github.com/step-finance/)
+  const orgOnlyPattern = /github\.com\/([^\/\?#]+)\/?$/;
+  const orgMatch = url.match(orgOnlyPattern);
+  if (orgMatch) {
+    console.error(`Invalid URL: ${url} points to GitHub org "${orgMatch[1]}", not a specific repository`);
+    return { orgOnly: true, org: orgMatch[1] };
+  }
+
   const patterns = [
     /github\.com\/([^\/]+)\/([^\/\?#]+)/,
     /github\.com\/([^\/]+)\/([^\/]+)\.git$/,
@@ -129,8 +137,12 @@ async function fetchGitHubFile(
     if (response.ok) {
       return await response.text();
     }
-  } catch {
-    // Ignore errors - file doesn't exist
+    // Log HTTP errors for the first branch attempt to aid debugging
+    if (branch === "main") {
+      console.log(`GitHub ${response.status} for ${owner}/${repo}/${branch}/${path}`);
+    }
+  } catch (err) {
+    console.log(`Fetch error for ${owner}/${repo}/${branch}/${path}: ${err}`);
   }
   return null;
 }
@@ -1013,6 +1025,18 @@ Deno.serve(async (req) => {
     if (!parsed) {
       return new Response(
         JSON.stringify({ success: false, error: "Invalid GitHub URL format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Handle org-only URLs with a clear error message
+    if ('orgOnly' in parsed) {
+      console.log(`Rejected org-only URL: ${github_url} (org: ${parsed.org})`);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: `URL points to GitHub organization "${parsed.org}", not a specific repository. Please provide a URL like github.com/${parsed.org}/repo-name` 
+        }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
