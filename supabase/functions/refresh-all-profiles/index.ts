@@ -45,25 +45,35 @@ Deno.serve(async (req) => {
   }
 
   try {
-    // Parse request body to check for selective dimension refresh
+    // Parse request body for selective dimension refresh and batch params
     const body = await req.json().catch(() => ({}));
     const requestedDimensions: string[] = body.dimensions || ['github', 'dependencies', 'governance', 'tvl'];
+    const batchSize: number = Math.min(Math.max(body.batch_size || 10, 1), 50);
+    const offset: number = Math.max(body.offset || 0, 0);
     
-    console.log(`[refresh-all-profiles] Requested dimensions: ${requestedDimensions.join(', ')}`);
+    console.log(`[refresh-all-profiles] Dimensions: ${requestedDimensions.join(', ')}, batch_size: ${batchSize}, offset: ${offset}`);
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    console.log("Starting refresh of all verified profiles...");
+    // First get total count
+    const { count: totalCount } = await supabase
+      .from("claimed_profiles")
+      .select("id", { count: "exact", head: true })
+      .or("verified.eq.true,claim_status.eq.unclaimed")
+      .not("github_org_url", "is", null);
 
-    // Fetch all verified profiles AND unclaimed profiles with GitHub URLs
-    // This ensures unclaimed profiles are actively monitored for liveness
+    console.log(`Total eligible profiles: ${totalCount}, processing offset ${offset} batch ${batchSize}`);
+
+    // Fetch batch of profiles
     const { data: profiles, error: fetchError } = await supabase
       .from("claimed_profiles")
       .select("id, project_name, github_org_url, multisig_address, category, resilience_score, dependency_health_score, governance_tx_30d, tvl_usd, tvl_risk_ratio, github_commits_30d")
       .or("verified.eq.true,claim_status.eq.unclaimed")
-      .not("github_org_url", "is", null);
+      .not("github_org_url", "is", null)
+      .order("project_name")
+      .range(offset, offset + batchSize - 1);
 
     if (fetchError) {
       throw new Error(`Failed to fetch profiles: ${fetchError.message}`);
@@ -237,8 +247,8 @@ Deno.serve(async (req) => {
         });
         console.log(`✓ Full analysis complete: ${profile.project_name}`);
 
-        // Rate limit: wait 2 seconds between profiles to respect all API limits
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        // Rate limit: wait 1 second between profiles
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       } catch (err) {
         errorCount++;
         results.push({ profile: profile.project_name, status: `exception: ${err}` });
@@ -246,9 +256,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    const nextOffset = offset + profiles.length;
+    const hasMore = totalCount ? nextOffset < totalCount : false;
+
     const summary = {
-      message: `Refresh complete: ${successCount} updated, ${errorCount} errors`,
-      total: profiles.length,
+      message: `Batch complete: ${successCount} updated, ${errorCount} errors (offset ${offset}, batch ${batchSize})`,
+      total: totalCount || 0,
+      batch_size: batchSize,
+      offset,
+      next_offset: hasMore ? nextOffset : null,
+      has_more: hasMore,
+      processed: profiles.length,
       success: successCount,
       errors: errorCount,
       dimensions: requestedDimensions,
