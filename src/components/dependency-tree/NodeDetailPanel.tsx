@@ -10,10 +10,16 @@ interface NodeDetailPanelProps {
   onClose: () => void;
   nodeData: DependencyNodeData | null;
   cratesIoUrl?: string | null;
+  npmUrl?: string | null;
 }
 
-export function NodeDetailPanel({ open, onClose, nodeData, cratesIoUrl }: NodeDetailPanelProps) {
+export function NodeDetailPanel({ open, onClose, nodeData, cratesIoUrl, npmUrl }: NodeDetailPanelProps) {
   if (!nodeData) return null;
+
+  // Determine registry URL and name based on dependency type
+  const registryUrl = nodeData.dependencyType === 'npm' ? npmUrl : cratesIoUrl;
+  const registryName = nodeData.dependencyType === 'npm' ? 'npm' : nodeData.dependencyType === 'pypi' ? 'PyPI' : 'crates.io';
+  const typeIcon = nodeData.dependencyType === 'npm' ? '📦' : nodeData.dependencyType === 'pypi' ? '🐍' : '🦀';
 
   const getStatusBadge = () => {
     if (nodeData.type === 'project') {
@@ -65,7 +71,7 @@ export function NodeDetailPanel({ open, onClose, nodeData, cratesIoUrl }: NodeDe
       <SheetContent className="w-[400px] sm:w-[540px] border-border bg-card">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-3">
-            <Package className="h-5 w-5 text-primary" />
+            <span className="text-xl">{typeIcon}</span>
             <span className="font-mono">{nodeData.label}</span>
           </SheetTitle>
         </SheetHeader>
@@ -129,15 +135,15 @@ export function NodeDetailPanel({ open, onClose, nodeData, cratesIoUrl }: NodeDe
           )}
 
           {/* Actions */}
-          {cratesIoUrl && (
+          {registryUrl && (
             <div className="pt-4 border-t border-border">
               <Button
                 variant="outline"
                 className="w-full"
-                onClick={() => window.open(cratesIoUrl, '_blank')}
+                onClick={() => window.open(registryUrl, '_blank')}
               >
                 <ExternalLink className="mr-2 h-4 w-4" />
-                View on crates.io
+                View on {registryName}
               </Button>
             </div>
           )}
