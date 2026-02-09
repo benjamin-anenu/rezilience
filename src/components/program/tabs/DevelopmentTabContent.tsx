@@ -225,6 +225,7 @@ export function DevelopmentTabContent({
           outdatedCount={dependencyOutdatedCount}
           criticalCount={dependencyCriticalCount}
           analyzedAt={dependencyAnalyzedAt}
+          profileId={profileId}
         />
         <GovernanceHealthCard
           governanceAddress={governanceAddress}

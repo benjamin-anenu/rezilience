@@ -1,4 +1,5 @@
-import { Package, AlertTriangle, CheckCircle, RefreshCw } from 'lucide-react';
+import { Package, AlertTriangle, CheckCircle, RefreshCw, Network } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +14,7 @@ interface DependencyHealthCardProps {
   analyzedAt?: string | null;
   onRefresh?: () => void;
   isRefreshing?: boolean;
+  profileId?: string;
 }
 
 export function DependencyHealthCard({
@@ -22,6 +24,7 @@ export function DependencyHealthCard({
   analyzedAt,
   onRefresh,
   isRefreshing,
+  profileId,
 }: DependencyHealthCardProps) {
   const getHealthColor = (score: number) => {
     if (score >= 80) return 'text-primary';
@@ -56,26 +59,47 @@ export function DependencyHealthCard({
               </CardDescription>
             </div>
           </div>
-          {onRefresh && (
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={onRefresh}
-                    disabled={isRefreshing}
-                    className="h-8 w-8"
-                  >
-                    <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  {isRefreshing ? 'Analyzing...' : 'Re-analyze dependencies'}
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
+          <div className="flex items-center gap-1">
+            {profileId && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      asChild
+                      className="h-8 w-8"
+                    >
+                      <Link to={`/deps/${profileId}`}>
+                        <Network className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>View Dependency Tree</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+            {onRefresh && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={onRefresh}
+                      disabled={isRefreshing}
+                      className="h-8 w-8"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {isRefreshing ? 'Analyzing...' : 'Re-analyze dependencies'}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            )}
+          </div>
         </div>
       </CardHeader>
       <CardContent>
