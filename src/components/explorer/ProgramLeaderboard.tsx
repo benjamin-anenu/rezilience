@@ -143,7 +143,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
       case 'new':
         return <Sparkles className="h-3 w-3 text-amber-500" />;
       default:
-        return <Minus className="h-3 w-3 text-muted-foreground" />;
+        return null;
     }
   };
 
