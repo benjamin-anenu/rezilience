@@ -1,45 +1,26 @@
 
 
-# Rebrand Health States: Healthy, Evolving, Under Observation, Locked
+# Remove "Unclaimed" Status from Titan Watch
 
-## Label Mapping
+## What Changes
 
-| Score Range | Current Label | New Label | Color Change |
-|-------------|--------------|-----------|--------------|
-| 70+ | Healthy | **Healthy** (no change) | None |
-| 40-69 | Stale | **Evolving** | None (amber stays) |
-| 1-39 | Decaying | **Under Observation** | Red -> muted slate/steel |
-| Private repo | Unclaimed | **Locked** | New: black with padlock |
+The "Unclaimed" health status will be removed from the heatmap. Unclaimed projects will now be classified by their actual score (Healthy/Evolving/Under Observation) just like claimed projects -- no special treatment. The "Locked" status remains for private repos with no GitHub data.
 
 ## Files to Update
 
-### 1. `src/components/explorer/EcosystemHeatmap.tsx`
-- Add `'locked'` health status for unclaimed projects with no GitHub analysis
-- `getStatusLabel()`: STALE -> "EVOLVING", DECAYING -> "UNDER OBSERVATION", add LOCKED
-- `getHealthColor()`: decaying changes from red to muted steel; locked = near-black
-- Legend: update text and add Locked entry with padlock
-- Filter dropdown: update labels
-- Heatmap cell: show Lock icon for locked repos instead of score
-- Stats: add locked count
+### `src/components/explorer/EcosystemHeatmap.tsx`
+- Remove `'unclaimed'` from the `HealthStatus` type (keeping `'healthy' | 'stale' | 'decaying' | 'locked'`)
+- Update `getHealthStatus()`: remove the `if (project.claimStatus === 'unclaimed') return 'unclaimed'` check -- unclaimed projects now fall through to score-based classification (healthy/stale/decaying)
+- Remove `getHealthColor()` case for `'unclaimed'`
+- Remove `getStatusLabel()` case for `'unclaimed'`
+- Remove the "Unclaimed" legend entry
+- Remove the "Unclaimed" option from the status filter dropdown
+- Remove `stats.unclaimed` count
+- Remove the `'unclaimed'` rendering branch in the heatmap cell (the dash character)
+- Remove the unclaimed badge variant in the tooltip
 
-### 2. `src/components/explorer/EcosystemPulse.tsx`
-- Pie chart labels: "Stale" -> "Evolving", "Decaying" -> "Under Observation"
-- Decaying pie slice color: red -> steel
-
-### 3. `src/components/explorer/LeaderboardRow.tsx`
-- Badge text: "Stale" -> "Evolving", "Decay" -> "Observing"
-- Decaying badge color: destructive -> neutral steel
-
-### 4. `src/components/explorer/MobileProgramCard.tsx`
-- Same badge text and color changes as LeaderboardRow
-
-### 5. `src/components/explorer/SearchBar.tsx`
-- Filter dropdown: "Stale" -> "Evolving", "Decaying" -> "Under Observation"
-
-### What stays unchanged
-- Internal code keys (`'healthy'`, `'stale'`, `'decaying'`)
-- Database enum values (`ACTIVE`, `STALE`, `DECAYING`)
-- Score thresholds (70/40)
-- Teal and Amber colors
-- All scoring logic
+## What stays unchanged
+- "Locked" status remains for private/inaccessible repos (`claimStatus === 'unclaimed' && !github_analyzed_at`)
+- Healthy, Evolving, Under Observation -- all unchanged
+- All colors, scoring logic, thresholds unchanged
 
