@@ -424,6 +424,57 @@ export type Database = {
           },
         ]
       }
+      ecosystem_snapshots: {
+        Row: {
+          active_projects: number
+          avg_dependency_health: number
+          avg_resilience_score: number
+          created_at: string | null
+          decaying_count: number
+          healthy_count: number
+          id: string
+          snapshot_date: string
+          stale_count: number
+          total_commits_30d: number
+          total_contributors: number
+          total_governance_tx: number
+          total_projects: number
+          total_tvl_usd: number
+        }
+        Insert: {
+          active_projects?: number
+          avg_dependency_health?: number
+          avg_resilience_score?: number
+          created_at?: string | null
+          decaying_count?: number
+          healthy_count?: number
+          id?: string
+          snapshot_date: string
+          stale_count?: number
+          total_commits_30d?: number
+          total_contributors?: number
+          total_governance_tx?: number
+          total_projects?: number
+          total_tvl_usd?: number
+        }
+        Update: {
+          active_projects?: number
+          avg_dependency_health?: number
+          avg_resilience_score?: number
+          created_at?: string | null
+          decaying_count?: number
+          healthy_count?: number
+          id?: string
+          snapshot_date?: string
+          stale_count?: number
+          total_commits_30d?: number
+          total_contributors?: number
+          total_governance_tx?: number
+          total_projects?: number
+          total_tvl_usd?: number
+        }
+        Relationships: []
+      }
       projects: {
         Row: {
           created_at: string
