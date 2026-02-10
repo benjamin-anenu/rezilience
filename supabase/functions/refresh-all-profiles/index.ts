@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
   try {
     // Parse request body for selective dimension refresh and batch params
     const body = await req.json().catch(() => ({}));
-    const requestedDimensions: string[] = body.dimensions || ['github', 'dependencies', 'governance', 'tvl'];
+    const requestedDimensions: string[] = body.dimensions || ['github', 'dependencies', 'governance', 'tvl', 'bytecode'];
     const batchSize: number = Math.min(Math.max(body.batch_size || 5, 1), 50);
     const offset: number = Math.max(body.offset || 0, 0);
     const autoChain: boolean = body.auto_chain !== false; // default true
@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     // Fetch batch of profiles
     const { data: profiles, error: fetchError } = await supabase
       .from("claimed_profiles")
-      .select("id, project_name, github_org_url, multisig_address, category, resilience_score, dependency_health_score, governance_tx_30d, tvl_usd, tvl_risk_ratio, github_commits_30d")
+      .select("id, project_name, github_org_url, multisig_address, category, resilience_score, dependency_health_score, governance_tx_30d, tvl_usd, tvl_risk_ratio, github_commits_30d, program_id")
       .or("verified.eq.true,claim_status.eq.unclaimed")
       .not("github_org_url", "is", null)
       .order("project_name")
@@ -201,6 +201,34 @@ Deno.serve(async (req) => {
           }
         }
         tvlScore = calculateTvlScore(tvlRiskRatio, tvlUsd);
+
+        // === BYTECODE VERIFICATION (if requested) ===
+        if (requestedDimensions.includes('bytecode') && profile.program_id) {
+          const verifyBytecodeUrl = `${supabaseUrl}/functions/v1/verify-bytecode`;
+          try {
+            const bytecodeResponse = await fetch(verifyBytecodeUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${supabaseKey}`,
+              },
+              body: JSON.stringify({
+                program_id: profile.program_id,
+                profile_id: profile.id,
+                github_url: profile.github_org_url,
+              }),
+            });
+
+            if (bytecodeResponse.ok) {
+              const bytecodeData = await bytecodeResponse.json();
+              if (bytecodeData?.success && !bytecodeData?.cached) {
+                console.log(`✓ Bytecode verified: ${profile.project_name} (${bytecodeData.data?.matchStatus})`);
+              }
+            }
+          } catch (bytecodeErr) {
+            console.error(`✗ Bytecode verification failed for ${profile.project_name}:`, bytecodeErr);
+          }
+        }
 
         // === CALCULATE INTEGRATED SCORE ===
         // Formula: R = 0.40×GitHub + 0.25×Deps + 0.20×Gov + 0.15×TVL

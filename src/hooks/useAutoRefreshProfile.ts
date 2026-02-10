@@ -14,7 +14,9 @@ const STALE_THRESHOLD_MS = 30 * 60 * 1000; // 30 minutes
 export function useAutoRefreshProfile(
   profileId: string | undefined,
   githubUrl: string | undefined,
-  lastAnalyzedAt: string | undefined
+  lastAnalyzedAt: string | undefined,
+  programId?: string | undefined,
+  bytecodeVerifiedAt?: string | undefined
 ) {
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -41,30 +43,56 @@ export function useAutoRefreshProfile(
 
     console.log(`[AutoRefresh] Triggering background refresh for profile ${profileId}`);
 
-    // Non-blocking background refresh
-    supabase.functions
-      .invoke('analyze-github-repo', {
-        body: { github_url: githubUrl, profile_id: profileId },
-      })
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('[AutoRefresh] Failed:', error);
-          return;
-        }
+    // Non-blocking background refresh (GitHub + Bytecode in parallel)
+    const refreshPromises: Promise<void>[] = [];
 
-        if (data?.success) {
-          console.log(`[AutoRefresh] Complete. Score: ${data.data?.resilienceScore}`);
-          
-          // Invalidate queries to refresh UI with new data
-          queryClient.invalidateQueries({ queryKey: ['claimed-profile', profileId] });
-          queryClient.invalidateQueries({ queryKey: ['claimed-profile-by-program'] });
-          queryClient.invalidateQueries({ queryKey: ['claimed-profile-by-project-id'] });
-        }
-      })
-      .finally(() => {
-        setIsRefreshing(false);
-      });
-  }, [profileId, githubUrl, lastAnalyzedAt, queryClient]);
+    // GitHub analysis
+    refreshPromises.push(
+      supabase.functions
+        .invoke('analyze-github-repo', {
+          body: { github_url: githubUrl, profile_id: profileId },
+        })
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('[AutoRefresh] GitHub failed:', error);
+            return;
+          }
+          if (data?.success) {
+            console.log(`[AutoRefresh] GitHub complete. Score: ${data.data?.resilienceScore}`);
+          }
+        })
+    );
+
+    // Bytecode verification (if program_id available and not recently verified)
+    const bytecodeStale = !bytecodeVerifiedAt ||
+      (Date.now() - new Date(bytecodeVerifiedAt).getTime()) > 24 * 60 * 60 * 1000; // 24h
+    
+    if (programId && bytecodeStale) {
+      refreshPromises.push(
+        supabase.functions
+          .invoke('verify-bytecode', {
+            body: { program_id: programId, profile_id: profileId, github_url: githubUrl },
+          })
+          .then(({ data, error }) => {
+            if (error) {
+              console.error('[AutoRefresh] Bytecode failed:', error);
+              return;
+            }
+            if (data?.success && !data?.cached) {
+              console.log(`[AutoRefresh] Bytecode verified: ${data.data?.matchStatus}`);
+            }
+          })
+      );
+    }
+
+    Promise.allSettled(refreshPromises).then(() => {
+      // Invalidate queries to refresh UI with new data
+      queryClient.invalidateQueries({ queryKey: ['claimed-profile', profileId] });
+      queryClient.invalidateQueries({ queryKey: ['claimed-profile-by-program'] });
+      queryClient.invalidateQueries({ queryKey: ['claimed-profile-by-project-id'] });
+      setIsRefreshing(false);
+    });
+  }, [profileId, githubUrl, lastAnalyzedAt, programId, bytecodeVerifiedAt, queryClient]);
 
   return { isRefreshing };
 }
