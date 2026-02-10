@@ -1,141 +1,117 @@
 
 
-# Pre-Production Audit: Seed Consolidation + Bytecode Auto-Refresh
+# Bytecode Verification Hardening Plan
+
+## Current State: Honest Assessment
+
+The existing `verify-bytecode` function is essentially a **registry lookup wrapper** around the OtterSec API. It does NOT perform actual bytecode verification. The "bytecodeHash" stored in the database is computed from the first 64 characters of a base64-encoded program account (not the executable), making it meaningless for comparison purposes.
+
+**This would not pass security scrutiny from any Solana auditor.**
 
 ---
 
-## 1. Coverage and Intent Validation
+## What Needs to Change
 
-**Original Intent:**
-- Consolidate `seed-colosseum-profiles` into a single generic `seed-registry-profiles` function supporting both embedded Colosseum data and arbitrary JSON payloads.
-- Integrate bytecode verification into the automated refresh pipeline so it runs without manual intervention.
+### Fix 1: Compute the Real On-Chain Executable Hash (Mandatory)
 
-**Fully Addressed:**
-- Generic seeder created with dual-mode support (embedded + payload).
-- `transformProgram()` correctly maps fields to `claimed_profiles` schema.
-- Upsert on `project_name` conflict key preserved.
-- Fire-and-forget `refresh-all-profiles` trigger after seeding works.
-- Bytecode verification added to both `useAutoRefreshProfile` (frontend) and `refresh-all-profiles` (backend batch).
-- Old `seed-colosseum-profiles` deleted, config updated.
+**Problem:** `getAccountInfo` on a program ID returns the program proxy account, not the executable bytecode. The real executable lives in the `programData` account.
 
-**Partially Implemented / Gaps:**
-- The `seed-registry-profiles` fire-and-forget refresh (line 306) does NOT include `bytecode` in its dimensions array -- it sends `["github", "dependencies", "governance", "tvl"]`, missing the newly added `bytecode` dimension. This means freshly seeded profiles won't get bytecode verified during the post-seed pipeline. **MEDIUM severity.**
-- The `useAutoRefreshProfile` hook requires `githubUrl` to be truthy (line 32) before triggering ANY refresh, including bytecode. Profiles with a valid `program_id` but no GitHub URL (private repos) will never get bytecode auto-verified on page visit. **HIGH severity** -- many Colosseum entries have `github_url: "private"` but could still have valid on-chain program IDs.
+**Solution:** Follow the Solana program account structure:
+- Fetch the program account to find the `programData` address (bytes 4-36 of the account data)
+- Fetch the `programData` account which contains the actual ELF executable (after the 45-byte metadata header)
+- Compute SHA-256 of the full executable data
+- This hash will match the `on_chain_hash` from the OtterSec API, enabling independent cross-verification
 
----
+**Technical detail:** The `programData` account layout is: `[4 bytes state][32 bytes authority][1 byte slot_info][8 bytes slot][...executable bytes]`. The executable starts at offset 45.
 
-## 2. Reverse-Engineering Check (User Outcome to System Logic)
+### Fix 2: Cross-Verify Against OtterSec Hash (Mandatory)
 
-**User expectation:** "I visit a program page and bytecode originality shows the real status automatically."
+**Problem:** We blindly trust OtterSec's `is_verified` boolean.
 
-**Actual flow:**
-1. User navigates to `/program/:id`
-2. `ProgramDetail` renders, `useAutoRefreshProfile` fires
-3. Hook checks: `profileId` exists? `githubUrl` exists? `lastAnalyzedAt` stale?
-4. If ALL true, triggers GitHub + Bytecode in parallel
+**Solution:** When OtterSec returns a verified status with `on_chain_hash` and `executable_hash`:
+- Compare OtterSec's `on_chain_hash` against our independently computed hash
+- If they match, confidence is HIGH (two independent sources agree)
+- If they differ, flag as SUSPICIOUS regardless of OtterSec's `is_verified` status
+- Store both hashes in the database for audit trail
 
-**Mismatch:** The staleness gate uses `github_analyzed_at` (line 51 of ProgramDetail). If GitHub analysis succeeded recently but bytecode was never run, the hook will NOT trigger bytecode verification because the data isn't considered "stale." These are two independent dimensions sharing one staleness check. **MEDIUM severity.**
+### Fix 3: Validate program_id Input (Mandatory)
 
-**Backend batch flow:**
-1. `refresh-all-profiles` fetches profiles with `github_org_url IS NOT NULL`
-2. Runs bytecode for profiles where `program_id` is present
+**Problem:** No validation that `program_id` is a valid Solana public key.
 
-**Mismatch:** The batch query filters to only profiles with non-null `github_org_url` (line 74-75). Profiles with a valid `program_id` but no GitHub URL are excluded from the batch entirely, so bytecode verification never runs for them in batch mode either. **MEDIUM severity** -- though limited impact since most of these have `program_id: "TBD"` anyway.
+**Solution:** Add base58 validation before making any external calls:
+- Check length is 32-44 characters
+- Verify characters are valid base58 (no 0, O, I, l)
+- Reject obvious garbage inputs
 
----
+### Fix 4: Fix Fork Detection Logic (Mandatory)
 
-## 3. Edge Cases and Failure Scenarios
+**Problem:** `providedRepo.includes(verifiedRepo)` is trivially bypassable with URL manipulation.
 
-| Edge Case | Current Behavior | Risk |
-|-----------|-----------------|------|
-| Profile with `program_id` but `github_url = null` | Skipped by both auto-refresh and batch pipeline | **HIGH** -- bytecode never verified |
-| Profile with `program_id = "TBD"` (most Colosseum entries) | Seed transforms to `null` correctly; bytecode skipped | OK -- correct behavior |
-| Fake/invalid program_id (e.g., `Arcium111...111`) | RPC returns `not-deployed`, stored correctly | OK |
-| OtterSec API timeout (10s) | Graceful fallback to "unknown" | OK |
-| Solana RPC rate limiting | Caught in try/catch, continues to next profile | OK |
-| Duplicate seed call | Upsert with `ignoreDuplicates: false` overwrites; resets `discovered_at` timestamp each time | **LOW** -- minor data integrity concern |
-| `useAutoRefreshProfile` firing during SSR/initial hydration | `useRef` prevents duplicates per profile; `useEffect` is client-only | OK |
-| Race condition: two tabs open same profile | Both fire auto-refresh; backend handles idempotently (24h cache on bytecode) | OK |
-| Batch auto-chain: offset drift if profiles added mid-chain | Could skip or re-process profiles | **LOW** -- acceptable for background job |
+**Solution:** Normalize both URLs to `owner/repo` format and compare exact equality:
+- Strip protocol, trailing slashes, `.git` suffix, tree/branch paths
+- Extract only `{owner}/{repo}` and compare case-insensitively
+- Reject partial substring matches entirely
 
----
+### Fix 5: Add Upgrade Detection via Slot Tracking (Recommended)
 
-## 4. Touchpoints and User Journeys
+**Problem:** A 24h cache means a malicious program upgrade goes undetected.
 
-- **Explorer -> Program Detail:** User clicks a row, lands on detail page. Auto-refresh fires if stale. Bytecode status updates after ~10s. Transition is smooth.
-- **Seed -> Explorer:** After seeding, profiles appear immediately in Explorer but with score=0 and locked metrics. Refresh pipeline auto-chains in background. Coherent but slow (minutes).
-- **Seed -> Refresh -> Bytecode:** The seed function's refresh trigger omits `bytecode` dimension. Bytecode only gets verified when a user visits the page or the next scheduled full refresh includes it. Gap in automation.
-- **Realtime subscription error** in console (`CHANNEL_ERROR`) is unrelated to this implementation but indicates a general Explorer stability issue.
+**Solution:** The `programData` account contains a `slot` field (the last slot where the program was deployed/upgraded). Compare this against the previously stored value:
+- If slot changed since last verification, force re-verification regardless of cache
+- Store `last_deploy_slot` in the database alongside the hash
+- This catches upgrades within seconds of the next check
 
----
+### Fix 6: Use a Dedicated RPC Endpoint (Recommended)
 
-## 5. Frontend Review
+**Problem:** `api.mainnet-beta.solana.com` is rate-limited and unreliable for production use.
 
-| State | Handling |
-|-------|---------|
-| Loading | Skeleton UI renders correctly |
-| Success | Scores, bytecode status, metrics all display |
-| Error | Console logging only; no user-facing error for failed auto-refresh | **LOW** -- silent failure is acceptable for background refresh |
-| Empty (no data) | "PROJECT NOT FOUND" page with back/register CTAs | OK |
-| Refreshing indicator | `isRefreshing` returned but not visually surfaced anywhere in ProgramDetail | **LOW** -- nice-to-have |
+**Solution:** Use a dedicated RPC provider via a secret:
+- Add an `RPC_URL` secret for a production endpoint (e.g., Helius, QuickNode)
+- Fall back to public RPC if the secret is not configured
+- This also enables fetching larger `programData` accounts reliably
 
-No broken flows or confusing affordances identified.
+### Fix 7: Add Verification Confidence Levels (Recommended)
+
+**Problem:** Current system has binary "verified/unknown" which oversimplifies.
+
+**Solution:** Introduce a confidence tier:
+- **HIGH**: Our computed hash matches OtterSec's `on_chain_hash`, program is verified, and repo URLs match exactly
+- **MEDIUM**: OtterSec says verified but we couldn't independently compute the hash (programData too large or RPC failed)
+- **LOW**: Program exists on-chain but not in OtterSec registry (unknown provenance)
+- **SUSPICIOUS**: Hash mismatch between our computation and OtterSec, or repo URL mismatch detected
+- **NOT_DEPLOYED**: Program not found on-chain
 
 ---
 
-## 6. Backend Review
+## Implementation Scope
 
-**Data Validation:**
-- `transformProgram()` correctly sanitizes `TBD`, `N/A`, empty strings, `private` values to `null`
-- x_handle `@` prefix stripped correctly
+### Files to modify:
+1. **`supabase/functions/verify-bytecode/index.ts`** -- Complete rewrite of verification logic with real hash computation, input validation, cross-verification, and slot tracking
+2. **`src/hooks/useBytecodeVerification.ts`** -- Update types to include confidence level and deploy slot
+3. **`src/components/program/tabs/DevelopmentTabContent.tsx`** -- Display confidence tier and last deploy slot
+4. **`src/components/program/MetricCards.tsx`** -- Update bytecode display to reflect confidence levels
 
-**Error Handling:**
-- Both edge functions have try/catch with proper HTTP error responses
-- Bytecode verification in batch has inner try/catch (line 228) preventing one failure from killing the batch
+### Database changes:
+- Add columns to `claimed_profiles`: `bytecode_deploy_slot` (bigint), `bytecode_on_chain_hash` (text), `bytecode_confidence` (text)
 
-**Idempotency:**
-- Bytecode: 24-hour cache check prevents redundant verification -- good
-- Seed: Upsert on `project_name` is idempotent but overwrites `discovered_at` on re-seed -- minor
-
-**Security:**
-- `verify_jwt = false` on `seed-registry-profiles` -- this means ANYONE can seed profiles into the registry without authentication. **HIGH severity security risk.** An attacker could insert arbitrary data or overwrite existing profile descriptions/categories.
-- All other edge functions already have `verify_jwt = false` which is consistent with the existing architecture (service role key used for writes), but the seed function is particularly dangerous since it does direct upserts.
-
-**Race Conditions:**
-- Auto-chain pagination could have minor offset drift -- acceptable for background job
-- No database-level locking on profile updates during concurrent refresh -- Supabase handles row-level locking implicitly
+### Secrets needed:
+- `RPC_URL` (optional but recommended for reliability)
 
 ---
 
-## 7. Churn and Risk Assessment
+## What This Does NOT Change
 
-| Issue | Churn Risk | Details |
-|-------|-----------|---------|
-| Bytecode status never shows for profiles without GitHub URL | **HIGH** | Users see perpetual "unknown" for on-chain programs where github is private but program_id is valid |
-| Post-seed refresh missing bytecode dimension | **MEDIUM** | Newly seeded profiles with valid program_ids won't get bytecode verified until next full cycle or page visit |
-| Shared staleness gate for GitHub + Bytecode | **MEDIUM** | Fresh GitHub data blocks bytecode refresh even if bytecode was never checked |
-| No visual "refreshing" indicator | **LOW** | Users don't know data is being updated in background |
-| Unauthenticated seed endpoint | **HIGH** (security) | Potential data poisoning attack vector |
+- The OtterSec API remains the primary source for "is this program's source code verified?" -- this is correct and industry-standard
+- We are adding **independent validation** on top of it, not replacing it
+- The UI flow and auto-refresh pipeline remain unchanged
+- The 24h cache TTL stays, but upgrade detection via slot comparison adds a safety net
 
----
+## Priority Order
 
-## 8. Final Verdict
-
-**Conditionally Ready** -- with required fixes.
-
-### Mandatory Fixes (before production)
-
-1. **Add `bytecode` to seed function's refresh trigger dimensions** (line 306 of `seed-registry-profiles/index.ts`): Change `["github", "dependencies", "governance", "tvl"]` to `["github", "dependencies", "governance", "tvl", "bytecode"]`. One-line fix.
-
-2. **Decouple bytecode staleness from GitHub staleness** in `useAutoRefreshProfile`: Bytecode should have its own independent staleness check so that a recently-analyzed GitHub profile still triggers bytecode verification if `bytecodeVerifiedAt` is null or stale.
-
-3. **Allow bytecode auto-refresh without requiring `githubUrl`**: Remove the `githubUrl` guard for the bytecode-only path. Profiles with a valid `program_id` but no GitHub URL should still get bytecode verified on page visit.
-
-### Recommended Improvements (nice-to-have)
-
-4. **Secure the `seed-registry-profiles` endpoint**: Add JWT verification or at minimum an API key check to prevent unauthorized seeding. This is the most impactful security improvement.
-
-5. **Add a subtle "refreshing" indicator** to the ProgramDetail page (e.g., a pulsing dot or shimmer on the score ring) so users know data is updating.
-
-6. **Prevent `discovered_at` overwrite on re-seed**: Only set `discovered_at` on INSERT, not on conflict UPDATE. Use a raw SQL upsert or conditional logic.
-
+1. Fix 3 (input validation) -- 5 minutes, prevents abuse
+2. Fix 4 (fork detection) -- 10 minutes, prevents gaming
+3. Fix 1 (real hash computation) -- core upgrade, 30 minutes
+4. Fix 2 (cross-verification) -- depends on Fix 1, 15 minutes
+5. Fix 5 (slot tracking) -- 15 minutes
+6. Fix 7 (confidence levels) -- 20 minutes, UI + types
+7. Fix 6 (dedicated RPC) -- 5 minutes, secret setup
