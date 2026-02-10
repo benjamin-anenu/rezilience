@@ -18,6 +18,7 @@ import MyBonds from "./pages/MyBonds";
 import Readme from "./pages/Readme";
 import DependencyTree from "./pages/DependencyTree";
 import Grants from "./pages/Grants";
+import PitchDeck from "./pages/PitchDeck";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/my-bonds" element={<MyBonds />} />
               <Route path="/deps/:id" element={<DependencyTree />} />
               <Route path="/grants" element={<Grants />} />
+              <Route path="/pitch" element={<PitchDeck />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
