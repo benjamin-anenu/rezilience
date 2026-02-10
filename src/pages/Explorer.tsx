@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/layout';
-import { EcosystemStats, EcosystemHeatmap, SearchBar, ProgramLeaderboard } from '@/components/explorer';
+import { EcosystemStats, EcosystemHeatmap, EcosystemPulse, SearchBar, ProgramLeaderboard } from '@/components/explorer';
 import { useExplorerProjects } from '@/hooks/useExplorerProjects';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -106,13 +106,18 @@ const Explorer = () => {
 
           {/* View Toggle: Heatmap vs List */}
           <Tabs defaultValue="list" className="mb-6">
-            <TabsList className="grid w-full max-w-xs grid-cols-2">
+            <TabsList className="grid w-full max-w-md grid-cols-3">
               <TabsTrigger value="list">List View</TabsTrigger>
               <TabsTrigger value="heatmap">Titan Watch</TabsTrigger>
+              <TabsTrigger value="pulse">Ecosystem Pulse</TabsTrigger>
             </TabsList>
 
             <TabsContent value="heatmap" className="mt-4">
               <EcosystemHeatmap />
+            </TabsContent>
+
+            <TabsContent value="pulse" className="mt-4">
+              <EcosystemPulse />
             </TabsContent>
 
             <TabsContent value="list" className="mt-4">

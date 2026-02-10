@@ -288,6 +288,52 @@ Deno.serve(async (req) => {
     const nextOffset = offset + profiles.length;
     const hasMore = totalCount ? nextOffset < totalCount : false;
 
+    // === ECOSYSTEM SNAPSHOT (only on final batch) ===
+    if (!hasMore) {
+      try {
+        console.log("[refresh-all-profiles] Final batch — writing ecosystem snapshot");
+        const { data: agg } = await supabase
+          .from("claimed_profiles")
+          .select("resilience_score, github_commits_30d, github_contributors, tvl_usd, dependency_health_score, governance_tx_30d, liveness_status");
+
+        if (agg && agg.length > 0) {
+          const total = agg.length;
+          const active = agg.filter((p: any) => p.liveness_status === "ACTIVE").length;
+          const stale = agg.filter((p: any) => p.liveness_status === "STALE").length;
+          const decaying = agg.filter((p: any) => p.liveness_status === "DECAYING").length;
+          const healthy = agg.filter((p: any) => (p.resilience_score || 0) >= 70).length;
+          const avgScore = agg.reduce((s: number, p: any) => s + (p.resilience_score || 0), 0) / total;
+          const totalCommits = agg.reduce((s: number, p: any) => s + (p.github_commits_30d || 0), 0);
+          const totalContributors = agg.reduce((s: number, p: any) => s + (p.github_contributors || 0), 0);
+          const totalTvl = agg.reduce((s: number, p: any) => s + (p.tvl_usd || 0), 0);
+          const avgDepHealth = agg.reduce((s: number, p: any) => s + (p.dependency_health_score || 0), 0) / total;
+          const totalGovTx = agg.reduce((s: number, p: any) => s + (p.governance_tx_30d || 0), 0);
+
+          const today = new Date().toISOString().split("T")[0];
+          await supabase
+            .from("ecosystem_snapshots")
+            .upsert({
+              snapshot_date: today,
+              total_projects: total,
+              active_projects: active,
+              avg_resilience_score: Math.round(avgScore * 10) / 10,
+              total_commits_30d: totalCommits,
+              total_contributors: totalContributors,
+              total_tvl_usd: totalTvl,
+              avg_dependency_health: Math.round(avgDepHealth * 10) / 10,
+              total_governance_tx: totalGovTx,
+              healthy_count: healthy,
+              stale_count: stale,
+              decaying_count: decaying,
+            }, { onConflict: "snapshot_date" });
+
+          console.log(`✓ Ecosystem snapshot written for ${today}`);
+        }
+      } catch (snapErr) {
+        console.error("Ecosystem snapshot failed:", snapErr);
+      }
+    }
+
     const summary = {
       message: `Batch complete: ${successCount} updated, ${errorCount} errors (offset ${offset}, batch ${batchSize})`,
       total: totalCount || 0,
