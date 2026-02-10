@@ -209,6 +209,8 @@ const ProgramDetail = () => {
                     githubIsFork={claimedProfile?.githubAnalytics?.github_is_fork}
                     bytecodeMatchStatus={claimedProfile?.bytecodeMatchStatus}
                     bytecodeVerifiedAt={claimedProfile?.bytecodeVerifiedAt}
+                    bytecodeConfidence={claimedProfile?.bytecodeConfidence}
+                    bytecodeDeploySlot={claimedProfile?.bytecodeDeploySlot}
                     programId={displayProgramId}
                     profileId={claimedProfile?.id}
                     dependencyHealthScore={claimedProfile?.dependencyMetrics?.dependency_health_score}

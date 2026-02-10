@@ -21,6 +21,8 @@ interface DevelopmentTabContentProps {
   githubIsFork?: boolean;
   bytecodeMatchStatus?: string | null;
   bytecodeVerifiedAt?: string | null;
+  bytecodeConfidence?: string | null;
+  bytecodeDeploySlot?: number | null;
   programId?: string | null;
   profileId?: string;
   // New multi-dimensional scoring props
@@ -48,6 +50,8 @@ export function DevelopmentTabContent({
   githubIsFork,
   bytecodeMatchStatus,
   bytecodeVerifiedAt,
+  bytecodeConfidence,
+  bytecodeDeploySlot,
   programId,
   profileId,
   // Multi-dimensional props with defaults
@@ -83,19 +87,19 @@ export function DevelopmentTabContent({
   const getBytecodeOriginalityInfo = () => {
     // If we have bytecode verification data from the database, use it
     if (bytecodeMatchStatus) {
-      return getBytecodeStatusInfo(bytecodeMatchStatus);
+      return getBytecodeStatusInfo(bytecodeMatchStatus, bytecodeConfidence);
     }
     
     // Fallback to program's originality status (legacy)
     switch (program.originalityStatus) {
       case 'verified':
-        return { label: 'Verified Original', value: 100, isPositive: true, isWarning: false, isNA: false, description: '' };
+        return { label: 'Verified Original', value: 100, isPositive: true, isWarning: false, isNA: false, description: '', confidence: 'MEDIUM' };
       case 'fork':
-        return { label: 'Known Fork', value: 45, isPositive: false, isWarning: true, isNA: false, description: '' };
+        return { label: 'Known Fork', value: 45, isPositive: false, isWarning: true, isNA: false, description: '', confidence: 'LOW' };
       case 'not-deployed':
-        return { label: 'Not On-Chain', value: 0, isPositive: false, isWarning: false, isNA: true, description: '' };
+        return { label: 'Not On-Chain', value: 0, isPositive: false, isWarning: false, isNA: true, description: '', confidence: 'NOT_DEPLOYED' };
       default:
-        return { label: 'Unverified', value: 60, isPositive: false, isWarning: false, isNA: false, description: '' };
+        return { label: 'Unverified', value: 60, isPositive: false, isWarning: false, isNA: false, description: '', confidence: 'LOW' };
     }
   };
 
@@ -127,6 +131,8 @@ export function DevelopmentTabContent({
       isNA: bytecodeOriginality.isNA,
       canVerify: !!programId && !!profileId,
       lastVerified: bytecodeVerifiedAt,
+      confidence: bytecodeOriginality.confidence,
+      deploySlot: bytecodeDeploySlot,
     },
     {
       icon: GitBranch,
@@ -207,6 +213,23 @@ export function DevelopmentTabContent({
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">{metric.description}</p>
+                {metric.confidence && metric.confidence !== 'NOT_DEPLOYED' && (
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                      metric.confidence === 'HIGH' ? 'bg-primary/15 text-primary' :
+                      metric.confidence === 'MEDIUM' ? 'bg-blue-500/15 text-blue-400' :
+                      metric.confidence === 'SUSPICIOUS' ? 'bg-destructive/15 text-destructive' :
+                      'bg-muted text-muted-foreground'
+                    }`}>
+                      {metric.confidence}
+                    </span>
+                    {metric.deploySlot && (
+                      <span className="text-[10px] text-muted-foreground/60">
+                        Slot #{metric.deploySlot.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {metric.lastVerified && (
                   <p className="mt-1 text-[10px] text-muted-foreground/70">
                     Last verified: {formatDistanceToNow(new Date(metric.lastVerified), { addSuffix: true })}

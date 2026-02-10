@@ -301,10 +301,13 @@ export interface ClaimedProfile {
   // Extended GitHub Analytics (populated from DB)
   githubAnalytics?: GitHubAnalytics;
   
-  // Bytecode Verification (Phase 2)
+  // Bytecode Verification (Phase 2 - Hardened)
   bytecodeHash?: string;
   bytecodeVerifiedAt?: string;
   bytecodeMatchStatus?: 'original' | 'fork' | 'unknown' | 'not-deployed';
+  bytecodeConfidence?: 'HIGH' | 'MEDIUM' | 'LOW' | 'SUSPICIOUS' | 'NOT_DEPLOYED';
+  bytecodeDeploySlot?: number;
+  bytecodeOnChainHash?: string;
   
   // Build In Public & Twitter Integration (Phase 2)
   buildInPublicVideos?: BuildInPublicVideo[];
