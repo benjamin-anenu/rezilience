@@ -75,14 +75,13 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
       case 'STALE':
         return (
           <Badge variant="outline" className="border-muted-foreground/50 bg-muted text-muted-foreground text-xs">
-            Stale
+            Evolving
           </Badge>
         );
       case 'DECAYING':
         return (
-          <Badge variant="outline" className="border-destructive/50 bg-destructive/10 text-destructive text-xs">
-            <AlertCircle className="mr-1 h-3 w-3" />
-            Decaying
+          <Badge variant="outline" className="border-[hsl(212,11%,40%)]/50 bg-[hsl(212,11%,40%)]/10 text-[hsl(212,11%,40%)] text-xs">
+            Observing
           </Badge>
         );
     }

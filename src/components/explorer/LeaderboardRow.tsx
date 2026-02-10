@@ -50,14 +50,13 @@ const getStatusBadge = (status: LivenessStatus) => {
     case 'STALE':
       return (
         <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-muted-foreground/50 bg-muted text-muted-foreground">
-          Stale
+          Evolving
         </Badge>
       );
     case 'DECAYING':
       return (
-        <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-destructive/50 bg-destructive/10 text-destructive">
-          <AlertCircle className="mr-0.5 h-2.5 w-2.5" />
-          Decay
+        <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-[hsl(212,11%,40%)]/50 bg-[hsl(212,11%,40%)]/10 text-[hsl(212,11%,40%)]">
+          Observing
         </Badge>
       );
   }

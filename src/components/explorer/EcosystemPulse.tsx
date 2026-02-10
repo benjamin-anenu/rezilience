@@ -10,8 +10,8 @@ import {
 
 const LIVENESS_COLORS = [
   'hsl(174, 100%, 38%)', // active - teal
-  'hsl(45, 100%, 50%)',  // stale - amber
-  'hsl(0, 85%, 55%)',    // decaying - red
+  'hsl(45, 100%, 50%)',  // evolving - amber
+  'hsl(212, 11%, 40%)',  // under observation - steel
 ];
 
 const DEP_COLORS = [
@@ -139,8 +139,8 @@ export function EcosystemPulse() {
     if (!aggregates) return [];
     return [
       { name: 'Active', value: aggregates.activeProjects },
-      { name: 'Stale', value: aggregates.staleProjects },
-      { name: 'Decaying', value: aggregates.decayingProjects },
+      { name: 'Evolving', value: aggregates.staleProjects },
+      { name: 'Under Observation', value: aggregates.decayingProjects },
     ].filter(d => d.value > 0);
   }, [aggregates]);
 

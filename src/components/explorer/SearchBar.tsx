@@ -59,8 +59,8 @@ export function SearchBar({
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="decaying">Decaying</SelectItem>
-            <SelectItem value="stale">Stale</SelectItem>
+            <SelectItem value="evolving">Evolving</SelectItem>
+            <SelectItem value="under-observation">Under Observation</SelectItem>
           </SelectContent>
         </Select>
 
