@@ -174,20 +174,11 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
   const handleRowClick = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
     
-    if (project.claimStatus === 'unclaimed') {
-      const params = new URLSearchParams({
-        profile_id: project.id,
-        project: project.program_name,
-      });
-      navigate(`/claim-profile?${params.toString()}`);
-      return;
-    }
-    
     const routeId = project.program_id && project.program_id !== project.id 
       ? project.program_id 
       : project.id;
     navigate(`/program/${routeId}`);
-  }, [navigate, project.claimStatus, project.id, project.program_id, project.program_name]);
+  }, [navigate, project.id, project.program_id]);
 
   const handleClaimClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
