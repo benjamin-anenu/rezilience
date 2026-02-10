@@ -11,6 +11,7 @@ import {
   ExternalLink,
   ChevronRight,
   ChevronDown,
+  Server,
   Zap,
   Brain,
   Heart,
@@ -1046,6 +1047,11 @@ export default function Readme() {
                       description="Bytecode fingerprinting for originality classification"
                       refresh="On verification request (static)"
                     />
+                    <DataSourceItem
+                      name="Helius RPC (Solana)"
+                      description="Dedicated RPC for program account extraction and bytecode hash computation"
+                      refresh="On verification request + upgrade detection via slot tracking"
+                    />
                   </div>
 
                   <div className="mt-6 p-4 rounded-sm bg-muted/30 border border-border">
@@ -1059,6 +1065,164 @@ export default function Readme() {
                   </div>
                 </CardContent>
               </Card>
+            </section>
+
+            {/* Bytecode Verification Section */}
+            <section id="bytecode-verification" className="scroll-mt-24">
+              <SectionHeader icon={Shield} title="Bytecode Verification" />
+
+              {/* Card 1: How It Works */}
+              <Card className="card-premium mb-6">
+                <CardContent className="pt-6">
+                  <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground mb-4">
+                    Verification Pipeline
+                  </h3>
+                  <p className="text-muted-foreground mb-6">
+                    Resilience performs <strong className="text-foreground">independent cryptographic verification</strong> of every
+                    Solana program to prove that deployed bytecode matches verified source code. This is not trust-based — it's math-based.
+                  </p>
+                  <div className="space-y-4">
+                    {[
+                      { step: '1', text: 'Fetch program account via Solana RPC to locate the programData address' },
+                      { step: '2', text: 'Extract the executable ELF binary (starting at offset 45 of the programData account)' },
+                      { step: '3', text: 'Compute SHA-256 hash of the trimmed executable bytes' },
+                      { step: '4', text: 'Cross-verify the hash against OtterSec\'s verified builds registry' },
+                      { step: '5', text: 'Detect forks by comparing the claimed GitHub repo against OtterSec\'s verified repo URL' },
+                      { step: '6', text: 'Track deploy slot to auto-detect program upgrades and trigger re-verification' },
+                    ].map((item) => (
+                      <div key={item.step} className="flex items-start gap-3">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 font-mono text-xs font-bold text-primary shrink-0">
+                          {item.step}
+                        </div>
+                        <p className="text-sm text-muted-foreground pt-1">{item.text}</p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-6 p-3 rounded-sm bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm text-muted-foreground">
+                      <strong className="text-destructive">Anti-Forgery:</strong> If the independently computed hash does not match OtterSec's
+                      registry, the program is flagged as <Badge variant="outline" className="font-mono text-xs mx-1">SUSPICIOUS</Badge> — possible bytecode tampering.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Card 2: Helius RPC Infrastructure */}
+              <div id="helius-rpc" className="scroll-mt-24">
+                <Card className="card-premium mb-6">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-3 mb-4">
+                      <Server className="h-5 w-5 text-primary" />
+                      <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground">
+                        Helius RPC Infrastructure
+                      </h3>
+                    </div>
+                    <p className="text-muted-foreground mb-4">
+                      Bytecode verification requires fetching entire program data accounts from Solana — binaries that can be
+                      <strong className="text-foreground"> 1–5 MB+</strong> in size. A dedicated RPC endpoint is critical for reliability and performance.
+                    </p>
+
+                    <h4 className="font-display text-sm font-bold uppercase tracking-wider text-foreground mb-3">
+                      Why Not Public RPC?
+                    </h4>
+                    <div className="space-y-2 mb-6">
+                      {[
+                        'Program data accounts can be 1-5 MB+ (too large for rate-limited public endpoints)',
+                        'Public Solana RPC (api.mainnet-beta.solana.com) enforces aggressive rate limits (~100 req/10s)',
+                        'Batch profile refreshes trigger dozens of getAccountInfo calls in parallel',
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <AlertTriangle className="h-4 w-4 text-yellow-500 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <h4 className="font-display text-sm font-bold uppercase tracking-wider text-foreground mb-3">
+                      Helius Advantages
+                    </h4>
+                    <div className="space-y-2 mb-6">
+                      {[
+                        '100K+ requests/day capacity for large account lookups',
+                        'Reliable retrieval of multi-megabyte program binaries',
+                        'No rate-limiting during batch verification sweeps',
+                        'Consistent low latency for real-time verification on profile load',
+                      ].map((item, i) => (
+                        <div key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                          <CheckCircle2 className="h-4 w-4 text-chart-4 shrink-0 mt-0.5" />
+                          <span>{item}</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="rounded-sm border border-primary/20 bg-primary/5 p-4">
+                      <p className="font-mono text-xs text-primary mb-2 uppercase tracking-wider">Security Note</p>
+                      <p className="text-sm text-muted-foreground">
+                        Helius is a <strong className="text-foreground">server-side integration only</strong>. The RPC endpoint
+                        and API key are used exclusively within backend functions — no credentials are ever exposed to the client.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Card 3: Confidence Tiers */}
+              <div id="confidence-tiers" className="scroll-mt-24">
+                <Card className="card-premium">
+                  <CardContent className="pt-6">
+                    <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground mb-4">
+                      Confidence Tiers
+                    </h3>
+                    <p className="text-muted-foreground mb-6">
+                      Every verified program receives a confidence tier based on the depth of cryptographic verification achieved.
+                    </p>
+
+                    <div className="rounded-sm border border-border overflow-hidden">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-border bg-muted/30">
+                            <th className="px-4 py-2 text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">Tier</th>
+                            <th className="px-4 py-2 text-left font-mono text-xs uppercase tracking-wider text-muted-foreground">Criteria</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b border-border">
+                            <td className="px-4 py-3 font-mono text-chart-4 font-bold">HIGH</td>
+                            <td className="px-4 py-3 text-muted-foreground">SHA-256 hash independently computed AND matches OtterSec's <code className="font-mono text-primary">on_chain_hash</code>; source repo matches claimed repo</td>
+                          </tr>
+                          <tr className="border-b border-border">
+                            <td className="px-4 py-3 font-mono text-primary font-bold">MEDIUM</td>
+                            <td className="px-4 py-3 text-muted-foreground">OtterSec verified but independent hash computation was skipped or unavailable</td>
+                          </tr>
+                          <tr className="border-b border-border">
+                            <td className="px-4 py-3 font-mono text-yellow-500 font-bold">LOW</td>
+                            <td className="px-4 py-3 text-muted-foreground">Program exists on-chain but is not in OtterSec's verified builds registry</td>
+                          </tr>
+                          <tr className="border-b border-border">
+                            <td className="px-4 py-3 font-mono text-destructive font-bold">SUSPICIOUS</td>
+                            <td className="px-4 py-3 text-muted-foreground">Hash mismatch between independent computation and OtterSec — possible tampering or unverified upgrade</td>
+                          </tr>
+                          <tr>
+                            <td className="px-4 py-3 font-mono text-muted-foreground font-bold">NOT_DEPLOYED</td>
+                            <td className="px-4 py-3 text-muted-foreground">Program not found on Solana mainnet</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="mt-6 p-4 rounded-sm bg-muted/30 border border-border">
+                      <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-2">
+                        IMPACT ON RESILIENCE SCORE
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Bytecode confidence feeds directly into the scoring engine. Original code receives a
+                        <span className="font-mono text-chart-4 mx-1">1.0×</span> multiplier, while detected forks receive a
+                        <span className="font-mono text-destructive mx-1">0.3×</span> penalty — ensuring that reputation truly cannot be forked.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </section>
 
             {/* FAQ Section */}
