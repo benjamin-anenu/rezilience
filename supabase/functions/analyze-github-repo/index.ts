@@ -174,11 +174,12 @@ Deno.serve(async (req) => {
 
     // Fetch repo, commits, contributors, releases in parallel
     // Events and stats fetched separately with pagination/retry logic
-    const [repoResponse, commitsResponse, contributorsResponse, releasesResponse] = await Promise.all([
+    const [repoResponse, commitsResponse, contributorsResponse, releasesResponse, languagesResponse] = await Promise.all([
       fetchWithAuth(`https://api.github.com/repos/${owner}/${repo}`, githubToken),
       fetchWithAuth(`https://api.github.com/repos/${owner}/${repo}/commits?since=${sinceDate}&per_page=100`, githubToken),
       fetchWithAuth(`https://api.github.com/repos/${owner}/${repo}/contributors?per_page=10`, githubToken),
       fetchWithAuth(`https://api.github.com/repos/${owner}/${repo}/releases?per_page=10`, githubToken),
+      fetchWithAuth(`https://api.github.com/repos/${owner}/${repo}/languages`, githubToken),
     ]);
 
     // Check if repo exists
@@ -224,6 +225,12 @@ Deno.serve(async (req) => {
     let releases: any[] = [];
     if (releasesResponse.ok) {
       releases = await releasesResponse.json();
+    }
+
+    // Parse languages (returns { "Rust": 150000, "TypeScript": 42000, ... })
+    let languages: Record<string, number> = {};
+    if (languagesResponse.ok) {
+      languages = await languagesResponse.json();
     }
 
     // Calculate metrics
@@ -447,6 +454,7 @@ Deno.serve(async (req) => {
             github_pr_events_30d: result.prEvents30d,
             github_issue_events_30d: result.issueEvents30d,
             github_last_activity: result.lastActivity,
+            github_languages: languages,
             updated_at: new Date().toISOString(),
           })
           .eq("id", profile_id);

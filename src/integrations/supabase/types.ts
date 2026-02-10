@@ -126,6 +126,7 @@ export type Database = {
           github_is_fork: boolean | null
           github_issue_events_30d: number | null
           github_language: string | null
+          github_languages: Json | null
           github_last_activity: string | null
           github_last_commit: string | null
           github_open_issues: number | null
@@ -208,6 +209,7 @@ export type Database = {
           github_is_fork?: boolean | null
           github_issue_events_30d?: number | null
           github_language?: string | null
+          github_languages?: Json | null
           github_last_activity?: string | null
           github_last_commit?: string | null
           github_open_issues?: number | null
@@ -290,6 +292,7 @@ export type Database = {
           github_is_fork?: boolean | null
           github_issue_events_30d?: number | null
           github_language?: string | null
+          github_languages?: Json | null
           github_last_activity?: string | null
           github_last_commit?: string | null
           github_open_issues?: number | null

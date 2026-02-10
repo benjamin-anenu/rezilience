@@ -10,12 +10,15 @@ import {
   ExternalLink,
   TrendingUp,
   GitCommit,
+  Code,
+  ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useGitHubAnalysis } from '@/hooks/useGitHubAnalysis';
 import { useToast } from '@/hooks/use-toast';
 
@@ -36,6 +39,7 @@ interface GitHubAnalytics {
   github_analyzed_at?: string;
   resilience_score?: number;
   liveness_status?: string;
+  github_languages?: Record<string, number>;
 }
 
 interface GitHubAnalyticsCardProps {
@@ -193,6 +197,56 @@ export const GitHubAnalyticsCard = ({ profileId, analytics, onRefresh }: GitHubA
             </div>
             <div className="text-[10px] text-muted-foreground">Commits (30d)</div>
           </div>
+
+          {/* Language breakdown */}
+          {(() => {
+            const langEntries = analytics.github_languages 
+              ? Object.entries(analytics.github_languages).sort(([, a], [, b]) => b - a)
+              : [];
+            const total = langEntries.reduce((s, [, b]) => s + b, 0);
+            const primary = langEntries.length > 0 ? langEntries[0][0] : (analytics.github_language || null);
+            
+            if (!primary) return null;
+            
+            return (
+              <div className="space-y-2">
+                <span className="font-display text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                  <Code className="h-4 w-4" />
+                  Languages
+                </span>
+                {langEntries.length > 1 ? (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button className="flex items-center gap-1.5 font-mono text-sm text-foreground hover:text-primary transition-colors">
+                        {primary}
+                        <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-52 p-2 bg-popover border-border" align="start" sideOffset={4}>
+                      <div className="space-y-1.5">
+                        {langEntries.map(([lang, bytes]) => {
+                          const pct = total > 0 ? (bytes / total) * 100 : 0;
+                          return (
+                            <div key={lang} className="space-y-0.5">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="font-mono text-foreground">{lang}</span>
+                                <span className="font-mono text-muted-foreground">{pct.toFixed(1)}%</span>
+                              </div>
+                              <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                                <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                ) : (
+                  <span className="font-mono text-sm text-foreground">{primary}</span>
+                )}
+              </div>
+            );
+          })()}
         </div>
 
         {/* Commit Velocity */}

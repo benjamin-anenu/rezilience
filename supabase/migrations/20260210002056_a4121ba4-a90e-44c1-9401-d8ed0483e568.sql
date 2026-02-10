@@ -1,0 +1,1 @@
+ALTER TABLE public.claimed_profiles ADD COLUMN github_languages jsonb DEFAULT '{}'::jsonb;

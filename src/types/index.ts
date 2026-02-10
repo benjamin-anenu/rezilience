@@ -165,6 +165,7 @@ export interface GitHubAnalytics {
   github_forks?: number;
   github_contributors?: number;
   github_language?: string;
+  github_languages?: Record<string, number>;
   github_last_commit?: string;
   github_commit_velocity?: number;
   github_commits_30d?: number;
