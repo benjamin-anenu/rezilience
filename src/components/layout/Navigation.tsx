@@ -14,7 +14,7 @@ import logo from '@/assets/logo.png';
 const navLinks = [
   { href: '/readme', label: 'README', external: false },
   { href: '/explorer', label: 'EXPLORER', external: false },
-  { href: 'https://grants.resilience.dev', label: 'GRANTS', external: true },
+  { href: '/grants', label: 'GRANTS', external: false },
   { href: '/staking', label: 'STAKING', external: false },
   { href: '/my-bonds', label: 'MY BONDS', external: false },
 ];
