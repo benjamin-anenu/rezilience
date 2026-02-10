@@ -1,44 +1,36 @@
 import { Fingerprint, Shield, Lock, GitBranch } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import { getBytecodeStatusInfo } from '@/hooks/useBytecodeVerification';
 import type { Program } from '@/types';
 
 interface MetricCardsProps {
   program: Program;
   githubIsFork?: boolean;
+  bytecodeMatchStatus?: string | null;
+  bytecodeConfidence?: string | null;
 }
 
-export function MetricCards({ program, githubIsFork }: MetricCardsProps) {
+export function MetricCards({ program, githubIsFork, bytecodeMatchStatus, bytecodeConfidence }: MetricCardsProps) {
   // Get GitHub originality status and styling
   const getGithubOriginalityInfo = () => {
     if (githubIsFork === undefined) {
-      return {
-        subtitle: 'Not Analyzed',
-        value: 50,
-        isPositive: false,
-        isWarning: false,
-      };
+      return { subtitle: 'Not Analyzed', value: 50, isPositive: false, isWarning: false };
     }
     if (githubIsFork) {
-      return {
-        subtitle: 'Forked Repository',
-        value: 30,
-        isPositive: false,
-        isWarning: true,
-      };
+      return { subtitle: 'Forked Repository', value: 30, isPositive: false, isWarning: true };
     }
-    return {
-      subtitle: 'Original Repository',
-      value: 100,
-      isPositive: true,
-      isWarning: false,
-    };
+    return { subtitle: 'Original Repository', value: 100, isPositive: true, isWarning: false };
   };
 
   const githubOriginality = getGithubOriginalityInfo();
 
-  // Get bytecode originality status and styling
+  // Get bytecode originality - prefer database status with confidence
   const getBytecodeOriginalityInfo = () => {
+    if (bytecodeMatchStatus) {
+      const info = getBytecodeStatusInfo(bytecodeMatchStatus, bytecodeConfidence);
+      return { subtitle: info.label, value: info.value, isPositive: info.isPositive, isWarning: info.isWarning, isNA: info.isNA };
+    }
     switch (program.originalityStatus) {
       case 'verified':
         return { subtitle: 'Verified Original', value: 100, isPositive: true, isWarning: false, isNA: false };

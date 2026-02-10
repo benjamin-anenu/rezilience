@@ -2,11 +2,16 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 
+export type BytecodeConfidence = 'HIGH' | 'MEDIUM' | 'LOW' | 'SUSPICIOUS' | 'NOT_DEPLOYED';
+
 export interface BytecodeVerificationResult {
   programId: string;
   verified: boolean;
   bytecodeHash: string | null;
+  onChainHash: string | null;
   matchStatus: 'original' | 'fork' | 'unknown' | 'not-deployed';
+  confidence: BytecodeConfidence;
+  deploySlot: number | null;
   message: string;
   verifiedAt: string;
 }
@@ -40,7 +45,6 @@ export function useBytecodeVerification() {
 
       if (!data.success) {
         if (data.cached) {
-          // Already verified recently, not an error
           return null;
         }
         throw new Error(data.error || 'Verification failed');
@@ -48,7 +52,6 @@ export function useBytecodeVerification() {
 
       setResult(data.data);
 
-      // Invalidate profile queries to refresh UI with new data
       if (profileId) {
         queryClient.invalidateQueries({ queryKey: ['claimed-profile', profileId] });
         queryClient.invalidateQueries({ queryKey: ['claimed-profile-by-program'] });
@@ -80,18 +83,30 @@ export function useBytecodeVerification() {
 }
 
 /**
- * Get display info for bytecode match status
+ * Get display info for bytecode match status, incorporating confidence tiers.
  */
-export function getBytecodeStatusInfo(status: string | undefined | null) {
+export function getBytecodeStatusInfo(
+  status: string | undefined | null,
+  confidence?: string | null
+) {
+  const tier = confidence as BytecodeConfidence | undefined;
+
   switch (status) {
     case 'original':
       return {
-        label: 'Verified Original',
-        description: 'On-chain bytecode matches verified source code',
-        value: 100,
+        label: tier === 'HIGH' ? 'Verified Original (High Confidence)' 
+             : tier === 'MEDIUM' ? 'Verified Original (Medium Confidence)'
+             : 'Verified Original',
+        description: tier === 'HIGH' 
+          ? 'On-chain bytecode independently cross-verified against OtterSec registry'
+          : tier === 'MEDIUM'
+          ? 'Verified by OtterSec, independent hash check unavailable'
+          : 'On-chain bytecode matches verified source code',
+        value: tier === 'HIGH' ? 100 : tier === 'MEDIUM' ? 85 : 100,
         isPositive: true,
         isWarning: false,
         isNA: false,
+        confidence: tier || 'MEDIUM',
       };
     case 'fork':
       return {
@@ -101,6 +116,7 @@ export function getBytecodeStatusInfo(status: string | undefined | null) {
         isPositive: false,
         isWarning: true,
         isNA: false,
+        confidence: tier || 'LOW',
       };
     case 'not-deployed':
       return {
@@ -110,16 +126,22 @@ export function getBytecodeStatusInfo(status: string | undefined | null) {
         isPositive: false,
         isWarning: false,
         isNA: true,
+        confidence: 'NOT_DEPLOYED' as BytecodeConfidence,
       };
     case 'unknown':
-    default:
+    default: {
+      const isSuspicious = tier === 'SUSPICIOUS';
       return {
-        label: 'Unverified',
-        description: 'Program exists but not in verified builds registry',
-        value: 50,
+        label: isSuspicious ? '⚠ Suspicious' : 'Unverified',
+        description: isSuspicious
+          ? 'Hash mismatch detected between independent verification and registry'
+          : 'Program exists but not in verified builds registry',
+        value: isSuspicious ? 10 : 50,
         isPositive: false,
-        isWarning: false,
+        isWarning: isSuspicious,
         isNA: false,
+        confidence: tier || 'LOW',
       };
+    }
   }
 }

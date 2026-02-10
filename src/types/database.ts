@@ -124,6 +124,10 @@ export interface DBClaimedProfile {
   claimer_wallet: string | null;
   created_at: string;
   updated_at: string;
+  // Bytecode hardening fields
+  bytecode_confidence: string | null;
+  bytecode_deploy_slot: number | null;
+  bytecode_on_chain_hash: string | null;
 }
 
 export interface MediaAsset {

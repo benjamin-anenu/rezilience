@@ -100,8 +100,11 @@ export type Database = {
           authority_verified_at: string | null
           authority_wallet: string | null
           build_in_public_videos: Json | null
+          bytecode_confidence: string | null
+          bytecode_deploy_slot: number | null
           bytecode_hash: string | null
           bytecode_match_status: string | null
+          bytecode_on_chain_hash: string | null
           bytecode_verified_at: string | null
           category: string | null
           claim_status: string | null
@@ -183,8 +186,11 @@ export type Database = {
           authority_verified_at?: string | null
           authority_wallet?: string | null
           build_in_public_videos?: Json | null
+          bytecode_confidence?: string | null
+          bytecode_deploy_slot?: number | null
           bytecode_hash?: string | null
           bytecode_match_status?: string | null
+          bytecode_on_chain_hash?: string | null
           bytecode_verified_at?: string | null
           category?: string | null
           claim_status?: string | null
@@ -266,8 +272,11 @@ export type Database = {
           authority_verified_at?: string | null
           authority_wallet?: string | null
           build_in_public_videos?: Json | null
+          bytecode_confidence?: string | null
+          bytecode_deploy_slot?: number | null
           bytecode_hash?: string | null
           bytecode_match_status?: string | null
+          bytecode_on_chain_hash?: string | null
           bytecode_verified_at?: string | null
           category?: string | null
           claim_status?: string | null
