@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Eye, Filter, Lock } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 
-type HealthStatus = 'healthy' | 'stale' | 'decaying' | 'unclaimed' | 'locked';
+type HealthStatus = 'healthy' | 'stale' | 'decaying' | 'locked';
 
 interface HeatmapCell {
   project: ExplorerProject;
@@ -18,7 +18,6 @@ interface HeatmapCell {
 
 function getHealthStatus(score: number, project: ExplorerProject): HealthStatus {
   if (project.claimStatus === 'unclaimed' && !project.github_analyzed_at) return 'locked';
-  if (project.claimStatus === 'unclaimed') return 'unclaimed';
   if (score >= 70) return 'healthy';
   if (score >= 40) return 'stale';
   return 'decaying';
@@ -32,8 +31,6 @@ function getHealthColor(status: HealthStatus): string {
       return 'bg-chart-4/80 hover:bg-chart-4';
     case 'decaying':
       return 'bg-[hsl(212,11%,40%)]/80 hover:bg-[hsl(212,11%,40%)]';
-    case 'unclaimed':
-      return 'bg-muted/50 hover:bg-muted';
     case 'locked':
       return 'bg-[#1a1a1a] hover:bg-[#222]';
   }
@@ -47,8 +44,6 @@ function getStatusLabel(status: HealthStatus): string {
       return 'EVOLVING';
     case 'decaying':
       return 'UNDER OBSERVATION';
-    case 'unclaimed':
-      return 'UNCLAIMED';
     case 'locked':
       return 'LOCKED';
   }
@@ -92,7 +87,6 @@ export function EcosystemHeatmap() {
       healthy: cells.filter((c) => c.healthStatus === 'healthy').length,
       stale: cells.filter((c) => c.healthStatus === 'stale').length,
       decaying: cells.filter((c) => c.healthStatus === 'decaying').length,
-      unclaimed: cells.filter((c) => c.healthStatus === 'unclaimed').length,
       locked: cells.filter((c) => c.healthStatus === 'locked').length,
     };
   }, [heatmapCells]);
@@ -145,7 +139,6 @@ export function EcosystemHeatmap() {
                 <SelectItem value="healthy">Healthy</SelectItem>
                 <SelectItem value="stale">Evolving</SelectItem>
                 <SelectItem value="decaying">Under Observation</SelectItem>
-                <SelectItem value="unclaimed">Unclaimed</SelectItem>
                 <SelectItem value="locked">Locked</SelectItem>
               </SelectContent>
             </Select>
@@ -168,11 +161,6 @@ export function EcosystemHeatmap() {
             <div className="h-3 w-3 rounded-sm bg-[hsl(212,11%,40%)]" />
             <span>Under Observation (1-39)</span>
             <span className="font-mono text-foreground">{stats.decaying}</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="h-3 w-3 rounded-sm bg-muted" />
-            <span>Unclaimed</span>
-            <span className="font-mono text-foreground">{stats.unclaimed}</span>
           </div>
           <div className="flex items-center gap-1.5">
             <div className="h-3 w-3 rounded-sm bg-[#1a1a1a] border border-border" />
@@ -216,8 +204,6 @@ export function EcosystemHeatmap() {
                       <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] font-bold text-white/90 sm:text-xs">
                         {cell.healthStatus === 'locked' ? (
                           <Lock className="h-3 w-3 text-muted-foreground" />
-                        ) : cell.healthStatus === 'unclaimed' ? (
-                          '—'
                         ) : (
                           cell.project.resilience_score
                         )}
