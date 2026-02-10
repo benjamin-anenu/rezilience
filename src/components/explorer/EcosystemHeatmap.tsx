@@ -172,9 +172,9 @@ export function EcosystemHeatmap() {
 
         {/* Heatmap Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-6 gap-1 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12">
-            {[...Array(24)].map((_, i) => (
-              <Skeleton key={i} className="aspect-square rounded-sm" />
+          <div className="grid grid-cols-8 gap-0.5 sm:grid-cols-10 md:grid-cols-14 lg:grid-cols-16">
+            {[...Array(32)].map((_, i) => (
+              <Skeleton key={i} className="h-8 w-full rounded-sm" />
             ))}
           </div>
         ) : heatmapCells.length === 0 ? (
@@ -184,7 +184,7 @@ export function EcosystemHeatmap() {
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-6 gap-1 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12">
+          <div className="grid grid-cols-8 gap-0.5 sm:grid-cols-10 md:grid-cols-14 lg:grid-cols-16">
             <AnimatePresence mode="popLayout">
               {heatmapCells.map((cell) => (
                 <Tooltip key={cell.project.id}>
@@ -196,14 +196,13 @@ export function EcosystemHeatmap() {
                       exit={{ opacity: 0, scale: 0.8 }}
                       transition={{ duration: 0.2 }}
                       onClick={() => navigate(`/program/${cell.project.id}`)}
-                      className={`relative aspect-square rounded-sm transition-all duration-200 ${getHealthColor(
+                      className={`relative h-8 w-full rounded-sm transition-all duration-200 sm:h-9 ${getHealthColor(
                         cell.healthStatus
                       )} cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background`}
                     >
-                      {/* Score badge or Lock icon */}
-                      <span className="absolute inset-0 flex items-center justify-center font-mono text-[10px] font-bold text-white/90 sm:text-xs">
+                      <span className="absolute inset-0 flex items-center justify-center font-mono text-[9px] font-bold text-white/90 sm:text-[10px]">
                         {cell.healthStatus === 'locked' ? (
-                          <Lock className="h-3 w-3 text-muted-foreground" />
+                          <Lock className="h-2.5 w-2.5 text-muted-foreground" />
                         ) : (
                           cell.project.resilience_score
                         )}

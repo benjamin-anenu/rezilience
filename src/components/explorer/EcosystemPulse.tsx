@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useEcosystemPulse, type EcosystemSnapshot } from '@/hooks/useEcosystemPulse';
 import { Skeleton } from '@/components/ui/skeleton';
-import { AlertCircle, Activity, TrendingUp, Shield } from 'lucide-react';
+import { AlertCircle, Activity, TrendingUp, Shield, Code, Info } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
@@ -162,6 +162,11 @@ export function EcosystemPulse() {
     ].filter(d => d.value > 0);
   }, [aggregates]);
 
+  const languageData = useMemo(() => {
+    if (!aggregates) return [];
+    return aggregates.languageBreakdown;
+  }, [aggregates]);
+
   if (isLoading) {
     return (
       <div className="grid gap-4 lg:grid-cols-3">
@@ -174,6 +179,12 @@ export function EcosystemPulse() {
 
   return (
     <div className="space-y-4">
+      {/* Registry Data Disclaimer */}
+      <div className="flex items-center gap-2 rounded-sm border border-border bg-card/50 p-3 text-xs text-muted-foreground">
+        <Info className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
+        <span>Data reflects only projects indexed in the Resilience Registry and does not represent the entire Solana ecosystem.</span>
+      </div>
+
       {isSparse && <SparseDataNotice />}
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -239,7 +250,7 @@ export function EcosystemPulse() {
           </Card>
 
           {/* Bottom row: Liveness + Category + Dep Health */}
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {/* Liveness Distribution */}
             <Card className="border-border">
               <CardHeader className="pb-2">
@@ -304,6 +315,25 @@ export function EcosystemPulse() {
                     </span>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Top Languages */}
+            <Card className="border-border">
+              <CardHeader className="pb-2">
+                <CardTitle className="flex items-center gap-1 text-xs font-display uppercase tracking-wide">
+                  <Code className="h-3 w-3 text-primary" /> Top Languages
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1.5">
+                {languageData.length > 0 ? languageData.map(l => (
+                  <div key={l.name} className="flex items-center gap-2">
+                    <div className="h-1.5 rounded-full bg-primary" style={{ width: `${Math.max(8, (l.count / (languageData[0]?.count || 1)) * 100)}%` }} />
+                    <span className="shrink-0 text-[10px] text-muted-foreground">{l.name} ({l.count})</span>
+                  </div>
+                )) : (
+                  <p className="py-4 text-center text-[10px] text-muted-foreground">No language data</p>
+                )}
               </CardContent>
             </Card>
           </div>
