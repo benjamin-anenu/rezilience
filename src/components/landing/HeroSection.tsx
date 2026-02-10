@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Activity, Lock, Info, GitBranch, Network, Heart, Coins, HeartPulse, Fingerprint, Shield } from 'lucide-react';
+import { ArrowRight, Activity, Lock, Info, GitBranch, Network, Coins, HeartPulse, Fingerprint, Shield, Landmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -189,7 +189,7 @@ export function HeroSection() {
 
               {/* 6. GOV - bottom-left */}
               <div className="absolute flex flex-col items-center gap-1.5" style={{ bottom: '8%', left: '10%' }}>
-                <Heart className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
+                <Landmark className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
                 <span className="font-mono text-[10px] text-primary">GOV</span>
               </div>
 
