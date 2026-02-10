@@ -31,6 +31,9 @@ const tocItems: TOCItem[] = [
   { id: 'claim-blacklist', label: 'Blacklist', level: 2 },
   { id: 'improve-continuity', label: 'Improve Continuity', level: 2 },
   { id: 'data-provenance', label: 'Data Provenance', level: 1 },
+  { id: 'bytecode-verification', label: 'Bytecode Verification', level: 1 },
+  { id: 'helius-rpc', label: 'Helius RPC Infrastructure', level: 2 },
+  { id: 'confidence-tiers', label: 'Confidence Tiers', level: 2 },
   { id: 'roadmap', label: 'Product Roadmap', level: 1 },
   { id: 'faq', label: 'FAQ', level: 1 },
 ];
