@@ -1,21 +1,25 @@
 
 
-# Fix Row Click to Always Navigate to Program Detail Page
+# Fix Row Click Navigation to Match Heatmap Behavior
 
 ## Problem
-Clicking a project row in the Explorer registry navigates to `/claim-profile` for unclaimed projects instead of the program detail page (`/program/:id`). The user expects all row clicks to open the project's detail page. The "Claim" button in the action column already handles the claim flow separately.
+The leaderboard row click navigates using `program_id` (on-chain address like `worm2ZoG2kUd4vFXhvjh93UUH596ayRfgQ2MgjNMTth`) when available, but this results in a "does not exist" error for some projects. The heatmap works correctly because it always uses `project.id` (the database UUID).
 
-## Change
+## Fix
 
-**File: `src/components/explorer/LeaderboardRow.tsx`** (lines 174-190)
+**File: `src/components/explorer/LeaderboardRow.tsx`**
 
-Remove the unclaimed redirect logic from `handleRowClick`. Currently:
-- If unclaimed --> navigates to `/claim-profile` (unwanted)
-- If claimed --> navigates to `/program/:id`
+Simplify `handleRowClick` to always navigate using `project.id` (the database UUID), matching the heatmap pattern:
 
-After the fix, all row clicks will navigate to `/program/:id` regardless of claim status. The dedicated "Claim" button in the action column remains unchanged for users who want to claim a project.
+```typescript
+// Before (broken):
+const routeId = project.program_id && project.program_id !== project.id 
+  ? project.program_id 
+  : project.id;
+navigate(`/program/${routeId}`);
 
-## Technical Detail
+// After (matches heatmap):
+navigate(`/program/${project.id}`);
+```
 
-In `handleRowClick`, remove the `if (project.claimStatus === 'unclaimed')` block (lines 177-184) so the function always falls through to the `/program/:routeId` navigation logic.
-
+This is a one-line change that aligns the table row navigation with the working heatmap navigation.
