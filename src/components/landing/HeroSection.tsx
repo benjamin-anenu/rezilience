@@ -166,7 +166,7 @@ export function HeroSection() {
               {/* 2. DEPS - top-right */}
               <div className="absolute flex flex-col items-center gap-1.5" style={{ top: '8%', right: '12%' }}>
                 <Network className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
-                <span className="font-mono text-[10px] text-primary">DEPS</span>
+                <span className="font-mono text-[10px] text-primary">DEPENDENCIES</span>
               </div>
 
               {/* 3. LIVENESS - right */}
@@ -190,13 +190,13 @@ export function HeroSection() {
               {/* 6. GOV - bottom-left */}
               <div className="absolute flex flex-col items-center gap-1.5" style={{ bottom: '8%', left: '10%' }}>
                 <Landmark className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
-                <span className="font-mono text-[10px] text-primary">GOV</span>
+                <span className="font-mono text-[10px] text-primary">GOVERNANCE</span>
               </div>
 
               {/* 7. ECON - left */}
               <div className="absolute flex flex-col items-center gap-1.5" style={{ top: '42%', left: '0%' }}>
                 <Coins className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
-                <span className="font-mono text-[10px] text-primary">ECON</span>
+                <span className="font-mono text-[10px] text-primary">ECONOMICS</span>
               </div>
 
               {/* Connection lines - dashed blueprint style (7 lines to center ~210,210) */}
