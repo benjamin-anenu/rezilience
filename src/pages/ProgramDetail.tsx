@@ -48,7 +48,9 @@ const ProgramDetail = () => {
   const { isRefreshing } = useAutoRefreshProfile(
     claimedProfile?.id,
     claimedProfile?.githubOrgUrl,
-    claimedProfile?.githubAnalytics?.github_analyzed_at
+    claimedProfile?.githubAnalytics?.github_analyzed_at,
+    claimedProfile?.programId || project?.program_id,
+    claimedProfile?.bytecodeVerifiedAt
   );
 
   if (isLoading) {
