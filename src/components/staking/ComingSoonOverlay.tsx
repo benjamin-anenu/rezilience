@@ -1,14 +1,13 @@
 import { Clock, Bell, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-
 interface ComingSoonOverlayProps {
   onJoinWaitlist?: () => void;
 }
-
-export function ComingSoonOverlay({ onJoinWaitlist }: ComingSoonOverlayProps) {
-  return (
-    <div className="mb-8">
+export function ComingSoonOverlay({
+  onJoinWaitlist
+}: ComingSoonOverlayProps) {
+  return <div className="mb-8">
       <Card className="border-primary/50 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
         <CardContent className="p-6">
           <div className="flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -26,16 +25,11 @@ export function ComingSoonOverlay({ onJoinWaitlist }: ComingSoonOverlayProps) {
                   </h3>
                 </div>
                 <p className="max-w-lg text-sm text-muted-foreground">
-                  Continuity Bonds will launch in Phase 2. Stake SOL on protocols you believe in, 
-                  earn yield based on their Resilience Score, and help fund ecosystem sustainability.
+                  Continuity Bonds will launch in Phase 2. Stake SOL on Projects you believe in, earn yield based on their Resilience Score, and help fund ecosystem sustainability.
                 </p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              className="shrink-0 border-primary/50 hover:bg-primary/10"
-              onClick={onJoinWaitlist}
-            >
+            <Button variant="outline" className="shrink-0 border-primary/50 hover:bg-primary/10" onClick={onJoinWaitlist}>
               <Bell className="mr-2 h-4 w-4" />
               JOIN WAITLIST
               <ArrowRight className="ml-2 h-4 w-4" />
@@ -62,6 +56,5 @@ export function ComingSoonOverlay({ onJoinWaitlist }: ComingSoonOverlayProps) {
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
