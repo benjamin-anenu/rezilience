@@ -33,6 +33,7 @@ interface DBClaimedProfile {
   github_forks: number | null;
   github_contributors: number | null;
   github_language: string | null;
+  github_languages: Record<string, number> | null;
   github_last_commit: string | null;
   github_commit_velocity: number | null;
   github_commits_30d: number | null;
@@ -112,6 +113,9 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
       github_forks: db.github_forks ?? undefined,
       github_contributors: db.github_contributors ?? undefined,
       github_language: db.github_language || undefined,
+      github_languages: (db.github_languages && typeof db.github_languages === 'object' && !Array.isArray(db.github_languages))
+        ? db.github_languages as Record<string, number>
+        : undefined,
       github_last_commit: db.github_last_commit || undefined,
       github_commit_velocity: db.github_commit_velocity ?? undefined,
       github_commits_30d: db.github_commits_30d ?? undefined,

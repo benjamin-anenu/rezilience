@@ -1,8 +1,10 @@
-import { Star, GitFork, Users, Activity, Package, Code, ExternalLink, AlertCircle, Clock, TrendingUp, GitPullRequest, MessageSquare, Upload } from 'lucide-react';
+import { useState } from 'react';
+import { Star, GitFork, Users, Activity, Package, Code, ExternalLink, AlertCircle, Clock, TrendingUp, GitPullRequest, MessageSquare, Upload, ChevronDown } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import type { GitHubAnalytics, TopContributor } from '@/types';
 
 interface PublicGitHubMetricsProps {
@@ -113,18 +115,20 @@ export function PublicGitHubMetrics({ analytics, githubUrl }: PublicGitHubMetric
     },
   ];
 
+  // Build language entries sorted by bytes
+  const languageEntries = analytics?.github_languages 
+    ? Object.entries(analytics.github_languages).sort(([, a], [, b]) => b - a)
+    : [];
+  const totalBytes = languageEntries.reduce((sum, [, bytes]) => sum + bytes, 0);
+  const hasMultipleLanguages = languageEntries.length > 1;
+  const primaryLanguage = languageEntries.length > 0 ? languageEntries[0][0] : (analytics?.github_language || '—');
+
   const secondaryMetrics = [
     {
       icon: Package,
       value: formatNumber(analytics?.github_releases_30d),
       label: 'Releases (30d)',
       iconColor: 'text-purple-400',
-    },
-    {
-      icon: Code,
-      value: analytics?.github_language || '—',
-      label: 'Language',
-      iconColor: 'text-muted-foreground',
     },
   ];
 
@@ -212,7 +216,46 @@ export function PublicGitHubMetrics({ analytics, githubUrl }: PublicGitHubMetric
               </div>
             </div>
           ))}
-          
+
+          {/* Language display with dropdown */}
+          <div className="flex flex-col items-center rounded-sm border border-border bg-muted/30 p-3 text-center">
+            <Code className="mb-1.5 h-4 w-4 text-muted-foreground" />
+            {hasMultipleLanguages ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-1 font-mono text-lg font-bold text-foreground hover:text-primary transition-colors">
+                    {primaryLanguage}
+                    <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2 bg-popover border-border" align="center" sideOffset={4}>
+                  <div className="space-y-1.5">
+                    {languageEntries.map(([lang, bytes]) => {
+                      const pct = totalBytes > 0 ? (bytes / totalBytes) * 100 : 0;
+                      return (
+                        <div key={lang} className="space-y-0.5">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-mono text-foreground">{lang}</span>
+                            <span className="font-mono text-muted-foreground">{pct.toFixed(1)}%</span>
+                          </div>
+                          <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                            <div className="h-full bg-primary transition-all" style={{ width: `${pct}%` }} />
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <div className="font-mono text-lg font-bold text-foreground">
+                {primaryLanguage}
+              </div>
+            )}
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              Language{hasMultipleLanguages ? 's' : ''}
+            </div>
+          </div>
           {/* Velocity Bar - spans 2 columns */}
           <div className="col-span-2 flex flex-col justify-center rounded-sm border border-border bg-muted/30 p-3">
             <div className="mb-2 flex items-center justify-between">

@@ -129,7 +129,10 @@ Deno.serve(async (req) => {
         if (githubToken) headers.Authorization = `Bearer ${githubToken}`;
 
         const { owner, repo } = parsed;
-        const repoResponse = await fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers });
+        const [repoResponse, languagesResponse] = await Promise.all([
+          fetch(`https://api.github.com/repos/${owner}/${repo}`, { headers }),
+          fetch(`https://api.github.com/repos/${owner}/${repo}/languages`, { headers }),
+        ]);
         
         if (!repoResponse.ok) {
           results.push({ project: project.program_name, status: `github_error_${repoResponse.status}` });
@@ -137,6 +140,12 @@ Deno.serve(async (req) => {
         }
 
         const repoData = await repoResponse.json();
+        
+        // Parse languages
+        let languages: Record<string, number> = {};
+        if (languagesResponse.ok) {
+          languages = await languagesResponse.json();
+        }
         
         // Get commit velocity (simplified)
         let commitVelocity = 0;
@@ -187,6 +196,7 @@ Deno.serve(async (req) => {
           github_last_commit: repoData.pushed_at,
           github_commit_velocity: commitVelocity,
           github_language: repoData.language,
+          github_languages: languages,
           is_fork: project.is_fork ?? repoData.fork,
           liveness_status: livenessStatus,
           resilience_score: resilienceScore,
