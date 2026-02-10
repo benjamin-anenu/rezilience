@@ -2,11 +2,13 @@ import { Calendar, CheckCircle, AlertTriangle, Lock, Clock, MapPin } from 'lucid
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { UnclaimedBanner } from '../UnclaimedBanner';
 import type { Milestone } from '@/types';
 
 interface RoadmapTabContentProps {
   milestones?: Milestone[];
   isVerified?: boolean;
+  claimStatus?: string;
 }
 
 function getMilestoneIcon(status: string) {
@@ -31,8 +33,9 @@ function getMilestoneColors(status: string) {
   }
 }
 
-export function RoadmapTabContent({ milestones, isVerified }: RoadmapTabContentProps) {
+export function RoadmapTabContent({ milestones, isVerified, claimStatus }: RoadmapTabContentProps) {
   const hasMilestones = milestones && milestones.length > 0;
+  const isUnclaimed = claimStatus === 'unclaimed';
 
   // Sort milestones by target date
   const sortedMilestones = hasMilestones
@@ -46,6 +49,11 @@ export function RoadmapTabContent({ milestones, isVerified }: RoadmapTabContentP
   const progressPercent = hasMilestones ? (completedCount / sortedMilestones.length) * 100 : 0;
 
   if (!isVerified || !hasMilestones) {
+    if (isUnclaimed) {
+      return (
+        <UnclaimedBanner reason="Claim this project to publish your roadmap, set delivery commitments, and demonstrate long-term vision to stakers and users." />
+      );
+    }
     return (
       <Card className="border-border bg-card">
         <CardContent className="flex flex-col items-center justify-center py-16 text-center">

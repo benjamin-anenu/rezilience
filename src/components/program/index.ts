@@ -18,4 +18,5 @@ export { DependencyHealthCard } from './DependencyHealthCard';
 export { GovernanceHealthCard } from './GovernanceHealthCard';
 export { TVLMetricsCard } from './TVLMetricsCard';
 export { ScoreBreakdownTooltip } from './ScoreBreakdownTooltip';
+export { UnclaimedBanner } from './UnclaimedBanner';
 export * from './tabs';

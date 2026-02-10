@@ -1,4 +1,5 @@
 import { Users2, BadgeCheck, Target, Quote } from 'lucide-react';
+import { UnclaimedBanner } from '../UnclaimedBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { TeamMember } from '@/types';
@@ -7,6 +8,7 @@ interface TeamTabContentProps {
   teamMembers?: TeamMember[];
   stakingPitch?: string;
   isVerified?: boolean;
+  claimStatus?: string;
 }
 
 const getRoleBadgeVariant = (role: string) => {
@@ -36,12 +38,20 @@ const getInitials = (name: string) => {
     .slice(0, 2);
 };
 
-export function TeamTabContent({ teamMembers, stakingPitch, isVerified }: TeamTabContentProps) {
+export function TeamTabContent({ teamMembers, stakingPitch, isVerified, claimStatus }: TeamTabContentProps) {
   const hasTeamMembers = teamMembers && teamMembers.length > 0;
   const hasStakingPitch = stakingPitch && stakingPitch.trim().length > 0;
+  const isUnclaimed = claimStatus === 'unclaimed';
 
   // Empty state
   if (!hasTeamMembers && !hasStakingPitch) {
+    if (isUnclaimed) {
+      return (
+        <div className="space-y-6">
+          <UnclaimedBanner reason="Claim this project to showcase your team, build trust with the community, and let stakers know who is behind the code." />
+        </div>
+      );
+    }
     return (
       <div className="space-y-6">
         <Card className="border-border bg-card">

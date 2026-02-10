@@ -331,6 +331,7 @@ export interface ClaimedProfile {
   tvlMetrics?: TVLMetrics;
   integratedScore?: number;
   scoreBreakdown?: ScoreBreakdown;
+  claimStatus?: 'claimed' | 'unclaimed' | 'pending';
 }
 
 // Form data for multi-step claim flow

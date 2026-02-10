@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { BuildInPublicSection, BuildInPublicVideo } from '../BuildInPublicSection';
 import { TwitterPulseSection, Tweet } from '../TwitterPulseSection';
+import { UnclaimedBanner } from '../UnclaimedBanner';
 import { cn } from '@/lib/utils';
 
 interface CommunityTabContentProps {
@@ -16,6 +17,7 @@ interface CommunityTabContentProps {
   telegramUrl?: string;
   githubUrl?: string;
   isVerified?: boolean;
+  claimStatus?: string;
 }
 
 interface SocialLinkCardProps {
@@ -78,10 +80,12 @@ export function CommunityTabContent({
   telegramUrl,
   githubUrl,
   isVerified,
+  claimStatus,
 }: CommunityTabContentProps) {
   const hasVideos = buildInPublicVideos && buildInPublicVideos.length > 0;
   const hasTwitter = xUsername;
   const hasSocials = discordUrl || telegramUrl || githubUrl;
+  const isUnclaimed = claimStatus === 'unclaimed';
 
   return (
     <div className="space-y-6">
@@ -149,15 +153,19 @@ export function CommunityTabContent({
 
       {/* Empty state */}
       {!hasVideos && !hasTwitter && !hasSocials && (
-        <Card className="border-border bg-card">
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <MessageCircle className="h-12 w-12 text-muted-foreground/30 mb-4" />
-            <p className="text-muted-foreground">No community links available yet.</p>
-            <p className="text-sm text-muted-foreground/70">
-              Connect with this project once they add their socials.
-            </p>
-          </CardContent>
-        </Card>
+        isUnclaimed ? (
+          <UnclaimedBanner reason="Claim this project to connect your social channels, share build-in-public content, and grow your community presence." />
+        ) : (
+          <Card className="border-border bg-card">
+            <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+              <MessageCircle className="h-12 w-12 text-muted-foreground/30 mb-4" />
+              <p className="text-muted-foreground">No community links available yet.</p>
+              <p className="text-sm text-muted-foreground/70">
+                Connect with this project once they add their socials.
+              </p>
+            </CardContent>
+          </Card>
+        )
       )}
     </div>
   );

@@ -78,6 +78,7 @@ interface DBClaimedProfile {
   tvl_analyzed_at: string | null;
   integrated_score: number | null;
   score_breakdown: Json | null;
+  claim_status: string | null;
 }
 
 // Transform database format to frontend ClaimedProfile format
@@ -170,6 +171,7 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
       tvl_analyzed_at: db.tvl_analyzed_at || undefined,
     },
     integratedScore: db.integrated_score ?? db.resilience_score ?? 0,
+    claimStatus: (db.claim_status as 'claimed' | 'unclaimed' | 'pending') || 'claimed',
   };
 }
 

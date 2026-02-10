@@ -42,6 +42,7 @@ const ProgramDetail = () => {
   const hasData = project || claimedProfile;
   const isLoading = loadingByProgramId && loadingClaimedById;
   const isVerified = project?.verified || claimedProfile?.verified || searchParams.get('verified') === 'true';
+  const claimStatus = claimedProfile?.claimStatus || (claimedProfile ? 'claimed' : 'unclaimed');
 
   // Auto-refresh analytics when data is stale (> 30 minutes old)
   const { isRefreshing } = useAutoRefreshProfile(
@@ -229,6 +230,7 @@ const ProgramDetail = () => {
                     teamMembers={claimedProfile?.teamMembers}
                     stakingPitch={claimedProfile?.stakingPitch}
                     isVerified={isVerified}
+                    claimStatus={claimStatus}
                   />
                 ),
                 community: (
@@ -243,18 +245,21 @@ const ProgramDetail = () => {
                     telegramUrl={claimedProfile?.socials?.telegramUrl}
                     githubUrl={displayGithubUrl}
                     isVerified={isVerified}
+                    claimStatus={claimStatus}
                   />
                 ),
                 roadmap: (
                   <RoadmapTabContent
                     milestones={claimedProfile?.milestones}
                     isVerified={isVerified}
+                    claimStatus={claimStatus}
                   />
                 ),
                 support: (
                   <SupportTabContent
                     program={programForComponents}
                     isVerified={isVerified}
+                    claimStatus={claimStatus}
                   />
                 ),
               }}

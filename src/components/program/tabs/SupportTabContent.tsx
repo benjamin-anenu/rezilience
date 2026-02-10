@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Shield, Lock, Heart, HelpCircle, ChevronRight, TrendingUp, Clock, Coins } from 'lucide-react';
+import { UnclaimedBanner } from '../UnclaimedBanner';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -9,9 +10,11 @@ import type { Program } from '@/types';
 interface SupportTabContentProps {
   program: Program;
   isVerified?: boolean;
+  claimStatus?: string;
 }
 
-export function SupportTabContent({ program, isVerified }: SupportTabContentProps) {
+export function SupportTabContent({ program, isVerified, claimStatus }: SupportTabContentProps) {
+  const isUnclaimed = claimStatus === 'unclaimed';
   const trustMetrics = [
     {
       icon: Shield,
@@ -79,6 +82,11 @@ export function SupportTabContent({ program, isVerified }: SupportTabContentProp
 
   return (
     <div className="space-y-6">
+      {/* Unclaimed Banner */}
+      {isUnclaimed && (
+        <UnclaimedBanner reason="Claim this project to unlock staking, build economic security, and let supporters back your protocol with confidence." />
+      )}
+
       {/* Hero Stake CTA Card */}
       <Card className="relative overflow-hidden border-primary/20 bg-gradient-to-br from-primary/5 via-card to-card">
         {/* Subtle gradient overlay */}
