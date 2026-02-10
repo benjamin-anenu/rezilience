@@ -45,5 +45,5 @@ verify_jwt = false
 [functions.refresh-tvl-realtime]
 verify_jwt = false
 
-[functions.seed-colosseum-profiles]
+[functions.seed-registry-profiles]
 verify_jwt = false
