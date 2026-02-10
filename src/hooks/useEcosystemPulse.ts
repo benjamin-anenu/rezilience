@@ -14,6 +14,7 @@ export interface EcosystemAggregates {
   avgDependencyHealth: number;
   categoryBreakdown: Record<string, number>;
   depHealthDistribution: { healthy: number; warning: number; critical: number; unknown: number };
+  languageBreakdown: { name: string; count: number }[];
 }
 
 export interface EcosystemSnapshot {
@@ -55,6 +56,21 @@ function computeAggregates(profiles: any[]): EcosystemAggregates {
     unknown: profiles.filter(p => !p.dependency_health_score || p.dependency_health_score === 0).length,
   };
 
+  // Aggregate language usage: count how many projects use each language
+  const langCounts: Record<string, number> = {};
+  profiles.forEach(p => {
+    const langs = p.github_languages;
+    if (langs && typeof langs === 'object' && !Array.isArray(langs)) {
+      Object.keys(langs).forEach(lang => {
+        langCounts[lang] = (langCounts[lang] || 0) + 1;
+      });
+    }
+  });
+  const languageBreakdown = Object.entries(langCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8);
+
   return {
     totalProjects: total,
     activeProjects: active,
@@ -68,6 +84,7 @@ function computeAggregates(profiles: any[]): EcosystemAggregates {
     avgDependencyHealth: Math.round(avgDepHealth * 10) / 10,
     categoryBreakdown,
     depHealthDistribution,
+    languageBreakdown,
   };
 }
 
@@ -77,7 +94,7 @@ export function useEcosystemPulse() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('claimed_profiles')
-        .select('resilience_score, github_commits_30d, github_contributors, tvl_usd, dependency_health_score, governance_tx_30d, liveness_status, category');
+        .select('resilience_score, github_commits_30d, github_contributors, tvl_usd, dependency_health_score, governance_tx_30d, liveness_status, category, github_languages');
       if (error) throw error;
       return computeAggregates(data || []);
     },
