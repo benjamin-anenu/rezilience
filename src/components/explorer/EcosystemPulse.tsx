@@ -164,7 +164,7 @@ export function EcosystemPulse() {
 
   const languageData = useMemo(() => {
     if (!aggregates) return [];
-    return aggregates.languageBreakdown;
+    return aggregates.languageBreakdown || [];
   }, [aggregates]);
 
   if (isLoading) {
