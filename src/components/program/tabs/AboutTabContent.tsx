@@ -84,7 +84,7 @@ export function AboutTabContent({
       )}
 
       {/* Website Preview with Browser Chrome */}
-      {isVerified && websiteUrl && (
+      {websiteUrl && (
         <Card className="card-premium border-border bg-card overflow-hidden">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
