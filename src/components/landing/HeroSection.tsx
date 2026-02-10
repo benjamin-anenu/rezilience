@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Activity, Lock, Info, GitBranch, Network, Heart, Coins } from 'lucide-react';
+import { ArrowRight, Activity, Lock, Info, GitBranch, Network, Heart, Coins, HeartPulse, Fingerprint, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -142,7 +142,7 @@ export function HeroSection() {
 
           {/* Right content - Abstract geometric illustration */}
           <div className="relative hidden lg:flex lg:items-center lg:justify-center">
-            <div className="relative h-96 w-96">
+            <div className="relative h-[420px] w-[420px]">
               {/* Rotating scanning ring */}
               <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/10" style={{ animation: 'spin 12s linear infinite' }} />
               <div className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-primary/5" style={{ animation: 'spin 20s linear infinite reverse' }} />
@@ -156,38 +156,58 @@ export function HeroSection() {
                 </svg>
               </div>
 
-              {/* Orbital nodes - Dimensions of Trust */}
-              <div className="absolute left-0 top-1/4 flex flex-col items-center gap-1.5">
-                <div className="flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
-                  <GitBranch className="h-6 w-6 text-primary" />
-                </div>
-                <span className="font-mono text-[10px] text-muted-foreground">CODE 40%</span>
-              </div>
-              <div className="absolute right-0 top-1/4 flex flex-col items-center gap-1.5">
-                <div className="flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
-                  <Network className="h-6 w-6 text-primary" />
-                </div>
-                <span className="font-mono text-[10px] text-muted-foreground">DEPS 25%</span>
-              </div>
-              <div className="absolute bottom-0 left-1/4 flex flex-col items-center gap-1.5">
-                <div className="flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
-                  <Heart className="h-6 w-6 text-primary" />
-                </div>
-                <span className="font-mono text-[10px] text-muted-foreground">GOV 20%</span>
-              </div>
-              <div className="absolute bottom-0 right-1/4 flex flex-col items-center gap-1.5">
-                <div className="flex h-16 w-16 items-center justify-center rounded-sm border border-border bg-card">
-                  <Coins className="h-6 w-6 text-primary" />
-                </div>
-                <span className="font-mono text-[10px] text-muted-foreground">ECON 15%</span>
+              {/* Orbital nodes - 7 Dimensions of Trust (containerless with glow) */}
+              {/* 1. CODE - top-left */}
+              <div className="absolute flex flex-col items-center gap-1.5" style={{ top: '8%', left: '12%' }}>
+                <GitBranch className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
+                <span className="font-mono text-[10px] text-primary">CODE</span>
               </div>
 
-              {/* Connection lines - dashed blueprint style */}
+              {/* 2. DEPS - top-right */}
+              <div className="absolute flex flex-col items-center gap-1.5" style={{ top: '8%', right: '12%' }}>
+                <Network className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
+                <span className="font-mono text-[10px] text-primary">DEPS</span>
+              </div>
+
+              {/* 3. LIVENESS - right */}
+              <div className="absolute flex flex-col items-center gap-1.5" style={{ top: '42%', right: '0%' }}>
+                <HeartPulse className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
+                <span className="font-mono text-[10px] text-primary">LIVENESS</span>
+              </div>
+
+              {/* 4. ORIGINALITY - bottom-right */}
+              <div className="absolute flex flex-col items-center gap-1.5" style={{ bottom: '8%', right: '10%' }}>
+                <Fingerprint className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
+                <span className="font-mono text-[10px] text-primary">ORIGINALITY</span>
+              </div>
+
+              {/* 5. ASSURANCE - bottom center */}
+              <div className="absolute flex flex-col items-center gap-1.5" style={{ bottom: '0%', left: '50%', transform: 'translateX(-50%)' }}>
+                <Shield className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
+                <span className="font-mono text-[10px] text-primary">ASSURANCE</span>
+              </div>
+
+              {/* 6. GOV - bottom-left */}
+              <div className="absolute flex flex-col items-center gap-1.5" style={{ bottom: '8%', left: '10%' }}>
+                <Heart className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
+                <span className="font-mono text-[10px] text-primary">GOV</span>
+              </div>
+
+              {/* 7. ECON - left */}
+              <div className="absolute flex flex-col items-center gap-1.5" style={{ top: '42%', left: '0%' }}>
+                <Coins className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
+                <span className="font-mono text-[10px] text-primary">ECON</span>
+              </div>
+
+              {/* Connection lines - dashed blueprint style (7 lines to center ~210,210) */}
               <svg className="absolute inset-0 h-full w-full" style={{ zIndex: -1 }}>
-                <line x1="48" y1="96" x2="160" y2="160" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
-                <line x1="336" y1="96" x2="224" y2="160" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
-                <line x1="96" y1="336" x2="160" y2="224" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
-                <line x1="288" y1="336" x2="224" y2="224" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
+                <line x1="72" y1="55" x2="190" y2="190" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
+                <line x1="348" y1="55" x2="230" y2="190" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
+                <line x1="400" y1="196" x2="235" y2="210" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
+                <line x1="340" y1="365" x2="230" y2="230" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
+                <line x1="210" y1="400" x2="210" y2="235" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
+                <line x1="72" y1="365" x2="190" y2="230" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
+                <line x1="20" y1="196" x2="185" y2="210" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
               </svg>
             </div>
           </div>
