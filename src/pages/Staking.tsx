@@ -6,24 +6,20 @@ import { ComingSoonOverlay } from '@/components/staking/ComingSoonOverlay';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 import { toast } from 'sonner';
-
 const Staking = () => {
   const [formData, setFormData] = useState({
     programId: '',
     programName: '',
     amount: 0,
     lockupMonths: 12,
-    isValid: false,
+    isValid: false
   });
-
   const handleJoinWaitlist = () => {
     toast.success('Thanks for your interest!', {
-      description: 'We\'ll notify you when Staking launches in Phase 2.',
+      description: 'We\'ll notify you when Staking launches in Phase 2.'
     });
   };
-
-  return (
-    <Layout>
+  return <Layout>
       <div className="py-8">
         <div className="container mx-auto px-4 lg:px-8">
           {/* Coming Soon Banner */}
@@ -36,7 +32,7 @@ const Staking = () => {
                 STAKE FOR ASSURANCE
               </h1>
               <p className="text-muted-foreground">
-                Create a bond to support program resilience and earn rewards.
+                Create a Bond of Continuity to support this Solana Project and earn rewards.
               </p>
             </div>
             <Button variant="outline" asChild>
@@ -68,8 +64,6 @@ const Staking = () => {
           </div>
         </div>
       </div>
-    </Layout>
-  );
+    </Layout>;
 };
-
 export default Staking;
