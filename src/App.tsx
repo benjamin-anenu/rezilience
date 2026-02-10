@@ -17,6 +17,7 @@ import Staking from "./pages/Staking";
 import MyBonds from "./pages/MyBonds";
 import Readme from "./pages/Readme";
 import DependencyTree from "./pages/DependencyTree";
+import Grants from "./pages/Grants";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/staking" element={<Staking />} />
               <Route path="/my-bonds" element={<MyBonds />} />
               <Route path="/deps/:id" element={<DependencyTree />} />
+              <Route path="/grants" element={<Grants />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
