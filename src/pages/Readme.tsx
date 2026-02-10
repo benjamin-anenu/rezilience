@@ -843,6 +843,7 @@ export default function Readme() {
                         { text: 'Tier classification (TITAN to CRITICAL)' },
                         { text: 'Continuity decay calculations' },
                         { text: 'Health dimension indicators' },
+                        { text: 'Pre-chain data validation testing to ensure metric authenticity', ongoing: true },
                       ].map((item, i) => (
                         <div key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
                           {item.ongoing ? (
