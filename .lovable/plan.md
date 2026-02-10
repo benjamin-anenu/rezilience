@@ -1,85 +1,99 @@
 
 
-# Solana Grants Directory Page
+# Resilience Grant Pitch Deck — Internal Page at `/pitch`
 
-## Overview
+## Strategy & Rationale
 
-Replace the external GRANTS link with an internal `/grants` page that serves as a curated directory of Solana ecosystem grant programs. The page is static content (no database), designed as a public good resource.
+The Solana Foundation application guidelines explicitly state "A deck / presentation is not necessary but would be helpful." Building it as a navigable in-app page serves three purposes:
 
-## What Gets Built
+1. **Live demo** — reviewers click the link and immediately see the product working, not a static PDF
+2. **Dynamic data** — slide stats pull from the live registry (project count, avg score, active heartbeats)
+3. **Reusable asset** — works for Foundation grants, investor intros, and partnership pitches
 
-### 1. New Page: `src/pages/Grants.tsx`
-A single-page directory with these sections:
+The deck follows the Foundation's exact evaluation criteria: What are you building, Budget/Milestones, Metrics, Why You, Competition, and Community Benefit.
 
-**Header Section**
-- Title: "Solana Grants Directory"
-- Subtitle explaining this is a curated list of funding opportunities in the Solana ecosystem
-- Disclaimer banner: "This directory is maintained as a public good by Resilience. Information may change -- always verify directly with grant providers before applying."
-- Transparency note: "Resilience is also an active grant applicant within the Solana ecosystem."
+## Slide Structure (10 slides, keyboard-navigable)
 
-**Grant Cards Grid**
-Each grant program displayed as a card with:
-- Grant name and provider logo/icon
-- Funding range (e.g., "$5K - $100K")
-- Status badge (Open / Rolling / Seasonal)
-- Focus areas as tags (Infrastructure, DeFi, Public Goods, Developer Tooling, etc.)
-- Eligibility summary (who can apply)
-- Brief description of what the grant funds
-- "Apply" button linking to the official application page
-- "Learn More" link to official criteria page
+```text
+Slide 1: TITLE
+  "Reputation Can't Be Forked."
+  Resilience — Decentralized Assurance Layer for Solana
+  [Live stats from registry: Projects | Active | Avg Score]
 
-**Programs to include (based on current Solana ecosystem):**
-1. Solana Foundation Grants (general)
-2. Solana Foundation RFPs (specific bounties)
-3. Superteam Grants (regional)
-4. Colosseum Accelerator / Hackathons
-5. Marinade Finance Grants
-6. Jupiter Ecosystem Grants
-7. Dialect / xNFT Grants (if active)
-8. Ecosystem-specific programs as available
+Slide 2: THE PROBLEM
+  Solana's upgrade authority model creates a trust vacuum
+  - No standardized health monitoring
+  - Forks/clones erode integrity
+  - Manual due diligence doesn't scale
+  - $X billion in TVL with zero continuous auditing
 
-**Criteria Guidance Section**
-An accordion-style section titled "What Grant Providers Look For" with general advice:
-- Open source commitment
-- Clear problem statement and target users
-- Team credibility and track record
-- Technical feasibility
-- Ecosystem alignment
-- Milestone-based delivery plans
+Slide 3: THE SOLUTION
+  Multi-dimensional Proof-of-Life registry
+  R = 0.40xGitHub + 0.25xDeps + 0.20xGov + 0.15xTVL
+  Visual: four dimension icons (Brain, Nervous System, Heart, Limbs)
 
-**Bottom CTA**
-- "Know a grant program we're missing? Let us know" with a link to X/Twitter or contact
+Slide 4: HOW IT WORKS
+  3-step flow:
+  1. Index — Automated scoring of every registered program
+  2. Verify — Bytecode originality + dependency health
+  3. Commit — Staked assurance + Commitment Locks
 
-### 2. Update Navigation
-**`src/components/layout/Navigation.tsx`**
-- Change the GRANTS entry from `external: true` with `href: 'https://grants.resilience.dev'` to `external: false` with `href: '/grants'`
+Slide 5: TRACTION & METRICS
+  Live data pulled from database:
+  - Registry count, Active heartbeats, Avg resilience score
+  - Claimed vs unclaimed ratio
+  - Edge functions running (refresh cycles)
 
-### 3. Update Router
-**`src/App.tsx`**
-- Add route: `<Route path="/grants" element={<Grants />} />`
-- Import the new Grants page
+Slide 6: PUBLIC GOOD VALUE
+  - Open registry (free access for everyone)
+  - Grants Directory (curated funding resource)
+  - Dependency health monitoring (supply chain security)
+  - Score Oracle architecture (composable on-chain data)
+  - Open-source scoring methodology
 
-### 4. Grant Data File
-**`src/data/solana-grants.ts`**
-- Static array of grant objects with fields: `name`, `provider`, `fundingRange`, `status`, `focusAreas`, `eligibility`, `description`, `applyUrl`, `learnMoreUrl`
-- Easy to update manually when grants change
-- No database needed -- this is curated editorial content
+Slide 7: COMPETITIVE LANDSCAPE
+  Comparison table:
+  Resilience vs generic block explorers vs audit firms vs DeFi dashboards
+  Key differentiator: continuous, automated, multi-dimensional
+  (not one-time audits or single-metric dashboards)
 
-## Technical Details
+Slide 8: ROADMAP & MILESTONES (Budget-aligned)
+  Phase 1: Registry (IN PROGRESS) — $X
+  Phase 2: Economic Commitment Layer — $X
+  Phase 3: Ecosystem Integration — $X
+  Phase 4: AEGIS Supply Chain Monitor — $X
 
-- Uses existing `Layout`, `Card`, `Badge`, `Accordion`, `Button` components
-- No new dependencies required
-- No database tables or edge functions needed
-- Follows the existing page patterns (similar structure to Readme page)
-- Responsive grid: 1 column mobile, 2 columns tablet, 3 columns desktop
-- Design follows the existing "Institutional Bloomberg Terminal" aesthetic
+Slide 9: THE TEAM
+  Placeholder section for team bios
+  (Content to be filled by user — name, role, background, links)
 
-## What Is Explicitly Out of Scope
-- No application tracking or submission forms
-- No user accounts or saved grants
-- No automated data fetching from grant provider APIs
-- No grant matching algorithm
-- No comments or reviews system
+Slide 10: ASK & CONTACT
+  Funding request amount
+  Key milestones tied to funding tranches
+  Website URL, X/Twitter, GitHub links
+```
 
-## Content Maintenance Strategy
-The grant data lives in a single TypeScript file (`src/data/solana-grants.ts`). When grants change, only that file needs updating. A `lastUpdated` timestamp is displayed on the page so users know how current the information is.
+## Technical Implementation
+
+### New Files
+- **`src/pages/PitchDeck.tsx`** — Full-screen slide presentation with keyboard navigation (arrow keys, Escape). Each slide is a React component rendered at viewport size. Minimal chrome — no header/footer/nav (this is a presentation, not a website page). Includes a small progress bar and slide counter. Uses framer-motion for slide transitions.
+- **`src/components/pitch/slides.tsx`** — Individual slide components (TitleSlide, ProblemSlide, SolutionSlide, etc.) using the existing design tokens and typography (Space Grotesk headlines, Inter body, JetBrains Mono data).
+
+### Modified Files
+- **`src/App.tsx`** — Add route: `/pitch`
+
+### Design Approach
+- Dark background (matches existing theme), no Layout wrapper
+- Each slide uses full viewport (`h-screen w-screen`)
+- Navigation: Left/Right arrows, dot indicators at bottom
+- Auto-hides cursor after 3 seconds of inactivity (presentation mode)
+- Responsive but optimized for landscape/desktop (this is a pitch deck)
+- Uses `useHeroStats` hook for live data on the Traction slide
+- Team slide has placeholder content with clear `TODO` markers for user to fill in
+
+### What Is NOT Included
+- No PDF export (unnecessary complexity — the live URL is the deliverable)
+- No edit mode (content is code-managed, not CMS)
+- No speaker notes (this is a self-guided deck)
+- Not linked from main navigation (accessed via direct URL only)
+
