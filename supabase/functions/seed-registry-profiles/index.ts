@@ -303,7 +303,7 @@ Deno.serve(async (req) => {
           Authorization: `Bearer ${supabaseKey}`,
         },
         body: JSON.stringify({
-          dimensions: ["github", "dependencies", "governance", "tvl"],
+          dimensions: ["github", "dependencies", "governance", "tvl", "bytecode"],
           batch_size: 5,
           offset: 0,
           auto_chain: true,
