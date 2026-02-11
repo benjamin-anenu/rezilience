@@ -204,9 +204,9 @@ export function TractionSlide() {
 /* ─── SLIDE 7: OPENING NEW POSSIBILITIES ─── */
 export function PossibilitiesSlide() {
   const items = [
-    { icon: Activity, title: 'Public Milestone Tracking', desc: 'The community can finally see the heartbeat of a project\'s progress — from code commits to governance decisions.' },
-    { icon: Coins, title: 'Economic Alignment', desc: 'Continuity Bonds let the public stake their trust in projects that prove they are here for the long haul.' },
-    { icon: Network, title: 'Supply Chain Auditing', desc: 'Map the ecosystem\'s "nervous system" — trace dependent services and warn the community when critical infrastructure is at risk.' },
+    { icon: Activity, title: 'Public Milestone Tracking', desc: 'Real-time project progress — code commits, governance decisions, and delivery timelines — unified in one view.' },
+    { icon: Coins, title: 'Economic Alignment', desc: 'Continuity Bonds let the public stake trust in projects backed by verifiable data, not social media hype.' },
+    { icon: Network, title: 'Supply Chain Auditing', desc: 'Trace the ecosystem\'s dependency graph to warn when critical infrastructure is at risk.' },
     { icon: BookOpen, title: 'Grants Directory', desc: 'Curated funding resource for builders — a public good with no gatekeeping.' },
     { icon: Zap, title: 'Score Oracle', desc: 'Composable on-chain data architecture for protocol-level integrations and programmatic access.' },
   ];
@@ -214,9 +214,12 @@ export function PossibilitiesSlide() {
     <SlideLayout>
       <Tag>OPENING NEW POSSIBILITIES</Tag>
       <h2 className="mt-6 text-[52px] font-bold text-foreground leading-tight">
-        Building the Tools That Don't Exist Yet
+        One Central System for What Matters
       </h2>
-      <div className="mt-10 grid grid-cols-3 gap-5">
+      <p className="mt-4 max-w-[900px] text-[18px] text-muted-foreground leading-relaxed">
+        These capabilities exist individually across the ecosystem — block explorers track transactions, audit firms verify code, DeFi dashboards monitor TVL. But no single system unifies development health, supply chain integrity, governance activity, and economic data into one continuous, public assurance layer. <span className="text-foreground font-medium">Resilience brings it all together</span> — for builders and the public alike.
+      </p>
+      <div className="mt-8 grid grid-cols-3 gap-5">
         {items.map((item) => (
           <div key={item.title} className="flex gap-4 rounded-sm border border-border bg-card/40 p-5">
             <item.icon className="h-6 w-6 shrink-0 text-primary mt-1" />
@@ -233,6 +236,7 @@ export function PossibilitiesSlide() {
 
 /* ─── SLIDE 8: COMPETITIVE LANDSCAPE ─── */
 export function CompetitionSlide() {
+  type Score = 'yes' | 'partial' | 'no';
   const features = [
     'Multi-dimensional scoring',
     'Continuous monitoring',
@@ -243,19 +247,28 @@ export function CompetitionSlide() {
     'Economic staking',
     'Open methodology',
   ];
-  const competitors = [
-    { name: 'Block Explorers', scores: [false, false, false, false, false, false, false, false] },
-    { name: 'Audit Firms', scores: [false, false, true, false, false, false, false, false] },
-    { name: 'DeFi Dashboards', scores: [false, true, false, false, false, true, false, false] },
-    { name: 'Resilience', scores: [true, true, true, true, true, true, true, true] },
+  const competitors: { name: string; scores: Score[] }[] = [
+    { name: 'Solscan / FM',   scores: ['no','no','no','no','no','no','no','no'] },
+    { name: 'CertiK Skynet',  scores: ['partial','no','yes','no','no','no','no','no'] },
+    { name: 'DefiLlama',      scores: ['no','yes','no','no','no','yes','no','yes'] },
+    { name: 'DeFiSafety',     scores: ['partial','no','no','no','no','no','no','yes'] },
+    { name: 'Resilience',     scores: ['yes','yes','yes','yes','yes','yes','yes','yes'] },
   ];
+  const renderScore = (s: Score, isResilience: boolean) => {
+    if (s === 'yes') return <CheckCircle className={`h-5 w-5 mx-auto ${isResilience ? 'text-primary' : 'text-primary/70'}`} />;
+    if (s === 'partial') return <div className="h-5 w-5 mx-auto rounded-full border-2 border-amber-500 bg-amber-500/20" />;
+    return <span className="text-muted-foreground/30">—</span>;
+  };
   return (
     <SlideLayout>
       <Tag>COMPETITIVE LANDSCAPE</Tag>
       <h2 className="mt-6 text-[48px] font-bold text-foreground leading-tight">
-        No One Else Does This
+        Where Resilience Fits
       </h2>
-      <div className="mt-8 overflow-hidden rounded-sm border border-border">
+      <p className="mt-3 max-w-[800px] text-[17px] text-muted-foreground">
+        Existing tools excel in their domains. Resilience is the only platform that combines all dimensions into a single, continuous, public assurance layer.
+      </p>
+      <div className="mt-6 overflow-hidden rounded-sm border border-border">
         <Table>
           <TableHeader>
             <TableRow className="border-border bg-card/60">
@@ -273,17 +286,18 @@ export function CompetitionSlide() {
                 <TableCell className="text-[14px] text-muted-foreground">{f}</TableCell>
                 {competitors.map(c => (
                   <TableCell key={c.name} className={`text-center ${c.name === 'Resilience' ? 'bg-primary/5' : ''}`}>
-                    {c.scores[i] ? (
-                      <CheckCircle className="h-5 w-5 text-primary mx-auto" />
-                    ) : (
-                      <span className="text-muted-foreground/30">—</span>
-                    )}
+                    {renderScore(c.scores[i], c.name === 'Resilience')}
                   </TableCell>
                 ))}
               </TableRow>
             ))}
           </TableBody>
         </Table>
+      </div>
+      <div className="mt-4 flex items-center gap-6 text-[13px] text-muted-foreground">
+        <span className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary" /> Supported</span>
+        <span className="flex items-center gap-2"><div className="h-4 w-4 rounded-full border-2 border-amber-500 bg-amber-500/20" /> Partial</span>
+        <span className="flex items-center gap-2"><span className="text-muted-foreground/30 text-[16px]">—</span> Not available</span>
       </div>
     </SlideLayout>
   );
