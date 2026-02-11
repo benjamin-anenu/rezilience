@@ -7,6 +7,7 @@ export { ProgramLeaderboard } from './ProgramLeaderboard';
 export { MobileProgramCard, MobileProgramCards } from './MobileProgramCard';
 export { Sparkline } from './Sparkline';
 export { LeaderboardRow } from './LeaderboardRow';
+export { IntelligenceGrid } from './IntelligenceGrid';
 export { BuildersInPublicFeed } from './BuildersInPublicFeed';
 export { BuilderPostCard } from './BuilderPostCard';
 export { SubscribePopover } from './SubscribePopover';

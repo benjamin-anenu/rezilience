@@ -36,6 +36,14 @@ export interface ExplorerProject {
   x_username: string | null;
   github_analyzed_at: string | null;
   discovery_source: string | null;
+  // Intelligence fields
+  vulnerability_count: number | null;
+  openssf_score: number | null;
+  bytecode_match_status: string | null;
+  github_commit_velocity: number;
+  github_commits_30d: number;
+  dependency_outdated_count: number;
+  dependency_critical_count: number;
 }
 
 /**
@@ -126,6 +134,14 @@ export function useExplorerProjects() {
         x_username: profile.x_username || null,
         github_analyzed_at: profile.github_analyzed_at || null,
         discovery_source: (profile as { discovery_source?: string }).discovery_source || null,
+        // Intelligence fields
+        vulnerability_count: profile.vulnerability_count ?? null,
+        openssf_score: profile.openssf_score ?? null,
+        bytecode_match_status: profile.bytecode_match_status ?? null,
+        github_commit_velocity: profile.github_commit_velocity || 0,
+        github_commits_30d: profile.github_commits_30d || 0,
+        dependency_outdated_count: profile.dependency_outdated_count || 0,
+        dependency_critical_count: profile.dependency_critical_count || 0,
       }));
     },
   });
