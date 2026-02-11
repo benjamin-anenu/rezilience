@@ -6,6 +6,7 @@ export type MovementType = 'up' | 'down' | 'stable' | 'new';
 interface RankMovementResult {
   movements: Record<string, MovementType>;
   scoreHistories: Record<string, number[]>;
+  velocityHistories: Record<string, number[]>;
 }
 
 /**
@@ -18,7 +19,7 @@ export function useRankMovement(profileIds: string[]) {
     queryKey: ['rank-movement', profileIds],
     queryFn: async (): Promise<RankMovementResult> => {
       if (profileIds.length === 0) {
-        return { movements: {}, scoreHistories: {} };
+        return { movements: {}, scoreHistories: {}, velocityHistories: {} };
       }
 
       // Fetch movement data using RPC function
@@ -38,10 +39,10 @@ export function useRankMovement(profileIds: string[]) {
         }
       }
 
-      // Fetch last 7 score snapshots for sparklines
+      // Fetch last 7 score snapshots + commit velocity for sparklines
       const { data: historyData, error: historyError } = await supabase
         .from('score_history')
-        .select('claimed_profile_id, score, snapshot_date')
+        .select('claimed_profile_id, score, commit_velocity, snapshot_date')
         .in('claimed_profile_id', profileIds)
         .order('snapshot_date', { ascending: true });
 
@@ -49,25 +50,29 @@ export function useRankMovement(profileIds: string[]) {
         console.error('Error fetching score history:', historyError);
       }
 
-      // Group by profile and get last 7 scores
+      // Group by profile and get last 7 scores + velocities
       const scoreHistories: Record<string, number[]> = {};
+      const velocityHistories: Record<string, number[]> = {};
       if (historyData) {
         for (const row of historyData) {
           if (!row.claimed_profile_id) continue;
           
           if (!scoreHistories[row.claimed_profile_id]) {
             scoreHistories[row.claimed_profile_id] = [];
+            velocityHistories[row.claimed_profile_id] = [];
           }
           scoreHistories[row.claimed_profile_id].push(Number(row.score));
+          velocityHistories[row.claimed_profile_id].push(Number(row.commit_velocity ?? 0));
         }
 
         // Keep only last 7 snapshots per profile
         for (const id of Object.keys(scoreHistories)) {
           scoreHistories[id] = scoreHistories[id].slice(-7);
+          velocityHistories[id] = velocityHistories[id].slice(-7);
         }
       }
 
-      return { movements, scoreHistories };
+      return { movements, scoreHistories, velocityHistories };
     },
     enabled: profileIds.length > 0,
     staleTime: 5 * 60 * 1000, // Cache for 5 minutes

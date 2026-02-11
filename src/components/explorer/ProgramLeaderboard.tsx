@@ -57,6 +57,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
               index={index}
               movement={rankData?.movements[project.id]}
               scoreHistory={rankData?.scoreHistories[project.id] || [project.resilience_score]}
+              velocityHistory={rankData?.velocityHistories[project.id] || []}
             />
           ))}
         </TableBody>
