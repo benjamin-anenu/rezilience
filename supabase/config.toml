@@ -50,3 +50,9 @@ verify_jwt = false
 
 [functions.chat-gpt]
 verify_jwt = false
+
+[functions.analyze-vulnerabilities]
+verify_jwt = false
+
+[functions.analyze-security-posture]
+verify_jwt = false
