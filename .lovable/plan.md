@@ -1,140 +1,109 @@
 
 
-# Fix ResilienceGPT: Accurate System Prompt + Live Database Access
+# Two Changes: Layout Fix + Free API Integrations
 
-## Problem
+## Change 1: Move "Builders In Public" to the Left as a Standalone Element
 
-ResilienceGPT currently has two critical flaws:
+Currently, "Builders In Public" is the 4th tab inside the `TabsList`. You want it pulled out to the left side of the same line as the tabs, as its own standalone button/link.
 
-1. **Wrong scoring weights in system prompt** -- Claims 35/25/20/10/10 but production formula is 40/25/20/15 (GitHub/Deps/Governance/TVL)
-2. **No database access** -- When asked about specific projects (e.g., "Tell me about Pollinet"), the GPT fabricates data instead of looking it up. It has zero ability to query real project information.
-
-## Solution
-
-### Part 1: Fix the System Prompt
-
-Rewrite the system prompt in `supabase/functions/chat-gpt/index.ts` to:
-
-- Correct the scoring formula to **R = 0.40 x GitHub + 0.25 x Dependencies + 0.20 x Governance + 0.15 x TVL**
-- Remove the fictional "Community & Transparency (10%)" and "Economic Commitment (10%)" dimensions that don't exist in production
-- Clearly separate **live features** from **planned features** so the GPT stops presenting aspirational features as real
-- Add a **strict anti-hallucination rule**: "When asked about a specific project, ALWAYS use the `lookup_project` tool first. NEVER invent project data, scores, or metrics."
-
-### Part 2: Give ResilienceGPT Database Access via Tool Calling
-
-Instead of the current simple streaming chat, the edge function will use **AI tool calling** to let the model query the database on demand.
-
-**How it works:**
+### New Layout
 
 ```text
-User asks: "Tell me about Marinade Finance"
-        |
-        v
-Edge function sends messages + tool definitions to Lovable AI
-        |
-        v
-AI decides to call "lookup_project" tool with query "Marinade"
-        |
-        v
-Edge function intercepts tool call, queries claimed_profiles table
-        |
-        v
-Real data injected back into conversation as tool result
-        |
-        v
-AI generates response using REAL data (score, GitHub stats, TVL, etc.)
-        |
-        v
-Final response streamed to user
+Before:
+[List View] [Titan Watch] [Ecosystem Pulse] [Builders In Public]
+
+After:
+[Builders In Public]                    [List View] [Titan Watch] [Ecosystem Pulse]
 ```
 
-**Tools defined for the AI:**
+The "Builders In Public" becomes a standalone toggle button on the left, and the three data-view tabs stay grouped on the right. When "Builders In Public" is active, the tabs deselect (and vice versa). This is achieved by managing active state manually instead of relying solely on the Tabs component.
 
-| Tool | Purpose | Database Query |
-|------|---------|---------------|
-| `lookup_project` | Search for a project by name, program ID, or category | `claimed_profiles` with ilike search, returns top 5 matches |
-| `get_ecosystem_stats` | Get aggregate ecosystem health data | `ecosystem_snapshots` latest row |
-| `list_top_projects` | Get leaderboard by score | `claimed_profiles` ordered by `integrated_score` desc, limit 10 |
+### File Modified
 
-### Part 3: Updated Edge Function Architecture
-
-The `chat-gpt` edge function changes from a simple proxy to a **tool-calling orchestrator**:
-
-1. Receive user messages
-2. Send to Lovable AI with tool definitions (non-streaming first call)
-3. If AI responds with a tool call:
-   - Execute the database query using Supabase service role client
-   - Send tool results back to the AI
-   - Get final response
-4. Stream the final AI response to the client
-
-**Important**: The tool-calling round (steps 2-3) uses non-streaming mode. Only the final response (step 4) is streamed to the frontend. This keeps the frontend code unchanged.
+**`src/pages/Explorer.tsx`**
+- Add a `activeView` state (`'list' | 'heatmap' | 'pulse' | 'builders'`)
+- Render the "Builders In Public" button outside the `TabsList`, positioned left via a flex container
+- Remove the `Builders In Public` trigger from inside `TabsList` (now 3 columns)
+- Conditionally render `BuildersInPublicFeed` when `activeView === 'builders'`, otherwise show the Tabs content
 
 ---
 
-## Technical Details
+## Change 2: Free 3rd-Party API Integrations
 
-### Files Modified
+After auditing your current data sources and researching what is available for free, here are the high-impact integrations that directly serve Resilience's mission of measuring project health, security, and trustworthiness:
 
-**1. `supabase/functions/chat-gpt/index.ts`** (major rewrite)
+### Currently Integrated
+| Source | Purpose | Status |
+|--------|---------|--------|
+| GitHub API | Code health, commits, contributors | Live |
+| Crates.io / NPM / PyPI | Dependency freshness | Live |
+| DeFiLlama | TVL and economic activity | Live |
+| Solana RPC | Governance transaction signatures | Live |
+| OtterSec | Bytecode verification | Live |
 
-- Import `@supabase/supabase-js` for database access
-- Replace `SYSTEM_PROMPT` with corrected, production-accurate prompt
-- Add tool definitions array for `lookup_project`, `get_ecosystem_stats`, `list_top_projects`
-- Add `executeToolCall()` function that runs Supabase queries based on tool name
-- Change request flow: first non-streaming call with tools, handle tool calls, then stream final response
-- Database client uses `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` (both already configured as secrets)
+### Recommended New Integrations (All Free, No API Key Required)
 
-**2. No frontend changes needed** -- The streaming response format stays identical. The tool-calling loop happens entirely server-side before streaming begins.
+**1. OSV.dev (Google Open Source Vulnerabilities)** -- Priority: HIGH
+- **What**: Free vulnerability database API. Query by package name + version to get known CVEs.
+- **URL**: `https://api.osv.dev/v1/query`
+- **Why**: Your dependency analysis currently tracks *outdated* packages but not *vulnerable* packages. OSV would let you flag "this project uses `anchor-lang 0.28.0` which has CVE-XXXX." This is the single biggest gap in your supply chain scoring.
+- **Impact**: Adds a `vulnerability_count` field to dependency analysis. Projects with unpatched CVEs get a score penalty.
+- **Cost**: Completely free, no auth needed, generous rate limits.
 
-### Corrected System Prompt (Key Changes)
+**2. OpenSSF Scorecard API** -- Priority: HIGH
+- **What**: Google-backed security scorecard for GitHub repos (checks branch protection, code review, CI/CD, signed releases, etc.).
+- **URL**: `https://api.scorecard.dev/projects/github.com/{owner}/{repo}`
+- **Why**: Gives you an industry-standard security posture score (0-10) per repo. This directly strengthens the Governance & Security dimension (20%) with data you currently cannot compute.
+- **Impact**: Adds `openssf_score` to profiles. Repos with branch protection, signed commits, and CI checks score higher.
+- **Cost**: Free, no auth, public API.
 
-Current (wrong):
-- Code Vitality (35%), On-chain Liveness (25%), Governance (20%), Community (10%), Economic (10%)
+**3. Helius Free Tier (Solana RPC + DAS)** -- Priority: MEDIUM
+- **What**: Enhanced Solana RPC with Digital Asset Standard (DAS) API. Free tier: 100K requests/month.
+- **URL**: `https://mainnet.helius-rpc.com/?api-key=FREE_KEY`
+- **Why**: Your current governance analysis uses the public Solana RPC which has aggressive rate limits. Helius free tier gives you 100K calls/month with richer data (transaction parsing, account history, compressed NFT data).
+- **Impact**: More reliable governance scoring, ability to parse transaction types (not just count signatures).
+- **Cost**: Free tier (requires signup for API key).
 
-Fixed (matches production):
-- GitHub Code Health (40%): commit velocity, contributors, releases, issues, fork detection
-- Dependency Health (25%): outdated/critical dependency counts, supply chain risk
-- Governance & Security (20%): multisig usage, governance transaction frequency
-- TVL & Economic Activity (15%): Total Value Locked, risk ratio (TVL per commit)
+**4. CoinGecko Free API** -- Priority: MEDIUM
+- **What**: Token price, market cap, volume, and community data.
+- **URL**: `https://api.coingecko.com/api/v3/coins/{id}`
+- **Why**: Adds an economic dimension beyond TVL -- market cap, 24h volume, and price trends. Also provides community metrics (Twitter followers, Reddit subscribers) that CoinGecko already aggregates.
+- **Impact**: Enriches the TVL dimension with market activity data. Could also feed the (planned) Community dimension.
+- **Cost**: Free, no auth needed, 10-30 calls/min rate limit.
 
-Additional prompt rules:
-- "You have access to tools that query the live Resilience database. ALWAYS use `lookup_project` before answering questions about specific projects."
-- "If a project is not found in the database, say so honestly. Do NOT fabricate scores or metrics."
-- "Clearly label Phase 2/3/4 features as PLANNED, not live."
+**5. libs.tech / deps.dev (Google)** -- Priority: LOW
+- **What**: Google's dependency insight API for understanding transitive dependencies and their security status.
+- **URL**: `https://api.deps.dev/v3alpha/systems/{system}/packages/{package}`
+- **Why**: Your dependency analysis currently checks direct dependencies. deps.dev would let you trace *transitive* (indirect) vulnerabilities -- e.g., "your project depends on X which depends on Y which has a CVE."
+- **Impact**: Deeper supply chain analysis for the AEGIS Phase 4 vision.
+- **Cost**: Free, no auth.
 
-### Tool Definitions
+### Implementation Approach
 
-```text
-lookup_project:
-  parameters: { query: string }
-  returns: array of matching profiles with:
-    project_name, integrated_score, score_breakdown,
-    github_stars, github_forks, github_contributors,
-    github_commit_velocity, github_commits_30d,
-    dependency_health_score, tvl_usd, governance_tx_30d,
-    liveness_status, category, website_url, verified,
-    claim_status, authority_type, x_username
+Each integration gets its own edge function, following the existing pattern:
 
-get_ecosystem_stats:
-  parameters: none
-  returns: latest ecosystem snapshot with:
-    total_projects, active_projects, avg_resilience_score,
-    total_commits_30d, total_contributors, total_tvl_usd,
-    healthy_count, stale_count, decaying_count
+| Edge Function | API Source | Database Column |
+|---------------|-----------|-----------------|
+| `analyze-vulnerabilities` | OSV.dev | `vulnerability_count`, `vulnerability_details` (JSONB) |
+| `analyze-security-posture` | OpenSSF Scorecard | `openssf_score`, `openssf_checks` (JSONB) |
 
-list_top_projects:
-  parameters: { limit?: number, category?: string }
-  returns: top N projects ordered by integrated_score
-```
+These would be called during the existing `refresh-all-profiles` cron cycle, alongside the current `analyze-dependencies`, `analyze-governance`, and `analyze-tvl` functions.
 
-### Edge Cases
+### Scoring Formula Impact
 
-| Scenario | Behavior |
-|----------|----------|
-| Project not found in database | AI responds honestly: "I don't have data on [X] in our registry. It may not be indexed yet." |
-| Multiple tool calls needed | Loop handles up to 3 sequential tool calls before forcing a final response |
-| Tool call fails (DB error) | Return error message as tool result; AI adapts response gracefully |
-| General Solana question (no tool needed) | AI responds directly without tool calls -- no performance overhead |
-| Rate limit from AI gateway | Same 429/402 handling as before |
+No change to the current 4-dimension formula yet. The new data enriches existing dimensions:
+- **OSV vulnerabilities** feed into the Dependency Health (25%) dimension
+- **OpenSSF Scorecard** feeds into the Governance & Security (20%) dimension
+- **CoinGecko market data** feeds into the TVL & Economic (15%) dimension
+
+---
+
+## Files Modified Summary
+
+1. **`src/pages/Explorer.tsx`** -- Pull "Builders In Public" out of TabsList, render it as a standalone button on the left side of the same row
+2. **`supabase/functions/analyze-vulnerabilities/index.ts`** (NEW) -- OSV.dev integration
+3. **`supabase/functions/analyze-security-posture/index.ts`** (NEW) -- OpenSSF Scorecard integration
+4. **Database migration** -- Add `vulnerability_count`, `vulnerability_details`, `openssf_score`, `openssf_checks` columns to `claimed_profiles`
+5. **`supabase/functions/refresh-all-profiles/index.ts`** -- Call the two new analysis functions during refresh cycle
+6. **Scoring display updates** -- Show vulnerability badges and OpenSSF score in the Development tab
 
