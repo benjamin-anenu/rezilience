@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import ecosystemImg from '@/assets/resilience-ecosystem.png';
 import {
   TitleSlide,
   VisionSlide,
@@ -33,6 +34,12 @@ export default function PitchDeck() {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(0);
   const [cursorHidden, setCursorHidden] = useState(false);
+
+  /* Preload slide 2 image immediately on mount */
+  useEffect(() => {
+    const img = new Image();
+    img.src = ecosystemImg;
+  }, []);
 
   const go = useCallback(
     (d: number) => {
