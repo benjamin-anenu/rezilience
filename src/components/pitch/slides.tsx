@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { Brain, Network, Heart, Coins, Search, ShieldCheck, Lock, Globe, BookOpen, GitBranch, Users, TrendingUp, Database, Activity, ExternalLink, CheckCircle, ArrowRight, Zap, Eye, Target, BarChart3, Shield, Clock, AlertTriangle, Info } from 'lucide-react';
 import { useHeroStats } from '@/hooks/useHeroStats';
 import { useRoadmapStats } from '@/hooks/useRoadmapStats';
@@ -6,17 +7,24 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import founderImg from '@/assets/founder-benjamin.png';
 import ecosystemImg from '@/assets/resilience-ecosystem.png';
 
-/* ─── fade image with skeleton ─── */
-function FadeImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+/* ─── cinematic fade image with blur-to-sharp reveal ─── */
+function FadeImage({ src, alt, className, wrapperClassName }: { 
+  src: string; alt: string; className?: string; wrapperClassName?: string 
+}) {
   const [loaded, setLoaded] = useState(false);
   return (
-    <div className="relative">
+    <div className={wrapperClassName ?? 'relative'}>
       {!loaded && <div className="absolute inset-0 animate-pulse bg-card/60 rounded-sm" />}
-      <img
+      <motion.img
         src={src}
         alt={alt}
-        className={`${className ?? ''} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        className={className ?? ''}
         onLoad={() => setLoaded(true)}
+        initial={{ opacity: 0, scale: 0.92, filter: 'blur(8px)' }}
+        animate={loaded 
+          ? { opacity: 1, scale: 1, filter: 'blur(0px)' } 
+          : { opacity: 0, scale: 0.92, filter: 'blur(8px)' }}
+        transition={{ duration: 1.2, ease: [0.25, 0.1, 0.25, 1] }}
       />
     </div>
   );
@@ -81,10 +89,25 @@ export function TitleSlide() {
 
 /* ─── SLIDE 2: THE VISION ─── */
 export function VisionSlide() {
-  return <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
-      <FadeImage src={ecosystemImg} alt="Rezilience Ecosystem — Code, Liveness, Originality, Governance, Dependencies, Economics" className="absolute inset-0 h-full w-full object-contain" />
-      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
-      <div className="relative z-10 flex flex-col items-center text-center mt-[55%]">
+  return <div className="relative h-full w-full flex flex-col items-center justify-center overflow-hidden px-[120px] py-[60px]">
+      {/* Subtle glow behind image */}
+      <div className="absolute top-[15%] left-1/2 -translate-x-1/2 w-[500px] h-[500px] rounded-full bg-primary/8 blur-[100px] pointer-events-none" />
+      
+      {/* Centered ecosystem image */}
+      <FadeImage 
+        src={ecosystemImg} 
+        alt="Rezilience Ecosystem — Code, Liveness, Originality, Governance, Dependencies, Economics" 
+        className="max-w-[750px] max-h-[500px] w-full h-auto object-contain"
+        wrapperClassName="relative flex items-center justify-center"
+      />
+      
+      {/* Text below, staggered entrance */}
+      <motion.div 
+        className="relative z-10 flex flex-col items-center text-center mt-8"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, delay: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+      >
         <Tag>THE VISION</Tag>
         <h2 className="mt-4 text-[56px] font-bold text-foreground leading-tight">
           The Assurance Layer of Solana
@@ -92,7 +115,7 @@ export function VisionSlide() {
         <p className="mt-4 max-w-[700px] text-[20px] text-muted-foreground">
           Bridging Builders and the Public through transparent, verifiable project health data.
         </p>
-      </div>
+      </motion.div>
     </div>;
 }
 
@@ -575,7 +598,7 @@ export function FounderSlide() {
       </h2>
       <div className="mt-10 flex gap-12 items-start max-w-[1000px]">
         <div className="shrink-0 flex flex-col items-center gap-4">
-          <FadeImage src={founderImg} alt="Benjamin Omoata Anenu" className="h-40 w-40 rounded-full object-cover border-2 border-primary/30" />
+          <FadeImage src={founderImg} alt="Benjamin Omoata Anenu" className="h-40 w-40 rounded-full object-cover border-2 border-primary/30" wrapperClassName="relative" />
           <h3 className="text-[22px] font-semibold text-foreground text-center">Benjamin Omoata Anenu</h3>
           <p className="font-mono text-[13px] text-primary text-center leading-tight">Product Visionary<br />Technical Project Manager<br />& AI Product Strategist</p>
         </div>
