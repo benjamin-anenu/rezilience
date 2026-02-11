@@ -47,3 +47,6 @@ verify_jwt = false
 
 [functions.seed-registry-profiles]
 verify_jwt = false
+
+[functions.chat-gpt]
+verify_jwt = false
