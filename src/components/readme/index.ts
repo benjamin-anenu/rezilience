@@ -11,3 +11,4 @@ export {
   DecayFormula,
   DimensionBreakdown,
 } from './FormulaDisplay';
+export { ScoringMethodology } from './ScoringMethodology';

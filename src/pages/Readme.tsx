@@ -46,6 +46,7 @@ import {
   TierLabelsLegend,
   IntegratedScoreFormula,
   DecayFormula,
+  ScoringMethodology,
   DimensionBreakdown,
 } from '@/components/readme';
 import { useHeroStats } from '@/hooks/useHeroStats';
@@ -264,7 +265,11 @@ export default function Readme() {
             <section id="scoring" className="scroll-mt-24">
               <SectionHeader icon={BarChart3} title="Scoring Methodology" />
               
-              <IntegratedScoreFormula />
+              <ScoringMethodology />
+
+              <div className="mt-8">
+                <IntegratedScoreFormula />
+              </div>
 
               <div className="grid gap-8 mt-8">
                 <div id="github-score" className="scroll-mt-24">
