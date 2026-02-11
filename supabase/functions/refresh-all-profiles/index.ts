@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
   try {
     // Parse request body for selective dimension refresh and batch params
     const body = await req.json().catch(() => ({}));
-    const requestedDimensions: string[] = body.dimensions || ['github', 'dependencies', 'governance', 'tvl', 'bytecode'];
+    const requestedDimensions: string[] = body.dimensions || ['github', 'dependencies', 'governance', 'tvl', 'bytecode', 'vulnerabilities', 'security'];
     const batchSize: number = Math.min(Math.max(body.batch_size || 5, 1), 50);
     const offset: number = Math.max(body.offset || 0, 0);
     const autoChain: boolean = body.auto_chain !== false; // default true
@@ -94,6 +94,8 @@ Deno.serve(async (req) => {
     const analyzeDepsUrl = `${supabaseUrl}/functions/v1/analyze-dependencies`;
     const analyzeGovUrl = `${supabaseUrl}/functions/v1/analyze-governance`;
     const analyzeTvlUrl = `${supabaseUrl}/functions/v1/analyze-tvl`;
+    const analyzeVulnsUrl = `${supabaseUrl}/functions/v1/analyze-vulnerabilities`;
+    const analyzeSecurityUrl = `${supabaseUrl}/functions/v1/analyze-security-posture`;
 
     let successCount = 0;
     let errorCount = 0;
@@ -227,6 +229,55 @@ Deno.serve(async (req) => {
             }
           } catch (bytecodeErr) {
             console.error(`✗ Bytecode verification failed for ${profile.project_name}:`, bytecodeErr);
+          }
+        }
+
+        // === VULNERABILITY ANALYSIS (if requested) ===
+        if (requestedDimensions.includes('vulnerabilities')) {
+          try {
+            const vulnResponse = await fetch(analyzeVulnsUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${supabaseKey}`,
+              },
+              body: JSON.stringify({ profile_id: profile.id }),
+            });
+
+            if (vulnResponse.ok) {
+              const vulnData = await vulnResponse.json();
+              console.log(`✓ Vulnerabilities scanned: ${profile.project_name} (${vulnData?.vulnerability_count || 0} CVEs)`);
+            } else {
+              await vulnResponse.text();
+            }
+          } catch (vulnErr) {
+            console.error(`✗ Vulnerability scan failed for ${profile.project_name}:`, vulnErr);
+          }
+        }
+
+        // === SECURITY POSTURE ANALYSIS (if requested) ===
+        if (requestedDimensions.includes('security') && profile.github_org_url) {
+          try {
+            const secResponse = await fetch(analyzeSecurityUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${supabaseKey}`,
+              },
+              body: JSON.stringify({
+                github_url: profile.github_org_url,
+                profile_id: profile.id,
+              }),
+            });
+
+            if (secResponse.ok) {
+              const secData = await secResponse.json();
+              console.log(`✓ Security posture analyzed: ${profile.project_name} (OpenSSF: ${secData?.score ?? 'N/A'}/10)`);
+            } else {
+              await secResponse.text();
+            }
+          } catch (secErr) {
+            console.error(`✗ Security posture failed for ${profile.project_name}:`, secErr);
           }
         }
 

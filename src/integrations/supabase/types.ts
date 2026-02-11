@@ -214,6 +214,9 @@ export type Database = {
           milestones: Json | null
           multisig_address: string | null
           multisig_verified_via: string | null
+          openssf_analyzed_at: string | null
+          openssf_checks: Json | null
+          openssf_score: number | null
           program_id: string | null
           project_id: string | null
           project_name: string
@@ -234,6 +237,9 @@ export type Database = {
           updated_at: string
           verified: boolean
           verified_at: string | null
+          vulnerability_analyzed_at: string | null
+          vulnerability_count: number | null
+          vulnerability_details: Json | null
           wallet_address: string | null
           website_url: string | null
           x_user_id: string | null
@@ -300,6 +306,9 @@ export type Database = {
           milestones?: Json | null
           multisig_address?: string | null
           multisig_verified_via?: string | null
+          openssf_analyzed_at?: string | null
+          openssf_checks?: Json | null
+          openssf_score?: number | null
           program_id?: string | null
           project_id?: string | null
           project_name: string
@@ -320,6 +329,9 @@ export type Database = {
           updated_at?: string
           verified?: boolean
           verified_at?: string | null
+          vulnerability_analyzed_at?: string | null
+          vulnerability_count?: number | null
+          vulnerability_details?: Json | null
           wallet_address?: string | null
           website_url?: string | null
           x_user_id?: string | null
@@ -386,6 +398,9 @@ export type Database = {
           milestones?: Json | null
           multisig_address?: string | null
           multisig_verified_via?: string | null
+          openssf_analyzed_at?: string | null
+          openssf_checks?: Json | null
+          openssf_score?: number | null
           program_id?: string | null
           project_id?: string | null
           project_name?: string
@@ -406,6 +421,9 @@ export type Database = {
           updated_at?: string
           verified?: boolean
           verified_at?: string | null
+          vulnerability_analyzed_at?: string | null
+          vulnerability_count?: number | null
+          vulnerability_details?: Json | null
           wallet_address?: string | null
           website_url?: string | null
           x_user_id?: string | null
