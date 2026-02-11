@@ -45,7 +45,7 @@ function getStatusLabel(status: HealthStatus): string {
     case 'decaying':
       return 'UNDER OBSERVATION';
     case 'locked':
-      return 'LOCKED';
+      return 'PRIVATE';
   }
 }
 
