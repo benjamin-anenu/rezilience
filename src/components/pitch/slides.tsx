@@ -1,7 +1,9 @@
-import { Brain, Network, Heart, Coins, Search, ShieldCheck, Lock, Globe, BookOpen, GitBranch, Users, TrendingUp, Database, Activity, ExternalLink, CheckCircle, ArrowRight, Zap } from 'lucide-react';
+import { Brain, Network, Heart, Coins, Search, ShieldCheck, Lock, Globe, BookOpen, GitBranch, Users, TrendingUp, Database, Activity, ExternalLink, CheckCircle, ArrowRight, Zap, Eye, Target, BarChart3, Shield } from 'lucide-react';
 import { useHeroStats } from '@/hooks/useHeroStats';
 import { useRoadmapStats } from '@/hooks/useRoadmapStats';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import founderImg from '@/assets/founder-benjamin.png';
+import ecosystemImg from '@/assets/resilience-ecosystem.png';
 
 /* ─── shared layout ─── */
 function SlideLayout({ children, className = '' }: { children: React.ReactNode; className?: string }) {
@@ -36,7 +38,7 @@ export function TitleSlide() {
       </h1>
       <p className="mt-6 max-w-[800px] text-[24px] leading-relaxed text-muted-foreground">
         <span className="text-primary font-semibold">Resilience</span> — Decentralized Assurance Layer for Solana.
-        <br />Multi-dimensional Proof-of-Life for every program on-chain.
+        <br />Multi-dimensional Proof-of-Life for every project — on-chain and off-chain.
       </p>
       {stats && (
         <div className="mt-12 flex gap-6">
@@ -50,22 +52,41 @@ export function TitleSlide() {
   );
 }
 
-/* ─── SLIDE 2: THE PROBLEM ─── */
+/* ─── SLIDE 2: THE VISION ─── */
+export function VisionSlide() {
+  return (
+    <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
+      <img src={ecosystemImg} alt="Resilience Ecosystem — Code, Liveness, Originality, Governance, Dependencies, Economics" className="absolute inset-0 h-full w-full object-contain" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+      <div className="relative z-10 flex flex-col items-center text-center mt-[55%]">
+        <Tag>THE VISION</Tag>
+        <h2 className="mt-4 text-[56px] font-bold text-foreground leading-tight">
+          The Assurance Layer of Solana
+        </h2>
+        <p className="mt-4 max-w-[700px] text-[20px] text-muted-foreground">
+          Bridging Builders and the Public through transparent, verifiable project health data.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ─── SLIDE 3: THE PROBLEM ─── */
 export function ProblemSlide() {
   const problems = [
-    { icon: ShieldCheck, title: 'No Standardized Health Monitoring', desc: 'Solana has 2,000+ deployed programs with zero continuous assurance infrastructure.' },
-    { icon: GitBranch, title: 'Forks & Clones Erode Integrity', desc: 'Code can be forked in seconds — reputation and maintenance history cannot.' },
-    { icon: Search, title: 'Manual Due Diligence Doesn\'t Scale', desc: 'Investors, protocols, and users rely on fragmented, one-time audits.' },
-    { icon: Coins, title: 'Billions in TVL, Zero Continuous Auditing', desc: 'DeFi protocols secure massive value with no real-time health telemetry.' },
+    { icon: Eye, title: 'No Real-Time Milestone Tracking', desc: 'The public has no way to track project commitments, progress, or delivery in real-time.' },
+    { icon: Target, title: 'No Data-Backed Community Staking', desc: 'No bridge for the community to back projects based on verifiable data rather than social media hype.' },
+    { icon: GitBranch, title: 'Forks & Clones Erode Integrity', desc: 'Code can be forked in seconds — reputation and maintenance history cannot be copied.' },
+    { icon: BarChart3, title: 'Billions in TVL, Zero Health Telemetry', desc: 'DeFi protocols and off-chain tools secure massive value with no continuous health monitoring.' },
   ];
   return (
     <SlideLayout>
       <Tag>THE PROBLEM</Tag>
       <h2 className="mt-6 text-[52px] font-bold text-foreground leading-tight">
-        Solana's Trust Vacuum
+        The Transparency Gap
       </h2>
       <p className="mt-4 max-w-[700px] text-[20px] text-muted-foreground">
-        Upgrade authority creates power. But power without transparency creates risk.
+        Solana mastered speed and deployment. Now it's time to master transparency and accountability.
       </p>
       <div className="mt-10 grid grid-cols-2 gap-6">
         {problems.map((p) => (
@@ -84,7 +105,7 @@ export function ProblemSlide() {
   );
 }
 
-/* ─── SLIDE 3: THE SOLUTION ─── */
+/* ─── SLIDE 4: THE SOLUTION ─── */
 export function SolutionSlide() {
   const dimensions = [
     { icon: Brain, label: 'Brain', weight: '40%', desc: 'GitHub Activity', color: 'text-primary' },
@@ -98,12 +119,17 @@ export function SolutionSlide() {
       <h2 className="mt-6 text-[52px] font-bold text-foreground leading-tight">
         Multi-Dimensional Proof-of-Life
       </h2>
-      <div className="mt-6 rounded-sm border border-primary/30 bg-primary/5 px-6 py-4 inline-block">
+      <div className="mt-4 flex gap-8 text-[16px] text-muted-foreground">
+        <span className="flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> <strong className="text-foreground">The Public (The Fish)</strong> — Data-backed transparency</span>
+        <span className="flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /> <strong className="text-foreground">Builders (The Eagles)</strong> — Immutable trust scores</span>
+      </div>
+      <div className="mt-4 rounded-sm border border-primary/30 bg-primary/5 px-6 py-4 inline-block">
         <p className="font-mono text-[22px] text-primary">
           R = 0.40×GitHub + 0.25×Deps + 0.20×Gov + 0.15×TVL
         </p>
       </div>
-      <div className="mt-10 grid grid-cols-4 gap-6">
+      <p className="mt-3 text-[14px] text-muted-foreground">Covers on-chain programs AND off-chain projects equally.</p>
+      <div className="mt-8 grid grid-cols-4 gap-6">
         {dimensions.map((d) => (
           <div key={d.label} className="flex flex-col items-center gap-3 rounded-sm border border-border bg-card/40 p-6 text-center">
             <d.icon className={`h-10 w-10 ${d.color}`} />
@@ -117,12 +143,12 @@ export function SolutionSlide() {
   );
 }
 
-/* ─── SLIDE 4: HOW IT WORKS ─── */
+/* ─── SLIDE 5: HOW IT WORKS ─── */
 export function HowItWorksSlide() {
   const steps = [
-    { num: '01', icon: Database, title: 'INDEX', desc: 'Automated multi-dimensional scoring of every registered Solana program. GitHub, dependencies, governance, and TVL analyzed continuously.' },
-    { num: '02', icon: ShieldCheck, title: 'VERIFY', desc: 'Bytecode originality verification, dependency supply-chain health checks, and fork detection to establish authenticity.' },
-    { num: '03', icon: Lock, title: 'COMMIT', desc: 'Economic commitment through staked assurance bonds. Builders put skin in the game via Commitment Locks.' },
+    { num: '01', icon: Database, title: 'INDEX', desc: 'Automated multi-dimensional scoring of every registered Solana project — on-chain programs and off-chain tools alike. GitHub, dependencies, governance, and TVL analyzed continuously.' },
+    { num: '02', icon: ShieldCheck, title: 'VERIFY', desc: 'On-chain: authority wallet SIWS for "Verified Titan" status. Off-chain: GitHub ownership proof for "Claimed" badge. Bytecode originality + dependency supply-chain health checks.' },
+    { num: '03', icon: Lock, title: 'COMMIT', desc: 'Economic commitment through staked assurance bonds. Builders put skin in the game via Commitment Locks — public milestone tracking with timeline variance alerts.' },
   ];
   return (
     <SlideLayout>
@@ -149,7 +175,7 @@ export function HowItWorksSlide() {
   );
 }
 
-/* ─── SLIDE 5: TRACTION ─── */
+/* ─── SLIDE 6: TRACTION ─── */
 export function TractionSlide() {
   const { data: heroStats } = useHeroStats();
   const { data: roadmapStats } = useRoadmapStats();
@@ -175,20 +201,20 @@ export function TractionSlide() {
   );
 }
 
-/* ─── SLIDE 6: PUBLIC GOOD ─── */
-export function PublicGoodSlide() {
+/* ─── SLIDE 7: OPENING NEW POSSIBILITIES ─── */
+export function PossibilitiesSlide() {
   const items = [
-    { icon: Globe, title: 'Open Registry', desc: 'Free, permissionless access to health scores for every indexed Solana program.' },
-    { icon: BookOpen, title: 'Grants Directory', desc: 'Curated funding resource for builders — no gatekeeping.' },
-    { icon: Network, title: 'Supply Chain Security', desc: 'Dependency health monitoring across the entire ecosystem.' },
-    { icon: Zap, title: 'Score Oracle', desc: 'Composable on-chain data architecture for protocol-level integrations.' },
-    { icon: GitBranch, title: 'Open Methodology', desc: 'Transparent, auditable scoring formula — no black boxes.' },
+    { icon: Activity, title: 'Public Milestone Tracking', desc: 'The community can finally see the heartbeat of a project\'s progress — from code commits to governance decisions.' },
+    { icon: Coins, title: 'Economic Alignment', desc: 'Continuity Bonds let the public stake their trust in projects that prove they are here for the long haul.' },
+    { icon: Network, title: 'Supply Chain Auditing', desc: 'Map the ecosystem\'s "nervous system" — trace dependent services and warn the community when critical infrastructure is at risk.' },
+    { icon: BookOpen, title: 'Grants Directory', desc: 'Curated funding resource for builders — a public good with no gatekeeping.' },
+    { icon: Zap, title: 'Score Oracle', desc: 'Composable on-chain data architecture for protocol-level integrations and programmatic access.' },
   ];
   return (
     <SlideLayout>
-      <Tag>PUBLIC GOOD VALUE</Tag>
+      <Tag>OPENING NEW POSSIBILITIES</Tag>
       <h2 className="mt-6 text-[52px] font-bold text-foreground leading-tight">
-        Infrastructure for Everyone
+        Building the Tools That Don't Exist Yet
       </h2>
       <div className="mt-10 grid grid-cols-3 gap-5">
         {items.map((item) => (
@@ -205,7 +231,7 @@ export function PublicGoodSlide() {
   );
 }
 
-/* ─── SLIDE 7: COMPETITIVE LANDSCAPE ─── */
+/* ─── SLIDE 8: COMPETITIVE LANDSCAPE ─── */
 export function CompetitionSlide() {
   const features = [
     'Multi-dimensional scoring',
@@ -263,7 +289,7 @@ export function CompetitionSlide() {
   );
 }
 
-/* ─── SLIDE 8: ROADMAP ─── */
+/* ─── SLIDE 9: ROADMAP ─── */
 export function RoadmapSlide() {
   const phases = [
     { phase: '1', title: 'Resilience Registry', status: 'IN PROGRESS', items: ['Multi-dimensional scoring engine', 'Builder claim & verification flow', 'Public explorer + heartbeat dashboard', 'Grants directory (public good)'], color: 'border-primary text-primary' },
@@ -302,39 +328,40 @@ export function RoadmapSlide() {
   );
 }
 
-/* ─── SLIDE 9: TEAM ─── */
-export function TeamSlide() {
-  const members = [
-    { name: '[ YOUR NAME ]', role: 'Founder & CEO', bio: 'Add your background, experience, and relevant credentials here.' },
-    { name: '[ TEAM MEMBER ]', role: 'CTO / Lead Engineer', bio: 'Add technical background and relevant Solana experience.' },
-    { name: '[ TEAM MEMBER ]', role: 'Product / Growth', bio: 'Add product strategy and ecosystem experience.' },
-  ];
+/* ─── SLIDE 10: THE FOUNDER ─── */
+export function FounderSlide() {
   return (
-    <SlideLayout>
-      <Tag>THE TEAM</Tag>
-      <h2 className="mt-6 text-[52px] font-bold text-foreground leading-tight">
-        Built by Builders
+    <SlideLayout className="items-center">
+      <Tag>THE FOUNDER</Tag>
+      <h2 className="mt-6 text-[52px] font-bold text-foreground leading-tight text-center">
+        Solo Founder. AI-Augmented.
       </h2>
-      <p className="mt-3 text-[18px] text-muted-foreground">
-        TODO: Replace placeholder content with actual team bios.
-      </p>
-      <div className="mt-10 grid grid-cols-3 gap-8">
-        {members.map((m) => (
-          <div key={m.role} className="rounded-sm border border-dashed border-primary/30 bg-card/30 p-8 text-center">
-            <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-border bg-muted">
-              <Users className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="mt-5 text-[20px] font-semibold text-foreground">{m.name}</h3>
-            <p className="mt-1 font-mono text-[13px] text-primary">{m.role}</p>
-            <p className="mt-3 text-[14px] text-muted-foreground">{m.bio}</p>
-          </div>
-        ))}
+      <div className="mt-10 flex gap-12 items-start max-w-[1000px]">
+        <div className="shrink-0 flex flex-col items-center gap-4">
+          <img src={founderImg} alt="Benjamin Omoata Anenu" className="h-40 w-40 rounded-full object-cover border-2 border-primary/30" />
+          <h3 className="text-[22px] font-semibold text-foreground text-center">Benjamin Omoata Anenu</h3>
+          <p className="font-mono text-[13px] text-primary text-center leading-tight">Founder & CEO<br />Technical Product Strategist<br />& AI Systems Architect</p>
+        </div>
+        <div className="flex flex-col gap-5">
+          <blockquote className="border-l-2 border-primary pl-5 text-[17px] italic text-foreground/90 leading-relaxed">
+            "Solana has already mastered the art of speed and deployment. Now, it is time to master the art of Transparency and Accountability."
+          </blockquote>
+          <p className="text-[15px] text-muted-foreground leading-relaxed">
+            Working closely with founders who have received grants and those building in the trenches, it became clear that a massive opportunity is being missed — no real-time milestone tracking, no community-backed continuity bonds, no verifiable data bridge.
+          </p>
+          <blockquote className="border-l-2 border-primary/50 pl-5 text-[15px] italic text-muted-foreground leading-relaxed">
+            "We aren't here to point out where the ecosystem is quiet. We are here to provide the megaphone for those who are consistently building, and the map for those who need to know which projects are truly resilient."
+          </blockquote>
+          <p className="text-[13px] text-muted-foreground/70 mt-2">
+            Building with AI as a force multiplier — this grant will fund the team needed to take Resilience to the next level.
+          </p>
+        </div>
       </div>
     </SlideLayout>
   );
 }
 
-/* ─── SLIDE 10: ASK & CONTACT ─── */
+/* ─── SLIDE 11: THE ASK ─── */
 export function AskSlide() {
   return (
     <SlideLayout className="items-center text-center">
@@ -343,8 +370,11 @@ export function AskSlide() {
         Let's Build Solana's<br />Trust Infrastructure
       </h2>
       <p className="mt-6 max-w-[700px] text-[20px] text-muted-foreground">
-        We're seeking a Solana Foundation grant to accelerate the Resilience Registry 
-        from Phase 1 into ecosystem-wide integration.
+        Seeking a Solana Foundation grant to fund the team and infrastructure needed
+        to scale Resilience from Phase 1 into ecosystem-wide integration.
+      </p>
+      <p className="mt-4 max-w-[600px] text-[16px] text-foreground/70 italic">
+        Institutional capital and retail users will navigate Solana with absolute confidence.
       </p>
       <div className="mt-10 flex gap-6">
         <a href="https://bloomberg-pixel-perfect-fe.lovable.app" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-sm border border-primary bg-primary/10 px-6 py-3 font-mono text-[15px] text-primary hover:bg-primary/20 transition-colors">
@@ -356,14 +386,6 @@ export function AskSlide() {
         <a href="https://bloomberg-pixel-perfect-fe.lovable.app/grants" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-sm border border-border bg-card/50 px-6 py-3 font-mono text-[15px] text-foreground hover:bg-card transition-colors">
           <BookOpen className="h-4 w-4" /> Grants Directory
         </a>
-      </div>
-      <div className="mt-12 flex gap-8 text-[14px] text-muted-foreground">
-        <span className="flex items-center gap-2">
-          <ExternalLink className="h-4 w-4" /> TODO: Add X/Twitter
-        </span>
-        <span className="flex items-center gap-2">
-          <ExternalLink className="h-4 w-4" /> TODO: Add GitHub
-        </span>
       </div>
       <p className="mt-8 font-mono text-[12px] text-muted-foreground/40">REPUTATION CAN'T BE FORKED.</p>
     </SlideLayout>
