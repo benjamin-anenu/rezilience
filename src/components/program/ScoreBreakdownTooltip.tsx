@@ -1,14 +1,20 @@
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Progress } from '@/components/ui/progress';
-import { Info } from 'lucide-react';
 
 interface ScoreBreakdown {
   github: number;
   dependency: number;
-  governance: number;
-  tvl: number;
+  governance: number | null;
+  tvl: number | null;
   continuityDecay?: number;
   baseScore?: number;
+  weights?: {
+    github: number;
+    dependencies: number;
+    governance: number;
+    tvl: number;
+  };
+  applicableDimensions?: string[];
 }
 
 interface ScoreBreakdownTooltipProps {
@@ -22,29 +28,30 @@ export function ScoreBreakdownTooltip({
   totalScore,
   children,
 }: ScoreBreakdownTooltipProps) {
-  // Default breakdown if not provided
-  const defaultBreakdown: ScoreBreakdown = {
-    github: totalScore, // Assume all from GitHub if no breakdown
+  const scores = breakdown || {
+    github: totalScore,
     dependency: 50,
+    governance: null,
+    tvl: null,
+  };
+
+  // Use stored weights or fall back to defaults
+  const weights = (scores as any).weights || {
+    github: 0.60,
+    dependencies: 0.40,
     governance: 0,
     tvl: 0,
   };
 
-  const scores = breakdown || defaultBreakdown;
-
-  // Calculate weighted contributions
-  const weights = {
-    github: 0.40,
-    dependency: 0.25,
-    governance: 0.20,
-    tvl: 0.15,
-  };
+  const applicable = (scores as any).applicableDimensions || ['github', 'dependencies'];
+  const showGov = applicable.includes('governance');
+  const showTvl = applicable.includes('tvl');
 
   const contributions = {
-    github: Math.round(scores.github * weights.github),
-    dependency: Math.round(scores.dependency * weights.dependency),
-    governance: Math.round(scores.governance * weights.governance),
-    tvl: Math.round(scores.tvl * weights.tvl),
+    github: Math.round((scores.github || 0) * weights.github),
+    dependency: Math.round((scores.dependency || 0) * weights.dependencies),
+    governance: showGov ? Math.round((scores.governance || 0) * weights.governance) : 0,
+    tvl: showTvl ? Math.round((scores.tvl || 0) * weights.tvl) : 0,
   };
 
   const getScoreColor = (score: number) => {
@@ -52,6 +59,8 @@ export function ScoreBreakdownTooltip({
     if (score >= 40) return 'text-amber-500';
     return 'text-destructive';
   };
+
+  const pct = (n: number) => `${Math.round(n * 100)}%`;
 
   return (
     <TooltipProvider delayDuration={300}>
@@ -70,58 +79,61 @@ export function ScoreBreakdownTooltip({
               </span>
             </div>
 
-            {/* GitHub (40%) */}
-            <div>
-              <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">GitHub Activity (40%)</span>
-                <span className={`font-mono font-medium ${getScoreColor(scores.github)}`}>
-                  +{contributions.github}
-                </span>
-              </div>
-              <Progress value={scores.github} className="h-1.5" />
-            </div>
+            {/* GitHub */}
+            <DimensionRow
+              label={`GitHub Activity (${pct(weights.github)})`}
+              score={scores.github || 0}
+              contribution={contributions.github}
+              getScoreColor={getScoreColor}
+            />
 
-            {/* Dependencies (25%) */}
-            <div>
-              <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Dependency Health (25%)</span>
-                <span className={`font-mono font-medium ${getScoreColor(scores.dependency)}`}>
-                  +{contributions.dependency}
-                </span>
-              </div>
-              <Progress 
-                value={scores.dependency} 
-                className={`h-1.5 ${scores.dependency < 50 ? '[&>div]:bg-amber-500' : ''}`} 
-              />
-            </div>
+            {/* Dependencies */}
+            <DimensionRow
+              label={`Dependency Health (${pct(weights.dependencies)})`}
+              score={scores.dependency || 0}
+              contribution={contributions.dependency}
+              getScoreColor={getScoreColor}
+              progressClass={scores.dependency != null && scores.dependency < 50 ? '[&>div]:bg-amber-500' : ''}
+            />
 
-            {/* Governance (20%) */}
-            <div>
-              <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Governance (20%)</span>
-                <span className={`font-mono font-medium ${getScoreColor(scores.governance)}`}>
-                  +{contributions.governance}
-                </span>
-              </div>
-              <Progress 
-                value={scores.governance} 
-                className={`h-1.5 ${scores.governance < 30 ? '[&>div]:bg-muted-foreground' : ''}`} 
+            {/* Governance — only if applicable */}
+            {showGov && (
+              <DimensionRow
+                label={`Governance (${pct(weights.governance)})`}
+                score={scores.governance || 0}
+                contribution={contributions.governance}
+                getScoreColor={getScoreColor}
+                progressClass={(scores.governance || 0) < 30 ? '[&>div]:bg-muted-foreground' : ''}
               />
-            </div>
+            )}
 
-            {/* TVL (15%) */}
-            <div>
-              <div className="mb-1 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">Economic Health (15%)</span>
-                <span className={`font-mono font-medium ${getScoreColor(scores.tvl)}`}>
-                  +{contributions.tvl}
-                </span>
-              </div>
-              <Progress 
-                value={scores.tvl} 
-                className={`h-1.5 ${scores.tvl < 30 ? '[&>div]:bg-muted-foreground' : ''}`} 
+            {/* TVL — only if applicable */}
+            {showTvl && (
+              <DimensionRow
+                label={`Economic Health (${pct(weights.tvl)})`}
+                score={scores.tvl || 0}
+                contribution={contributions.tvl}
+                getScoreColor={getScoreColor}
+                progressClass={(scores.tvl || 0) < 30 ? '[&>div]:bg-muted-foreground' : ''}
               />
-            </div>
+            )}
+
+            {/* N/A dimensions */}
+            {!showGov && !showTvl && (
+              <p className="text-[10px] text-muted-foreground/60 italic">
+                Governance & TVL not applicable — weights redistributed
+              </p>
+            )}
+            {!showGov && showTvl && (
+              <p className="text-[10px] text-muted-foreground/60 italic">
+                Governance not applicable — weight redistributed
+              </p>
+            )}
+            {showGov && !showTvl && (
+              <p className="text-[10px] text-muted-foreground/60 italic">
+                TVL not applicable — weight redistributed
+              </p>
+            )}
 
             {/* Continuity Decay */}
             {scores.continuityDecay !== undefined && scores.continuityDecay > 0 && (
@@ -139,15 +151,43 @@ export function ScoreBreakdownTooltip({
               </div>
             )}
 
-            {/* Formula explanation */}
+            {/* Formula */}
             <div className="border-t border-border pt-2">
               <p className="text-[10px] text-muted-foreground/70">
-                R = (0.40×G + 0.25×D + 0.20×Gov + 0.15×TVL) × Continuity
+                R = ({pct(weights.github)}×G + {pct(weights.dependencies)}×D
+                {showGov ? ` + ${pct(weights.governance)}×Gov` : ''}
+                {showTvl ? ` + ${pct(weights.tvl)}×TVL` : ''}) × Continuity
               </p>
             </div>
           </div>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
+  );
+}
+
+function DimensionRow({
+  label,
+  score,
+  contribution,
+  getScoreColor,
+  progressClass = '',
+}: {
+  label: string;
+  score: number;
+  contribution: number;
+  getScoreColor: (s: number) => string;
+  progressClass?: string;
+}) {
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs">
+        <span className="text-muted-foreground">{label}</span>
+        <span className={`font-mono font-medium ${getScoreColor(score)}`}>
+          +{contribution}
+        </span>
+      </div>
+      <Progress value={score} className={`h-1.5 ${progressClass}`} />
+    </div>
   );
 }

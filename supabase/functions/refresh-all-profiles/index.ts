@@ -154,9 +154,14 @@ Deno.serve(async (req) => {
         }
 
         // === GOVERNANCE ANALYSIS (if requested) ===
+        // Determine applicable dimensions for adaptive weighting
+        const categoryLower = (profile.category || '').toLowerCase();
+        const hasGovernance = !!(profile.multisig_address) || categoryLower === 'dao' || categoryLower.includes('governance');
+        const hasTvl = categoryLower.includes('defi');
+
         let govScore = 0;
         let govTx30d = profile.governance_tx_30d || 0;
-        if (requestedDimensions.includes('governance') && profile.multisig_address) {
+        if (requestedDimensions.includes('governance') && (profile.multisig_address || (hasGovernance && profile.program_id))) {
           const govResponse = await fetch(analyzeGovUrl, {
             method: "POST",
             headers: {
@@ -181,7 +186,7 @@ Deno.serve(async (req) => {
         let tvlScore = 50; // Neutral default
         let tvlUsd = profile.tvl_usd || 0;
         let tvlRiskRatio = profile.tvl_risk_ratio || 0;
-        if (requestedDimensions.includes('tvl') && profile.category === 'defi') {
+        if (requestedDimensions.includes('tvl') && hasTvl) {
           const tvlResponse = await fetch(analyzeTvlUrl, {
             method: "POST",
             headers: {
@@ -281,13 +286,25 @@ Deno.serve(async (req) => {
           }
         }
 
-        // === CALCULATE UNIFIED RESILIENCE SCORE ===
-        // Hybrid formula: R = (0.40×G + 0.25×D + 0.20×Gov + 0.15×TVL) × ContinuityDecay
+        // === CALCULATE UNIFIED RESILIENCE SCORE (Adaptive Weights) ===
+        // Determine weights based on applicable dimensions
+        let weights: { github: number; dependencies: number; governance: number; tvl: number };
+
+        if (hasGovernance && hasTvl) {
+          weights = { github: 0.40, dependencies: 0.25, governance: 0.20, tvl: 0.15 };
+        } else if (hasGovernance && !hasTvl) {
+          weights = { github: 0.45, dependencies: 0.30, governance: 0.25, tvl: 0 };
+        } else if (!hasGovernance && hasTvl) {
+          weights = { github: 0.50, dependencies: 0.30, governance: 0, tvl: 0.20 };
+        } else {
+          weights = { github: 0.60, dependencies: 0.40, governance: 0, tvl: 0 };
+        }
+
         const baseScore = Math.round(
-          (githubScore * 0.40) +
-          (depsScore * 0.25) +
-          (govScore * 0.20) +
-          (tvlScore * 0.15)
+          (githubScore * weights.github) +
+          (depsScore * weights.dependencies) +
+          (govScore * weights.governance) +
+          (tvlScore * weights.tvl)
         );
 
         // Continuity Decay: exponential penalty for inactivity
@@ -306,17 +323,17 @@ Deno.serve(async (req) => {
         const scoreBreakdown = {
           github: Math.round(githubScore),
           dependencies: Math.round(depsScore),
-          governance: Math.round(govScore),
-          tvl: Math.round(tvlScore),
+          governance: hasGovernance ? Math.round(govScore) : null,
+          tvl: hasTvl ? Math.round(tvlScore) : null,
           baseScore,
           continuityDecay: Math.round(continuityDecay * 100),
           finalScore,
-          weights: {
-            github: 0.40,
-            dependencies: 0.25,
-            governance: 0.20,
-            tvl: 0.15,
-          },
+          weights,
+          applicableDimensions: [
+            'github', 'dependencies',
+            ...(hasGovernance ? ['governance'] : []),
+            ...(hasTvl ? ['tvl'] : []),
+          ],
         };
 
         console.log(`✓ Unified score for ${profile.project_name}: ${finalScore} (base:${baseScore} decay:${Math.round(continuityDecay * 100)}% G:${githubScore} D:${depsScore} Gov:${govScore} T:${tvlScore})`);
