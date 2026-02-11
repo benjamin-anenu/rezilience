@@ -20,40 +20,40 @@ export function HeroSection() {
   const { data: heroStats, isLoading } = useHeroStats();
 
   // Build dynamic stats from database
-  const registryDisplay = heroStats ?
-  getRegistryDisplay(heroStats.registryCount, heroStats.displayMode) :
-  { value: '...', badge: '' };
+  const registryDisplay = heroStats 
+    ? getRegistryDisplay(heroStats.registryCount, heroStats.displayMode)
+    : { value: '...', badge: '' };
 
   const stats = [
-  {
-    value: registryDisplay.value,
-    label: heroStats?.displayMode === 'launching' ? 'Registry Status' : 'Registered Projects',
-    tooltip: heroStats?.displayMode === 'launching' ?
-    'The Resilience Registry is launching soon. Be among the first to claim your project.' :
-    'Verified projects in the Resilience Registry who have secured their standing.',
-    badge: registryDisplay.badge
-  },
-  {
-    value: heroStats ? `${heroStats.activeCount}` : '...',
-    label: 'Active Heartbeats',
-    tooltip: 'Projects with verified activity in the last 14 days and 5+ events.',
-    badge: undefined
-  },
-  {
-    value: heroStats ? heroStats.averageScore.toFixed(1) : '...',
-    label: 'Avg. Resilience',
-    tooltip: 'Average Resilience Score across all verified projects in the registry.',
-    badge: undefined
-  }];
-
+    {
+      value: registryDisplay.value,
+      label: heroStats?.displayMode === 'launching' ? 'Registry Status' : 'Registered Projects',
+      tooltip: heroStats?.displayMode === 'launching' 
+        ? 'The Resilience Registry is launching soon. Be among the first to claim your project.'
+        : 'Verified projects in the Resilience Registry who have secured their standing.',
+      badge: registryDisplay.badge,
+    },
+    {
+      value: heroStats ? `${heroStats.activeCount}` : '...',
+      label: 'Active Heartbeats',
+      tooltip: 'Projects with verified activity in the last 14 days and 5+ events.',
+      badge: undefined,
+    },
+    {
+      value: heroStats ? heroStats.averageScore.toFixed(1) : '...',
+      label: 'Avg. Resilience',
+      tooltip: 'Average Resilience Score across all verified projects in the registry.',
+      badge: undefined,
+    }
+  ];
 
   return (
     <section className="relative overflow-hidden py-20 lg:py-32">
       {/* Background image with dark overlay */}
-      <div
+      <div 
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: `url(${heroBg})` }} />
-
+        style={{ backgroundImage: `url(${heroBg})` }}
+      />
       <div className="absolute inset-0 bg-background/80" />
 
       <div className="container relative mx-auto px-4 lg:px-8">
@@ -81,12 +81,12 @@ export function HeroSection() {
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                disabled
-                className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider cursor-not-allowed sm:w-auto">
-
+              <Button 
+                variant="outline" 
+                size="lg" 
+                disabled 
+                className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider cursor-not-allowed sm:w-auto"
+              >
                 <Lock className="mr-2 h-4 w-4" />
                 STAKE NOW
                 <span className="ml-2 text-xs text-muted-foreground">(COMING SOON)</span>
@@ -96,29 +96,29 @@ export function HeroSection() {
             {/* Stats - Stack vertically on mobile */}
             <TooltipProvider>
               <div className="mt-10 grid grid-cols-1 gap-4 sm:mt-12 sm:grid-cols-3 sm:gap-8">
-                {isLoading ?
-                <>
-                    {[1, 2, 3].map((i) =>
-                  <div key={i} className="flex items-center justify-between rounded-sm border border-border bg-card/50 p-4 sm:block sm:border-0 sm:bg-transparent sm:p-0">
+                {isLoading ? (
+                  <>
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="flex items-center justify-between rounded-sm border border-border bg-card/50 p-4 sm:block sm:border-0 sm:bg-transparent sm:p-0">
                         <Skeleton className="h-8 w-20" />
                         <Skeleton className="mt-1 h-4 w-24" />
                       </div>
-                  )}
-                  </> :
-
-                stats.map((stat) =>
-                <div
-                  key={stat.label}
-                  className="flex items-center justify-between rounded-sm border border-border bg-card/50 p-4 sm:block sm:border-0 sm:bg-transparent sm:p-0">
-
+                    ))}
+                  </>
+                ) : (
+                  stats.map((stat) => (
+                    <div 
+                      key={stat.label} 
+                      className="flex items-center justify-between rounded-sm border border-border bg-card/50 p-4 sm:block sm:border-0 sm:bg-transparent sm:p-0"
+                    >
                       <div className="flex items-center gap-2 sm:block">
                         <div className="flex items-center gap-2">
                           <p className="font-mono text-xl font-bold text-primary sm:text-2xl">{stat.value}</p>
-                          {stat.badge &&
-                      <span className="rounded-sm bg-primary/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
+                          {stat.badge && (
+                            <span className="rounded-sm bg-primary/20 px-1.5 py-0.5 font-mono text-[10px] font-bold text-primary">
                               {stat.badge}
                             </span>
-                      }
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground sm:hidden">{stat.label}</p>
                       </div>
@@ -134,8 +134,8 @@ export function HeroSection() {
                         </Tooltip>
                       </div>
                     </div>
-                )
-                }
+                  ))
+                )}
               </div>
             </TooltipProvider>
           </div>
@@ -145,7 +145,7 @@ export function HeroSection() {
             <div className="relative h-[420px] w-[420px]">
               {/* Rotating scanning ring */}
               <div className="absolute left-1/2 top-1/2 h-32 w-32 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/10" style={{ animation: 'spin 12s linear infinite' }} />
-              
+              <div className="absolute left-1/2 top-1/2 h-36 w-36 -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-primary/5" style={{ animation: 'spin 20s linear infinite reverse' }} />
 
               {/* Central node - Solana logo */}
               <div className="absolute left-1/2 top-1/2 flex h-24 w-24 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-sm border-2 border-primary bg-primary/10 glow-signal-strong pulse-subtle">
@@ -213,6 +213,6 @@ export function HeroSection() {
           </div>
         </div>
       </div>
-    </section>);
-
+    </section>
+  );
 }
