@@ -1,5 +1,5 @@
- export { HeroSection } from './HeroSection';
- export { ProblemSolutionSection } from './ProblemSolutionSection';
- export { HowItWorksSection } from './HowItWorksSection';
- export { PillarsSection } from './PillarsSection';
- export { UseCasesSection } from './UseCasesSection';
+export { HeroSection } from './HeroSection';
+export { TheGapSection } from './TheGapSection';
+export { HowItWorksSection } from './HowItWorksSection';
+export { AdaptiveScoringSection } from './AdaptiveScoringSection';
+export { UseCasesSection } from './UseCasesSection';
