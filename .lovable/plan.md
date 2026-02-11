@@ -1,119 +1,126 @@
 
 
-# Scoring Consolidation: Single Source of Truth
+# Intelligence Dashboard in Explorer Eye Popover
 
-## The Problem (Worse Than Expected)
+## The Problem
 
-There are actually **THREE** competing scoring systems, not two:
+You have 7 data services feeding real-time intelligence into every project, but the Explorer's Eye popover -- the most-used quick-glance tool -- shows almost none of it. A user clicking the Eye icon sees: GitHub public/private, website link, contributor count, X handle, and a dependency tree link. That's metadata, not intelligence.
 
-| System | Formula | Writes To | Called By |
-|--------|---------|-----------|-----------|
-| Anti-Gaming Points | Weighted activity buckets (0-100) | `resilience_score` | `analyze-github-repo` (the refresh cycle's GitHub step) |
-| Exponential Decay | `(O x I) x e^(-lambda*t) + S` | `resilience_score` | `fetch-github`, `github-oauth-callback` (claim flow) |
-| Weighted Linear | `0.40*G + 0.25*D + 0.20*Gov + 0.15*TVL` | `integrated_score` | `refresh-all-profiles` (orchestrator) |
+The actual intelligence (dependency health, governance activity, TVL, vulnerability count, OpenSSF score, bytecode status, continuity decay) is only visible after clicking through to the full Program Detail page and navigating to the Development tab. This creates a 3-click journey to answer the question: "Is this project healthy?"
 
-Additionally, two frontend files (`src/lib/scoring.ts` and `src/lib/resilience-scoring.ts`) contain scoring functions that are **never imported anywhere** -- pure dead code.
+## The Solution: Intelligence-Rich Eye Popover
 
-The refresh cycle works like this: `refresh-all-profiles` calls `analyze-github-repo`, which writes the anti-gaming score to `resilience_score`. Then `refresh-all-profiles` reads that `resilience_score` back as `githubScore` and feeds it into the weighted linear formula to produce `integrated_score`. So `resilience_score` is actually just the **GitHub dimension** (0-100), not the "resilience score." The naming is deeply misleading.
+Transform the Eye popover from a metadata card into a compact intelligence dashboard that surfaces the output of every connected service in one glance. No new pages, no new tabs -- just enrich what already exists.
 
-Meanwhile, the claim flow (`github-oauth-callback`) writes an exponential decay score to the same `resilience_score` column -- a completely different formula. The next refresh cycle overwrites it with the anti-gaming score. So for the first 30 minutes after claiming, a project shows a decay-based score, then switches to the anti-gaming score.
+## What Each Service Shows (Mapped to UI)
 
-## The Solution: Hybrid Model (as you specified)
+| Service | Data Point | Display Format |
+|---------|-----------|----------------|
+| GitHub API | Health status + commit velocity | Status badge (ACTIVE/STALE/DECAYING) + velocity bar |
+| Crates.io | Dependency health score + outdated count | Score pill + "3 outdated, 1 critical" text |
+| Solana RPC | Governance tx count (30d) | "12 tx (30d)" or "No governance" |
+| DeFiLlama | TVL in USD | "$4.2M TVL" or hidden if zero |
+| OSV.dev | Vulnerability count | "0 CVEs" (green) or "3 CVEs" (red) |
+| OpenSSF | Scorecard rating | "7.2/10" with color coding |
+| Bytecode | Originality status | "Original" / "Fork" / "Not On-Chain" badge |
 
-Consolidate into ONE formula used EVERYWHERE:
+## Technical Changes
 
-```text
-R = (0.40 x GitHub + 0.25 x Deps + 0.20 x Gov + 0.15 x TVL) x ContinuityDecay
-```
+### 1. Expand `ExplorerProject` type (`src/hooks/useExplorerProjects.ts`)
 
-Where `ContinuityDecay = e^(-0.00167 x days_since_last_commit)` applies as a multiplicative penalty on the weighted base score.
+Add fields already available in the `claimed_profiles` table but not currently fetched:
 
-### Key Design Decisions
+- `vulnerability_count` (number)
+- `openssf_score` (number or null)
+- `bytecode_match_status` (string or null)
+- `github_commit_velocity` (number)
+- `github_commits_30d` (number)
+- `liveness_status` (already present)
 
-1. **`resilience_score` becomes the canonical column** -- it's what the Explorer, leaderboard, and all UI already reads. `integrated_score` becomes a legacy column (kept for backward compatibility but no longer primary).
-2. **The anti-gaming GitHub score (0-100) stays as-is** in `analyze-github-repo` -- it's a good per-dimension score. It just needs to be clearly labeled as the "GitHub dimension" and stored in a dedicated column.
-3. **Continuity decay is applied at the final scoring step**, not inside any individual dimension.
-4. **The claim flow writes a provisional score** using the same hybrid formula (with default dimension baselines for deps/gov/tvl until the first full refresh runs).
+These columns already exist in the database -- no schema changes needed. Just expand the SELECT and mapping.
 
-## Files to Change
+### 2. Redesign Eye Popover (`src/components/explorer/LeaderboardRow.tsx`)
 
-### 1. `supabase/functions/refresh-all-profiles/index.ts`
-- After calculating `githubScore`, `depsScore`, `govScore`, `tvlScore` (all 0-100)
-- Calculate `baseScore = 0.40*G + 0.25*D + 0.20*Gov + 0.15*TVL`
-- Calculate `daysSinceLastCommit` from the profile's `github_last_commit`
-- Apply `continuityDecay = 1 - e^(-0.00167 * days)`
-- `finalScore = baseScore * (1 - continuityDecay)`
-- Write `finalScore` to **`resilience_score`** (the canonical column)
-- Write `finalScore` to `integrated_score` as well (backward compat)
-- Include `continuity_decay` percentage in `score_breakdown`
-- Store the per-dimension sub-scores (`github_score`, `deps_score`, etc.) for breakdown tooltip
+Replace the current simple list with a structured intelligence card containing 3 sections:
 
-### 2. `supabase/functions/github-oauth-callback/index.ts`
-- Replace the inline exponential decay `calculateResilienceScore` function
-- After GitHub analysis, calculate only the **GitHub dimension score** (0-100) using the same anti-gaming buckets as `analyze-github-repo`
-- Write a provisional `resilience_score` using: `GitHub * 0.40 + 50 * 0.25 + 0 * 0.20 + 50 * 0.15` (default baselines for dimensions not yet analyzed)
-- Apply continuity decay
-- This gives new claims a reasonable starting score that the first full refresh will correct
+**Section A: Identity** (keep existing)
+- GitHub status, website, X handle
 
-### 3. `supabase/functions/fetch-github/index.ts`
-- Same treatment: replace inline exponential decay with provisional weighted score
-- This function is called for manual GitHub re-analysis
+**Section B: Intelligence Grid** (new -- the core addition)
+- A compact 2x3 grid of service-sourced metrics:
+  - GitHub velocity (commits/day bar)
+  - Dependency health (score + outdated count)
+  - Governance (tx count badge)
+  - TVL (formatted USD, hidden if zero)
+  - Vulnerabilities (CVE count with severity color)
+  - OpenSSF (score out of 10)
 
-### 4. Delete dead code
-- Delete `src/lib/scoring.ts` (never imported)
-- Delete `src/lib/resilience-scoring.ts` (never imported)
+**Section C: Trust Signals** (new)
+- Bytecode originality badge
+- Continuity decay percentage
+- "Last analyzed" timestamp
 
-### 5. `src/hooks/useExplorerProjects.ts`
-- Sort by `resilience_score` (which is now the unified hybrid score)
-- Remove `integrated_score` sorting since `resilience_score` IS the integrated score now
+**Section D: Actions** (keep existing)
+- View Dependency Tree link
 
-### 6. `src/components/program/ScoreBreakdownTooltip.tsx`
-- Add a "Continuity Decay" row showing the decay percentage penalty
-- Update formula display: `R = (0.40xGitHub + 0.25xDeps + 0.20xGov + 0.15xTVL) x Continuity`
+### 3. Create `IntelligenceGrid` component (`src/components/explorer/IntelligenceGrid.tsx`)
 
-### 7. `src/components/readme/` (README page)
-- Update the formula display to show the hybrid model with continuity decay
-- This is what grant reviewers will read
+A new reusable component that renders the 2x3 metrics grid. This keeps the LeaderboardRow clean and allows reuse in MobileProgramCard.
 
-### 8. `supabase/functions/chat-gpt/index.ts`
-- Update the system prompt formula reference to match the hybrid model
-- GPT should explain the unified formula when asked
+Props:
+- `dependencyScore`, `outdatedCount`
+- `governanceTx30d`
+- `tvlUsd`
+- `vulnerabilityCount`
+- `openssfScore`
+- `commitVelocity`
+- `bytecodeStatus`
+- `decayPercentage`
 
-### 9. Ecosystem snapshot in `refresh-all-profiles`
-- Already aggregates from `resilience_score` -- no change needed since that column now contains the correct unified score
+Each metric cell: icon + label + value, color-coded by health thresholds. Null/zero values show gracefully as "N/A" or are hidden (TVL hidden when zero, governance shows "None detected").
 
-## Score Breakdown stored in DB
+### 4. Update `MobileProgramCard` (`src/components/explorer/MobileProgramCard.tsx`)
 
-The `score_breakdown` JSONB column will contain:
+Add the same `IntelligenceGrid` to the mobile card's expandable section so mobile users get the same intelligence density.
 
-```text
-{
-  "github": 72,
-  "dependencies": 65,
-  "governance": 40,
-  "tvl": 50,
-  "baseScore": 58,
-  "continuityDecay": 3,
-  "finalScore": 56,
-  "weights": { "github": 0.40, "dependencies": 0.25, "governance": 0.20, "tvl": 0.15 }
-}
-```
+### 5. Data Freshness Footer
 
-## What This Achieves
+Add a single "Last synced: 5m ago" line at the bottom of the popover using the `github_analyzed_at` timestamp (already fetched). This establishes data provenance -- critical for trust.
 
-- ONE formula, ONE column (`resilience_score`), used EVERYWHERE
-- Transparent 4-dimension breakdown + continuity decay visible in tooltip
-- Grant reviewers see a clean, auditable formula
-- Builders understand exactly why their score is what it is
-- No more "which score is real?" confusion
-- The decay model's mathematical elegance is preserved as a modifier, not the core formula
+## Edge Cases Handled
 
-## Deployment Sequence
+- **No vulnerability data**: Show "Not scanned" in muted text instead of "0 CVEs" (prevents false negatives)
+- **No OpenSSF data**: Show "Not indexed" -- some repos aren't in the OpenSSF database
+- **No governance address**: Show "No governance" with muted styling, not an error
+- **TVL is zero**: Hide the TVL row entirely (most projects aren't DeFi)
+- **Private/unclaimed repos**: Show lock icons for intelligence metrics (current pattern preserved)
+- **Bytecode not deployed**: Show "Off-chain" badge (already handled in current code)
 
-1. Update `refresh-all-profiles` with hybrid formula (writes to both `resilience_score` and `integrated_score`)
-2. Update `github-oauth-callback` and `fetch-github` with provisional scoring
-3. Delete dead frontend scoring files
-4. Update Explorer sort, tooltip, and README
-5. Deploy all edge functions
-6. Trigger one full refresh cycle to recalculate all 196 profiles with the unified formula
+## What This Does NOT Change
+
+- No new database queries -- all data already fetched by `useExplorerProjects` (just needs 4-5 more columns selected)
+- No new edge functions or API calls
+- No changes to the Development tab or Program Detail page
+- No changes to scoring logic
+- No breaking changes to existing LeaderboardRow columns
+
+## Performance Consideration
+
+The `claimed_profiles` SELECT already fetches `*` (all columns). The hook transforms a subset into `ExplorerProject`. We're simply mapping additional already-fetched columns. Zero additional database load.
+
+## User Story Flow
+
+1. User opens Explorer, sees leaderboard
+2. Clicks Eye icon on any project row
+3. Popover shows: identity info at top, then a compact intelligence grid with all 7 service outputs, then trust signals, then action links
+4. User instantly knows: "This project has a 72 dependency health, 0 CVEs, 12 governance transactions, 7.2 OpenSSF score, and 2% decay"
+5. Decision made in 3 seconds without leaving the Explorer
+
+## Files Modified
+
+1. `src/hooks/useExplorerProjects.ts` -- Add 4-5 fields to ExplorerProject interface and mapping
+2. `src/components/explorer/IntelligenceGrid.tsx` -- New component (compact metrics grid)
+3. `src/components/explorer/LeaderboardRow.tsx` -- Redesign Eye popover content
+4. `src/components/explorer/MobileProgramCard.tsx` -- Add IntelligenceGrid to mobile view
+5. `src/components/explorer/index.ts` -- Export new component
 
