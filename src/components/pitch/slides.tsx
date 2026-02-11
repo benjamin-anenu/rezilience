@@ -1,9 +1,26 @@
+import { useState } from 'react';
 import { Brain, Network, Heart, Coins, Search, ShieldCheck, Lock, Globe, BookOpen, GitBranch, Users, TrendingUp, Database, Activity, ExternalLink, CheckCircle, ArrowRight, Zap, Eye, Target, BarChart3, Shield, Clock, AlertTriangle, Info } from 'lucide-react';
 import { useHeroStats } from '@/hooks/useHeroStats';
 import { useRoadmapStats } from '@/hooks/useRoadmapStats';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import founderImg from '@/assets/founder-benjamin.png';
 import ecosystemImg from '@/assets/resilience-ecosystem.png';
+
+/* ─── fade image with skeleton ─── */
+function FadeImage({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div className="relative">
+      {!loaded && <div className="absolute inset-0 animate-pulse bg-card/60 rounded-sm" />}
+      <img
+        src={src}
+        alt={alt}
+        className={`${className ?? ''} transition-opacity duration-500 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        onLoad={() => setLoaded(true)}
+      />
+    </div>
+  );
+}
 
 /* ─── shared layout ─── */
 function SlideLayout({
@@ -65,7 +82,7 @@ export function TitleSlide() {
 /* ─── SLIDE 2: THE VISION ─── */
 export function VisionSlide() {
   return <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
-      <img src={ecosystemImg} alt="Rezilience Ecosystem — Code, Liveness, Originality, Governance, Dependencies, Economics" className="absolute inset-0 h-full w-full object-contain" />
+      <FadeImage src={ecosystemImg} alt="Rezilience Ecosystem — Code, Liveness, Originality, Governance, Dependencies, Economics" className="absolute inset-0 h-full w-full object-contain" />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
       <div className="relative z-10 flex flex-col items-center text-center mt-[55%]">
         <Tag>THE VISION</Tag>
@@ -558,7 +575,7 @@ export function FounderSlide() {
       </h2>
       <div className="mt-10 flex gap-12 items-start max-w-[1000px]">
         <div className="shrink-0 flex flex-col items-center gap-4">
-          <img src={founderImg} alt="Benjamin Omoata Anenu" className="h-40 w-40 rounded-full object-cover border-2 border-primary/30" />
+          <FadeImage src={founderImg} alt="Benjamin Omoata Anenu" className="h-40 w-40 rounded-full object-cover border-2 border-primary/30" />
           <h3 className="text-[22px] font-semibold text-foreground text-center">Benjamin Omoata Anenu</h3>
           <p className="font-mono text-[13px] text-primary text-center leading-tight">Product Visionary<br />Technical Project Manager<br />& AI Product Strategist</p>
         </div>
