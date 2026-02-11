@@ -1,113 +1,100 @@
 
 
-# Builders In Public -- Explorer Feed + Email Subscription Collection
+# Enriched Trend Sparkline -- Multi-Signal Visualization
 
-## Overview
+## Problem
 
-Add a 4th tab ("Builders In Public") to the Explorer page that aggregates all Build In Public posts from claimed profiles into a public feed. Visitors can subscribe to individual projects by entering their email, which is stored in a new database table. No email sending yet -- just intent capture.
+The TREND sparkline in the Explorer leaderboard currently plots only the integrated Resilience Score from `score_history`. This creates flat lines for projects where the final score doesn't change between snapshots, even when real activity (commits, governance, TVL, contributors) is happening underneath. It gives a false impression of stagnation.
 
----
+## Solution
 
-## What Gets Built
+Enrich the sparkline data source to use **commit velocity** (the most dynamic metric) as the primary trend signal, while keeping the score available as a tooltip overlay. This gives the sparkline actual movement that reflects real builder activity.
 
-### 1. New Database Table: `project_subscribers`
+### Why Commit Velocity?
 
-Stores email subscriptions per project. No authentication required to subscribe (public action).
+| Signal | Volatility | Data Availability | Reflects "Things Happening" |
+|--------|-----------|-------------------|----------------------------|
+| Resilience Score | Low (weighted formula smooths changes) | Requires snapshots | Indirectly |
+| Commit Velocity | High (changes daily) | Already in score_history | Directly |
+| TVL | Medium | Only for DeFi projects | Partially |
+| Governance | Low-Medium | Only for DAOs | Partially |
 
-| Column | Type | Notes |
-|--------|------|-------|
-| id | uuid | PK, auto-generated |
-| profile_id | uuid | FK concept to claimed_profiles.id |
-| email | text | Subscriber's email, validated |
-| subscribed_at | timestamptz | Default now() |
-| unsubscribed_at | timestamptz | Nullable, for future opt-out |
-
-**Unique constraint** on `(profile_id, email)` to prevent duplicate subscriptions.
-
-**RLS Policies:**
-- Public INSERT (anyone can subscribe) with check that email is not empty
-- No SELECT/UPDATE/DELETE from anon -- subscribers cannot browse the list
-- Service role has full access for future email sending
-
-### 2. New Explorer Tab: "Builders In Public"
-
-A 4th tab added to the Explorer page `TabsList`, positioned after "Ecosystem Pulse".
-
-**UI Layout:**
-- Grid of post cards (responsive: 1 col mobile, 2 cols tablet, 3 cols desktop)
-- Each card shows:
-  - Project logo + name + category badge (links to `/program/:id`)
-  - Embedded tweet via `react-tweet` (reusing existing `BuildInPublicSection` pattern)
-  - Post title if provided
-  - Timestamp
-  - "Subscribe" button that opens an email input popover
-- Empty state when no builders have posted yet: "No builders are posting yet. Claim your project to start building in public."
-- Data fetched via a new hook that queries `claimed_profiles` where `build_in_public_videos` is not empty
-
-### 3. Subscribe Flow
-
-When a user clicks "Subscribe" on a project card:
-1. A popover opens with an email input field + "Subscribe" button
-2. Client-side validation (valid email format, max 255 chars)
-3. On submit: INSERT into `project_subscribers` via Supabase client
-4. Success toast: "Subscribed! You'll be notified when [Project] posts updates."
-5. If duplicate (unique constraint violation): toast "You're already subscribed to this project."
-6. Button changes to "Subscribed" with a checkmark for that session
-
-### 4. Data Fetching Hook
-
-New hook `useBuildersFeed` that:
-- Queries `claimed_profiles` selecting `id, project_name, logo_url, category, x_username, build_in_public_videos, claim_status`
-- Filters: `claim_status = 'claimed'` AND `build_in_public_videos` is not null/empty
-- Flattens all videos across projects into a single feed sorted by timestamp (newest first)
-- Returns `{ posts, isLoading, error }`
+Commit velocity is the most universally available, highest-frequency signal that directly answers "is something happening in this project?"
 
 ---
 
-## What Is NOT Built (Deferred to V2)
+## Technical Changes
 
-| Feature | Why |
-|---------|-----|
-| Email sending | Requires Resend API key + verified domain |
-| Likes / reactions | Anonymous likes are abuse-prone without auth |
-| Unsubscribe flow | Build when email sending is wired up |
-| Subscriber count display | Privacy concern -- don't show counts publicly yet |
-| Pagination of feed | Not needed until content volume justifies it |
+### 1. Update `useRankMovement.ts`
+
+Currently fetches only `score` from `score_history`. Change to also fetch `commit_velocity`:
+
+```
+.select('claimed_profile_id, score, commit_velocity, snapshot_date')
+```
+
+Return both score history and velocity history per profile:
+
+```typescript
+scoreHistories: Record<string, number[]>;
+velocityHistories: Record<string, number[]>;
+```
+
+### 2. Update `Sparkline.tsx`
+
+Add support for a **dual-signal mode**:
+- Primary line: commit velocity (shows activity happening)
+- Optional secondary faint line: score (shows score trajectory)
+
+Or, simpler approach: just switch the sparkline to plot velocity values instead of score values. The score is already displayed in the SCORE column -- the TREND column should show *activity*.
+
+### 3. Update `LeaderboardRow.tsx`
+
+Pass velocity history to the Sparkline instead of (or alongside) score history:
+
+```tsx
+<Sparkline values={velocityHistory} width={50} height={16} />
+```
+
+### 4. Update `ProgramLeaderboard.tsx`
+
+Pass the new velocity history data from `rankData` to each `LeaderboardRow`.
+
+### 5. Update `MobileProgramCard.tsx`
+
+Same change for mobile view consistency.
 
 ---
 
-## Edge Cases and Guardrails
+## Sparkline Behavior After Change
 
-| Scenario | Behavior |
-|----------|----------|
-| Zero BIP content exists | Empty state card with CTA to claim a project |
-| Bot email spam on subscribe | Unique constraint prevents duplicates; rate limiting can be added later |
-| Invalid email format | Client-side zod validation before INSERT |
-| User subscribes then wants to unsubscribe | V2 -- for now the `unsubscribed_at` column exists for future use |
-| Builder deletes a BIP post | Feed auto-updates on next load (reads live data) |
+| Scenario | Before (Score Only) | After (Velocity) |
+|----------|-------------------|------------------|
+| Active project, stable score | Flat line | Rising/dynamic line showing commit bursts |
+| Project slowing down | Flat or barely moving | Visible downward trend in velocity |
+| Score jumps from 40 to 55 | Step up visible | Velocity spike that caused the jump is visible |
+| Inactive project | Flat line at same score | Flat line at zero (accurate -- nothing is happening) |
 
 ---
 
-## Technical Details
+## Tooltip Enhancement
 
-### Database Migration
-- Create `project_subscribers` table with RLS
-- Public INSERT policy (email collection is a public action)
-- No public SELECT (subscriber lists are private)
+Add a hover tooltip to the sparkline showing:
+- "7-day commit trend" label
+- Min/max velocity values
+- Current score for context
 
-### Files Created
-1. `src/components/explorer/BuildersInPublicFeed.tsx` -- Feed component with post cards grid
-2. `src/components/explorer/BuilderPostCard.tsx` -- Individual post card with tweet embed + subscribe button
-3. `src/components/explorer/SubscribePopover.tsx` -- Email input popover for subscribing
-4. `src/hooks/useBuildersFeed.ts` -- Data fetching hook for BIP content across all profiles
-5. `src/hooks/useProjectSubscribe.ts` -- Mutation hook for subscribing to a project
+---
 
-### Files Modified
-1. `src/pages/Explorer.tsx` -- Add 4th tab "Builders In Public" after Ecosystem Pulse
-2. `src/components/explorer/index.ts` -- Export new components
+## Files Modified
 
-### No new dependencies needed
-- `react-tweet` already installed
-- `zod` already installed for validation
-- Supabase client already configured
+1. **`src/hooks/useRankMovement.ts`** -- Fetch `commit_velocity` alongside `score`, return `velocityHistories`
+2. **`src/components/explorer/Sparkline.tsx`** -- Add tooltip on hover, keep existing smooth curve logic
+3. **`src/components/explorer/LeaderboardRow.tsx`** -- Pass velocity data to Sparkline
+4. **`src/components/explorer/ProgramLeaderboard.tsx`** -- Pass velocity histories to rows
+5. **`src/components/explorer/MobileProgramCard.tsx`** -- Same velocity data for mobile
+
+## Fallback
+
+If a project has no `commit_velocity` data in `score_history`, fall back to the existing score-based sparkline. This ensures no visual regression for projects with sparse data.
 
