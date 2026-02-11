@@ -369,7 +369,35 @@ serve(async (req) => {
       }
     }
 
-    // ── Step 2: Final streaming call (with tool results in context) ───────
+    // ── Step 2: Check if AI already answered in the tool loop ──────────
+    // If the last message from the AI has text content (not tool calls),
+    // stream that text directly instead of making a duplicate API call.
+    const lastMsg = toolLoopMessages[toolLoopMessages.length - 1];
+    const alreadyAnswered =
+      lastMsg &&
+      typeof lastMsg === "object" &&
+      "role" in lastMsg &&
+      lastMsg.role === "assistant" &&
+      "content" in lastMsg &&
+      typeof lastMsg.content === "string" &&
+      lastMsg.content.length > 0 &&
+      !("tool_calls" in lastMsg && lastMsg.tool_calls?.length);
+
+    if (alreadyAnswered) {
+      // Construct a synthetic SSE stream from the already-generated text
+      const text = lastMsg.content as string;
+      const ssePayload = `data: ${JSON.stringify({
+        choices: [{ delta: { content: text }, finish_reason: null }],
+      })}\n\ndata: ${JSON.stringify({
+        choices: [{ delta: {}, finish_reason: "stop" }],
+      })}\n\ndata: [DONE]\n\n`;
+
+      return new Response(ssePayload, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
+    // Otherwise, make the final streaming call with tool results in context
     const streamResponse = await fetch(
       "https://ai.gateway.lovable.dev/v1/chat/completions",
       {

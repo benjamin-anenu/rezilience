@@ -268,6 +268,17 @@ export default function ResilienceGPT() {
                   onFeedback={msg.role === 'assistant' ? (fb) => handleFeedback(i, fb) : undefined}
                 />
               ))}
+              {isLoading && (messages.length === 0 || messages[messages.length - 1]?.role === 'user') && (
+                <div className="flex gap-3 px-4 py-4">
+                  <div className="flex-shrink-0 h-7 w-7 rounded-sm border border-primary/30 bg-primary/10 flex items-center justify-center">
+                    <span className="font-display text-xs font-bold text-primary">R</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+                    Searching database...
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

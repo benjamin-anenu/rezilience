@@ -89,7 +89,7 @@ export function useExplorerProjects() {
         .from('claimed_profiles')
         .select('*')
         .or('verified.eq.true,claim_status.eq.unclaimed')
-        .order('resilience_score', { ascending: false });
+        .order('integrated_score', { ascending: false, nullsFirst: false });
 
       if (error) {
         console.error('Error fetching explorer projects:', error);

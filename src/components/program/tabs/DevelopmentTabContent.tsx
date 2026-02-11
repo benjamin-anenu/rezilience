@@ -9,6 +9,7 @@ import { RecentEvents } from '../RecentEvents';
 import { DependencyHealthCard } from '../DependencyHealthCard';
 import { GovernanceHealthCard } from '../GovernanceHealthCard';
 import { TVLMetricsCard } from '../TVLMetricsCard';
+import { VulnerabilityCard } from '../VulnerabilityCard';
 import { useBytecodeVerification, getBytecodeStatusInfo } from '@/hooks/useBytecodeVerification';
 import { formatDistanceToNow } from 'date-fns';
 import type { GitHubAnalytics, Program } from '@/types';
@@ -40,6 +41,13 @@ interface DevelopmentTabContentProps {
   tvlAnalyzedAt?: string | null;
   protocolName?: string;
   category?: string;
+  // Vulnerability & OpenSSF props
+  vulnerabilityCount?: number;
+  vulnerabilityDetails?: unknown[] | null;
+  vulnerabilityAnalyzedAt?: string | null;
+  openssfScore?: number | null;
+  openssfChecks?: Record<string, unknown> | null;
+  openssfAnalyzedAt?: string | null;
 }
 
 export function DevelopmentTabContent({
@@ -69,6 +77,12 @@ export function DevelopmentTabContent({
   tvlAnalyzedAt,
   protocolName,
   category,
+  vulnerabilityCount = 0,
+  vulnerabilityDetails,
+  vulnerabilityAnalyzedAt,
+  openssfScore,
+  openssfChecks,
+  openssfAnalyzedAt,
 }: DevelopmentTabContentProps) {
   const { verifyBytecode, isVerifying } = useBytecodeVerification();
 
@@ -265,6 +279,14 @@ export function DevelopmentTabContent({
             analyzedAt={tvlAnalyzedAt}
           />
         )}
+        <VulnerabilityCard
+          vulnerabilityCount={vulnerabilityCount}
+          vulnerabilityDetails={vulnerabilityDetails as any}
+          analyzedAt={vulnerabilityAnalyzedAt}
+          openssfScore={openssfScore}
+          openssfChecks={openssfChecks as any}
+          openssfAnalyzedAt={openssfAnalyzedAt}
+        />
       </div>
 
       {/* GitHub Metrics */}
