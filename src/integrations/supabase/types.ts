@@ -534,6 +534,38 @@ export type Database = {
         }
         Relationships: []
       }
+      project_subscribers: {
+        Row: {
+          email: string
+          id: string
+          profile_id: string
+          subscribed_at: string
+          unsubscribed_at: string | null
+        }
+        Insert: {
+          email: string
+          id?: string
+          profile_id: string
+          subscribed_at?: string
+          unsubscribed_at?: string | null
+        }
+        Update: {
+          email?: string
+          id?: string
+          profile_id?: string
+          subscribed_at?: string
+          unsubscribed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_subscribers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
