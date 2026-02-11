@@ -1,71 +1,68 @@
 
 
-# Pitch Deck Fixes: Possibilities Framing + Honest Competitive Landscape
+# Problem Slide Rewrite + Founder Title Fix + "What This Unlocks" Section
 
-## Problem 1: "Opening New Possibilities" Implies These Don't Exist
+## Changes to `src/components/pitch/slides.tsx`
 
-The current slide says "Building the Tools That Don't Exist Yet" -- which is factually misleading. Milestone tracking, TVL dashboards, and audit tools DO exist individually in the Solana ecosystem. The Solana Foundation knows this. Claiming otherwise signals poor research.
+### 1. Founder Title (FounderSlide)
+Replace "Founder & CEO / Technical Product Strategist / & AI Systems Architect" with:
+- **Product Visionary**
+- **Technical Project Manager**
+- **& AI Product Strategist**
 
-### Fix
-- Change headline to: **"One Central System for What Matters"**
-- Add a framing paragraph before the feature cards: *"These capabilities exist individually across the ecosystem -- block explorers track transactions, audit firms verify code, DeFi dashboards monitor TVL. But no single system unifies development health, supply chain integrity, governance activity, and economic data into one continuous, public assurance layer. Resilience brings it all together -- for builders and the public alike."*
-- Keep the 5 feature items but reframe descriptions to emphasize **unification**, not invention
+### 2. Problem Slide -- Complete Rewrite
+
+**Tag**: THE OPPORTUNITY (replaces "THE PROBLEM")
+
+**Headline**: "The Maintenance Visibility Gap"
+
+**Intro**: "While working closely with builders across pre-Colosseum, Colosseum, and post-Colosseum hackathons, and observing recently funded Solana projects, consistent gaps became clear. Solana makes it incredibly easy to ship. What is still hard is understanding what is actually being maintained over time."
+
+**Six observation cards** in a 3x2 grid (blue/constructive icons instead of red/destructive):
+
+1. **On-Chain Activity Alone Doesn't Tell the Full Story** -- Deployment metrics hint at usage, but a quiet program might be stable, paused, or abandoned -- today it is difficult to tell the difference.
+2. **No Universal Verification Registry** -- Unlike Ethereum's Sourcify, Solana lacks a single decentralized service that pulls source, rebuilds deterministically, and publishes verification status.
+3. **Verifiable Builds Exist, Adoption Is Inconsistent** -- Some teams don't generate them, others don't publish metadata -- coverage remains partial.
+4. **Provenance Does Not Equal Maintenance** -- A source-to-binary match at deployment proves origin at one point in time, not ongoing health.
+5. **Closed Programs Remain Hard to Reason About** -- Without published source, reverse engineering helps surface risk but is not a substitute for verification.
+6. **Maintainer Identity Is Fragmented** -- GitHub, X, wallets, Discord -- rarely bound together cryptographically.
+
+**Closing line**: "Resilience is designed to close this gap -- bottom-up, using real signals builders already generate, and turning them into shared, verifiable infrastructure."
+
+**Visual shift**: All icon backgrounds change from `bg-destructive/15` + `text-destructive` to `bg-primary/15` + `text-primary` (constructive, not critical).
+
+### 3. Problem Slide -- "What This Unlocks" Footer
+
+Below the 6 observation cards and closing line, add a compact horizontal strip with three forward-looking items that connect the gap to the bigger vision. This ensures the audience sees where this leads without waiting for later slides:
+
+```text
+[Coins icon] SOL Continuity Bonds
+The community stakes SOL on projects
+they believe in -- backed by verifiable
+data, not hype.
+
+[Shield icon] AEGIS Supply Chain Auditing
+Real-time dependency and vulnerability
+monitoring across the ecosystem's
+nervous system.
+
+[Globe icon] Public Good, No Gatekeeping
+Every tool, every score, every metric --
+open access for builders and the public.
+No subscriptions. No walls.
+```
+
+These three items appear as a single row of compact cards at the bottom of the slide, styled with a subtle `border-primary/20` border and `bg-primary/5` background to visually separate them from the observation grid above. Each card has an icon, a bold title, and a one-line description.
 
 ---
 
-## Problem 2: Competitive Landscape Is Dishonest
+## Technical Details
 
-Saying "No One Else Does This" with a table showing zero checks for competitors is arrogant and factually wrong. Here's what actually exists in the Solana ecosystem:
-
-| Tool | What It Does | What It Doesn't Do |
-|------|-------------|-------------------|
-| **Solscan / SolanaFM** | Transaction explorer, account details, token tracking | No project health scoring, no dev activity, no governance |
-| **CertiK Skynet** | Security score (audit-based), KYC verification, leaderboard | Point-in-time audits, not continuous; no dependency health; no dev activity tracking |
-| **DeFiSafety** | Process quality reviews for DeFi protocols | Manual reviews, not automated; limited Solana coverage |
-| **DefiLlama** | TVL tracking, protocol comparison, yield data | TVL only -- no code health, no governance, no dependency analysis |
-| **Step Finance** | Portfolio dashboard, wallet tracking, news aggregation | User-focused, not project health; no scoring methodology |
-| **OtterSec / Sec3** | Smart contract audits, formal verification | One-time engagement; no continuous monitoring |
-
-### Fix
-- Change headline from "No One Else Does This" to **"Where Resilience Fits"**
-- Replace generic "Block Explorers / Audit Firms / DeFi Dashboards" with **real named competitors**: Solscan, CertiK Skynet, DefiLlama, DeFiSafety
-- Give them honest checkmarks where they DO have capabilities (CertiK has partial scoring; DefiLlama has TVL and continuous monitoring; DeFiSafety has methodology)
-- Add a subtitle: *"Existing tools excel in their domains. Resilience is the only platform that combines all dimensions into a single, continuous, public assurance layer."*
-- This is far more credible to the Foundation than pretending no one does anything
-
-### Updated Feature Comparison Table
-
-| Feature | Solscan/FM | CertiK Skynet | DefiLlama | DeFiSafety | **Resilience** |
-|---------|-----------|---------------|-----------|------------|------------|
-| Multi-dimensional scoring | -- | Partial | -- | Partial | Yes |
-| Continuous monitoring | -- | -- | Yes | -- | Yes |
-| Bytecode verification | -- | Yes | -- | -- | Yes |
-| Dependency health | -- | -- | -- | -- | Yes |
-| Governance tracking | -- | -- | -- | -- | Yes |
-| TVL risk analysis | -- | -- | Yes | -- | Yes |
-| Economic staking | -- | -- | -- | -- | Yes |
-| Open methodology | -- | -- | Yes | Yes | Yes |
-
-"Partial" renders as a half-filled or amber indicator rather than a full checkmark, showing honesty without diminishing Resilience's unique position.
-
----
-
-## Technical Changes
-
-### File: `src/components/pitch/slides.tsx`
-
-**PossibilitiesSlide (Slide 7)**
-- Update headline to "One Central System for What Matters"
-- Add framing text acknowledging existing tools before the feature grid
-- Reword feature descriptions from "we invented this" to "unified under one roof"
-
-**CompetitionSlide (Slide 8)**
-- Rename headline to "Where Resilience Fits"
-- Replace generic categories with real competitors: Solscan/SolanaFM, CertiK Skynet, DefiLlama, DeFiSafety
-- Update score arrays to give honest partial/full marks
-- Add a "Partial" state (amber circle icon) alongside the existing checkmark and dash
-- Add subtitle text about complementary positioning
+### File Modified
+- `src/components/pitch/slides.tsx` -- Three edits:
+  1. `ProblemSlide` component: Full rewrite with 6 cards + 3 "What This Unlocks" items + constructive styling
+  2. `FounderSlide` component: Title text replacement (3 lines)
+  3. Add `Globe` to the lucide-react import if not already present
 
 ### No other files change
-- Same 11 slides, same navigation, same PitchDeck.tsx shell
 
