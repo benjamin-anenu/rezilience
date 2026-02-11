@@ -224,9 +224,14 @@ export function EcosystemHeatmap() {
                               ? 'default'
                               : cell.healthStatus === 'stale'
                               ? 'secondary'
+                              : cell.healthStatus === 'locked'
+                              ? 'outline'
                               : 'destructive'
                           }
-                          className="text-[10px]"
+                          className={cell.healthStatus === 'locked' 
+                            ? 'text-[10px] bg-[#1a1a1a] text-white border-[#333]' 
+                            : 'text-[10px]'
+                          }
                         >
                           {getStatusLabel(cell.healthStatus)}
                         </Badge>
