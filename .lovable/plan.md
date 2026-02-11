@@ -1,109 +1,159 @@
 
 
-# Pitch Deck Overhaul: Grant-Ready with Budget, Roadmap, Traction, and PoH Differentiation
+# ResilienceGPT -- AI Assistant Integration
 
-## Overview
+## Advisory Council Assessment
 
-This plan addresses all raised concerns across 5 slides in `src/components/pitch/slides.tsx` plus adds a new 12th slide. The goal: make this deck grant-ready with a specific $75K USDC ask, realistic phase budgets, honest competitive framing, early traction proof, and a clear technical differentiation from Proof of History.
+Before diving in, here is the honest stress-test of this document:
 
----
+**What is realistic today:**
+- A beautiful chat page at `/gpt` with a nav link
+- An edge function calling Lovable AI models (no API key needed -- we have google/gemini-2.5-flash and others built in)
+- A system prompt loaded with Resilience platform knowledge + Solana ecosystem referral logic
+- Chat history saved to database for authenticated users (X login already exists)
+- LocalStorage-only ephemeral chat for unauthenticated visitors (with clear disclaimer)
+- Rich markdown rendering (bold, code blocks, tables, links) via existing TipTap or a markdown renderer
+- Thumbs up/down feedback stored in a database table
+- Branded UI matching the Bloomberg Terminal aesthetic
 
-## Changes by Slide
+**What the document asks for but is NOT buildable in one pass:**
+- RAG with vector embeddings and pgvector (requires infrastructure not available here)
+- Daily scraping of Stack Exchange, Discord, GitHub, Twitter (requires external cron jobs, API keys, scraping infrastructure)
+- Self-learning knowledge graph that improves over time (requires ML pipeline)
+- Three distinct "modes" with different behavior (over-engineering -- one good system prompt with context detection achieves 90% of this)
+- Admin dashboard with analytics (separate feature, build later)
+- WebSocket real-time streaming (not supported in edge functions)
+- Community contributions and voting system (separate feature)
 
-### 1. Roadmap Slide (Slide 9) -- Mirror README Phases with Budget Breakdown
-
-Replace the current sparse 4-card grid with detailed phase cards that match the README's content and include USDC allocation per phase.
-
-**Budget Breakdown:**
-
-| Phase | Timeline | Allocation |
-|-------|----------|------------|
-| Phase 1: Resilience Registry | Months 1-1.5 | $30,000 |
-| Phase 2: Economic Commitment Layer | Months 2-4 | $20,000 |
-| Phase 3: Ecosystem Integration | Months 5-8 | $15,000 |
-| Phase 4: AEGIS Supply Chain | Months 9-12 | $10,000 |
-| **Total** | **12 months** | **$75,000 USDC** |
-
-**Phase 1 Line Items (shown as sub-items):**
-- Senior Anchor Engineer (1 month full-time) -- Review/refactor prototype, build on-chain program, optimize data pipeline, security + documentation
-- Frontend Engineer (1.5 months full-time) -- Decouple from Lovable, code review to meet standards, optimize frontend, documentation
-- Infrastructure and DevOps (1 month) -- Production deployment, database optimization, monitoring/alerting, RPC node setup
-- Web3 Strategist (Advisor, part-time) -- Ecosystem positioning, partnership conversations, community engagement
-- QA, Security and Contingency -- Testing, basic security review, unexpected costs buffer
-
-Each phase card will show: phase number, title, timeline, budget, key deliverables (from README), and status badge.
+**The council's recommendation:** Build a polished V1 that delivers 80% of the user value with 20% of the complexity. The system prompt does the heavy lifting -- not infrastructure.
 
 ---
 
-### 2. Ask Slide (Slide 11) -- Specific $75K Request
+## What Gets Built
 
-Replace the vague "Seeking a grant" language with:
-- **Headline**: "75,000 USDC Across Four Phases"
-- **Subtitle**: "Milestone-based delivery. Each phase unlocked on completion of the previous."
-- A compact 4-column summary: Phase name, timeline, amount, key deliverable
-- Keep the existing CTA links (Live Product, Explorer, Grants Directory)
+### 1. New Page: `/gpt` (ResilienceGPT)
+
+A full-page chat interface accessible from navigation. No Layout wrapper (immersive experience like the pitch deck).
+
+**UI Structure:**
+- Header bar with logo, "ResilienceGPT" title, and a "New Chat" button
+- Chat message area (scrollable) with user/AI message bubbles
+- Input area at bottom with textarea, send button, and attachment indicator
+- Suggested questions shown when chat is empty (4-6 starter prompts)
+- Thumbs up/down on each AI response
+- Disclaimer banner for unauthenticated users: "Chat history is stored locally and will be lost when you close this page. Sign in to save your conversations."
+
+**Design tokens:** Resilience brand -- dark background, primary (teal) accents, font-mono for code, card borders matching the Bloomberg Terminal aesthetic. No purple/blue gradients (that is generic Solana branding, not Resilience branding).
+
+### 2. Navigation Update
+
+Add "GPT" link to `navLinks` array in `Navigation.tsx` between GRANTS and STAKING:
+```
+{ href: '/gpt', label: 'GPT', external: false }
+```
+
+### 3. Edge Function: `chat-gpt`
+
+A new edge function at `supabase/functions/chat-gpt/index.ts` that:
+- Receives: `{ message, conversationHistory, mode? }`
+- Calls Lovable AI (google/gemini-2.5-flash) with a comprehensive system prompt
+- Returns: `{ reply, confidence? }`
+
+**System prompt includes:**
+- Full Resilience platform knowledge (what it is, scoring formula, phases, vision)
+- Solana ecosystem referral logic (when confidence is low, suggest official docs, Stack Exchange, Discord, X developers)
+- Personality: friendly senior developer, asks clarifying questions, adapts to skill level
+- Formatting instructions: use markdown, code blocks, tables, bold text, links
+
+### 4. Database Tables
+
+**Table: `chat_conversations`**
+- `id` (uuid, PK)
+- `user_id` (text, nullable -- X user ID from auth context)
+- `title` (text -- auto-generated from first message)
+- `created_at` (timestamptz)
+- `updated_at` (timestamptz)
+
+**Table: `chat_messages`**
+- `id` (uuid, PK)
+- `conversation_id` (uuid, FK to chat_conversations)
+- `role` (text -- 'user' or 'assistant')
+- `content` (text)
+- `feedback` (text, nullable -- 'up' or 'down')
+- `created_at` (timestamptz)
+
+RLS policies: Users can only read/write their own conversations (matched by `user_id`). No anonymous access to database -- unauthenticated users use localStorage only.
+
+### 5. Frontend Components
+
+**New files:**
+- `src/pages/ResilienceGPT.tsx` -- Page component with chat logic
+- `src/components/gpt/ChatMessage.tsx` -- Individual message bubble with markdown rendering and feedback buttons
+- `src/components/gpt/ChatInput.tsx` -- Input area with textarea, send button, suggested questions
+- `src/components/gpt/ChatHeader.tsx` -- Top bar with branding and new chat button
+
+**Key behavior:**
+- Authenticated users: conversations auto-save to database, chat history list in sidebar/dropdown
+- Unauthenticated users: messages stored in React state only (lost on page close), disclaimer shown
+- Markdown rendering using a lightweight renderer (react-markdown or manual parsing)
+- Code syntax highlighting via pre/code blocks with Tailwind styling
+- Typing indicator while waiting for AI response
+- Auto-scroll to bottom on new messages
+
+### 6. Route Registration
+
+Add to `App.tsx`:
+```tsx
+import ResilienceGPT from './pages/ResilienceGPT';
+// ...
+<Route path="/gpt" element={<ResilienceGPT />} />
+```
 
 ---
 
-### 3. Traction Slide (Slide 6) -- Add Waitlist/QA Context
+## What Is NOT Built (Deferred)
 
-Below the existing 6 stat boxes, add a callout box explaining:
-- "30+ builders waiting to claim profiles"
-- Claims paused for end-to-end QA/vetting
-- Need to ensure code meets Solana standards
-- On-chain protocol must be built first
-- Builders will sign with a SOL transaction to confirm originality
-- This positions builders for Phase 2 where the public can stake on their projects as they build in public
-
-Styled as a bordered info card with an amber/primary accent.
-
----
-
-### 4. Competition Slide (Slide 8) -- Add PoH Differentiation + Anchor Verified Builds
-
-**Add two sections:**
-
-**A) "Resilience vs. Proof of History" differentiation strip** below the comparison table:
-- Three compact columns:
-  - "PoH is a Clock" -- Validators use it to order transactions. It does not care what the events are.
-  - "Resilience is a Performance Review" -- Tracks whether developers update code, respond to bugs, stick to promises.
-  - "Partners, Not Competitors" -- Resilience uses PoH timestamps to measure how often programs are updated. Raw Time becomes Useful Intelligence.
-- Closing line: "PoH makes Solana fast. Resilience makes Solana reliable."
-
-**B) Add Anchor Verified Builds** as a 5th competitor in the table:
-- Name: "Anchor Verify"
-- Scores: no, no, yes, no, no, no, no, partial
-- This adds honesty -- Anchor's verified builds exist and should be acknowledged
-
-**C) Mark unbuilt Resilience features honestly:**
-- Change "Economic staking" from "yes" to "planned" (new state)
-- Add a "Planned" legend item with a dashed border indicator
+| Feature | Why Deferred |
+|---------|-------------|
+| RAG / vector search | Requires pgvector extension and embedding pipeline |
+| Daily scraping of external sources | Requires cron infrastructure and API keys |
+| Self-learning knowledge graph | Requires ML pipeline, not just a chat UI |
+| Three distinct modes toggle | One system prompt with context detection is sufficient |
+| Admin analytics dashboard | Separate feature, build after traction data exists |
+| Community contributions / voting | Separate feature, requires moderation system |
+| Conversation history sidebar | Can be added in V2 after core chat works |
 
 ---
 
-### 5. Founder Slide (Slide 10) -- No changes needed
+## Risk Analysis
 
-Title already updated to "Product Visionary / Technical Project Manager / AI Product Strategist" in previous iteration. No further changes.
+| Risk | Mitigation |
+|------|-----------|
+| AI hallucinating Solana answers | System prompt explicitly instructs to say "I'm not sure" and refer to official docs when uncertain |
+| Users treating this as official Solana support | Disclaimer: "ResilienceGPT is a community tool, not official Solana Foundation support" |
+| Cost of AI calls | Rate limiting in edge function (max 20 messages per minute per user) |
+| Chat history data privacy | RLS policies ensure users only see their own data; unauthenticated data never hits the database |
+| Over-promising vs. delivery | V1 is a clean chat with good system prompt -- no claims about "self-learning" or "RAG" |
 
 ---
 
 ## Technical Details
 
-### File Modified
-`src/components/pitch/slides.tsx` -- Five edits:
+### Files Created
+1. `supabase/functions/chat-gpt/index.ts` -- Edge function with AI call and system prompt
+2. `src/pages/ResilienceGPT.tsx` -- Main chat page
+3. `src/components/gpt/ChatMessage.tsx` -- Message bubble component
+4. `src/components/gpt/ChatInput.tsx` -- Input component with suggestions
+5. `src/components/gpt/ChatHeader.tsx` -- Header bar
 
-1. **RoadmapSlide**: Full rewrite with README-aligned phases, USDC budget per phase, Phase 1 line items
-2. **AskSlide**: Rewrite with specific $75K ask, 4-phase budget summary table, milestone-based framing
-3. **TractionSlide**: Add waitlist/QA callout below stat boxes
-4. **CompetitionSlide**: 
-   - Add "Anchor Verify" competitor row
-   - Add "planned" Score type with dashed border render
-   - Change Resilience "Economic staking" to "planned"
-   - Add PoH differentiation strip below table
-   - Add "Planned" to legend
-5. **Imports**: Add `Clock` icon from lucide-react if not already present
+### Files Modified
+1. `src/components/layout/Navigation.tsx` -- Add GPT nav link
+2. `src/App.tsx` -- Add `/gpt` route
 
-### No other files change
-- README stays as-is (pitch mirrors it, not the other way around)
-- Same 11-slide structure in PitchDeck.tsx (no new slides needed -- PoH section fits inside Competition slide)
+### Database Migration
+- Create `chat_conversations` and `chat_messages` tables with RLS policies
+
+### Dependencies
+- No new npm packages required (markdown can be rendered with dangerouslySetInnerHTML on sanitized content, or we add `react-markdown` if needed)
+- Uses existing: framer-motion, lucide-react, Lovable AI models
 
