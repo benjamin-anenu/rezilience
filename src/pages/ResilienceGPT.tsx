@@ -4,9 +4,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { ChatHeader } from '@/components/gpt/ChatHeader';
 import { ChatMessage } from '@/components/gpt/ChatMessage';
 import { ChatInput } from '@/components/gpt/ChatInput';
+import { ChatSidebar } from '@/components/gpt/ChatSidebar';
 import { AlertTriangle } from 'lucide-react';
 
-type Msg = { role: 'user' | 'assistant'; content: string; id?: string };
+type Msg = { role: 'user' | 'assistant'; content: string; dbId?: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-gpt`;
 
@@ -15,6 +16,7 @@ export default function ResilienceGPT() {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [sidebarRefresh, setSidebarRefresh] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom
@@ -41,13 +43,15 @@ export default function ResilienceGPT() {
     }
   }, [messages, isAuthenticated]);
 
-  const saveMessageToDb = useCallback(async (convId: string, role: string, content: string) => {
-    if (!isAuthenticated || !user) return;
-    await supabase.from('chat_messages' as any).insert({
+  const saveMessageToDb = useCallback(async (convId: string, role: string, content: string): Promise<string | null> => {
+    if (!isAuthenticated || !user) return null;
+    const { data, error } = await supabase.from('chat_messages' as any).insert({
       conversation_id: convId,
       role,
       content,
-    });
+    }).select('id').single();
+    if (error || !data) return null;
+    return (data as any).id;
   }, [isAuthenticated, user]);
 
   const createConversation = useCallback(async (firstMessage: string): Promise<string | null> => {
@@ -61,8 +65,21 @@ export default function ResilienceGPT() {
       console.error('Failed to create conversation:', error);
       return null;
     }
+    setSidebarRefresh(p => p + 1);
     return (data as any).id;
   }, [isAuthenticated, user]);
+
+  const loadConversation = useCallback(async (convId: string) => {
+    const { data, error } = await supabase
+      .from('chat_messages' as any)
+      .select('id, role, content, feedback, created_at')
+      .eq('conversation_id', convId)
+      .order('created_at', { ascending: true });
+    if (!error && data) {
+      setMessages((data as any[]).map(m => ({ role: m.role, content: m.content, dbId: m.id })));
+      setConversationId(convId);
+    }
+  }, []);
 
   const handleNewChat = () => {
     setMessages([]);
@@ -77,15 +94,16 @@ export default function ResilienceGPT() {
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);
 
-    // Create conversation on first message (authenticated only)
     let convId = conversationId;
     if (!convId && isAuthenticated && user) {
       convId = await createConversation(input);
       setConversationId(convId);
     }
 
-    // Save user message
-    if (convId) await saveMessageToDb(convId, 'user', input);
+    if (convId) {
+      const dbId = await saveMessageToDb(convId, 'user', input);
+      if (dbId) userMsg.dbId = dbId;
+    }
 
     let assistantSoFar = '';
     const allMessages = [...messages, userMsg];
@@ -129,10 +147,7 @@ export default function ResilienceGPT() {
           if (!line.startsWith('data: ')) continue;
 
           const jsonStr = line.slice(6).trim();
-          if (jsonStr === '[DONE]') {
-            streamDone = true;
-            break;
-          }
+          if (jsonStr === '[DONE]') { streamDone = true; break; }
 
           try {
             const parsed = JSON.parse(jsonStr);
@@ -180,16 +195,20 @@ export default function ResilienceGPT() {
         }
       }
 
-      // Save assistant message
+      // Save assistant message and store dbId
       if (convId && assistantSoFar) {
-        await saveMessageToDb(convId, 'assistant', assistantSoFar);
+        const dbId = await saveMessageToDb(convId, 'assistant', assistantSoFar);
+        if (dbId) {
+          setMessages(prev => prev.map((m, i) =>
+            i === prev.length - 1 && m.role === 'assistant' ? { ...m, dbId } : m
+          ));
+        }
       }
     } catch (e: any) {
       console.error('Chat error:', e);
       const errorMsg = e.message || 'Something went wrong. Please try again.';
       setMessages(prev => [
         ...prev,
-        ...(prev[prev.length - 1]?.role === 'assistant' ? [] : []),
         { role: 'assistant' as const, content: `⚠️ ${errorMsg}` },
       ]);
     } finally {
@@ -198,56 +217,67 @@ export default function ResilienceGPT() {
   };
 
   const handleFeedback = async (index: number, feedback: 'up' | 'down') => {
-    if (!conversationId || !isAuthenticated) return;
-    // We don't have message IDs easily accessible, but we can update by content match
-    // For V1 this is a best-effort approach
-    console.log('Feedback recorded:', { index, feedback });
+    const msg = messages[index];
+    if (!msg?.dbId || !isAuthenticated) return;
+    await supabase
+      .from('chat_messages' as any)
+      .update({ feedback })
+      .eq('id', msg.dbId);
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background">
-      <ChatHeader onNewChat={handleNewChat} />
+    <div className="flex h-screen bg-background">
+      <ChatSidebar
+        activeConversationId={conversationId}
+        onSelectConversation={loadConversation}
+        onNewChat={handleNewChat}
+        refreshTrigger={sidebarRefresh}
+      />
 
-      {!isAuthenticated && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-card border-b border-border text-xs font-mono text-muted-foreground">
-          <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
-          <span>Chat history is stored locally and will be lost when you close this page. Sign in to save your conversations.</span>
-        </div>
-      )}
+      <div className="flex flex-col flex-1 min-w-0">
+        <ChatHeader onNewChat={handleNewChat} />
 
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
-        {messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full px-4 text-center">
-            <div className="h-16 w-16 rounded-sm border border-primary/20 bg-primary/5 flex items-center justify-center mb-4">
-              <span className="font-display text-2xl font-bold text-primary">R</span>
-            </div>
-            <h2 className="font-display text-lg font-bold text-foreground mb-1">
-              ResilienceGPT
-            </h2>
-            <p className="text-sm text-muted-foreground max-w-md mb-8">
-              Ask about the Resilience platform, Solana program health scoring, dependency analysis, or anything in the ecosystem.
-            </p>
-          </div>
-        ) : (
-          <div className="max-w-3xl mx-auto py-4">
-            {messages.map((msg, i) => (
-              <ChatMessage
-                key={i}
-                role={msg.role}
-                content={msg.content}
-                isStreaming={isLoading && i === messages.length - 1 && msg.role === 'assistant'}
-                onFeedback={msg.role === 'assistant' ? (fb) => handleFeedback(i, fb) : undefined}
-              />
-            ))}
+        {!isAuthenticated && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-card border-b border-border text-xs font-mono text-muted-foreground">
+            <AlertTriangle className="h-3.5 w-3.5 text-destructive flex-shrink-0" />
+            <span>Chat history is stored locally and will be lost when you close this page. Sign in to save your conversations.</span>
           </div>
         )}
-      </div>
 
-      <ChatInput
-        onSend={handleSend}
-        isLoading={isLoading}
-        showSuggestions={messages.length === 0}
-      />
+        <div ref={scrollRef} className="flex-1 overflow-y-auto">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full px-4 text-center">
+              <div className="h-16 w-16 rounded-sm border border-primary/20 bg-primary/5 flex items-center justify-center mb-4">
+                <span className="font-display text-2xl font-bold text-primary">R</span>
+              </div>
+              <h2 className="font-display text-lg font-bold text-foreground mb-1">
+                ResilienceGPT
+              </h2>
+              <p className="text-sm text-muted-foreground max-w-md mb-8">
+                Ask about the Resilience platform, Solana program health scoring, dependency analysis, or anything in the ecosystem.
+              </p>
+            </div>
+          ) : (
+            <div className="max-w-3xl mx-auto py-4">
+              {messages.map((msg, i) => (
+                <ChatMessage
+                  key={i}
+                  role={msg.role}
+                  content={msg.content}
+                  isStreaming={isLoading && i === messages.length - 1 && msg.role === 'assistant'}
+                  onFeedback={msg.role === 'assistant' ? (fb) => handleFeedback(i, fb) : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        <ChatInput
+          onSend={handleSend}
+          isLoading={isLoading}
+          showSuggestions={messages.length === 0}
+        />
+      </div>
     </div>
   );
 }
