@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Sparkline } from './Sparkline';
 import { DimensionHealthIndicators } from './DimensionHealthIndicators';
+import { IntelligenceGrid } from './IntelligenceGrid';
 import { PROJECT_CATEGORIES } from '@/types';
 import type { ExplorerProject } from '@/hooks/useExplorerProjects';
 import type { LivenessStatus } from '@/types/database';
@@ -281,83 +282,72 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory, veloc
         {/* Expanded Details */}
         {isExpanded && (
           <div className="mt-3 pt-3 border-t border-border space-y-3" onClick={(e) => e.stopPropagation()}>
-            {/* GitHub Status */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Github className="h-4 w-4" />
-                <span className="text-xs">GitHub</span>
-              </div>
-              <Badge 
-                variant="outline" 
-                className={isPrivateRepo 
-                  ? 'border-amber-500/50 text-amber-500 text-xs' 
-                  : 'border-primary/50 text-primary text-xs'
-                }
-              >
-                {isPrivateRepo ? 'PRIVATE' : 'PUBLIC'}
-              </Badge>
-            </div>
-
-            {/* Website */}
-            {project.website_url && (
+            {/* Identity Row */}
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <Globe className="h-4 w-4" />
-                  <span className="text-xs">Website</span>
+                  <Github className="h-4 w-4" />
+                  <span className="text-xs">GitHub</span>
                 </div>
-                <a 
-                  href={project.website_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-xs text-primary hover:underline"
+                <Badge 
+                  variant="outline" 
+                  className={isPrivateRepo 
+                    ? 'border-amber-500/50 text-amber-500 text-xs' 
+                    : 'border-primary/50 text-primary text-xs'
+                  }
                 >
-                  Visit
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-            )}
-
-            {/* Contributors */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span className="text-xs">Contributors</span>
-              </div>
-              <span className="text-xs text-foreground">
-                {project.github_contributors || '—'}
-              </span>
-            </div>
-
-            {/* Source/Hackathon */}
-            {project.discovery_source && (
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Sparkles className="h-4 w-4 text-amber-500" />
-                  <span className="text-xs">Source</span>
-                </div>
-                <Badge variant="outline" className="border-amber-500/50 text-amber-500 text-xs">
-                  {project.discovery_source}
+                  {isPrivateRepo ? 'PRIVATE' : 'PUBLIC'}
                 </Badge>
               </div>
-            )}
 
-            {/* X Handle */}
-            {project.x_username && (
+              {project.website_url && (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Globe className="h-4 w-4" />
+                    <span className="text-xs">Website</span>
+                  </div>
+                  <a 
+                    href={project.website_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 text-xs text-primary hover:underline"
+                  >
+                    Visit
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
+
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 text-muted-foreground">
-                  <XIcon className="h-4 w-4" />
-                  <span className="text-xs">X Handle</span>
+                  <Users className="h-4 w-4" />
+                  <span className="text-xs">Contributors</span>
                 </div>
-                <a 
-                  href={`https://x.com/${project.x_username}`} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline"
-                >
-                  @{project.x_username}
-                </a>
+                <span className="text-xs text-foreground">
+                  {project.github_contributors || '—'}
+                </span>
               </div>
-            )}
+            </div>
+
+            {/* Intelligence Grid */}
+            <div className="pt-2 border-t border-border">
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Intelligence</p>
+              <IntelligenceGrid
+                commitVelocity={project.github_commit_velocity}
+                commits30d={project.github_commits_30d}
+                dependencyScore={project.dependency_health_score}
+                outdatedCount={project.dependency_outdated_count}
+                criticalCount={project.dependency_critical_count}
+                governanceTx30d={project.governance_tx_30d}
+                tvlUsd={project.tvl_usd}
+                vulnerabilityCount={project.vulnerability_count}
+                openssfScore={project.openssf_score}
+                bytecodeStatus={project.bytecode_match_status}
+                decayPercentage={decayPercentage}
+                lastAnalyzedAt={project.github_analyzed_at}
+                isPrivate={isPrivateRepo}
+              />
+            </div>
           </div>
         )}
       </div>

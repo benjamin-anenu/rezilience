@@ -5,6 +5,7 @@ import {
   TrendingUp, TrendingDown, Cloud, AlertTriangle, TrendingDownIcon,
   Eye, Lock, Github, Globe, ExternalLink, Users, Network
 } from 'lucide-react';
+import { IntelligenceGrid } from './IntelligenceGrid';
 import { TableCell, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -364,89 +365,83 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
                 </Button>
               </PopoverTrigger>
               <PopoverContent 
-                className="w-72 p-3 bg-popover border-border" 
+                className="w-80 p-3 bg-popover border-border" 
                 align="end" 
                 side="left"
                 sideOffset={8}
               >
                 <div className="space-y-3">
-                  {/* GitHub Status */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Github className="h-4 w-4" />
-                      <span>GitHub</span>
-                    </div>
-                    <Badge 
-                      variant="outline" 
-                      className={isPrivate 
-                        ? 'border-amber-500/50 text-amber-500' 
-                        : 'border-primary/50 text-primary'
-                      }
-                    >
-                      {isPrivate ? 'PRIVATE' : 'PUBLIC'}
-                    </Badge>
-                  </div>
-                  
-                  {/* Website */}
-                  {project.website_url && (
-                    <a 
-                      href={project.website_url} 
-                      target="_blank" 
-                      rel="noopener noreferrer" 
-                      className="flex items-center justify-between text-sm hover:text-primary transition-colors"
-                    >
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        <Globe className="h-4 w-4" />
-                        <span>Website</span>
+                  {/* Identity Section */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Github className="h-4 w-4" />
+                        <span>GitHub</span>
                       </div>
-                      <div className="flex items-center gap-1 text-foreground">
-                        <span className="truncate max-w-[120px]">
-                          {new URL(project.website_url).hostname}
-                        </span>
-                        <ExternalLink className="h-3 w-3" />
-                      </div>
-                    </a>
-                  )}
-                  
-                  {/* Contributors */}
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>Contributors</span>
-                    </div>
-                    <span className="text-foreground">
-                      {project.github_contributors || '—'}
-                    </span>
-                  </div>
-                  
-                  {/* Source/Hackathon */}
-                  {project.discovery_source && (
-                    <div className="flex items-center justify-between text-sm gap-3">
-                      <span className="text-muted-foreground shrink-0">Source</span>
-                      <Badge variant="outline" className="border-amber-500/50 text-amber-500 max-w-[140px] truncate">
-                        {project.discovery_source}
+                      <Badge 
+                        variant="outline" 
+                        className={isPrivate 
+                          ? 'border-amber-500/50 text-amber-500' 
+                          : 'border-primary/50 text-primary'
+                        }
+                      >
+                        {isPrivate ? 'PRIVATE' : 'PUBLIC'}
                       </Badge>
                     </div>
-                  )}
-                  
-                  {/* X Handle */}
-                  {project.x_username && (
-                    <a 
-                      href={`https://x.com/${project.x_username}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between text-sm hover:text-primary transition-colors"
-                    >
+                    
+                    {project.website_url && (
+                      <a 
+                        href={project.website_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="flex items-center justify-between text-sm hover:text-primary transition-colors"
+                      >
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Globe className="h-4 w-4" />
+                          <span>Website</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-foreground">
+                          <span className="truncate max-w-[120px]">
+                            {new URL(project.website_url).hostname}
+                          </span>
+                          <ExternalLink className="h-3 w-3" />
+                        </div>
+                      </a>
+                    )}
+                    
+                    <div className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        <XIcon className="h-4 w-4" />
-                        <span>X Handle</span>
+                        <Users className="h-4 w-4" />
+                        <span>Contributors</span>
                       </div>
-                      <span className="text-foreground">@{project.x_username}</span>
-                    </a>
-                  )}
+                      <span className="text-foreground">
+                        {project.github_contributors || '—'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Intelligence Grid */}
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-2">Intelligence</p>
+                    <IntelligenceGrid
+                      commitVelocity={project.github_commit_velocity}
+                      commits30d={project.github_commits_30d}
+                      dependencyScore={project.dependency_health_score}
+                      outdatedCount={project.dependency_outdated_count}
+                      criticalCount={project.dependency_critical_count}
+                      governanceTx30d={project.governance_tx_30d}
+                      tvlUsd={project.tvl_usd}
+                      vulnerabilityCount={project.vulnerability_count}
+                      openssfScore={project.openssf_score}
+                      bytecodeStatus={project.bytecode_match_status}
+                      decayPercentage={decayPercentage}
+                      lastAnalyzedAt={project.github_analyzed_at}
+                      isPrivate={isPrivate}
+                    />
+                  </div>
                   
-                  {/* Dependency Tree Link */}
-                  <div className="pt-3 mt-3 border-t border-border">
+                  {/* Actions */}
+                  <div className="pt-2 border-t border-border">
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
