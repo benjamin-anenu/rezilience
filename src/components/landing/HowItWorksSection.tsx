@@ -1,22 +1,27 @@
- import { Database, Cpu, Shield, ArrowRight } from 'lucide-react';
- 
- const steps = [
-   {
-     icon: Database,
-     title: 'INGEST',
-     description: 'Real-time indexing of on-chain program data, upgrades, and authority changes.',
-   },
-   {
-     icon: Cpu,
-     title: 'ANALYZE',
-     description: 'Bytecode fingerprinting, liveness scoring, and originality verification.',
-   },
-   {
-     icon: Shield,
-     title: 'ASSURE',
-     description: 'Stake-backed guarantees and quantified trust metrics for every program.',
-   },
- ];
+import { Database, Cpu, Shield, AlertTriangle, ArrowRight } from 'lucide-react';
+
+const steps = [
+  {
+    icon: Database,
+    title: 'INDEX',
+    description: 'Multi-dimensional scoring of every Solana project — GitHub, dependencies, governance, and TVL analyzed continuously.',
+  },
+  {
+    icon: Cpu,
+    title: 'VERIFY',
+    description: 'On-chain authority verification, GitHub ownership proof, bytecode originality and dependency health checks.',
+  },
+  {
+    icon: Shield,
+    title: 'COMMIT',
+    description: 'Economic commitment through staked assurance bonds with public milestone tracking and timeline alerts.',
+  },
+  {
+    icon: AlertTriangle,
+    title: 'DETECT',
+    description: 'AEGIS Supply Chain Intelligence — real-time dependency graph mapping, automated CVE detection, and cross-program risk alerts.',
+  },
+];
  
  export function HowItWorksSection() {
    return (
@@ -35,7 +40,7 @@
            {/* Connection line (desktop) */}
            <div className="absolute left-0 right-0 top-12 hidden h-px bg-border md:block" />
  
-           <div className="grid gap-8 md:grid-cols-3">
+           <div className="grid gap-8 md:grid-cols-4">
              {steps.map((step, index) => (
                <div key={step.title} className="relative">
                  {/* Step card */}
