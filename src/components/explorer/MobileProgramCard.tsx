@@ -27,9 +27,10 @@ interface MobileProgramCardProps {
   rank: number;
   movement?: MovementType;
   scoreHistory?: number[];
+  velocityHistory?: number[];
 }
 
-export function MobileProgramCard({ project, rank, movement, scoreHistory }: MobileProgramCardProps) {
+export function MobileProgramCard({ project, rank, movement, scoreHistory, velocityHistory }: MobileProgramCardProps) {
   const navigate = useNavigate();
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -184,7 +185,7 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory }: Mob
               <Lock className="h-4 w-4 text-muted-foreground" />
             ) : (
               <>
-                <Sparkline values={scoreHistory || [project.resilience_score]} width={50} height={16} />
+                <Sparkline values={velocityHistory?.some(v => v > 0) ? velocityHistory : (scoreHistory || [project.resilience_score])} width={50} height={16} />
                 <span className={cn('font-mono text-lg font-bold', getScoreColor(project.resilience_score))}>
                   {Math.round(project.resilience_score)}/100
                 </span>
@@ -369,6 +370,7 @@ interface MobileProgramCardsProps {
   rankData?: {
     movements: Record<string, MovementType>;
     scoreHistories: Record<string, number[]>;
+    velocityHistories: Record<string, number[]>;
   };
 }
 
@@ -382,6 +384,7 @@ export function MobileProgramCards({ projects, rankData }: MobileProgramCardsPro
           rank={index + 1}
           movement={rankData?.movements[project.id]}
           scoreHistory={rankData?.scoreHistories[project.id]}
+          velocityHistory={rankData?.velocityHistories[project.id]}
         />
       ))}
     </div>

@@ -29,6 +29,7 @@ interface LeaderboardRowProps {
   index: number;
   movement: MovementType | undefined;
   scoreHistory: number[];
+  velocityHistory: number[];
 }
 
 // Helper functions defined outside component to avoid recreation
@@ -159,6 +160,7 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
   index,
   movement,
   scoreHistory,
+  velocityHistory,
 }: LeaderboardRowProps) {
   const navigate = useNavigate();
   const isPrivate = isPrivateRepo(project);
@@ -269,12 +271,27 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
             tvlUsd={project.tvl_usd}
           />
         </TableCell>
-        {/* Trend */}
+        {/* Trend (commit velocity preferred, fallback to score) */}
         <TableCell className="hidden xl:table-cell px-1 w-16">
           {isPrivate ? (
             <Lock className="h-3 w-3 text-muted-foreground" />
           ) : (
-            <Sparkline values={scoreHistory} width={50} height={16} />
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <Sparkline 
+                    values={velocityHistory.some(v => v > 0) ? velocityHistory : scoreHistory} 
+                    width={50} 
+                    height={16} 
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs font-medium">
+                  {velocityHistory.some(v => v > 0) ? '7-day commit velocity' : '7-day score trend'}
+                </p>
+              </TooltipContent>
+            </Tooltip>
           )}
         </TableCell>
         {/* Liveness */}
