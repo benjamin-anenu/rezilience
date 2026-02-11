@@ -28,9 +28,9 @@ Deno.serve(async (req) => {
     // Fetch all profiles with governance addresses configured
     const { data: profiles, error: fetchError } = await supabase
       .from("claimed_profiles")
-      .select("id, project_name, governance_address, multisig_address, resilience_score, dependency_health_score, governance_tx_30d, tvl_usd, tvl_risk_ratio")
+      .select("id, project_name, governance_address, multisig_address, program_id, resilience_score, dependency_health_score, governance_tx_30d, tvl_usd, tvl_risk_ratio")
       .or("verified.eq.true,claim_status.eq.unclaimed")
-      .not("multisig_address", "is", null);
+      .or("multisig_address.not.is.null,category.eq.dao");
 
     if (fetchError) {
       throw new Error(`Failed to fetch profiles: ${fetchError.message}`);
@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log(`[Governance Hourly] Found ${profiles.length} profiles with governance addresses`);
+    console.log(`[Governance Hourly] Found ${profiles.length} profiles with governance/dao addresses`);
 
     const analyzeGovUrl = `${supabaseUrl}/functions/v1/analyze-governance`;
 
@@ -53,7 +53,12 @@ Deno.serve(async (req) => {
 
     for (const profile of profiles) {
       try {
-        console.log(`[Governance Hourly] Analyzing: ${profile.project_name}`);
+        const addressToAnalyze = profile.multisig_address || profile.program_id;
+        if (!addressToAnalyze) {
+          console.log(`[Governance Hourly] Skipping ${profile.project_name}: no address available`);
+          continue;
+        }
+        console.log(`[Governance Hourly] Analyzing: ${profile.project_name} (${addressToAnalyze})`);
 
         const response = await fetch(analyzeGovUrl, {
           method: "POST",
@@ -62,7 +67,7 @@ Deno.serve(async (req) => {
             Authorization: `Bearer ${supabaseKey}`,
           },
           body: JSON.stringify({
-            governance_address: profile.multisig_address,
+            governance_address: addressToAnalyze,
             profile_id: profile.id,
           }),
         });
