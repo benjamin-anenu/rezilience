@@ -154,7 +154,7 @@ Deno.serve(async (req) => {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: "application/vnd.github.v3+json",
-        "User-Agent": "Resilience-Platform",
+        "User-Agent": "Rezilience-Platform",
       },
     });
 
@@ -182,7 +182,7 @@ Deno.serve(async (req) => {
           headers: {
             Authorization: `Bearer ${accessToken}`,
             Accept: "application/vnd.github.v3+json",
-            "User-Agent": "Resilience-Platform",
+            "User-Agent": "Rezilience-Platform",
           },
         });
 
@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
         headers: {
           Authorization: `Bearer ${accessToken}`,
           Accept: "application/vnd.github.v3+json",
-          "User-Agent": "Resilience-Platform",
+          "User-Agent": "Rezilience-Platform",
         },
       });
 
@@ -230,7 +230,7 @@ Deno.serve(async (req) => {
                 headers: {
                   Authorization: `Bearer ${accessToken}`,
                   Accept: "application/vnd.github.v3+json",
-                  "User-Agent": "Resilience-Platform",
+                  "User-Agent": "Rezilience-Platform",
                 },
               }
             );
@@ -264,7 +264,7 @@ Deno.serve(async (req) => {
               headers: {
                 Authorization: `Bearer ${accessToken}`,
                 Accept: "application/vnd.github.v3+json",
-                "User-Agent": "Resilience-Platform",
+                "User-Agent": "Rezilience-Platform",
               },
             }
           );

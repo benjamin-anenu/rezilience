@@ -36,7 +36,7 @@ export function TheGapSection() {
           <div className="relative overflow-hidden rounded-sm border border-destructive/20 bg-destructive/5 p-8">
             <div className="mb-6">
               <h3 className="font-display text-xl font-bold uppercase tracking-tight text-destructive">
-                WITHOUT RESILIENCE
+                WITHOUT REZILIENCE
               </h3>
               <p className="text-sm text-muted-foreground">The status quo in the Solana ecosystem</p>
             </div>
@@ -65,7 +65,7 @@ export function TheGapSection() {
           <div className="relative overflow-hidden rounded-sm border border-primary/30 bg-card p-8 shadow-[0_0_30px_hsl(174_100%_38%_/_0.08)]">
             <div className="mb-6">
               <h3 className="font-display text-xl font-bold uppercase tracking-tight text-primary">
-                WITH RESILIENCE
+                WITH REZILIENCE
               </h3>
               <p className="text-sm text-muted-foreground">What the ecosystem unlocks</p>
             </div>

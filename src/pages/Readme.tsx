@@ -67,7 +67,7 @@ export default function Readme() {
               PUBLIC DOCUMENTATION
             </Badge>
             <h1 className="font-display text-4xl md:text-5xl lg:text-6xl font-bold uppercase tracking-tight text-foreground mb-4">
-              RESILIENCE{' '}
+              REZILIENCE{' '}
               <span className="text-primary">README</span>
             </h1>
             <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
@@ -136,7 +136,7 @@ export default function Readme() {
               <Card className="card-premium">
                 <CardContent className="pt-6">
                   <p className="text-muted-foreground leading-relaxed mb-4">
-                    <strong className="text-foreground">Resilience</strong> is a decentralized assurance layer and indexing 
+                    <strong className="text-foreground">Rezilience</strong> is a decentralized assurance layer and indexing 
                     service that combines off-chain development signals (GitHub, dependencies, bytecode) with on-chain 
                     infrastructure activity to create immutable, verifiable proof-of-maintenance and continuity for Solana projects.
                   </p>
@@ -387,7 +387,7 @@ export default function Readme() {
               
               <div className="grid gap-4">
                 <FeatureCard
-                  title="Resilience Registry (Explorer)"
+                  title="Rezilience Registry (Explorer)"
                   description="Browse and compare all indexed projects with sortable leaderboard, search, and category filters."
                   link="/explorer"
                 />
@@ -457,7 +457,7 @@ export default function Readme() {
                     </div>
                     <div className="mt-3 pt-3 border-t border-border">
                       <p className="text-xs text-muted-foreground">
-                        <strong className="text-yellow-500">Org Note:</strong> For organization-owned private repos, the org owner must grant the Resilience OAuth App access in GitHub Organization settings for the repository to be visible.
+                        <strong className="text-yellow-500">Org Note:</strong> For organization-owned private repos, the org owner must grant the Rezilience OAuth App access in GitHub Organization settings for the repository to be visible.
                       </p>
                     </div>
                   </div>
@@ -476,7 +476,7 @@ export default function Readme() {
                     <StepItem
                       number={5}
                       title="Get Analyzed"
-                      description="System computes your Resilience Score using the same formula: R = 0.40 × GitHub + 0.25 × Deps + 0.20 × Gov + 0.15 × TVL."
+                      description="System computes your Rezilience Score using the same formula: R = 0.40 × GitHub + 0.25 × Deps + 0.20 × Gov + 0.15 × TVL."
                     />
                   </ol>
 
@@ -495,7 +495,7 @@ export default function Readme() {
                       </h3>
                     </div>
                     <p className="text-muted-foreground text-sm mb-4">
-                      The Resilience Registry is pre-seeded with <strong className="text-foreground">166+ Solana protocols</strong> (including 82 major protocols and 84 Colosseum startups). When you claim a pre-listed project, the system pre-populates your registration with existing metadata. To prevent unauthorized claims, verification is required via one of two paths:
+                      The Rezilience Registry is pre-seeded with <strong className="text-foreground">166+ Solana protocols</strong> (including 82 major protocols and 84 Colosseum startups). When you claim a pre-listed project, the system pre-populates your registration with existing metadata. To prevent unauthorized claims, verification is required via one of two paths:
                     </p>
 
                     {/* Path A: On-Chain */}
@@ -550,7 +550,7 @@ export default function Readme() {
                           number={5}
                           icon={KeyRound}
                           title="SIWS Signature"
-                          description='Sign a structured "Resilience Registry Claim" message (no on-chain transaction) to cryptographically prove ownership.'
+                          description='Sign a structured "Rezilience Registry Claim" message (no on-chain transaction) to cryptographically prove ownership.'
                         />
                         <VerificationStep
                           number={6}
@@ -708,7 +708,7 @@ export default function Readme() {
                     How to Improve Continuity
                   </h3>
                   <p className="text-sm text-muted-foreground mb-6">
-                    To Increase Your Resilience Score (Prove Continuity):
+                    To Increase Your Rezilience Score (Prove Continuity):
                   </p>
 
                   <Accordion type="multiple" className="space-y-2">
@@ -827,7 +827,7 @@ export default function Readme() {
                   <AccordionTrigger className="px-6 hover:no-underline">
                     <div className="flex items-center gap-3 flex-1">
                       <Badge className="bg-yellow-500/20 text-yellow-500 border-yellow-500/30 font-mono text-xs">IN PROGRESS</Badge>
-                      <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Phase 1: Resilience Registry</span>
+                      <span className="font-display text-sm font-bold uppercase tracking-wider text-foreground">Phase 1: Rezilience Registry</span>
                       <span className="text-xs text-muted-foreground ml-auto mr-4 font-mono">Months 1-3</span>
                     </div>
                   </AccordionTrigger>
@@ -889,7 +889,7 @@ export default function Readme() {
                     <div className="space-y-2 mb-6">
                       {[
                         'Staking mechanism (lock tokens on projects)',
-                        'Conditional yield (5-15% annual based on Resilience Score continuity)',
+                        'Conditional yield (5-15% annual based on Rezilience Score continuity)',
                         'Yield pauses if score drops (incentive alignment)',
                         '"Building in Public" gallery (X posts + embedded videos)',
                         'Commitment Lock feature (public milestone tracking)',
@@ -906,7 +906,7 @@ export default function Readme() {
                       <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-3">HOW IT WORKS</p>
                       <div className="space-y-3">
                         {[
-                          { step: '1', text: 'Developer maintains protocol → Resilience Score stays healthy' },
+                          { step: '1', text: 'Developer maintains protocol → Rezilience Score stays healthy' },
                           { step: '2', text: 'Investor stakes on developer → Earns yield continuously' },
                           { step: '3', text: 'Maintenance stops → Score drops → Yield pauses' },
                         ].map((item, i) => (
@@ -936,7 +936,7 @@ export default function Readme() {
                   <AccordionContent className="px-6">
                     <p className="text-sm text-primary font-medium mb-3">"Infrastructure API for Continuity Management"</p>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Enterprise SaaS layer where wallets, DEXs, and institutions consume Resilience continuity data in real-time.
+                      Enterprise SaaS layer where wallets, DEXs, and institutions consume Rezilience continuity data in real-time.
                     </p>
                     <div className="space-y-2 mb-6">
                       {[
@@ -1084,7 +1084,7 @@ export default function Readme() {
                     Verification Pipeline
                   </h3>
                   <p className="text-muted-foreground mb-6">
-                    Resilience performs <strong className="text-foreground">independent cryptographic verification</strong> of every
+                    Rezilience performs <strong className="text-foreground">independent cryptographic verification</strong> of every
                     Solana program to prove that deployed bytecode matches verified source code. This is not trust-based — it's math-based.
                   </p>
                   <div className="space-y-4">
@@ -1218,7 +1218,7 @@ export default function Readme() {
 
                     <div className="mt-6 p-4 rounded-sm bg-muted/30 border border-border">
                       <p className="font-mono text-xs uppercase tracking-wider text-muted-foreground mb-2">
-                        IMPACT ON RESILIENCE SCORE
+                        IMPACT ON REZILIENCE SCORE
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Bytecode confidence feeds directly into the scoring engine. Original code receives a
@@ -1249,7 +1249,7 @@ export default function Readme() {
                 <FAQItem
                   value="no-github"
                   question="What if my project isn't on GitHub?"
-                  answer="Currently, Resilience requires a public GitHub repository for code activity analysis. Projects without GitHub will score 0 on the GitHub dimension (40% of total score). We're exploring support for other version control systems."
+                  answer="Currently, Rezilience requires a public GitHub repository for code activity analysis. Projects without GitHub will score 0 on the GitHub dimension (40% of total score). We're exploring support for other version control systems."
                 />
                 <FAQItem
                   value="staking"
@@ -1259,7 +1259,7 @@ export default function Readme() {
                 <FAQItem
                   value="public-data"
                   question="Is this data public?"
-                  answer="Yes! Resilience operates as a public good. All indexed protocol data is viewable by anyone. The registry provides data-backed transparency for the entire ecosystem."
+                  answer="Yes! Rezilience operates as a public good. All indexed protocol data is viewable by anyone. The registry provides data-backed transparency for the entire ecosystem."
                 />
                 <FAQItem
                   value="private-repos"
@@ -1281,7 +1281,7 @@ export default function Readme() {
                   Ready to Get Started?
                 </h2>
                 <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-                  Join the Resilience Registry and prove your project's commitment to the Solana ecosystem.
+                  Join the Rezilience Registry and prove your project's commitment to the Solana ecosystem.
                 </p>
                 <div className="flex flex-wrap justify-center gap-4">
                   <Button asChild size="lg" className="font-display uppercase tracking-wider">

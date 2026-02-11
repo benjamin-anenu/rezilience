@@ -58,7 +58,7 @@ async function fetchWithAuth(url: string, token: string): Promise<Response> {
     headers: {
       Authorization: `token ${token}`,
       Accept: "application/vnd.github.v3+json",
-      "User-Agent": "Resilience-Registry",
+      "User-Agent": "Rezilience-Registry",
     },
   });
 }

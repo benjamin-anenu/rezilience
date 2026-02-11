@@ -26,7 +26,7 @@ async function getSolanaTotalTVL(): Promise<number> {
     const response = await fetch("https://api.llama.fi/chains", {
       headers: {
         Accept: "application/json",
-        "User-Agent": "Resilience-Registry",
+        "User-Agent": "Rezilience-Registry",
       },
     });
     
@@ -98,7 +98,7 @@ Deno.serve(async (req) => {
     const response = await fetch(`https://api.llama.fi/protocol/${normalizedName}`, {
       headers: {
         Accept: "application/json",
-        "User-Agent": "Resilience-Registry",
+        "User-Agent": "Rezilience-Registry",
       },
     });
 

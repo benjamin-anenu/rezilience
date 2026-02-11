@@ -32,9 +32,9 @@ export function Navigation() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="Resilience" className="h-8 w-8 object-contain" />
+            <img src={logo} alt="Rezilience" className="h-8 w-8 object-contain" />
             <span className="font-display text-xl font-bold tracking-tight text-foreground">
-              RESILIENCE
+              REZILIENCE
             </span>
           </Link>
 
@@ -132,9 +132,9 @@ export function Navigation() {
               {/* Drawer Header */}
               <div className="flex items-center justify-between border-b border-border p-4">
                 <Link to="/" className="flex items-center gap-2">
-                  <img src={logo} alt="Resilience" className="h-6 w-6 object-contain" />
+                  <img src={logo} alt="Rezilience" className="h-6 w-6 object-contain" />
                   <span className="font-display text-lg font-bold tracking-tight text-foreground">
-                    RESILIENCE
+                    REZILIENCE
                   </span>
                 </Link>
                 <DrawerClose asChild>

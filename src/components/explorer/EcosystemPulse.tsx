@@ -182,7 +182,7 @@ export function EcosystemPulse() {
       {/* Registry Data Disclaimer */}
       <div className="flex items-center gap-2 rounded-sm border border-border bg-card/50 p-3 text-xs text-muted-foreground">
         <Info className="h-3.5 w-3.5 flex-shrink-0 text-primary" />
-        <span>Data reflects only projects indexed in the Resilience Registry and does not represent the entire Solana ecosystem.</span>
+        <span>Data reflects only projects indexed in the Rezilience Registry and does not represent the entire Solana ecosystem.</span>
       </div>
 
       {isSparse && <SparseDataNotice />}
@@ -196,7 +196,7 @@ export function EcosystemPulse() {
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-sm font-display uppercase tracking-wide">
                 <TrendingUp className="h-4 w-4 text-primary" />
-                Aggregate Resilience Trend
+                Aggregate Rezilience Trend
               </CardTitle>
             </CardHeader>
             <CardContent>

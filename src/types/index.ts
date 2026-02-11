@@ -1,7 +1,7 @@
 // Re-export all database types
 export * from './database';
 
-// Resilience Type Definitions
+// Rezilience Type Definitions
 
 export interface Program {
   id: string;
@@ -328,7 +328,7 @@ export interface ClaimedProfile {
   squadsVersion?: 'v3' | 'v4';
   multisigVerifiedVia?: 'member_signature' | 'transaction_proof' | 'manual_review';
   
-  // Multi-Dimensional Scoring (Full-Spectrum Resilience)
+  // Multi-Dimensional Scoring (Full-Spectrum Rezilience)
   dependencyMetrics?: DependencyMetrics;
   governanceMetrics?: GovernanceMetrics;
   tvlMetrics?: TVLMetrics;

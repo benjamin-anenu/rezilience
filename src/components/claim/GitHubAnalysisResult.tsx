@@ -71,7 +71,7 @@ export const GitHubAnalysisResultCard = ({ result, showDetailed = false }: GitHu
           <div className="font-mono text-3xl font-bold text-primary">
             {result.resilienceScore}
           </div>
-          <div className="text-[10px] text-muted-foreground">RESILIENCE SCORE</div>
+          <div className="text-[10px] text-muted-foreground">REZILIENCE SCORE</div>
           <Badge className={`mt-1 ${getStatusColor(result.livenessStatus)}`}>
             {result.livenessStatus}
           </Badge>

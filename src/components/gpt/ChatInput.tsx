@@ -9,12 +9,12 @@ interface ChatInputProps {
 }
 
 const SUGGESTIONS = [
-  'What is the Resilience Score and how is it calculated?',
+  'What is the Rezilience Score and how is it calculated?',
   'How do I claim my project profile?',
   'What does the dependency health score measure?',
   'How does authority verification work on Solana?',
   'What are the four phases of the Resilience roadmap?',
-  'How can I improve my project\'s resilience score?',
+  'How can I improve my project\'s rezilience score?',
 ];
 
 export function ChatInput({ onSend, isLoading, showSuggestions }: ChatInputProps) {
@@ -65,7 +65,7 @@ export function ChatInput({ onSend, isLoading, showSuggestions }: ChatInputProps
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask about Resilience, Solana programs, scoring..."
+          placeholder="Ask about Rezilience, Solana programs, scoring..."
           rows={1}
           disabled={isLoading}
           className="flex-1 resize-none bg-card border border-border rounded-sm px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary/50 disabled:opacity-50 font-body"
@@ -85,7 +85,7 @@ export function ChatInput({ onSend, isLoading, showSuggestions }: ChatInputProps
       </div>
 
       <p className="text-center text-[10px] font-mono text-muted-foreground/60 max-w-3xl mx-auto">
-        ResilienceGPT is a community tool — not official Solana Foundation support. Always DYOR.
+        RezilienceGPT is a community tool — not official Solana Foundation support. Always DYOR.
       </p>
     </div>
   );

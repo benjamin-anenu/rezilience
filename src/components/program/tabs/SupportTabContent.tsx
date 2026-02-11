@@ -76,7 +76,7 @@ export function SupportTabContent({ program, isVerified, claimStatus }: SupportT
     {
       question: 'How is yield calculated?',
       answer:
-        'Yield is calculated based on the protocol\'s Resilience Score, total staked amount, and network activity. Higher-scoring protocols typically offer better returns.',
+        'Yield is calculated based on the protocol\'s Rezilience Score, total staked amount, and network activity. Higher-scoring protocols typically offer better returns.',
     },
   ];
 
@@ -121,7 +121,7 @@ export function SupportTabContent({ program, isVerified, claimStatus }: SupportT
               <div>
                 <p className="font-mono text-2xl font-bold text-foreground">{program.score}</p>
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Resilience Score
+                  Rezilience Score
                 </p>
               </div>
               <div className="h-10 w-px bg-border" />

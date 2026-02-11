@@ -40,14 +40,14 @@ export default function Grants() {
           <div className="flex items-start gap-3 rounded-sm border border-border bg-card/60 p-4">
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              This directory is maintained as a public good by Resilience. Information may change —
+              This directory is maintained as a public good by Rezilience. Information may change —
               always verify directly with grant providers before applying.
             </p>
           </div>
           <div className="flex items-start gap-3 rounded-sm border border-primary/20 bg-primary/5 p-4">
             <BookOpen className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
             <p className="text-sm text-muted-foreground">
-              <span className="font-semibold text-foreground">Transparency note:</span> Resilience
+              <span className="font-semibold text-foreground">Transparency note:</span> Rezilience
               is also an active grant applicant within the Solana ecosystem.
             </p>
           </div>
@@ -180,7 +180,7 @@ export default function Grants() {
           <p className="text-sm text-muted-foreground">
             Know a grant program we're missing?{' '}
             <a
-              href="https://x.com/ResilienceSol"
+              href="https://x.com/RezilienceSol"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-primary transition-colors hover:text-primary/80"

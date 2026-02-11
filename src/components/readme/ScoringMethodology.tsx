@@ -17,7 +17,7 @@ export function ScoringMethodology() {
         </CardHeader>
         <CardContent>
           <p className="text-muted-foreground leading-relaxed mb-6">
-            Resilience uses a <strong className="text-foreground">weighted dimensional scoring model</strong> with{' '}
+            Rezilience uses a <strong className="text-foreground">weighted dimensional scoring model</strong> with{' '}
             <strong className="text-foreground">adaptive weights</strong> that adjust based on project type. 
             Every project receives a single score (0–100) derived from applicable dimensions, modified by a 
             continuity decay penalty for inactive projects.
@@ -26,7 +26,7 @@ export function ScoringMethodology() {
           {/* The Formula — Hero Display */}
           <div className="rounded-sm border-2 border-primary/30 bg-background px-6 py-5 mb-6">
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground mb-2">
-              UNIFIED RESILIENCE SCORE
+              UNIFIED REZILIENCE SCORE
             </p>
             <code className="block font-mono text-xl md:text-2xl text-primary font-bold leading-relaxed">
               R = (w<sub>G</sub>×G + w<sub>D</sub>×D + w<sub>Gov</sub>×Gov + w<sub>T</sub>×T) × Continuity

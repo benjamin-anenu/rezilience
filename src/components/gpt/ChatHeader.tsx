@@ -16,11 +16,11 @@ export function ChatHeader({ onNewChat }: ChatHeaderProps) {
         </Link>
         <div className="h-5 w-px bg-border" />
         <Link to="/" className="flex items-center gap-2">
-          <img src={logo} alt="Resilience" className="h-6 w-6 object-contain" />
+          <img src={logo} alt="Rezilience" className="h-6 w-6 object-contain" />
         </Link>
         <div>
           <h1 className="font-display text-sm font-bold tracking-tight text-foreground">
-            ResilienceGPT
+            RezilienceGPT
           </h1>
           <p className="text-[10px] font-mono text-muted-foreground leading-none">
             Solana Ecosystem Assistant
