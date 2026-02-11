@@ -1,4 +1,4 @@
-import { Brain, Network, Heart, Coins, Search, ShieldCheck, Lock, Globe, BookOpen, GitBranch, Users, TrendingUp, Database, Activity, ExternalLink, CheckCircle, ArrowRight, Zap, Eye, Target, BarChart3, Shield } from 'lucide-react';
+import { Brain, Network, Heart, Coins, Search, ShieldCheck, Lock, Globe, BookOpen, GitBranch, Users, TrendingUp, Database, Activity, ExternalLink, CheckCircle, ArrowRight, Zap, Eye, Target, BarChart3, Shield, Clock, AlertTriangle, Info } from 'lucide-react';
 import { useHeroStats } from '@/hooks/useHeroStats';
 import { useRoadmapStats } from '@/hooks/useRoadmapStats';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -267,7 +267,18 @@ export function TractionSlide() {
         <StatBox label="Claimed Profiles" value={roadmapStats?.claimedProfiles ?? '—'} />
         <StatBox label="Unclaimed" value={roadmapStats?.unclaimedProfiles ?? '—'} />
       </div>
-      <p className="mt-6 font-mono text-[12px] text-muted-foreground/50 text-center">DATA REFRESHED EVERY 5 MINUTES • ZERO MOCK DATA</p>
+      <div className="mt-6 rounded-sm border border-primary/30 bg-primary/5 p-5">
+        <div className="flex items-start gap-3">
+          <Info className="h-5 w-5 shrink-0 text-primary mt-0.5" />
+          <div>
+            <h4 className="text-[15px] font-semibold text-foreground">30+ Builders Waiting to Claim Profiles</h4>
+            <p className="mt-1 text-[13px] text-muted-foreground leading-relaxed">
+              Claims are currently paused for end-to-end QA and vetting. We need to ensure all code meets Solana standards and build the on-chain protocol before accepting claims. Builders will sign with a SOL transaction to confirm originality — positioning them for Phase 2, where the public can stake on their projects as they build in public.
+            </p>
+          </div>
+        </div>
+      </div>
+      <p className="mt-4 font-mono text-[12px] text-muted-foreground/50 text-center">DATA REFRESHED EVERY 5 MINUTES • ZERO MOCK DATA</p>
     </SlideLayout>;
 }
 
@@ -316,7 +327,7 @@ export function PossibilitiesSlide() {
 
 /* ─── SLIDE 8: COMPETITIVE LANDSCAPE ─── */
 export function CompetitionSlide() {
-  type Score = 'yes' | 'partial' | 'no';
+  type Score = 'yes' | 'partial' | 'no' | 'planned';
   const features = ['Multi-dimensional scoring', 'Continuous monitoring', 'Bytecode verification', 'Dependency health', 'Governance tracking', 'TVL risk analysis', 'Economic staking', 'Open methodology'];
   const competitors: {
     name: string;
@@ -334,46 +345,77 @@ export function CompetitionSlide() {
     name: 'DeFiSafety',
     scores: ['partial', 'no', 'no', 'no', 'no', 'no', 'no', 'yes']
   }, {
+    name: 'Anchor Verify',
+    scores: ['no', 'no', 'yes', 'no', 'no', 'no', 'no', 'partial']
+  }, {
     name: 'Resilience',
-    scores: ['yes', 'yes', 'yes', 'yes', 'yes', 'yes', 'yes', 'yes']
+    scores: ['yes', 'yes', 'yes', 'yes', 'yes', 'yes', 'planned', 'yes']
   }];
   const renderScore = (s: Score, isResilience: boolean) => {
     if (s === 'yes') return <CheckCircle className={`h-5 w-5 mx-auto ${isResilience ? 'text-primary' : 'text-primary/70'}`} />;
+    if (s === 'planned') return <div className="h-5 w-5 mx-auto rounded-full border-2 border-dashed border-primary bg-primary/10" />;
     if (s === 'partial') return <div className="h-5 w-5 mx-auto rounded-full border-2 border-amber-500 bg-amber-500/20" />;
     return <span className="text-muted-foreground/30">—</span>;
   };
+
+  const pohColumns = [
+    { icon: Clock, title: 'PoH is a Clock', desc: 'Validators use it to order transactions. It does not care what the events are.' },
+    { icon: Eye, title: 'Resilience is a Performance Review', desc: 'Tracks whether developers update code, respond to bugs, and stick to promises.' },
+    { icon: Zap, title: 'Partners, Not Competitors', desc: 'Resilience uses PoH timestamps to measure how often programs are updated. Raw Time becomes Useful Intelligence.' },
+  ];
+
   return <SlideLayout>
       <Tag>COMPETITIVE LANDSCAPE</Tag>
-      <h2 className="mt-6 text-[48px] font-bold text-foreground leading-tight">
+      <h2 className="mt-4 text-[44px] font-bold text-foreground leading-tight">
         Where Resilience Fits
       </h2>
-      <p className="mt-3 max-w-[800px] text-[17px] text-muted-foreground">
+      <p className="mt-2 max-w-[800px] text-[15px] text-muted-foreground">
         Existing tools excel in their domains. Resilience is the only platform that combines all dimensions into a single, continuous, public assurance layer.
       </p>
-      <div className="mt-6 overflow-hidden rounded-sm border border-border">
+      <div className="mt-4 overflow-hidden rounded-sm border border-border">
         <Table>
           <TableHeader>
             <TableRow className="border-border bg-card/60">
-              <TableHead className="text-[14px] font-semibold w-[200px]">Feature</TableHead>
-              {competitors.map(c => <TableHead key={c.name} className={`text-[14px] font-semibold text-center ${c.name === 'Resilience' ? 'text-primary bg-primary/5' : ''}`}>
+              <TableHead className="text-[13px] font-semibold w-[180px]">Feature</TableHead>
+              {competitors.map(c => <TableHead key={c.name} className={`text-[13px] font-semibold text-center ${c.name === 'Resilience' ? 'text-primary bg-primary/5' : ''}`}>
                   {c.name}
                 </TableHead>)}
             </TableRow>
           </TableHeader>
           <TableBody>
             {features.map((f, i) => <TableRow key={f} className="border-border">
-                <TableCell className="text-[14px] text-muted-foreground">{f}</TableCell>
-                {competitors.map(c => <TableCell key={c.name} className={`text-center ${c.name === 'Resilience' ? 'bg-primary/5' : ''}`}>
+                <TableCell className="text-[13px] text-muted-foreground py-2">{f}</TableCell>
+                {competitors.map(c => <TableCell key={c.name} className={`text-center py-2 ${c.name === 'Resilience' ? 'bg-primary/5' : ''}`}>
                     {renderScore(c.scores[i], c.name === 'Resilience')}
                   </TableCell>)}
               </TableRow>)}
           </TableBody>
         </Table>
       </div>
-      <div className="mt-4 flex items-center gap-6 text-[13px] text-muted-foreground">
-        <span className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary" /> Supported</span>
-        <span className="flex items-center gap-2"><div className="h-4 w-4 rounded-full border-2 border-amber-500 bg-amber-500/20" /> Partial</span>
-        <span className="flex items-center gap-2"><span className="text-muted-foreground/30 text-[16px]">—</span> Not available</span>
+      <div className="mt-3 flex items-center gap-6 text-[12px] text-muted-foreground">
+        <span className="flex items-center gap-2"><CheckCircle className="h-3.5 w-3.5 text-primary" /> Supported</span>
+        <span className="flex items-center gap-2"><div className="h-3.5 w-3.5 rounded-full border-2 border-dashed border-primary bg-primary/10" /> Planned</span>
+        <span className="flex items-center gap-2"><div className="h-3.5 w-3.5 rounded-full border-2 border-amber-500 bg-amber-500/20" /> Partial</span>
+        <span className="flex items-center gap-2"><span className="text-muted-foreground/30 text-[14px]">—</span> Not available</span>
+      </div>
+
+      {/* PoH Differentiation */}
+      <div className="mt-4 rounded-sm border border-border bg-card/30 p-4">
+        <p className="font-mono text-[11px] text-muted-foreground/60 mb-3">RESILIENCE vs. PROOF OF HISTORY</p>
+        <div className="grid grid-cols-3 gap-4">
+          {pohColumns.map(col => (
+            <div key={col.title} className="flex gap-3">
+              <col.icon className="h-5 w-5 shrink-0 text-primary mt-0.5" />
+              <div>
+                <h4 className="text-[13px] font-semibold text-foreground">{col.title}</h4>
+                <p className="mt-1 text-[12px] text-muted-foreground">{col.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p className="mt-3 text-[13px] text-foreground/80 font-medium italic text-center">
+          PoH makes Solana fast. Resilience makes Solana reliable.
+        </p>
       </div>
     </SlideLayout>;
 }
@@ -383,49 +425,80 @@ export function RoadmapSlide() {
   const phases = [{
     phase: '1',
     title: 'Resilience Registry',
+    timeline: 'Months 1–1.5',
+    budget: '$30,000',
     status: 'IN PROGRESS',
-    items: ['Multi-dimensional scoring engine', 'Builder claim & verification flow', 'Public explorer + heartbeat dashboard', 'Grants directory (public good)'],
-    color: 'border-primary text-primary'
+    items: ['Multi-dimensional scoring engine', 'Builder claim & verification flow', 'Public explorer + heartbeat dashboard', 'Grants directory (public good)', 'Pre-chain data validation testing'],
+    color: 'border-primary'
   }, {
     phase: '2',
     title: 'Economic Commitment Layer',
+    timeline: 'Months 2–4',
+    budget: '$20,000',
     status: 'PLANNED',
-    items: ['Commitment Lock staking', 'Yield mechanics for stakers', 'Bond marketplace'],
-    color: 'border-muted-foreground/30 text-muted-foreground'
+    items: ['Commitment Lock staking', 'Yield mechanics for stakers', 'Bond marketplace', 'Builder incentive alignment'],
+    color: 'border-muted-foreground/30'
   }, {
     phase: '3',
     title: 'Ecosystem Integration',
+    timeline: 'Months 5–8',
+    budget: '$15,000',
     status: 'PLANNED',
     items: ['Score Oracle on-chain program', 'Protocol-gated access APIs', 'Partner integrations'],
-    color: 'border-muted-foreground/30 text-muted-foreground'
+    color: 'border-muted-foreground/30'
   }, {
     phase: '4',
     title: 'AEGIS Supply Chain',
+    timeline: 'Months 9–12',
+    budget: '$10,000',
     status: 'PLANNED',
     items: ['Real-time vulnerability alerts', 'Automated dependency auditing', 'Cross-program risk mapping'],
-    color: 'border-muted-foreground/30 text-muted-foreground'
+    color: 'border-muted-foreground/30'
   }];
+
+  const phase1LineItems = [
+    'Senior Anchor Engineer (1 mo) — Review/refactor prototype, build on-chain program, optimize data pipeline, security + docs',
+    'Frontend Engineer (1.5 mo) — Decouple from Lovable, code review to meet standards, optimize frontend, docs',
+    'Infrastructure & DevOps (1 mo) — Production deployment, DB optimization, monitoring, RPC node setup',
+    'Web3 Strategist (Advisor, part-time) — Ecosystem positioning, partnerships, community engagement',
+    'QA, Security & Contingency — Testing, basic security review, unexpected costs buffer',
+  ];
+
   return <SlideLayout>
-      <Tag>ROADMAP & MILESTONES</Tag>
-      <h2 className="mt-6 text-[48px] font-bold text-foreground leading-tight">
-        Phased Delivery, Measurable Outcomes
+      <Tag>ROADMAP & BUDGET</Tag>
+      <h2 className="mt-4 text-[44px] font-bold text-foreground leading-tight">
+        75,000 USDC — Four Phases, 12 Months
       </h2>
-      <div className="mt-10 grid grid-cols-4 gap-5">
-        {phases.map(p => <div key={p.phase} className={`rounded-sm border ${p.color.split(' ')[0]} bg-card/30 p-6 flex flex-col`}>
+      <p className="mt-2 text-[15px] text-muted-foreground">Milestone-based delivery. Each phase unlocked on completion of the previous.</p>
+      <div className="mt-5 grid grid-cols-4 gap-4">
+        {phases.map(p => <div key={p.phase} className={`rounded-sm border ${p.color} bg-card/30 p-4 flex flex-col`}>
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[14px] text-muted-foreground">PHASE {p.phase}</span>
-              <span className={`font-mono text-[11px] rounded-sm px-2 py-0.5 ${p.status === 'IN PROGRESS' ? 'bg-primary/15 text-primary' : 'bg-muted-foreground/10 text-muted-foreground'}`}>
+              <span className="font-mono text-[12px] text-muted-foreground">PHASE {p.phase}</span>
+              <span className={`font-mono text-[10px] rounded-sm px-2 py-0.5 ${p.status === 'IN PROGRESS' ? 'bg-primary/15 text-primary' : 'bg-muted-foreground/10 text-muted-foreground'}`}>
                 {p.status}
               </span>
             </div>
-            <h3 className="mt-3 text-[18px] font-semibold text-foreground">{p.title}</h3>
-            <ul className="mt-4 space-y-2 flex-1">
-              {p.items.map(item => <li key={item} className="flex items-start gap-2 text-[13px] text-muted-foreground">
-                  <CheckCircle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-primary/50" />
+            <h3 className="mt-2 text-[16px] font-semibold text-foreground">{p.title}</h3>
+            <p className="mt-1 font-mono text-[20px] font-bold text-primary">{p.budget}</p>
+            <p className="text-[11px] text-muted-foreground">{p.timeline}</p>
+            <ul className="mt-3 space-y-1.5 flex-1">
+              {p.items.map(item => <li key={item} className="flex items-start gap-2 text-[12px] text-muted-foreground">
+                  <CheckCircle className="h-3 w-3 mt-0.5 shrink-0 text-primary/50" />
                   {item}
                 </li>)}
             </ul>
           </div>)}
+      </div>
+      {/* Phase 1 Line Items */}
+      <div className="mt-4 rounded-sm border border-primary/20 bg-primary/5 p-4">
+        <p className="font-mono text-[11px] text-primary mb-2">PHASE 1 BUDGET BREAKDOWN — $30,000</p>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
+          {phase1LineItems.map(item => (
+            <p key={item} className="text-[11px] text-muted-foreground flex items-start gap-2">
+              <span className="text-primary shrink-0">›</span> {item}
+            </p>
+          ))}
+        </div>
       </div>
     </SlideLayout>;
 }
@@ -463,19 +536,52 @@ export function FounderSlide() {
 
 /* ─── SLIDE 11: THE ASK ─── */
 export function AskSlide() {
+  const phasesSummary = [
+    { phase: 'Phase 1', name: 'Resilience Registry', timeline: 'Mo 1–1.5', amount: '$30,000', deliverable: 'On-chain program + production registry' },
+    { phase: 'Phase 2', name: 'Economic Layer', timeline: 'Mo 2–4', amount: '$20,000', deliverable: 'Staking bonds + yield mechanics' },
+    { phase: 'Phase 3', name: 'Ecosystem Integration', timeline: 'Mo 5–8', amount: '$15,000', deliverable: 'Score Oracle + partner APIs' },
+    { phase: 'Phase 4', name: 'AEGIS Supply Chain', timeline: 'Mo 9–12', amount: '$10,000', deliverable: 'Real-time vulnerability monitoring' },
+  ];
   return <SlideLayout className="items-center text-center">
       <Tag>THE ASK</Tag>
-      <h2 className="mt-8 text-[56px] font-bold text-foreground leading-tight">
-        Let's Build Solana's<br />Trust Infrastructure
+      <h2 className="mt-6 text-[52px] font-bold text-foreground leading-tight">
+        75,000 USDC<br />Across Four Phases
       </h2>
-      <p className="mt-6 max-w-[700px] text-[20px] text-muted-foreground">
-        Seeking a Solana Foundation grant to fund the team and infrastructure needed
-        to scale Resilience from Phase 1 into ecosystem-wide integration.
+      <p className="mt-4 max-w-[700px] text-[18px] text-muted-foreground">
+        Milestone-based delivery. Each phase unlocked on completion of the previous.
       </p>
-      <p className="mt-4 max-w-[600px] text-[16px] text-foreground/70 italic">
-        Institutional capital and retail users will navigate Solana with absolute confidence.
-      </p>
-      <div className="mt-10 flex gap-6">
+
+      {/* Phase summary table */}
+      <div className="mt-8 w-full max-w-[900px] overflow-hidden rounded-sm border border-border">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-border bg-card/60">
+              <TableHead className="text-[13px] font-semibold">Phase</TableHead>
+              <TableHead className="text-[13px] font-semibold">Timeline</TableHead>
+              <TableHead className="text-[13px] font-semibold text-right">Amount</TableHead>
+              <TableHead className="text-[13px] font-semibold">Key Deliverable</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {phasesSummary.map(p => (
+              <TableRow key={p.phase} className="border-border">
+                <TableCell className="text-[13px] text-foreground font-medium py-2">{p.phase}</TableCell>
+                <TableCell className="text-[13px] text-muted-foreground font-mono py-2">{p.timeline}</TableCell>
+                <TableCell className="text-[13px] text-primary font-mono font-bold text-right py-2">{p.amount}</TableCell>
+                <TableCell className="text-[13px] text-muted-foreground py-2">{p.deliverable}</TableCell>
+              </TableRow>
+            ))}
+            <TableRow className="border-border bg-primary/5">
+              <TableCell className="text-[13px] text-foreground font-bold py-2">Total</TableCell>
+              <TableCell className="text-[13px] text-muted-foreground font-mono py-2">12 months</TableCell>
+              <TableCell className="text-[13px] text-primary font-mono font-bold text-right py-2">$75,000</TableCell>
+              <TableCell className="text-[13px] text-muted-foreground py-2">Full assurance layer for Solana</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="mt-8 flex gap-6">
         <a href="https://bloomberg-pixel-perfect-fe.lovable.app" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 rounded-sm border border-primary bg-primary/10 px-6 py-3 font-mono text-[15px] text-primary hover:bg-primary/20 transition-colors">
           <Globe className="h-4 w-4" /> Live Product
         </a>
@@ -486,6 +592,6 @@ export function AskSlide() {
           <BookOpen className="h-4 w-4" /> Grants Directory
         </a>
       </div>
-      <p className="mt-8 font-mono text-[12px] text-muted-foreground/40">REPUTATION CAN'T BE FORKED.</p>
+      <p className="mt-6 font-mono text-[12px] text-muted-foreground/40">REPUTATION CAN'T BE FORKED.</p>
     </SlideLayout>;
 }
