@@ -251,10 +251,10 @@ export default function ResilienceGPT() {
                 <span className="font-display text-2xl font-bold text-primary">R</span>
               </div>
               <h2 className="font-display text-lg font-bold text-foreground mb-1">
-                ResilienceGPT
+                RezilienceGPT
               </h2>
               <p className="text-sm text-muted-foreground max-w-md mb-8">
-                Ask about the Resilience platform, Solana program health scoring, dependency analysis, or anything in the ecosystem.
+                Ask about the Rezilience platform, Solana program health scoring, dependency analysis, or anything in the ecosystem.
               </p>
             </div>
           ) : (

@@ -29,7 +29,7 @@
      title: 'STAKED ASSURANCE',
      subtitle: 'Economic Security Layer',
      description:
-       'Stake SOL on programs you trust. Higher stakes = higher resilience scores. Aligned incentives for the ecosystem.',
+       'Stake SOL on programs you trust. Higher stakes = higher rezilience scores. Aligned incentives for the ecosystem.',
      metrics: [
        { label: 'Total Staked', value: '$1.28M' },
        { label: 'Programs', value: '847' },

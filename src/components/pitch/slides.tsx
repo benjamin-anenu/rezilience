@@ -50,7 +50,7 @@ export function TitleSlide() {
         Reputation Can't <br />Be Forked.
       </h1>
       <p className="mt-6 max-w-[800px] text-[24px] leading-relaxed text-muted-foreground">
-        <span className="text-primary font-semibold">Resilience</span> — Decentralized Assurance Layer for Solana.
+        <span className="text-primary font-semibold">Rezilience</span> — Decentralized Assurance Layer for Solana.
         <br />Multi-dimensional Proof-of-Life for every project — on-chain and off-chain.
       </p>
       {stats && <div className="mt-12 flex gap-6">
@@ -58,14 +58,14 @@ export function TitleSlide() {
           <StatBox label="Active" value={stats.activeCount} />
           <StatBox label="Avg Score" value={stats.averageScore} />
         </div>}
-      <p className="mt-8 font-mono text-[13px] text-muted-foreground/60">LIVE DATA FROM RESILIENCE REGISTRY</p>
+      <p className="mt-8 font-mono text-[13px] text-muted-foreground/60">LIVE DATA FROM REZILIENCE REGISTRY</p>
     </SlideLayout>;
 }
 
 /* ─── SLIDE 2: THE VISION ─── */
 export function VisionSlide() {
   return <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
-      <img src={ecosystemImg} alt="Resilience Ecosystem — Code, Liveness, Originality, Governance, Dependencies, Economics" className="absolute inset-0 h-full w-full object-contain" />
+      <img src={ecosystemImg} alt="Rezilience Ecosystem — Code, Liveness, Originality, Governance, Dependencies, Economics" className="absolute inset-0 h-full w-full object-contain" />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
       <div className="relative z-10 flex flex-col items-center text-center mt-[55%]">
         <Tag>THE VISION</Tag>
@@ -306,7 +306,7 @@ export function TractionSlide() {
       <div className="mt-10 grid grid-cols-3 gap-6">
         <StatBox label="Programs Indexed" value={heroStats?.registryCount ?? '—'} />
         <StatBox label="Active Heartbeats" value={heroStats?.activeCount ?? '—'} />
-        <StatBox label="Avg Resilience Score" value={heroStats?.averageScore ?? '—'} />
+        <StatBox label="Avg Rezilience Score" value={heroStats?.averageScore ?? '—'} />
       </div>
       <div className="mt-6 grid grid-cols-3 gap-6">
         <StatBox label="Scored Projects" value={roadmapStats?.scoredProjects ?? '—'} />
@@ -357,7 +357,7 @@ export function PossibilitiesSlide() {
         One Central System for What Matters
       </h2>
       <p className="mt-4 max-w-[900px] text-[18px] text-muted-foreground leading-relaxed">
-        These capabilities exist individually across the ecosystem — block explorers track transactions, audit firms verify code, DeFi dashboards monitor TVL. But no single system unifies development health, supply chain integrity, governance activity, and economic data into one continuous, public assurance layer. <span className="text-foreground font-medium">Resilience brings it all together</span> — for builders and the public alike.
+        These capabilities exist individually across the ecosystem — block explorers track transactions, audit firms verify code, DeFi dashboards monitor TVL. But no single system unifies development health, supply chain integrity, governance activity, and economic data into one continuous, public assurance layer. <span className="text-foreground font-medium">Rezilience brings it all together</span> — for builders and the public alike.
       </p>
       <div className="mt-8 grid grid-cols-3 gap-5">
         {items.map(item => <div key={item.title} className="flex gap-4 rounded-sm border border-border bg-card/40 p-5">
@@ -394,11 +394,11 @@ export function CompetitionSlide() {
     name: 'Anchor Verify',
     scores: ['no', 'no', 'yes', 'no', 'no', 'no', 'no', 'partial']
   }, {
-    name: 'Resilience',
+    name: 'Rezilience',
     scores: ['yes', 'yes', 'yes', 'yes', 'yes', 'yes', 'planned', 'yes']
   }];
-  const renderScore = (s: Score, isResilience: boolean) => {
-    if (s === 'yes') return <CheckCircle className={`h-5 w-5 mx-auto ${isResilience ? 'text-primary' : 'text-primary/70'}`} />;
+  const renderScore = (s: Score, isRezilience: boolean) => {
+    if (s === 'yes') return <CheckCircle className={`h-5 w-5 mx-auto ${isRezilience ? 'text-primary' : 'text-primary/70'}`} />;
     if (s === 'planned') return <div className="h-5 w-5 mx-auto rounded-full border-2 border-dashed border-primary bg-primary/10" />;
     if (s === 'partial') return <div className="h-5 w-5 mx-auto rounded-full border-2 border-amber-500 bg-amber-500/20" />;
     return <span className="text-muted-foreground/30">—</span>;
@@ -406,24 +406,24 @@ export function CompetitionSlide() {
 
   const pohColumns = [
     { icon: Clock, title: 'PoH is a Clock', desc: 'Validators use it to order transactions. It does not care what the events are.' },
-    { icon: Eye, title: 'Resilience is a Performance Review', desc: 'Tracks whether developers update code, respond to bugs, and stick to promises.' },
-    { icon: Zap, title: 'Partners, Not Competitors', desc: 'Resilience uses PoH timestamps to measure how often programs are updated. Raw Time becomes Useful Intelligence.' },
+    { icon: Eye, title: 'Rezilience is a Performance Review', desc: 'Tracks whether developers update code, respond to bugs, and stick to promises.' },
+    { icon: Zap, title: 'Partners, Not Competitors', desc: 'Rezilience uses PoH timestamps to measure how often programs are updated. Raw Time becomes Useful Intelligence.' },
   ];
 
   return <SlideLayout>
       <Tag>COMPETITIVE LANDSCAPE</Tag>
       <h2 className="mt-4 text-[44px] font-bold text-foreground leading-tight">
-        Where Resilience Fits
+        Where Rezilience Fits
       </h2>
       <p className="mt-2 max-w-[800px] text-[15px] text-muted-foreground">
-        Existing tools excel in their domains. Resilience is the only platform that combines all dimensions into a single, continuous, public assurance layer.
+        Existing tools excel in their domains. Rezilience is the only platform that combines all dimensions into a single, continuous, public assurance layer.
       </p>
       <div className="mt-4 overflow-hidden rounded-sm border border-border">
         <Table>
           <TableHeader>
             <TableRow className="border-border bg-card/60">
               <TableHead className="text-[13px] font-semibold w-[180px]">Feature</TableHead>
-              {competitors.map(c => <TableHead key={c.name} className={`text-[13px] font-semibold text-center ${c.name === 'Resilience' ? 'text-primary bg-primary/5' : ''}`}>
+              {competitors.map(c => <TableHead key={c.name} className={`text-[13px] font-semibold text-center ${c.name === 'Rezilience' ? 'text-primary bg-primary/5' : ''}`}>
                   {c.name}
                 </TableHead>)}
             </TableRow>
@@ -431,8 +431,8 @@ export function CompetitionSlide() {
           <TableBody>
             {features.map((f, i) => <TableRow key={f} className="border-border">
                 <TableCell className="text-[13px] text-muted-foreground py-2">{f}</TableCell>
-                {competitors.map(c => <TableCell key={c.name} className={`text-center py-2 ${c.name === 'Resilience' ? 'bg-primary/5' : ''}`}>
-                    {renderScore(c.scores[i], c.name === 'Resilience')}
+                {competitors.map(c => <TableCell key={c.name} className={`text-center py-2 ${c.name === 'Rezilience' ? 'bg-primary/5' : ''}`}>
+                    {renderScore(c.scores[i], c.name === 'Rezilience')}
                   </TableCell>)}
               </TableRow>)}
           </TableBody>
@@ -447,7 +447,7 @@ export function CompetitionSlide() {
 
       {/* PoH Differentiation */}
       <div className="mt-4 rounded-sm border border-border bg-card/30 p-4">
-        <p className="font-mono text-[11px] text-muted-foreground/60 mb-3">RESILIENCE vs. PROOF OF HISTORY</p>
+        <p className="font-mono text-[11px] text-muted-foreground/60 mb-3">REZILIENCE vs. PROOF OF HISTORY</p>
         <div className="grid grid-cols-3 gap-4">
           {pohColumns.map(col => (
             <div key={col.title} className="flex gap-3">
@@ -460,7 +460,7 @@ export function CompetitionSlide() {
           ))}
         </div>
         <p className="mt-3 text-[13px] text-foreground/80 font-medium italic text-center">
-          PoH makes Solana fast. Resilience makes Solana reliable.
+          PoH makes Solana fast. Rezilience makes Solana reliable.
         </p>
       </div>
     </SlideLayout>;
@@ -573,7 +573,7 @@ export function FounderSlide() {
             "We aren't here to point out where the ecosystem is quiet. We are here to provide the megaphone for those who are consistently building, and the map for those who need to know which projects are truly resilient."
           </blockquote>
           <p className="text-[13px] text-muted-foreground/70 mt-2">
-            Building with AI as a force multiplier — this grant will fund the team needed to take Resilience to the next level.
+            Building with AI as a force multiplier — this grant will fund the team needed to take Rezilience to the next level.
           </p>
         </div>
       </div>

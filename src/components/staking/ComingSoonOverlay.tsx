@@ -25,7 +25,7 @@ export function ComingSoonOverlay({
                   </h3>
                 </div>
                 <p className="max-w-lg text-sm text-muted-foreground">
-                  Continuity Bonds will launch in Phase 2. Stake SOL on Projects you believe in, earn yield based on their Resilience Score, and help fund ecosystem sustainability.
+                  Continuity Bonds will launch in Phase 2. Stake SOL on Projects you believe in, earn yield based on their Rezilience Score, and help fund ecosystem sustainability.
                 </p>
               </div>
             </div>

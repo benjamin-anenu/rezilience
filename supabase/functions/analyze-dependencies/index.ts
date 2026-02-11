@@ -130,7 +130,7 @@ async function fetchGitHubFile(
       headers: {
         Authorization: `token ${token}`,
         Accept: "text/plain",
-        "User-Agent": "Resilience-Registry",
+        "User-Agent": "Rezilience-Registry",
       },
     });
     
@@ -163,7 +163,7 @@ async function listGitHubDirectory(
       headers: {
         Authorization: `token ${token}`,
         Accept: "application/vnd.github.v3+json",
-        "User-Agent": "Resilience-Registry",
+        "User-Agent": "Rezilience-Registry",
       },
     });
     
@@ -351,7 +351,7 @@ async function fetchPackageJson(owner: string, repo: string, token: string): Pro
           headers: {
             Authorization: `token ${token}`,
             Accept: "application/json",
-            "User-Agent": "Resilience-Registry",
+            "User-Agent": "Rezilience-Registry",
           },
         });
         
@@ -543,7 +543,7 @@ async function getNpmLatestVersion(packageName: string): Promise<string | null> 
     const encodedName = encodeURIComponent(packageName);
     const response = await fetch(`https://registry.npmjs.org/${encodedName}/latest`, {
       headers: {
-        "User-Agent": "Resilience-Registry",
+        "User-Agent": "Rezilience-Registry",
         Accept: "application/json",
       },
     });
@@ -569,7 +569,7 @@ async function getNpmDownloads(packageName: string): Promise<number> {
     const encodedName = encodeURIComponent(packageName);
     const response = await fetch(
       `https://api.npmjs.org/downloads/point/last-week/${encodedName}`,
-      { headers: { "User-Agent": "Resilience-Registry" } }
+      { headers: { "User-Agent": "Rezilience-Registry" } }
     );
     
     if (!response.ok) return 0;
@@ -587,7 +587,7 @@ async function getPypiLatestVersion(packageName: string): Promise<string | null>
   try {
     const response = await fetch(`https://pypi.org/pypi/${packageName}/json`, {
       headers: {
-        "User-Agent": "Resilience-Registry",
+        "User-Agent": "Rezilience-Registry",
         Accept: "application/json",
       },
     });
@@ -613,7 +613,7 @@ async function getPypiDownloads(packageName: string): Promise<number> {
   try {
     const response = await fetch(
       `https://pypistats.org/api/packages/${packageName}/recent`,
-      { headers: { "User-Agent": "Resilience-Registry" } }
+      { headers: { "User-Agent": "Rezilience-Registry" } }
     );
     
     if (!response.ok) return 0;
@@ -716,7 +716,7 @@ async function getLatestCrateVersion(crateName: string): Promise<string | null> 
   try {
     const response = await fetch(`https://crates.io/api/v1/crates/${crateName}`, {
       headers: {
-        "User-Agent": "Resilience-Registry (contact@resilience.fi)",
+        "User-Agent": "Rezilience-Registry (contact@rezilience.fi)",
         Accept: "application/json",
       },
     });
@@ -741,7 +741,7 @@ async function getCrateReverseDeps(crateName: string): Promise<number> {
   try {
     const response = await fetch(`https://crates.io/api/v1/crates/${crateName}/reverse_dependencies?per_page=1`, {
       headers: {
-        "User-Agent": "Resilience-Registry (contact@resilience.fi)",
+        "User-Agent": "Rezilience-Registry (contact@rezilience.fi)",
         Accept: "application/json",
       },
     });

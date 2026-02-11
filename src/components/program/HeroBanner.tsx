@@ -405,7 +405,7 @@ export function HeroBanner({
                 {/* Score content */}
                 <div className="z-10 text-center">
                   <p className="mb-1 font-display text-[10px] uppercase tracking-wider text-muted-foreground">
-                    Resilience
+                    Rezilience
                   </p>
                   <p className={cn(
                     'font-mono text-5xl font-bold sm:text-6xl',

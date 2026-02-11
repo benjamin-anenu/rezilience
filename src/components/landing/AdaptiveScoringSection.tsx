@@ -39,7 +39,7 @@ export function AdaptiveScoringSection() {
         {/* Formula Display */}
         <div className="mx-auto mb-12 max-w-3xl rounded-sm border border-border bg-card p-6 text-center">
           <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted-foreground">
-            Adaptive Resilience Formula
+            Adaptive Rezilience Formula
           </p>
           <p className="font-mono text-lg text-foreground md:text-xl">
             <span className="text-primary">R</span> = (

@@ -117,7 +117,7 @@ Deno.serve(async (req) => {
 
         const headers: HeadersInit = {
           Accept: "application/vnd.github.v3+json",
-          "User-Agent": "Resilience-Platform",
+          "User-Agent": "Rezilience-Platform",
         };
         if (githubToken) headers.Authorization = `Bearer ${githubToken}`;
 

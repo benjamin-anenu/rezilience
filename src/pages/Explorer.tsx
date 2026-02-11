@@ -96,7 +96,7 @@ const Explorer = () => {
           <div className="mb-8">
             <div>
               <h1 className="mb-2 font-display text-3xl font-bold uppercase tracking-tight text-foreground md:text-4xl">
-                RESILIENCE REGISTRY
+                REZILIENCE REGISTRY
               </h1>
             <p className="text-muted-foreground">
               Browse verified projects and their trust metrics across the Solana ecosystem.
@@ -212,7 +212,7 @@ const Explorer = () => {
                 <p className="text-muted-foreground">
                   {searchQuery || statusFilter !== 'all' || categoryFilter !== 'all' || countryFilter !== 'all'
                     ? 'No projects match your search criteria. Try adjusting your filters.'
-                    : 'Be among the first builders to register your project in the Resilience Registry.'}
+                    : 'Be among the first builders to register your project in the Rezilience Registry.'}
                 </p>
               </div>
             </div>

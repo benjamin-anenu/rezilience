@@ -70,7 +70,7 @@ interface ProgramHeaderProps {
         {/* Score Display - Prominent */}
         <div className="flex items-center justify-center gap-6 rounded-sm border border-border bg-background p-4">
           <div className="text-center">
-            <p className="mb-1 text-xs uppercase text-muted-foreground">Resilience Score</p>
+            <p className="mb-1 text-xs uppercase text-muted-foreground">Rezilience Score</p>
             <p className={cn('font-mono text-4xl font-bold', getScoreColor(program.score))}>
               {program.score}
             </p>
@@ -347,7 +347,7 @@ interface ProgramHeaderProps {
         {/* Right side - Score */}
         <div className="flex items-center gap-8">
           <div className="text-center">
-            <p className="mb-1 text-xs uppercase text-muted-foreground">Resilience Score</p>
+            <p className="mb-1 text-xs uppercase text-muted-foreground">Rezilience Score</p>
             <p className={cn('font-mono text-5xl font-bold', getScoreColor(program.score))}>
               {program.score}
             </p>
