@@ -1,132 +1,86 @@
 
 
-# Adaptive Scoring Weights by Category
+# Pitch Deck Updates: 4-Step Pipeline, Adaptive Formula, and Grant Budget Restructure
 
-## The Problem
+## Change 1: Four-Step Assurance Pipeline (HowItWorksSlide)
 
-The current fixed-weight formula unfairly penalizes projects where certain dimensions are irrelevant:
-- **Governance (20%)** defaults to 0 for any project without a multisig or DAO category -- that's ~80% of the registry
-- **TVL (15%)** defaults to 50 for non-DeFi, which is less punishing but still arbitrary
-- A perfect Infrastructure project can never score above ~72
+Add **DETECT** as step 04, selling the AEGIS Supply Chain vision as the end-game capability.
 
-## The Solution: Category-Aware Weight Redistribution
+**Updated steps:**
 
-When a dimension doesn't apply to a project, redistribute its weight proportionally to the remaining dimensions instead of scoring it as 0 or a neutral value.
+| Step | Title | Icon | Description |
+|------|-------|------|-------------|
+| 01 | INDEX | Database | Automated multi-dimensional scoring of every registered Solana project. GitHub, dependencies, governance, and TVL analyzed continuously. |
+| 02 | VERIFY | ShieldCheck | On-chain authority wallet SIWS for "Verified Titan" status. Off-chain GitHub ownership proof. Bytecode originality + dependency health checks. |
+| 03 | COMMIT | Lock | Economic commitment through staked assurance bonds. Public milestone tracking with Commitment Locks and timeline variance alerts. |
+| 04 | DETECT | AlertTriangle | AEGIS Supply Chain Intelligence -- real-time dependency graph mapping, automated CVE detection, and cross-program risk propagation alerts across the ecosystem's nervous system. |
 
-### Weight Table
+The slide title changes from "Three-Step" to "Four-Step Assurance Pipeline" and the grid switches from `grid-cols-3` to `grid-cols-4` with slightly tighter padding to fit.
 
-```text
-+---------------------+--------+------+------+-----+
-| Category            | GitHub | Deps | Gov  | TVL |
-+---------------------+--------+------+------+-----+
-| DeFi + DAO/Multisig | 0.40   | 0.25 | 0.20 | 0.15|  (full formula)
-| DeFi (no governance)| 0.50   | 0.30 | --   | 0.20|  (gov weight redistributed)
-| DAO (no TVL)        | 0.50   | 0.30 | 0.20 | --  |  (tvl weight redistributed -- wait, DAO could have TVL)
-| Everything else     | 0.60   | 0.40 | --   | --  |  (both redistributed)
-+---------------------+--------+------+------+-----+
+---
+
+## Change 2: Adaptive Formula on the Solution Slide
+
+Replace the fixed formula display with the new adaptive weighting system. Instead of showing one static formula, present the base formula plus a visual showing how weights shift by project category.
+
+**Current (static):**
+```
+R = 0.40xGitHub + 0.25xDeps + 0.20xGov + 0.15xTVL
 ```
 
-The logic:
-- **Has governance address/DAO?** Include Gov dimension
-- **Is DeFi?** Include TVL dimension
-- If a dimension is excluded, its weight is redistributed proportionally to the remaining dimensions
-
-### Example Outcomes
-
-**Infrastructure project (e.g., Helius) with GitHub=85, Deps=70:**
-- Current: (85x0.40 + 70x0.25 + 0x0.20 + 50x0.15) = 34 + 17.5 + 0 + 7.5 = **59**
-- New: (85x0.60 + 70x0.40) = 51 + 28 = **79**
-
-**DeFi project (e.g., Marinade) with GitHub=80, Deps=65, TVL=90:**
-- Current: (80x0.40 + 65x0.25 + 0x0.20 + 90x0.15) = 32 + 16.25 + 0 + 13.5 = **61.75**
-- New (no governance): (80x0.50 + 65x0.30 + 90x0.20) = 40 + 19.5 + 18 = **77.5**
-
-## Technical Changes
-
-### 1. Update `refresh-all-profiles/index.ts`
-
-Replace the fixed weight block (around line 250-270) with adaptive weight logic:
-
-```typescript
-// Determine applicable dimensions
-const hasGovernance = !!(profile.multisig_address) || profile.category === 'dao';
-const hasTvl = profile.category === 'defi' || (profile.category || '').toLowerCase().includes('defi');
-
-let weights: { github: number; dependencies: number; governance: number; tvl: number };
-
-if (hasGovernance && hasTvl) {
-  weights = { github: 0.40, dependencies: 0.25, governance: 0.20, tvl: 0.15 };
-} else if (hasGovernance && !hasTvl) {
-  weights = { github: 0.45, dependencies: 0.30, governance: 0.25, tvl: 0 };
-} else if (!hasGovernance && hasTvl) {
-  weights = { github: 0.50, dependencies: 0.30, governance: 0, tvl: 0.20 };
-} else {
-  weights = { github: 0.60, dependencies: 0.40, governance: 0, tvl: 0 };
-}
-
-const baseScore = Math.round(
-  (githubScore * weights.github) +
-  (depsScore * weights.dependencies) +
-  (govScore * weights.governance) +
-  (tvlScore * weights.tvl)
-);
+**New (adaptive):**
+```
+R = (wG x GitHub + wD x Deps + wGov x Gov + wTVL x TVL) x Continuity
 ```
 
-When a dimension has weight 0, its score is simply not factored in -- no penalty, no arbitrary neutral value.
+Below the formula, add a compact table showing 3 weight profiles:
+- **Full Stack (DeFi + DAO):** 40 / 25 / 20 / 15
+- **DeFi (no governance):** 50 / 30 / -- / 20
+- **Infrastructure / Tools:** 60 / 40 / -- / --
 
-### 2. Update `score_breakdown` JSONB
+Add a subtitle: *"Weights adapt to project category -- no project is penalized for dimensions that don't apply."*
 
-Store the actual weights used so the UI can show transparency:
+The four dimension cards below remain the same but each card's weight label changes to show the full-stack weight with a note like "up to 60%" for GitHub.
 
-```typescript
-const scoreBreakdown = {
-  github: Math.round(githubScore),
-  dependencies: Math.round(depsScore),
-  governance: hasGovernance ? Math.round(govScore) : null,
-  tvl: hasTvl ? Math.round(tvlScore) : null,
-  baseScore,
-  continuityDecay: Math.round(continuityDecay * 100),
-  finalScore,
-  weights, // now dynamic per project
-  applicableDimensions: [
-    'github', 'dependencies',
-    ...(hasGovernance ? ['governance'] : []),
-    ...(hasTvl ? ['tvl'] : []),
-  ],
-};
-```
+---
 
-### 3. Update the `ScoreBreakdownTooltip` component
+## Change 3: Revised Grant Budget Split
 
-Modify `src/components/program/ScoreBreakdownTooltip.tsx` to:
-- Only show dimensions that are in `applicableDimensions`
-- Display "N/A" or hide rows for inapplicable dimensions
-- Show the actual weights used (e.g., "GitHub 60%" instead of always "40%")
+### Strategic Rationale
 
-### 4. Update the README methodology section
+The current budget allocates only $10k (13%) to AEGIS despite it being the most technically complex deliverable. Meanwhile Phase 1 is allocated $30k for work that is partially already built (the prototype exists). Here is the recommended restructure:
 
-Update `src/components/readme/ScoringMethodology.tsx` to explain the adaptive weighting system so users understand why different project types have different weight distributions.
+**Revised Budget:**
 
-### 5. Category normalization (bonus)
+| Phase | Title | Budget | Timeline | Rationale |
+|-------|-------|--------|----------|-----------|
+| 1 | Production Hardening and On-Chain Migration | $25,000 | Months 1-2 | Prototype exists. Funds go to expert code review, security audit, Solana standards compliance, Anchor smart contract development, and migrating score history on-chain. Reduced from $30k because the foundation is already built. |
+| 2 | Economic Commitment Layer | $15,000 | Months 3-5 | Staking bonds, yield mechanics, Commitment Locks. Moderate complexity -- builds on Phase 1's on-chain program. Increased slightly because the staking contract needs rigorous security review. |
+| 3 | Ecosystem Integration | $12,000 | Months 6-8 | Score Oracle on-chain program, protocol-gated APIs, partner integrations. Lighter engineering lift -- mostly API wrappers and documentation. |
+| 4 | AEGIS Supply Chain | $23,000 | Months 9-12 | The end-game. Real-time cross-program dependency graph, automated CVE propagation, risk cascade modeling. Most technically complex phase requiring specialized security engineering expertise. Gets the second-largest allocation to match its complexity. |
 
-The database currently has ~100+ different category strings (e.g., "DeFi/Privacy", "defi", "DeFi / DEX"). The DeFi check should use a case-insensitive substring match:
+**Why this split works for grant reviewers:**
+1. **Phase 1 is credible at $25k** because you can point to the working prototype and say "we already built 70% of this -- we need experts to harden it, not build from scratch"
+2. **AEGIS at $23k (31%)** signals that you understand the technical depth required and are not hand-waving the hardest part
+3. **Descending then ascending budget curve** ($25k -> $15k -> $12k -> $23k) tells a story: heavy upfront investment for foundation, lean middle phases, then heavy investment for the most ambitious deliverable
+4. **12-month timeline is unchanged** -- reviewers see methodical pacing, not rushed delivery
 
-```typescript
-const categoryLower = (profile.category || '').toLowerCase();
-const hasTvl = categoryLower.includes('defi');
-const hasGovernance = !!(profile.multisig_address) || 
-  categoryLower === 'dao' || 
-  categoryLower.includes('governance');
-```
+**Phase 1 revised line items ($25,000):**
+- Senior Anchor Engineer (1 mo) -- Code review, on-chain program, security hardening
+- Frontend Engineer (1 mo) -- Standards compliance, performance optimization, documentation
+- Infrastructure/DevOps (0.5 mo) -- Production deployment, monitoring, RPC configuration
+- Security Audit and QA -- End-to-end testing, vulnerability assessment
+- Contingency buffer (~10%)
 
-This ensures "DeFi/Lending", "DeFi / DEX", "DePIN/DeFi" etc. all get TVL analysis, and "Governance / Futarchy" gets governance analysis.
+---
 
-### Files to modify
+## Files to Modify
 
-1. `supabase/functions/refresh-all-profiles/index.ts` -- adaptive weights + updated score_breakdown
-2. `src/components/program/ScoreBreakdownTooltip.tsx` -- conditional dimension display
-3. `src/components/readme/ScoringMethodology.tsx` -- document the adaptive system
+**`src/components/pitch/slides.tsx`** -- all three changes in this single file:
+1. `HowItWorksSlide`: Add step 04 DETECT, change title and grid to 4 columns
+2. `SolutionSlide`: Replace static formula with adaptive formula + weight profile table
+3. `RoadmapSlide`: Update budget numbers ($25k/$15k/$12k/$23k), revise Phase 1 line items, update timeline text
+4. `AskSlide`: Update the summary table to match new budget numbers
 
-### Post-deployment
+**`src/components/landing/HowItWorksSection.tsx`** -- Add DETECT step to the landing page pipeline for consistency (currently 3 steps: INGEST, ANALYZE, ASSURE -- add DETECT as step 4)
 
-After deploying, trigger a full registry refresh to recalculate all scores with adaptive weights. Projects like Infrastructure tools should see significant score increases reflecting their actual maintenance quality.
