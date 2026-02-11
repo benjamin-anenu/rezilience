@@ -79,41 +79,74 @@ export function VisionSlide() {
     </div>;
 }
 
-/* ─── SLIDE 3: THE PROBLEM ─── */
+/* ─── SLIDE 3: THE OPPORTUNITY ─── */
 export function ProblemSlide() {
-  const problems = [{
-    icon: Eye,
-    title: 'No Real-Time Milestone Tracking',
-    desc: 'The public has no way to track project commitments, progress, or delivery in real-time.'
+  const observations = [{
+    icon: Activity,
+    title: 'On-Chain Activity Alone Doesn\'t Tell the Full Story',
+    desc: 'Deployment metrics hint at usage, but a quiet program might be stable, paused, or abandoned — today it is difficult to tell the difference.'
   }, {
-    icon: Target,
-    title: 'No Data-Backed Community Staking',
-    desc: 'No bridge for the community to back projects based on verifiable data rather than social media hype.'
+    icon: Search,
+    title: 'No Universal Verification Registry',
+    desc: 'Unlike Ethereum\'s Sourcify, Solana lacks a single decentralized service that pulls source, rebuilds deterministically, and publishes verification status.'
+  }, {
+    icon: ShieldCheck,
+    title: 'Verifiable Builds Exist, Adoption Is Inconsistent',
+    desc: 'Some teams don\'t generate them, others don\'t publish metadata — coverage remains partial across the ecosystem.'
   }, {
     icon: GitBranch,
-    title: 'Forks & Clones Erode Integrity',
-    desc: 'Code can be forked in seconds — reputation and maintenance history cannot be copied.'
+    title: 'Provenance Does Not Equal Maintenance',
+    desc: 'A source-to-binary match at deployment proves origin at one point in time, not ongoing health.'
   }, {
-    icon: BarChart3,
-    title: 'Billions in TVL, Zero Health Telemetry',
-    desc: 'DeFi protocols and off-chain tools secure massive value with no continuous health monitoring.'
+    icon: Lock,
+    title: 'Closed Programs Remain Hard to Reason About',
+    desc: 'Without published source, reverse engineering helps surface risk but is not a substitute for verification.'
+  }, {
+    icon: Users,
+    title: 'Maintainer Identity Is Fragmented',
+    desc: 'GitHub, X, wallets, Discord — these signals are rarely bound together cryptographically, making it hard to answer: who maintains this program today?'
+  }];
+  const unlocks = [{
+    icon: Coins,
+    title: 'SOL Continuity Bonds',
+    desc: 'The community stakes SOL on projects they believe in — backed by verifiable data, not hype.'
+  }, {
+    icon: Shield,
+    title: 'AEGIS Supply Chain Auditing',
+    desc: 'Real-time dependency and vulnerability monitoring across the ecosystem\'s nervous system.'
+  }, {
+    icon: Globe,
+    title: 'Public Good, No Gatekeeping',
+    desc: 'Every tool, every score, every metric — open access for builders and the public. No subscriptions. No walls.'
   }];
   return <SlideLayout>
-      <Tag>THE PROBLEM</Tag>
-      <h2 className="mt-6 text-[52px] font-bold text-foreground leading-tight">
-        The Transparency Gap
+      <Tag>THE OPPORTUNITY</Tag>
+      <h2 className="mt-4 text-[48px] font-bold text-foreground leading-tight">
+        The Maintenance Visibility Gap
       </h2>
-      <p className="mt-4 max-w-[700px] text-[20px] text-muted-foreground">
-        Solana mastered speed and deployment. Now it's time to master transparency and accountability.
+      <p className="mt-3 max-w-[900px] text-[17px] text-muted-foreground leading-relaxed">
+        While working closely with builders across pre-Colosseum, Colosseum, and post-Colosseum hackathons, and observing recently funded Solana projects, consistent gaps became clear. <span className="text-foreground font-medium">Solana makes it incredibly easy to ship.</span> What is still hard is understanding what is actually being maintained over time.
       </p>
-      <div className="mt-10 grid grid-cols-2 gap-6">
-        {problems.map(p => <div key={p.title} className="flex gap-5 rounded-sm border border-border bg-card/40 p-6">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-sm bg-destructive/15">
-              <p.icon className="h-6 w-6 text-destructive" />
+      <div className="mt-6 grid grid-cols-3 gap-4">
+        {observations.map(o => <div key={o.title} className="flex gap-4 rounded-sm border border-border bg-card/40 p-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-sm bg-primary/15">
+              <o.icon className="h-5 w-5 text-primary" />
             </div>
             <div>
-              <h3 className="text-[18px] font-semibold text-foreground">{p.title}</h3>
-              <p className="mt-1 text-[15px] text-muted-foreground">{p.desc}</p>
+              <h3 className="text-[15px] font-semibold text-foreground leading-tight">{o.title}</h3>
+              <p className="mt-1 text-[13px] text-muted-foreground leading-relaxed">{o.desc}</p>
+            </div>
+          </div>)}
+      </div>
+      <p className="mt-4 text-[15px] text-muted-foreground italic">
+        Resilience is designed to close this gap — bottom-up, using real signals builders already generate, and turning them into shared, verifiable infrastructure.
+      </p>
+      <div className="mt-4 flex gap-4">
+        {unlocks.map(u => <div key={u.title} className="flex-1 flex gap-3 rounded-sm border border-primary/20 bg-primary/5 p-4">
+            <u.icon className="h-5 w-5 shrink-0 text-primary mt-0.5" />
+            <div>
+              <h4 className="text-[14px] font-semibold text-foreground">{u.title}</h4>
+              <p className="mt-1 text-[12px] text-muted-foreground">{u.desc}</p>
             </div>
           </div>)}
       </div>
@@ -408,7 +441,7 @@ export function FounderSlide() {
         <div className="shrink-0 flex flex-col items-center gap-4">
           <img src={founderImg} alt="Benjamin Omoata Anenu" className="h-40 w-40 rounded-full object-cover border-2 border-primary/30" />
           <h3 className="text-[22px] font-semibold text-foreground text-center">Benjamin Omoata Anenu</h3>
-          <p className="font-mono text-[13px] text-primary text-center leading-tight">Founder & CEO<br />Technical Product Strategist<br />& AI Systems Architect</p>
+          <p className="font-mono text-[13px] text-primary text-center leading-tight">Product Visionary<br />Technical Project Manager<br />& AI Product Strategist</p>
         </div>
         <div className="flex flex-col gap-5">
           <blockquote className="border-l-2 border-primary pl-5 text-[17px] italic text-foreground/90 leading-relaxed">
