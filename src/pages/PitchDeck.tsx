@@ -3,27 +3,29 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   TitleSlide,
+  VisionSlide,
   ProblemSlide,
   SolutionSlide,
   HowItWorksSlide,
   TractionSlide,
-  PublicGoodSlide,
+  PossibilitiesSlide,
   CompetitionSlide,
   RoadmapSlide,
-  TeamSlide,
+  FounderSlide,
   AskSlide,
 } from '@/components/pitch/slides';
 
 const SLIDES = [
   TitleSlide,
+  VisionSlide,
   ProblemSlide,
   SolutionSlide,
   HowItWorksSlide,
   TractionSlide,
-  PublicGoodSlide,
+  PossibilitiesSlide,
   CompetitionSlide,
   RoadmapSlide,
-  TeamSlide,
+  FounderSlide,
   AskSlide,
 ];
 
