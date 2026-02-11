@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Activity, Lock, Info, GitBranch, Network, Coins, HeartPulse, Fingerprint, Shield, Landmark } from 'lucide-react';
+import { ArrowRight, Activity, Lock, Info, GitBranch, Network, Coins, HeartPulse, Fingerprint, Shield, Landmark, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -156,7 +156,13 @@ export function HeroSection() {
                 </svg>
               </div>
 
-              {/* Orbital nodes - 7 Dimensions of Trust (containerless with glow) */}
+              {/* Orbital nodes - 8 Dimensions of Trust (containerless with glow) */}
+              {/* 0. KNOWLEDGE - top center */}
+              <div className="absolute flex flex-col items-center gap-1.5" style={{ top: '0%', left: '50%', transform: 'translateX(-50%)' }}>
+                <BookOpen className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
+                <span className="font-mono text-[10px] text-primary">KNOWLEDGE</span>
+              </div>
+
               {/* 1. CODE - top-left */}
               <div className="absolute flex flex-col items-center gap-1.5" style={{ top: '8%', left: '12%' }}>
                 <GitBranch className="h-10 w-10 text-primary" style={{ filter: 'drop-shadow(0 0 8px hsl(174 100% 38% / 0.5))' }} />
@@ -199,8 +205,9 @@ export function HeroSection() {
                 <span className="font-mono text-[10px] text-primary">ECONOMICS</span>
               </div>
 
-              {/* Connection lines - dashed blueprint style (7 lines to center ~210,210) */}
+              {/* Connection lines - dashed blueprint style (8 lines to center ~210,210) */}
               <svg className="absolute inset-0 h-full w-full" style={{ zIndex: -1 }}>
+                <line x1="210" y1="20" x2="210" y2="190" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
                 <line x1="72" y1="55" x2="190" y2="190" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
                 <line x1="348" y1="55" x2="230" y2="190" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
                 <line x1="400" y1="196" x2="235" y2="210" stroke="hsl(var(--border))" strokeWidth="1" strokeDasharray="4 3" opacity="0.6" />
