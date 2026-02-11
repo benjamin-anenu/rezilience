@@ -1,68 +1,109 @@
 
 
-# Problem Slide Rewrite + Founder Title Fix + "What This Unlocks" Section
+# Pitch Deck Overhaul: Grant-Ready with Budget, Roadmap, Traction, and PoH Differentiation
 
-## Changes to `src/components/pitch/slides.tsx`
+## Overview
 
-### 1. Founder Title (FounderSlide)
-Replace "Founder & CEO / Technical Product Strategist / & AI Systems Architect" with:
-- **Product Visionary**
-- **Technical Project Manager**
-- **& AI Product Strategist**
+This plan addresses all raised concerns across 5 slides in `src/components/pitch/slides.tsx` plus adds a new 12th slide. The goal: make this deck grant-ready with a specific $75K USDC ask, realistic phase budgets, honest competitive framing, early traction proof, and a clear technical differentiation from Proof of History.
 
-### 2. Problem Slide -- Complete Rewrite
+---
 
-**Tag**: THE OPPORTUNITY (replaces "THE PROBLEM")
+## Changes by Slide
 
-**Headline**: "The Maintenance Visibility Gap"
+### 1. Roadmap Slide (Slide 9) -- Mirror README Phases with Budget Breakdown
 
-**Intro**: "While working closely with builders across pre-Colosseum, Colosseum, and post-Colosseum hackathons, and observing recently funded Solana projects, consistent gaps became clear. Solana makes it incredibly easy to ship. What is still hard is understanding what is actually being maintained over time."
+Replace the current sparse 4-card grid with detailed phase cards that match the README's content and include USDC allocation per phase.
 
-**Six observation cards** in a 3x2 grid (blue/constructive icons instead of red/destructive):
+**Budget Breakdown:**
 
-1. **On-Chain Activity Alone Doesn't Tell the Full Story** -- Deployment metrics hint at usage, but a quiet program might be stable, paused, or abandoned -- today it is difficult to tell the difference.
-2. **No Universal Verification Registry** -- Unlike Ethereum's Sourcify, Solana lacks a single decentralized service that pulls source, rebuilds deterministically, and publishes verification status.
-3. **Verifiable Builds Exist, Adoption Is Inconsistent** -- Some teams don't generate them, others don't publish metadata -- coverage remains partial.
-4. **Provenance Does Not Equal Maintenance** -- A source-to-binary match at deployment proves origin at one point in time, not ongoing health.
-5. **Closed Programs Remain Hard to Reason About** -- Without published source, reverse engineering helps surface risk but is not a substitute for verification.
-6. **Maintainer Identity Is Fragmented** -- GitHub, X, wallets, Discord -- rarely bound together cryptographically.
+| Phase | Timeline | Allocation |
+|-------|----------|------------|
+| Phase 1: Resilience Registry | Months 1-1.5 | $30,000 |
+| Phase 2: Economic Commitment Layer | Months 2-4 | $20,000 |
+| Phase 3: Ecosystem Integration | Months 5-8 | $15,000 |
+| Phase 4: AEGIS Supply Chain | Months 9-12 | $10,000 |
+| **Total** | **12 months** | **$75,000 USDC** |
 
-**Closing line**: "Resilience is designed to close this gap -- bottom-up, using real signals builders already generate, and turning them into shared, verifiable infrastructure."
+**Phase 1 Line Items (shown as sub-items):**
+- Senior Anchor Engineer (1 month full-time) -- Review/refactor prototype, build on-chain program, optimize data pipeline, security + documentation
+- Frontend Engineer (1.5 months full-time) -- Decouple from Lovable, code review to meet standards, optimize frontend, documentation
+- Infrastructure and DevOps (1 month) -- Production deployment, database optimization, monitoring/alerting, RPC node setup
+- Web3 Strategist (Advisor, part-time) -- Ecosystem positioning, partnership conversations, community engagement
+- QA, Security and Contingency -- Testing, basic security review, unexpected costs buffer
 
-**Visual shift**: All icon backgrounds change from `bg-destructive/15` + `text-destructive` to `bg-primary/15` + `text-primary` (constructive, not critical).
+Each phase card will show: phase number, title, timeline, budget, key deliverables (from README), and status badge.
 
-### 3. Problem Slide -- "What This Unlocks" Footer
+---
 
-Below the 6 observation cards and closing line, add a compact horizontal strip with three forward-looking items that connect the gap to the bigger vision. This ensures the audience sees where this leads without waiting for later slides:
+### 2. Ask Slide (Slide 11) -- Specific $75K Request
 
-```text
-[Coins icon] SOL Continuity Bonds
-The community stakes SOL on projects
-they believe in -- backed by verifiable
-data, not hype.
+Replace the vague "Seeking a grant" language with:
+- **Headline**: "75,000 USDC Across Four Phases"
+- **Subtitle**: "Milestone-based delivery. Each phase unlocked on completion of the previous."
+- A compact 4-column summary: Phase name, timeline, amount, key deliverable
+- Keep the existing CTA links (Live Product, Explorer, Grants Directory)
 
-[Shield icon] AEGIS Supply Chain Auditing
-Real-time dependency and vulnerability
-monitoring across the ecosystem's
-nervous system.
+---
 
-[Globe icon] Public Good, No Gatekeeping
-Every tool, every score, every metric --
-open access for builders and the public.
-No subscriptions. No walls.
-```
+### 3. Traction Slide (Slide 6) -- Add Waitlist/QA Context
 
-These three items appear as a single row of compact cards at the bottom of the slide, styled with a subtle `border-primary/20` border and `bg-primary/5` background to visually separate them from the observation grid above. Each card has an icon, a bold title, and a one-line description.
+Below the existing 6 stat boxes, add a callout box explaining:
+- "30+ builders waiting to claim profiles"
+- Claims paused for end-to-end QA/vetting
+- Need to ensure code meets Solana standards
+- On-chain protocol must be built first
+- Builders will sign with a SOL transaction to confirm originality
+- This positions builders for Phase 2 where the public can stake on their projects as they build in public
+
+Styled as a bordered info card with an amber/primary accent.
+
+---
+
+### 4. Competition Slide (Slide 8) -- Add PoH Differentiation + Anchor Verified Builds
+
+**Add two sections:**
+
+**A) "Resilience vs. Proof of History" differentiation strip** below the comparison table:
+- Three compact columns:
+  - "PoH is a Clock" -- Validators use it to order transactions. It does not care what the events are.
+  - "Resilience is a Performance Review" -- Tracks whether developers update code, respond to bugs, stick to promises.
+  - "Partners, Not Competitors" -- Resilience uses PoH timestamps to measure how often programs are updated. Raw Time becomes Useful Intelligence.
+- Closing line: "PoH makes Solana fast. Resilience makes Solana reliable."
+
+**B) Add Anchor Verified Builds** as a 5th competitor in the table:
+- Name: "Anchor Verify"
+- Scores: no, no, yes, no, no, no, no, partial
+- This adds honesty -- Anchor's verified builds exist and should be acknowledged
+
+**C) Mark unbuilt Resilience features honestly:**
+- Change "Economic staking" from "yes" to "planned" (new state)
+- Add a "Planned" legend item with a dashed border indicator
+
+---
+
+### 5. Founder Slide (Slide 10) -- No changes needed
+
+Title already updated to "Product Visionary / Technical Project Manager / AI Product Strategist" in previous iteration. No further changes.
 
 ---
 
 ## Technical Details
 
 ### File Modified
-- `src/components/pitch/slides.tsx` -- Three edits:
-  1. `ProblemSlide` component: Full rewrite with 6 cards + 3 "What This Unlocks" items + constructive styling
-  2. `FounderSlide` component: Title text replacement (3 lines)
-  3. Add `Globe` to the lucide-react import if not already present
+`src/components/pitch/slides.tsx` -- Five edits:
+
+1. **RoadmapSlide**: Full rewrite with README-aligned phases, USDC budget per phase, Phase 1 line items
+2. **AskSlide**: Rewrite with specific $75K ask, 4-phase budget summary table, milestone-based framing
+3. **TractionSlide**: Add waitlist/QA callout below stat boxes
+4. **CompetitionSlide**: 
+   - Add "Anchor Verify" competitor row
+   - Add "planned" Score type with dashed border render
+   - Change Resilience "Economic staking" to "planned"
+   - Add PoH differentiation strip below table
+   - Add "Planned" to legend
+5. **Imports**: Add `Clock` icon from lucide-react if not already present
 
 ### No other files change
+- README stays as-is (pitch mirrors it, not the other way around)
+- Same 11-slide structure in PitchDeck.tsx (no new slides needed -- PoH section fits inside Competition slide)
 
