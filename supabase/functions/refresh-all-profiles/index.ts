@@ -70,7 +70,7 @@ Deno.serve(async (req) => {
     // Fetch batch of profiles
     const { data: profiles, error: fetchError } = await supabase
       .from("claimed_profiles")
-      .select("id, project_name, github_org_url, multisig_address, category, resilience_score, dependency_health_score, governance_tx_30d, tvl_usd, tvl_risk_ratio, github_commits_30d, program_id")
+      .select("id, project_name, github_org_url, multisig_address, category, resilience_score, dependency_health_score, governance_tx_30d, tvl_usd, tvl_risk_ratio, github_commits_30d, program_id, github_last_commit")
       .or("verified.eq.true,claim_status.eq.unclaimed")
       .not("github_org_url", "is", null)
       .order("project_name")
@@ -281,20 +281,36 @@ Deno.serve(async (req) => {
           }
         }
 
-        // === CALCULATE INTEGRATED SCORE ===
-        // Formula: R = 0.40×GitHub + 0.25×Deps + 0.20×Gov + 0.15×TVL
-        const integratedScore = Math.round(
+        // === CALCULATE UNIFIED RESILIENCE SCORE ===
+        // Hybrid formula: R = (0.40×G + 0.25×D + 0.20×Gov + 0.15×TVL) × ContinuityDecay
+        const baseScore = Math.round(
           (githubScore * 0.40) +
           (depsScore * 0.25) +
           (govScore * 0.20) +
           (tvlScore * 0.15)
         );
 
+        // Continuity Decay: exponential penalty for inactivity
+        // λ = 0.00167/day ≈ 5%/month
+        const lastCommit = profile.github_last_commit;
+        let daysSinceLastCommit = 0;
+        if (lastCommit) {
+          daysSinceLastCommit = Math.floor(
+            (Date.now() - new Date(lastCommit).getTime()) / (1000 * 60 * 60 * 24)
+          );
+        }
+        const decayRate = 0.00167;
+        const continuityDecay = 1 - Math.exp(-decayRate * daysSinceLastCommit);
+        const finalScore = Math.max(0, Math.min(100, Math.round(baseScore * (1 - continuityDecay))));
+
         const scoreBreakdown = {
           github: Math.round(githubScore),
           dependencies: Math.round(depsScore),
           governance: Math.round(govScore),
           tvl: Math.round(tvlScore),
+          baseScore,
+          continuityDecay: Math.round(continuityDecay * 100),
+          finalScore,
           weights: {
             github: 0.40,
             dependencies: 0.25,
@@ -303,13 +319,14 @@ Deno.serve(async (req) => {
           },
         };
 
-        console.log(`✓ Integrated score for ${profile.project_name}: ${integratedScore} (G:${githubScore} D:${depsScore} Gov:${govScore} T:${tvlScore})`);
+        console.log(`✓ Unified score for ${profile.project_name}: ${finalScore} (base:${baseScore} decay:${Math.round(continuityDecay * 100)}% G:${githubScore} D:${depsScore} Gov:${govScore} T:${tvlScore})`);
 
-        // Update the integrated score in the database
+        // Write to BOTH columns — resilience_score is now canonical
         const { error: updateError } = await supabase
           .from("claimed_profiles")
           .update({
-            integrated_score: integratedScore,
+            resilience_score: finalScore,
+            integrated_score: finalScore, // backward compat
             score_breakdown: scoreBreakdown,
             updated_at: new Date().toISOString(),
           })
@@ -323,7 +340,7 @@ Deno.serve(async (req) => {
         results.push({ 
           profile: profile.project_name, 
           status: "updated",
-          integrated_score: integratedScore,
+          integrated_score: finalScore,
         });
         console.log(`✓ Full analysis complete: ${profile.project_name}`);
 

@@ -22,11 +22,13 @@ const SYSTEM_PROMPT = `You are ResilienceGPT — the AI assistant for the Resili
 - **NEVER fabricate** project scores, metrics, GitHub stats, TVL numbers, or any project-specific data.
 - If you are unsure about something, say so. Do NOT invent plausible-sounding data.
 
-## Integrated Resilience Score Formula (Production)
+## Unified Resilience Score Formula (Production)
 
-The Integrated Resilience Score (R) is calculated as:
+The Resilience Score (R) is calculated as:
 
-**R = 0.40 × GitHub + 0.25 × Dependencies + 0.20 × Governance + 0.15 × TVL**
+**R = (0.40 × GitHub + 0.25 × Dependencies + 0.20 × Governance + 0.15 × TVL) × Continuity**
+
+Where **Continuity = e^(−0.00167 × days_since_last_commit)** is an exponential decay modifier that penalizes inactive projects. A project inactive for 180 days loses ~26% of its base score.
 
 ### Dimensions (Live in Production)
 

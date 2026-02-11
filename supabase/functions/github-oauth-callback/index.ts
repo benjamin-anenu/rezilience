@@ -12,34 +12,52 @@ function calculateLivenessStatus(daysSinceCommit: number): "ACTIVE" | "STALE" | 
   return "STALE";
 }
 
-// Calculate resilience score using exponential decay (unified formula)
-// λ = 0.05/month converted to per-day: 0.05/30 ≈ 0.00167
-function calculateResilienceScore(params: {
-  commitVelocity: number;
+// Calculate provisional resilience score using hybrid formula
+// R = (0.40×GitHub + 0.25×Deps + 0.20×Gov + 0.15×TVL) × ContinuityDecay
+// At claim time, only GitHub dimension is known; deps/gov/tvl use baselines
+function calculateProvisionalScore(params: {
   daysSinceCommit: number;
+  githubDimensionScore: number; // 0-100 from anti-gaming buckets
+}): number {
+  const { daysSinceCommit, githubDimensionScore } = params;
+  
+  // Weighted base with default baselines for unknown dimensions
+  const baseScore = 
+    (githubDimensionScore * 0.40) +
+    (50 * 0.25) +  // deps baseline: neutral
+    (0 * 0.20) +   // gov baseline: unknown
+    (50 * 0.15);   // tvl baseline: neutral for non-DeFi
+  
+  // Continuity decay: e^(-λ × days), λ = 0.00167/day
+  const decayRate = 0.00167;
+  const continuityDecay = 1 - Math.exp(-decayRate * daysSinceCommit);
+  const finalScore = baseScore * (1 - continuityDecay);
+  
+  return Math.max(0, Math.min(100, Math.round(finalScore)));
+}
+
+// Estimate a GitHub dimension score (0-100) from basic repo stats
+// Simplified version of analyze-github-repo's anti-gaming buckets
+function estimateGitHubScore(params: {
+  commitVelocity: number;
   contributors: number;
   stars: number;
   isFork: boolean;
 }): number {
-  const { commitVelocity, daysSinceCommit, contributors, stars, isFork } = params;
+  const { commitVelocity, contributors, stars, isFork } = params;
   
-  // O (Originality): 0.3 for forks, 1.0 for original (per spec)
-  const originality = isFork ? 0.3 : 1.0;
+  // Velocity component (0-40 pts)
+  const velocityPts = Math.min(40, commitVelocity * 3);
+  // Contributor component (0-30 pts)
+  const contribPts = Math.min(30, contributors * 3);
+  // Community component (0-20 pts)
+  const communityPts = Math.min(20, Math.log10(Math.max(stars, 1)) * 8);
+  // Fork penalty
+  const forkMultiplier = isFork ? 0.3 : 1.0;
+  // Base 10 pts for existing
+  const score = (10 + velocityPts + contribPts + communityPts) * forkMultiplier;
   
-  // I (Impact): logarithmic scale of contributors + stars
-  const impact = Math.log10(Math.max(contributors + stars, 1));
-  
-  // λ = 0.05/month = 0.00167/day
-  const lambda = 0.05 / 30;
-  const decayFactor = Math.exp(-lambda * daysSinceCommit);
-  
-  // R(P,t) = (O × I) × e^(-λ × t) (no stake bonus in OAuth flow)
-  const baseScore = (originality * impact) * decayFactor;
-  
-  // Normalize to 0-100 scale (max theoretical baseScore ~4)
-  const normalizedScore = Math.min((baseScore / 4) * 100, 100);
-  
-  return Math.round(normalizedScore * 10) / 10;
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 // Parse GitHub URL to get owner/repo
@@ -263,12 +281,15 @@ Deno.serve(async (req) => {
         }
       } catch { /* ignore */ }
 
-      resilienceScore = calculateResilienceScore({
+      const githubDimensionScore = estimateGitHubScore({
         commitVelocity,
-        daysSinceCommit,
         contributors,
         stars: primaryRepo.stargazers_count,
         isFork: primaryRepo.fork,
+      });
+      resilienceScore = calculateProvisionalScore({
+        daysSinceCommit,
+        githubDimensionScore,
       });
     }
 
