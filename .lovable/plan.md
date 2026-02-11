@@ -1,159 +1,113 @@
 
 
-# ResilienceGPT -- AI Assistant Integration
+# Builders In Public -- Explorer Feed + Email Subscription Collection
 
-## Advisory Council Assessment
+## Overview
 
-Before diving in, here is the honest stress-test of this document:
-
-**What is realistic today:**
-- A beautiful chat page at `/gpt` with a nav link
-- An edge function calling Lovable AI models (no API key needed -- we have google/gemini-2.5-flash and others built in)
-- A system prompt loaded with Resilience platform knowledge + Solana ecosystem referral logic
-- Chat history saved to database for authenticated users (X login already exists)
-- LocalStorage-only ephemeral chat for unauthenticated visitors (with clear disclaimer)
-- Rich markdown rendering (bold, code blocks, tables, links) via existing TipTap or a markdown renderer
-- Thumbs up/down feedback stored in a database table
-- Branded UI matching the Bloomberg Terminal aesthetic
-
-**What the document asks for but is NOT buildable in one pass:**
-- RAG with vector embeddings and pgvector (requires infrastructure not available here)
-- Daily scraping of Stack Exchange, Discord, GitHub, Twitter (requires external cron jobs, API keys, scraping infrastructure)
-- Self-learning knowledge graph that improves over time (requires ML pipeline)
-- Three distinct "modes" with different behavior (over-engineering -- one good system prompt with context detection achieves 90% of this)
-- Admin dashboard with analytics (separate feature, build later)
-- WebSocket real-time streaming (not supported in edge functions)
-- Community contributions and voting system (separate feature)
-
-**The council's recommendation:** Build a polished V1 that delivers 80% of the user value with 20% of the complexity. The system prompt does the heavy lifting -- not infrastructure.
+Add a 4th tab ("Builders In Public") to the Explorer page that aggregates all Build In Public posts from claimed profiles into a public feed. Visitors can subscribe to individual projects by entering their email, which is stored in a new database table. No email sending yet -- just intent capture.
 
 ---
 
 ## What Gets Built
 
-### 1. New Page: `/gpt` (ResilienceGPT)
+### 1. New Database Table: `project_subscribers`
 
-A full-page chat interface accessible from navigation. No Layout wrapper (immersive experience like the pitch deck).
+Stores email subscriptions per project. No authentication required to subscribe (public action).
 
-**UI Structure:**
-- Header bar with logo, "ResilienceGPT" title, and a "New Chat" button
-- Chat message area (scrollable) with user/AI message bubbles
-- Input area at bottom with textarea, send button, and attachment indicator
-- Suggested questions shown when chat is empty (4-6 starter prompts)
-- Thumbs up/down on each AI response
-- Disclaimer banner for unauthenticated users: "Chat history is stored locally and will be lost when you close this page. Sign in to save your conversations."
+| Column | Type | Notes |
+|--------|------|-------|
+| id | uuid | PK, auto-generated |
+| profile_id | uuid | FK concept to claimed_profiles.id |
+| email | text | Subscriber's email, validated |
+| subscribed_at | timestamptz | Default now() |
+| unsubscribed_at | timestamptz | Nullable, for future opt-out |
 
-**Design tokens:** Resilience brand -- dark background, primary (teal) accents, font-mono for code, card borders matching the Bloomberg Terminal aesthetic. No purple/blue gradients (that is generic Solana branding, not Resilience branding).
+**Unique constraint** on `(profile_id, email)` to prevent duplicate subscriptions.
 
-### 2. Navigation Update
+**RLS Policies:**
+- Public INSERT (anyone can subscribe) with check that email is not empty
+- No SELECT/UPDATE/DELETE from anon -- subscribers cannot browse the list
+- Service role has full access for future email sending
 
-Add "GPT" link to `navLinks` array in `Navigation.tsx` between GRANTS and STAKING:
-```
-{ href: '/gpt', label: 'GPT', external: false }
-```
+### 2. New Explorer Tab: "Builders In Public"
 
-### 3. Edge Function: `chat-gpt`
+A 4th tab added to the Explorer page `TabsList`, positioned after "Ecosystem Pulse".
 
-A new edge function at `supabase/functions/chat-gpt/index.ts` that:
-- Receives: `{ message, conversationHistory, mode? }`
-- Calls Lovable AI (google/gemini-2.5-flash) with a comprehensive system prompt
-- Returns: `{ reply, confidence? }`
+**UI Layout:**
+- Grid of post cards (responsive: 1 col mobile, 2 cols tablet, 3 cols desktop)
+- Each card shows:
+  - Project logo + name + category badge (links to `/program/:id`)
+  - Embedded tweet via `react-tweet` (reusing existing `BuildInPublicSection` pattern)
+  - Post title if provided
+  - Timestamp
+  - "Subscribe" button that opens an email input popover
+- Empty state when no builders have posted yet: "No builders are posting yet. Claim your project to start building in public."
+- Data fetched via a new hook that queries `claimed_profiles` where `build_in_public_videos` is not empty
 
-**System prompt includes:**
-- Full Resilience platform knowledge (what it is, scoring formula, phases, vision)
-- Solana ecosystem referral logic (when confidence is low, suggest official docs, Stack Exchange, Discord, X developers)
-- Personality: friendly senior developer, asks clarifying questions, adapts to skill level
-- Formatting instructions: use markdown, code blocks, tables, bold text, links
+### 3. Subscribe Flow
 
-### 4. Database Tables
+When a user clicks "Subscribe" on a project card:
+1. A popover opens with an email input field + "Subscribe" button
+2. Client-side validation (valid email format, max 255 chars)
+3. On submit: INSERT into `project_subscribers` via Supabase client
+4. Success toast: "Subscribed! You'll be notified when [Project] posts updates."
+5. If duplicate (unique constraint violation): toast "You're already subscribed to this project."
+6. Button changes to "Subscribed" with a checkmark for that session
 
-**Table: `chat_conversations`**
-- `id` (uuid, PK)
-- `user_id` (text, nullable -- X user ID from auth context)
-- `title` (text -- auto-generated from first message)
-- `created_at` (timestamptz)
-- `updated_at` (timestamptz)
+### 4. Data Fetching Hook
 
-**Table: `chat_messages`**
-- `id` (uuid, PK)
-- `conversation_id` (uuid, FK to chat_conversations)
-- `role` (text -- 'user' or 'assistant')
-- `content` (text)
-- `feedback` (text, nullable -- 'up' or 'down')
-- `created_at` (timestamptz)
-
-RLS policies: Users can only read/write their own conversations (matched by `user_id`). No anonymous access to database -- unauthenticated users use localStorage only.
-
-### 5. Frontend Components
-
-**New files:**
-- `src/pages/ResilienceGPT.tsx` -- Page component with chat logic
-- `src/components/gpt/ChatMessage.tsx` -- Individual message bubble with markdown rendering and feedback buttons
-- `src/components/gpt/ChatInput.tsx` -- Input area with textarea, send button, suggested questions
-- `src/components/gpt/ChatHeader.tsx` -- Top bar with branding and new chat button
-
-**Key behavior:**
-- Authenticated users: conversations auto-save to database, chat history list in sidebar/dropdown
-- Unauthenticated users: messages stored in React state only (lost on page close), disclaimer shown
-- Markdown rendering using a lightweight renderer (react-markdown or manual parsing)
-- Code syntax highlighting via pre/code blocks with Tailwind styling
-- Typing indicator while waiting for AI response
-- Auto-scroll to bottom on new messages
-
-### 6. Route Registration
-
-Add to `App.tsx`:
-```tsx
-import ResilienceGPT from './pages/ResilienceGPT';
-// ...
-<Route path="/gpt" element={<ResilienceGPT />} />
-```
+New hook `useBuildersFeed` that:
+- Queries `claimed_profiles` selecting `id, project_name, logo_url, category, x_username, build_in_public_videos, claim_status`
+- Filters: `claim_status = 'claimed'` AND `build_in_public_videos` is not null/empty
+- Flattens all videos across projects into a single feed sorted by timestamp (newest first)
+- Returns `{ posts, isLoading, error }`
 
 ---
 
-## What Is NOT Built (Deferred)
+## What Is NOT Built (Deferred to V2)
 
-| Feature | Why Deferred |
-|---------|-------------|
-| RAG / vector search | Requires pgvector extension and embedding pipeline |
-| Daily scraping of external sources | Requires cron infrastructure and API keys |
-| Self-learning knowledge graph | Requires ML pipeline, not just a chat UI |
-| Three distinct modes toggle | One system prompt with context detection is sufficient |
-| Admin analytics dashboard | Separate feature, build after traction data exists |
-| Community contributions / voting | Separate feature, requires moderation system |
-| Conversation history sidebar | Can be added in V2 after core chat works |
+| Feature | Why |
+|---------|-----|
+| Email sending | Requires Resend API key + verified domain |
+| Likes / reactions | Anonymous likes are abuse-prone without auth |
+| Unsubscribe flow | Build when email sending is wired up |
+| Subscriber count display | Privacy concern -- don't show counts publicly yet |
+| Pagination of feed | Not needed until content volume justifies it |
 
 ---
 
-## Risk Analysis
+## Edge Cases and Guardrails
 
-| Risk | Mitigation |
-|------|-----------|
-| AI hallucinating Solana answers | System prompt explicitly instructs to say "I'm not sure" and refer to official docs when uncertain |
-| Users treating this as official Solana support | Disclaimer: "ResilienceGPT is a community tool, not official Solana Foundation support" |
-| Cost of AI calls | Rate limiting in edge function (max 20 messages per minute per user) |
-| Chat history data privacy | RLS policies ensure users only see their own data; unauthenticated data never hits the database |
-| Over-promising vs. delivery | V1 is a clean chat with good system prompt -- no claims about "self-learning" or "RAG" |
+| Scenario | Behavior |
+|----------|----------|
+| Zero BIP content exists | Empty state card with CTA to claim a project |
+| Bot email spam on subscribe | Unique constraint prevents duplicates; rate limiting can be added later |
+| Invalid email format | Client-side zod validation before INSERT |
+| User subscribes then wants to unsubscribe | V2 -- for now the `unsubscribed_at` column exists for future use |
+| Builder deletes a BIP post | Feed auto-updates on next load (reads live data) |
 
 ---
 
 ## Technical Details
 
+### Database Migration
+- Create `project_subscribers` table with RLS
+- Public INSERT policy (email collection is a public action)
+- No public SELECT (subscriber lists are private)
+
 ### Files Created
-1. `supabase/functions/chat-gpt/index.ts` -- Edge function with AI call and system prompt
-2. `src/pages/ResilienceGPT.tsx` -- Main chat page
-3. `src/components/gpt/ChatMessage.tsx` -- Message bubble component
-4. `src/components/gpt/ChatInput.tsx` -- Input component with suggestions
-5. `src/components/gpt/ChatHeader.tsx` -- Header bar
+1. `src/components/explorer/BuildersInPublicFeed.tsx` -- Feed component with post cards grid
+2. `src/components/explorer/BuilderPostCard.tsx` -- Individual post card with tweet embed + subscribe button
+3. `src/components/explorer/SubscribePopover.tsx` -- Email input popover for subscribing
+4. `src/hooks/useBuildersFeed.ts` -- Data fetching hook for BIP content across all profiles
+5. `src/hooks/useProjectSubscribe.ts` -- Mutation hook for subscribing to a project
 
 ### Files Modified
-1. `src/components/layout/Navigation.tsx` -- Add GPT nav link
-2. `src/App.tsx` -- Add `/gpt` route
+1. `src/pages/Explorer.tsx` -- Add 4th tab "Builders In Public" after Ecosystem Pulse
+2. `src/components/explorer/index.ts` -- Export new components
 
-### Database Migration
-- Create `chat_conversations` and `chat_messages` tables with RLS policies
-
-### Dependencies
-- No new npm packages required (markdown can be rendered with dangerouslySetInnerHTML on sanitized content, or we add `react-markdown` if needed)
-- Uses existing: framer-motion, lucide-react, Lovable AI models
+### No new dependencies needed
+- `react-tweet` already installed
+- `zod` already installed for validation
+- Supabase client already configured
 
