@@ -1,60 +1,132 @@
 
 
-# Fix: Governance Scoring for Realms and Similar Projects
+# Adaptive Scoring Weights by Category
 
-## Problem
+## The Problem
 
-Realms (SPL Governance) scores ZERO on governance because:
-- The governance pipeline requires `multisig_address` to be populated
-- Realms has no `multisig_address` set, so it is completely skipped by the hourly refresh
-- Its own program ID (`GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw`) should be analyzed for on-chain transaction activity
+The current fixed-weight formula unfairly penalizes projects where certain dimensions are irrelevant:
+- **Governance (20%)** defaults to 0 for any project without a multisig or DAO category -- that's ~80% of the registry
+- **TVL (15%)** defaults to 50 for non-DeFi, which is less punishing but still arbitrary
+- A perfect Infrastructure project can never score above ~72
 
-There is also a duplicate: both "SPL Governance" (score 20) and "Realms (SPL Governance)" (score 42) exist with the same program ID.
+## The Solution: Category-Aware Weight Redistribution
 
-## Fix (2 parts)
+When a dimension doesn't apply to a project, redistribute its weight proportionally to the remaining dimensions instead of scoring it as 0 or a neutral value.
 
-### 1. Update the hourly governance refresh to fall back to `program_id`
+### Weight Table
 
-In `supabase/functions/refresh-governance-hourly/index.ts`:
-- Change the query filter to include profiles where EITHER `multisig_address` OR `program_id` is set (for `category = 'dao'` projects)
-- When calling `analyze-governance`, use `multisig_address` if available, otherwise fall back to `program_id`
-
-### 2. Remove the duplicate "SPL Governance" entry
-
-Run a database query to delete the lower-scoring duplicate entry ("SPL Governance", id `275a9638-...`, score 20), keeping only "Realms (SPL Governance)" (id `e36e1c93-...`, score 42).
-
-## Technical Details
-
-### File: `supabase/functions/refresh-governance-hourly/index.ts`
-
-Change the profile query from:
-```sql
-.not("multisig_address", "is", null)
-```
-To:
-```sql
-.or("multisig_address.not.is.null,category.eq.dao")
+```text
++---------------------+--------+------+------+-----+
+| Category            | GitHub | Deps | Gov  | TVL |
++---------------------+--------+------+------+-----+
+| DeFi + DAO/Multisig | 0.40   | 0.25 | 0.20 | 0.15|  (full formula)
+| DeFi (no governance)| 0.50   | 0.30 | --   | 0.20|  (gov weight redistributed)
+| DAO (no TVL)        | 0.50   | 0.30 | 0.20 | --  |  (tvl weight redistributed -- wait, DAO could have TVL)
+| Everything else     | 0.60   | 0.40 | --   | --  |  (both redistributed)
++---------------------+--------+------+------+-----+
 ```
 
-Then update the function call logic to use:
+The logic:
+- **Has governance address/DAO?** Include Gov dimension
+- **Is DeFi?** Include TVL dimension
+- If a dimension is excluded, its weight is redistributed proportionally to the remaining dimensions
+
+### Example Outcomes
+
+**Infrastructure project (e.g., Helius) with GitHub=85, Deps=70:**
+- Current: (85x0.40 + 70x0.25 + 0x0.20 + 50x0.15) = 34 + 17.5 + 0 + 7.5 = **59**
+- New: (85x0.60 + 70x0.40) = 51 + 28 = **79**
+
+**DeFi project (e.g., Marinade) with GitHub=80, Deps=65, TVL=90:**
+- Current: (80x0.40 + 65x0.25 + 0x0.20 + 90x0.15) = 32 + 16.25 + 0 + 13.5 = **61.75**
+- New (no governance): (80x0.50 + 65x0.30 + 90x0.20) = 40 + 19.5 + 18 = **77.5**
+
+## Technical Changes
+
+### 1. Update `refresh-all-profiles/index.ts`
+
+Replace the fixed weight block (around line 250-270) with adaptive weight logic:
+
 ```typescript
-const addressToAnalyze = profile.multisig_address || profile.program_id;
+// Determine applicable dimensions
+const hasGovernance = !!(profile.multisig_address) || profile.category === 'dao';
+const hasTvl = profile.category === 'defi' || (profile.category || '').toLowerCase().includes('defi');
+
+let weights: { github: number; dependencies: number; governance: number; tvl: number };
+
+if (hasGovernance && hasTvl) {
+  weights = { github: 0.40, dependencies: 0.25, governance: 0.20, tvl: 0.15 };
+} else if (hasGovernance && !hasTvl) {
+  weights = { github: 0.45, dependencies: 0.30, governance: 0.25, tvl: 0 };
+} else if (!hasGovernance && hasTvl) {
+  weights = { github: 0.50, dependencies: 0.30, governance: 0, tvl: 0.20 };
+} else {
+  weights = { github: 0.60, dependencies: 0.40, governance: 0, tvl: 0 };
+}
+
+const baseScore = Math.round(
+  (githubScore * weights.github) +
+  (depsScore * weights.dependencies) +
+  (govScore * weights.governance) +
+  (tvlScore * weights.tvl)
+);
 ```
 
-This ensures any project categorized as "dao" gets governance analysis using its program ID as a fallback.
+When a dimension has weight 0, its score is simply not factored in -- no penalty, no arbitrary neutral value.
 
-### Database cleanup
+### 2. Update `score_breakdown` JSONB
 
-Delete the duplicate entry:
-```sql
-DELETE FROM claimed_profiles WHERE id = '275a9638-0ac4-4445-b04c-0c93ae8f7ae7';
+Store the actual weights used so the UI can show transparency:
+
+```typescript
+const scoreBreakdown = {
+  github: Math.round(githubScore),
+  dependencies: Math.round(depsScore),
+  governance: hasGovernance ? Math.round(govScore) : null,
+  tvl: hasTvl ? Math.round(tvlScore) : null,
+  baseScore,
+  continuityDecay: Math.round(continuityDecay * 100),
+  finalScore,
+  weights, // now dynamic per project
+  applicableDimensions: [
+    'github', 'dependencies',
+    ...(hasGovernance ? ['governance'] : []),
+    ...(hasTvl ? ['tvl'] : []),
+  ],
+};
 ```
 
-### Expected outcome
+### 3. Update the `ScoreBreakdownTooltip` component
 
-After deployment, the next governance refresh cycle will:
-- Pick up Realms using its program ID `GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw`
-- Fetch recent on-chain transaction signatures for that address
-- Calculate a real governance health score based on 30d/90d activity
-- Update `governance_tx_30d`, `governance_last_activity`, and `governance_analyzed_at`
+Modify `src/components/program/ScoreBreakdownTooltip.tsx` to:
+- Only show dimensions that are in `applicableDimensions`
+- Display "N/A" or hide rows for inapplicable dimensions
+- Show the actual weights used (e.g., "GitHub 60%" instead of always "40%")
 
+### 4. Update the README methodology section
+
+Update `src/components/readme/ScoringMethodology.tsx` to explain the adaptive weighting system so users understand why different project types have different weight distributions.
+
+### 5. Category normalization (bonus)
+
+The database currently has ~100+ different category strings (e.g., "DeFi/Privacy", "defi", "DeFi / DEX"). The DeFi check should use a case-insensitive substring match:
+
+```typescript
+const categoryLower = (profile.category || '').toLowerCase();
+const hasTvl = categoryLower.includes('defi');
+const hasGovernance = !!(profile.multisig_address) || 
+  categoryLower === 'dao' || 
+  categoryLower.includes('governance');
+```
+
+This ensures "DeFi/Lending", "DeFi / DEX", "DePIN/DeFi" etc. all get TVL analysis, and "Governance / Futarchy" gets governance analysis.
+
+### Files to modify
+
+1. `supabase/functions/refresh-all-profiles/index.ts` -- adaptive weights + updated score_breakdown
+2. `src/components/program/ScoreBreakdownTooltip.tsx` -- conditional dimension display
+3. `src/components/readme/ScoringMethodology.tsx` -- document the adaptive system
+
+### Post-deployment
+
+After deploying, trigger a full registry refresh to recalculate all scores with adaptive weights. Projects like Infrastructure tools should see significant score increases reflecting their actual maintenance quality.
