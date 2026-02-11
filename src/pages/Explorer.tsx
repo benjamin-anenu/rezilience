@@ -4,6 +4,8 @@ import { EcosystemStats, EcosystemHeatmap, EcosystemPulse, SearchBar, ProgramLea
 import { useExplorerProjects } from '@/hooks/useExplorerProjects';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Megaphone } from 'lucide-react';
 import {
   Pagination,
   PaginationContent,
@@ -14,6 +16,8 @@ import {
   PaginationEllipsis,
 } from '@/components/ui/pagination';
 
+type ActiveView = 'list' | 'heatmap' | 'pulse' | 'builders';
+
 const ITEMS_PER_PAGE = 60;
 
 const Explorer = () => {
@@ -23,6 +27,7 @@ const Explorer = () => {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [countryFilter, setCountryFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
+  const [activeView, setActiveView] = useState<ActiveView>('list');
 
   const { data: projects, isLoading, error } = useExplorerProjects();
 
@@ -104,29 +109,52 @@ const Explorer = () => {
             <EcosystemStats />
           </div>
 
-          {/* View Toggle: Heatmap vs List */}
-          <Tabs defaultValue="list" className="mb-6">
-            <TabsList className="grid w-full max-w-lg grid-cols-4">
-              <TabsTrigger value="list">List View</TabsTrigger>
-              <TabsTrigger value="heatmap">Titan Watch</TabsTrigger>
-              <TabsTrigger value="pulse">Ecosystem Pulse</TabsTrigger>
-              <TabsTrigger value="builders">Builders In Public</TabsTrigger>
-            </TabsList>
+          {/* View Toggle Row: BIP standalone left, data tabs right */}
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              variant={activeView === 'builders' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setActiveView(activeView === 'builders' ? 'list' : 'builders')}
+              className="flex items-center gap-2"
+            >
+              <Megaphone className="h-4 w-4" />
+              Builders In Public
+            </Button>
 
-            <TabsContent value="heatmap" className="mt-4">
-              <EcosystemHeatmap />
-            </TabsContent>
+            <Tabs
+              value={activeView === 'builders' ? '' : activeView}
+              onValueChange={(v) => { if (v) setActiveView(v as ActiveView); }}
+              className="w-auto"
+            >
+              <TabsList className="grid w-full max-w-md grid-cols-3">
+                <TabsTrigger value="list">List View</TabsTrigger>
+                <TabsTrigger value="heatmap">Titan Watch</TabsTrigger>
+                <TabsTrigger value="pulse">Ecosystem Pulse</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
-            <TabsContent value="pulse" className="mt-4">
-              <EcosystemPulse />
-            </TabsContent>
-
-            <TabsContent value="builders" className="mt-4">
+          {/* View Content */}
+          {activeView === 'builders' && (
+            <div className="mt-4">
               <BuildersInPublicFeed />
-            </TabsContent>
+            </div>
+          )}
 
-            <TabsContent value="list" className="mt-4">
+          {activeView === 'heatmap' && (
+            <div className="mt-4">
+              <EcosystemHeatmap />
+            </div>
+          )}
 
+          {activeView === 'pulse' && (
+            <div className="mt-4">
+              <EcosystemPulse />
+            </div>
+          )}
+
+          {activeView === 'list' && (
+            <>
           {/* Search & Filters */}
           <div className="mb-6">
             <SearchBar
@@ -233,8 +261,8 @@ const Explorer = () => {
               </Pagination>
             </div>
           )}
-            </TabsContent>
-          </Tabs>
+            </>
+          )}
         </div>
       </div>
     </Layout>
