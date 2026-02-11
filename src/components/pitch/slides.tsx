@@ -159,27 +159,38 @@ export function SolutionSlide() {
     icon: Brain,
     label: 'Brain',
     weight: '40%',
+    range: 'up to 60%',
     desc: 'GitHub Activity',
     color: 'text-primary'
   }, {
     icon: Network,
     label: 'Nervous System',
     weight: '25%',
+    range: 'up to 40%',
     desc: 'Dependency Health',
     color: 'text-chart-2'
   }, {
     icon: Heart,
     label: 'Heart',
     weight: '20%',
+    range: 'when applicable',
     desc: 'Governance',
     color: 'text-chart-4'
   }, {
     icon: Coins,
     label: 'Limbs',
     weight: '15%',
+    range: 'DeFi only',
     desc: 'TVL / Economics',
     color: 'text-chart-3'
   }];
+
+  const weightProfiles = [
+    { category: 'Full Stack (DeFi + DAO)', github: '40', deps: '25', gov: '20', tvl: '15' },
+    { category: 'DeFi (no governance)', github: '50', deps: '30', gov: '—', tvl: '20' },
+    { category: 'Infrastructure / Tools', github: '60', deps: '40', gov: '—', tvl: '—' },
+  ];
+
   return <SlideLayout>
       <Tag>THE SOLUTION</Tag>
       <h2 className="mt-6 text-[52px] font-bold text-foreground leading-tight">
@@ -190,17 +201,47 @@ export function SolutionSlide() {
         <span className="flex items-center gap-2"><Shield className="h-4 w-4 text-primary" /> <strong className="text-foreground">Builders (The Eagles)</strong> — Immutable trust scores</span>
       </div>
       <div className="mt-4 rounded-sm border border-primary/30 bg-primary/5 px-6 py-4 inline-block">
-        <p className="font-mono text-[22px] text-primary">
-          R = 0.40×GitHub + 0.25×Deps + 0.20×Gov + 0.15×TVL
+        <p className="font-mono text-[20px] text-primary">
+          R = (w<sub>G</sub>×GitHub + w<sub>D</sub>×Deps + w<sub>Gov</sub>×Gov + w<sub>TVL</sub>×TVL) × Continuity
         </p>
       </div>
-      <p className="mt-3 text-[14px] text-muted-foreground">Covers on-chain programs AND off-chain projects equally.</p>
-      <div className="mt-8 grid grid-cols-4 gap-6">
-        {dimensions.map(d => <div key={d.label} className="flex flex-col items-center gap-3 rounded-sm border border-border bg-card/40 p-6 text-center">
+      <p className="mt-2 text-[14px] text-muted-foreground italic">
+        Weights adapt to project category — no project is penalized for dimensions that don't apply.
+      </p>
+
+      {/* Weight profiles table */}
+      <div className="mt-4 overflow-hidden rounded-sm border border-border inline-block">
+        <Table>
+          <TableHeader>
+            <TableRow className="border-border bg-card/60">
+              <TableHead className="text-[12px] font-semibold">Category</TableHead>
+              <TableHead className="text-[12px] font-semibold text-center">GitHub</TableHead>
+              <TableHead className="text-[12px] font-semibold text-center">Deps</TableHead>
+              <TableHead className="text-[12px] font-semibold text-center">Gov</TableHead>
+              <TableHead className="text-[12px] font-semibold text-center">TVL</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {weightProfiles.map(p => (
+              <TableRow key={p.category} className="border-border">
+                <TableCell className="text-[12px] text-foreground font-medium py-1.5">{p.category}</TableCell>
+                <TableCell className="text-[12px] text-primary font-mono text-center py-1.5">{p.github}%</TableCell>
+                <TableCell className="text-[12px] text-primary font-mono text-center py-1.5">{p.deps}%</TableCell>
+                <TableCell className={`text-[12px] font-mono text-center py-1.5 ${p.gov === '—' ? 'text-muted-foreground/40' : 'text-primary'}`}>{p.gov === '—' ? '—' : `${p.gov}%`}</TableCell>
+                <TableCell className={`text-[12px] font-mono text-center py-1.5 ${p.tvl === '—' ? 'text-muted-foreground/40' : 'text-primary'}`}>{p.tvl === '—' ? '—' : `${p.tvl}%`}</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="mt-6 grid grid-cols-4 gap-6">
+        {dimensions.map(d => <div key={d.label} className="flex flex-col items-center gap-2 rounded-sm border border-border bg-card/40 p-5 text-center">
             <d.icon className={`h-10 w-10 ${d.color}`} />
-            <span className="text-[20px] font-semibold text-foreground">{d.label}</span>
-            <span className="font-mono text-[28px] font-bold text-primary">{d.weight}</span>
-            <span className="text-[14px] text-muted-foreground">{d.desc}</span>
+            <span className="text-[18px] font-semibold text-foreground">{d.label}</span>
+            <span className="font-mono text-[26px] font-bold text-primary">{d.weight}</span>
+            <span className="text-[11px] text-muted-foreground/70 font-mono">{d.range}</span>
+            <span className="text-[13px] text-muted-foreground">{d.desc}</span>
           </div>)}
       </div>
     </SlideLayout>;
@@ -212,32 +253,37 @@ export function HowItWorksSlide() {
     num: '01',
     icon: Database,
     title: 'INDEX',
-    desc: 'Automated multi-dimensional scoring of every registered Solana project — on-chain programs and off-chain tools alike. GitHub, dependencies, governance, and TVL analyzed continuously.'
+    desc: 'Automated multi-dimensional scoring of every registered Solana project. GitHub, dependencies, governance, and TVL analyzed continuously.'
   }, {
     num: '02',
     icon: ShieldCheck,
     title: 'VERIFY',
-    desc: 'On-chain: authority wallet SIWS for "Verified Titan" status. Off-chain: GitHub ownership proof for "Claimed" badge. Bytecode originality + dependency supply-chain health checks.'
+    desc: 'On-chain authority wallet SIWS for "Verified Titan" status. Off-chain GitHub ownership proof. Bytecode originality + dependency health checks.'
   }, {
     num: '03',
     icon: Lock,
     title: 'COMMIT',
-    desc: 'Economic commitment through staked assurance bonds. Builders put skin in the game via Commitment Locks — public milestone tracking with timeline variance alerts.'
+    desc: 'Economic commitment through staked assurance bonds. Public milestone tracking with Commitment Locks and timeline variance alerts.'
+  }, {
+    num: '04',
+    icon: AlertTriangle,
+    title: 'DETECT',
+    desc: 'AEGIS Supply Chain Intelligence — real-time dependency graph mapping, automated CVE detection, and cross-program risk propagation alerts across the ecosystem\'s nervous system.'
   }];
   return <SlideLayout>
       <Tag>HOW IT WORKS</Tag>
       <h2 className="mt-6 text-[52px] font-bold text-foreground leading-tight">
-        Three-Step Assurance Pipeline
+        Four-Step Assurance Pipeline
       </h2>
-      <div className="mt-10 grid grid-cols-3 gap-8">
-        {steps.map((s, i) => <div key={s.num} className="relative flex flex-col items-start rounded-sm border border-border bg-card/40 p-8">
-            <span className="font-mono text-[48px] font-bold text-primary/20">{s.num}</span>
+      <div className="mt-10 grid grid-cols-4 gap-5">
+        {steps.map((s, i) => <div key={s.num} className="relative flex flex-col items-start rounded-sm border border-border bg-card/40 p-6">
+            <span className="font-mono text-[42px] font-bold text-primary/20">{s.num}</span>
             <div className="mt-2 flex items-center gap-3">
               <s.icon className="h-6 w-6 text-primary" />
-              <h3 className="text-[22px] font-bold tracking-wider text-foreground">{s.title}</h3>
+              <h3 className="text-[20px] font-bold tracking-wider text-foreground">{s.title}</h3>
             </div>
-            <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">{s.desc}</p>
-            {i < 2 && <ArrowRight className="absolute -right-5 top-1/2 h-6 w-6 text-primary/40 hidden xl:block" />}
+            <p className="mt-3 text-[13px] leading-relaxed text-muted-foreground">{s.desc}</p>
+            {i < 3 && <ArrowRight className="absolute -right-4 top-1/2 h-5 w-5 text-primary/40 hidden xl:block" />}
           </div>)}
       </div>
     </SlideLayout>;
@@ -424,44 +470,44 @@ export function CompetitionSlide() {
 export function RoadmapSlide() {
   const phases = [{
     phase: '1',
-    title: 'Resilience Registry',
-    timeline: 'Months 1–1.5',
-    budget: '$30,000',
+    title: 'Production Hardening & On-Chain Migration',
+    timeline: 'Months 1–2',
+    budget: '$25,000',
     status: 'IN PROGRESS',
-    items: ['Multi-dimensional scoring engine', 'Builder claim & verification flow', 'Public explorer + heartbeat dashboard', 'Grants directory (public good)', 'Pre-chain data validation testing'],
+    items: ['Expert code review & security audit', 'Solana standards compliance', 'Anchor smart contract development', 'Score history on-chain migration', 'Production deployment & monitoring'],
     color: 'border-primary'
   }, {
     phase: '2',
     title: 'Economic Commitment Layer',
-    timeline: 'Months 2–4',
-    budget: '$20,000',
+    timeline: 'Months 3–5',
+    budget: '$15,000',
     status: 'PLANNED',
-    items: ['Commitment Lock staking', 'Yield mechanics for stakers', 'Bond marketplace', 'Builder incentive alignment'],
+    items: ['Staking bonds & yield mechanics', 'Commitment Locks', 'Bond marketplace', 'Staking contract security review'],
     color: 'border-muted-foreground/30'
   }, {
     phase: '3',
     title: 'Ecosystem Integration',
-    timeline: 'Months 5–8',
-    budget: '$15,000',
+    timeline: 'Months 6–8',
+    budget: '$12,000',
     status: 'PLANNED',
-    items: ['Score Oracle on-chain program', 'Protocol-gated access APIs', 'Partner integrations'],
+    items: ['Score Oracle on-chain program', 'Protocol-gated access APIs', 'Partner integrations & docs'],
     color: 'border-muted-foreground/30'
   }, {
     phase: '4',
     title: 'AEGIS Supply Chain',
     timeline: 'Months 9–12',
-    budget: '$10,000',
+    budget: '$23,000',
     status: 'PLANNED',
-    items: ['Real-time vulnerability alerts', 'Automated dependency auditing', 'Cross-program risk mapping'],
+    items: ['Real-time dependency graph mapping', 'Automated CVE propagation', 'Cross-program risk cascade modeling', 'Security engineering infrastructure'],
     color: 'border-muted-foreground/30'
   }];
 
   const phase1LineItems = [
-    'Senior Anchor Engineer (1 mo) — Review/refactor prototype, build on-chain program, optimize data pipeline, security + docs',
-    'Frontend Engineer (1.5 mo) — Decouple from Lovable, code review to meet standards, optimize frontend, docs',
-    'Infrastructure & DevOps (1 mo) — Production deployment, DB optimization, monitoring, RPC node setup',
-    'Web3 Strategist (Advisor, part-time) — Ecosystem positioning, partnerships, community engagement',
-    'QA, Security & Contingency — Testing, basic security review, unexpected costs buffer',
+    'Senior Anchor Engineer (1 mo) — Code review, on-chain program, security hardening',
+    'Frontend Engineer (1 mo) — Standards compliance, performance optimization, documentation',
+    'Infrastructure/DevOps (0.5 mo) — Production deployment, monitoring, RPC configuration',
+    'Security Audit & QA — End-to-end testing, vulnerability assessment',
+    'Contingency buffer (~10%)',
   ];
 
   return <SlideLayout>
@@ -478,7 +524,7 @@ export function RoadmapSlide() {
                 {p.status}
               </span>
             </div>
-            <h3 className="mt-2 text-[16px] font-semibold text-foreground">{p.title}</h3>
+            <h3 className="mt-2 text-[15px] font-semibold text-foreground leading-tight">{p.title}</h3>
             <p className="mt-1 font-mono text-[20px] font-bold text-primary">{p.budget}</p>
             <p className="text-[11px] text-muted-foreground">{p.timeline}</p>
             <ul className="mt-3 space-y-1.5 flex-1">
@@ -491,7 +537,7 @@ export function RoadmapSlide() {
       </div>
       {/* Phase 1 Line Items */}
       <div className="mt-4 rounded-sm border border-primary/20 bg-primary/5 p-4">
-        <p className="font-mono text-[11px] text-primary mb-2">PHASE 1 BUDGET BREAKDOWN — $30,000</p>
+        <p className="font-mono text-[11px] text-primary mb-2">PHASE 1 BUDGET BREAKDOWN — $25,000</p>
         <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
           {phase1LineItems.map(item => (
             <p key={item} className="text-[11px] text-muted-foreground flex items-start gap-2">
@@ -537,10 +583,10 @@ export function FounderSlide() {
 /* ─── SLIDE 11: THE ASK ─── */
 export function AskSlide() {
   const phasesSummary = [
-    { phase: 'Phase 1', name: 'Resilience Registry', timeline: 'Mo 1–1.5', amount: '$30,000', deliverable: 'On-chain program + production registry' },
-    { phase: 'Phase 2', name: 'Economic Layer', timeline: 'Mo 2–4', amount: '$20,000', deliverable: 'Staking bonds + yield mechanics' },
-    { phase: 'Phase 3', name: 'Ecosystem Integration', timeline: 'Mo 5–8', amount: '$15,000', deliverable: 'Score Oracle + partner APIs' },
-    { phase: 'Phase 4', name: 'AEGIS Supply Chain', timeline: 'Mo 9–12', amount: '$10,000', deliverable: 'Real-time vulnerability monitoring' },
+    { phase: 'Phase 1', name: 'Production Hardening', timeline: 'Mo 1–2', amount: '$25,000', deliverable: 'Code audit + on-chain migration' },
+    { phase: 'Phase 2', name: 'Economic Layer', timeline: 'Mo 3–5', amount: '$15,000', deliverable: 'Staking bonds + yield mechanics' },
+    { phase: 'Phase 3', name: 'Ecosystem Integration', timeline: 'Mo 6–8', amount: '$12,000', deliverable: 'Score Oracle + partner APIs' },
+    { phase: 'Phase 4', name: 'AEGIS Supply Chain', timeline: 'Mo 9–12', amount: '$23,000', deliverable: 'Dependency graph + CVE propagation' },
   ];
   return <SlideLayout className="items-center text-center">
       <Tag>THE ASK</Tag>
