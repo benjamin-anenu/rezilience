@@ -82,6 +82,13 @@ interface DBClaimedProfile {
   integrated_score: number | null;
   score_breakdown: Json | null;
   claim_status: string | null;
+  // Vulnerability & Security
+  vulnerability_count: number | null;
+  vulnerability_details: Json | null;
+  vulnerability_analyzed_at: string | null;
+  openssf_score: number | null;
+  openssf_checks: Json | null;
+  openssf_analyzed_at: string | null;
 }
 
 // Transform database format to frontend ClaimedProfile format
@@ -178,6 +185,13 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
     },
     integratedScore: db.integrated_score ?? db.resilience_score ?? 0,
     claimStatus: (db.claim_status as 'claimed' | 'unclaimed' | 'pending') || 'claimed',
+    // Vulnerability & Security
+    vulnerabilityCount: db.vulnerability_count ?? 0,
+    vulnerabilityDetails: (Array.isArray(db.vulnerability_details) ? db.vulnerability_details : []) as unknown as ClaimedProfile['vulnerabilityDetails'],
+    vulnerabilityAnalyzedAt: db.vulnerability_analyzed_at || undefined,
+    openssfScore: db.openssf_score ?? undefined,
+    openssfChecks: (db.openssf_checks && typeof db.openssf_checks === 'object' && !Array.isArray(db.openssf_checks)) ? db.openssf_checks as Record<string, unknown> : undefined,
+    openssfAnalyzedAt: db.openssf_analyzed_at || undefined,
   };
 }
 

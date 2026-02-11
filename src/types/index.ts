@@ -335,6 +335,13 @@ export interface ClaimedProfile {
   integratedScore?: number;
   scoreBreakdown?: ScoreBreakdown;
   claimStatus?: 'claimed' | 'unclaimed' | 'pending';
+  // Vulnerability & Security Posture
+  vulnerabilityCount?: number;
+  vulnerabilityDetails?: Array<{ id: string; summary?: string; severity?: string }>;
+  vulnerabilityAnalyzedAt?: string;
+  openssfScore?: number;
+  openssfChecks?: Record<string, unknown>;
+  openssfAnalyzedAt?: string;
 }
 
 // Form data for multi-step claim flow

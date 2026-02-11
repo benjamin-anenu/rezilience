@@ -227,6 +227,12 @@ const ProgramDetail = () => {
                     tvlAnalyzedAt={claimedProfile?.tvlMetrics?.tvl_analyzed_at}
                     protocolName={displayName}
                     category={claimedProfile?.category}
+                    vulnerabilityCount={claimedProfile?.vulnerabilityCount}
+                    vulnerabilityDetails={claimedProfile?.vulnerabilityDetails as any}
+                    vulnerabilityAnalyzedAt={claimedProfile?.vulnerabilityAnalyzedAt}
+                    openssfScore={claimedProfile?.openssfScore}
+                    openssfChecks={claimedProfile?.openssfChecks}
+                    openssfAnalyzedAt={claimedProfile?.openssfAnalyzedAt}
                   />
                 ),
                 team: (
