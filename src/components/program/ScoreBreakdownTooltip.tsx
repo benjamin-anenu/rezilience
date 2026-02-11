@@ -7,6 +7,8 @@ interface ScoreBreakdown {
   dependency: number;
   governance: number;
   tvl: number;
+  continuityDecay?: number;
+  baseScore?: number;
 }
 
 interface ScoreBreakdownTooltipProps {
@@ -121,10 +123,26 @@ export function ScoreBreakdownTooltip({
               />
             </div>
 
+            {/* Continuity Decay */}
+            {scores.continuityDecay !== undefined && scores.continuityDecay > 0 && (
+              <div>
+                <div className="mb-1 flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Continuity Decay</span>
+                  <span className="font-mono font-medium text-destructive">
+                    −{scores.continuityDecay}%
+                  </span>
+                </div>
+                <Progress 
+                  value={100 - scores.continuityDecay} 
+                  className="h-1.5 [&>div]:bg-destructive" 
+                />
+              </div>
+            )}
+
             {/* Formula explanation */}
             <div className="border-t border-border pt-2">
               <p className="text-[10px] text-muted-foreground/70">
-                R = 0.40×GitHub + 0.25×Deps + 0.20×Gov + 0.15×TVL
+                R = (0.40×G + 0.25×D + 0.20×Gov + 0.15×TVL) × Continuity
               </p>
             </div>
           </div>

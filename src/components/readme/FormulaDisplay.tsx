@@ -71,14 +71,15 @@ export function FormulaDisplay({
 export function IntegratedScoreFormula() {
   return (
     <FormulaDisplay
-      title="Integrated Resilience Score"
-      formula="R = 0.40×GitHub + 0.25×Deps + 0.20×Gov + 0.15×TVL"
+      title="Unified Resilience Score"
+      formula="R = (0.40×GitHub + 0.25×Deps + 0.20×Gov + 0.15×TVL) × Continuity"
       variables={[
         { symbol: 'R', description: 'Final Resilience Score (0-100)' },
         { symbol: 'GitHub', description: 'Code activity component (40% weight)' },
         { symbol: 'Deps', description: 'Dependency health component (25% weight)' },
         { symbol: 'Gov', description: 'Governance activity component (20% weight)' },
         { symbol: 'TVL', description: 'Economic health component (15% weight)' },
+        { symbol: 'Continuity', description: 'e^(−0.00167 × days_inactive) — decay penalty for inactivity' },
       ]}
     />
   );
