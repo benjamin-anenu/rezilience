@@ -19,6 +19,10 @@ import Readme from "./pages/Readme";
 import DependencyTree from "./pages/DependencyTree";
 import Grants from "./pages/Grants";
 import Library from "./pages/Library";
+import LibraryLearn from "./pages/LibraryLearn";
+import LibraryDictionary from "./pages/LibraryDictionary";
+import LibraryBlueprints from "./pages/LibraryBlueprints";
+import LibraryProtocols from "./pages/LibraryProtocols";
 import ProtocolDetail from "./pages/ProtocolDetail";
 import PitchDeck from "./pages/PitchDeck";
 import ResilienceGPT from "./pages/ResilienceGPT";
@@ -49,6 +53,11 @@ const App = () => (
               <Route path="/deps/:id" element={<DependencyTree />} />
               <Route path="/grants" element={<Grants />} />
               <Route path="/library" element={<Library />} />
+              <Route path="/library/learn" element={<LibraryLearn />} />
+              <Route path="/library/learn/:level" element={<LibraryLearn />} />
+              <Route path="/library/dictionary" element={<LibraryDictionary />} />
+              <Route path="/library/blueprints" element={<LibraryBlueprints />} />
+              <Route path="/library/protocols" element={<LibraryProtocols />} />
               <Route path="/library/:slug" element={<ProtocolDetail />} />
               <Route path="/pitch" element={<PitchDeck />} />
               <Route path="/gpt" element={<ResilienceGPT />} />

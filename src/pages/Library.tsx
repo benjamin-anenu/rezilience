@@ -1,91 +1,92 @@
-import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
-import { LibraryHero, ProtocolCard, CategoryGrid } from '@/components/library';
-import { protocols, getRecentlyUpdated, getProtocolsByCategory } from '@/data/protocols';
-import { BookOpen, ArrowRight } from 'lucide-react';
-import { Card, CardContent } from '@/components/ui/card';
+import { ExperienceSelector } from '@/components/library/ExperienceSelector';
+import { RoomCard } from '@/components/library/RoomCard';
+import { LibrarySearchBar } from '@/components/library/LibrarySearchBar';
+import { GraduationCap, BookA, Map, Search } from 'lucide-react';
+import { dictionary } from '@/data/dictionary';
+import { protocols } from '@/data/protocols';
+import type { ExperienceLevel } from '@/data/learning-paths';
 
-const learningPaths = [
-  { title: 'Your First Solana Program', description: 'Set up Anchor, write a counter program, deploy to devnet.', slugs: ['anchor', 'solana-web3js'] },
-  { title: 'Token Swap Integration', description: 'Add token swaps to your dApp with Jupiter aggregator.', slugs: ['jupiter', 'solana-web3js'] },
-  { title: 'NFT Minting', description: 'Create an NFT collection with Metaplex and Candy Machine.', slugs: ['metaplex', 'solana-web3js'] },
-  { title: 'Oracle Price Feeds', description: 'Integrate real-time price data from Pyth into your protocol.', slugs: ['pyth', 'solana-web3js'] },
+const rooms = [
+  {
+    to: '/library/learn',
+    icon: GraduationCap,
+    title: 'Guided Learning',
+    description: 'Curriculum-style modules adapted to your experience level. From first program to production architecture.',
+    count: '15 modules',
+  },
+  {
+    to: '/library/dictionary',
+    icon: BookA,
+    title: 'Solana Dictionary',
+    description: 'Every term, concept, and abbreviation in the Solana ecosystem — explained with examples.',
+    count: `${dictionary.length} terms`,
+  },
+  {
+    to: '/library/blueprints',
+    icon: Map,
+    title: 'Project Blueprints',
+    description: 'Interactive dependency maps for building wallets, DEXs, NFT marketplaces, and more.',
+    count: '5 blueprints',
+  },
+  {
+    to: '/library/protocols',
+    icon: Search,
+    title: 'Protocol Search',
+    description: 'Find the right protocol, understand when to use it, and integrate in minutes.',
+    count: `${protocols.length} protocols`,
+  },
 ];
 
 export default function Library() {
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const recentlyUpdated = useMemo(() => getRecentlyUpdated(5), []);
+  const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | null>(null);
 
-  const displayedProtocols = useMemo(() => {
-    if (selectedCategory) return getProtocolsByCategory(selectedCategory);
-    return protocols;
-  }, [selectedCategory]);
+  useEffect(() => {
+    const saved = localStorage.getItem('rez-experience-level');
+    if (saved) setSelectedLevel(saved as ExperienceLevel);
+  }, []);
+
+  const handleSelectLevel = (level: ExperienceLevel) => {
+    setSelectedLevel(level);
+    localStorage.setItem('rez-experience-level', level);
+  };
 
   return (
     <Layout>
       <section className="container mx-auto px-4 py-16 lg:px-8">
-        <LibraryHero />
+        {/* Hero */}
+        <div className="mb-12 max-w-3xl">
+          <p className="mb-3 font-mono text-xs uppercase tracking-widest text-primary">KNOWLEDGE CENTRE</p>
+          <h1 className="font-display text-4xl font-bold tracking-tight text-foreground lg:text-5xl">
+            THE REZILIENCE LIBRARY
+          </h1>
+          <p className="mt-4 text-lg text-muted-foreground">
+            The knowledge centre for Solana builders. Whether you wrote your first program yesterday or you've shipped three protocols — start here.
+          </p>
+        </div>
 
-        {/* Learning Paths */}
+        {/* Search */}
+        <div className="mb-16 max-w-2xl">
+          <LibrarySearchBar size="large" />
+        </div>
+
+        {/* Experience Selector */}
+        <div className="mb-16">
+          <h2 className="mb-2 font-display text-xl font-bold text-foreground">Where are you on your Solana journey?</h2>
+          <p className="mb-6 text-sm text-muted-foreground">Choose your level to unlock tailored learning content.</p>
+          <ExperienceSelector selected={selectedLevel} onSelect={handleSelectLevel} />
+        </div>
+
+        {/* Four Rooms */}
         <div className="mb-12">
-          <h2 className="mb-4 font-display text-xl font-bold text-foreground">Popular Learning Paths</h2>
+          <h2 className="mb-6 font-display text-xl font-bold text-foreground">Explore the Library</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {learningPaths.map((path) => (
-              <Link key={path.title} to={`/library/${path.slugs[0]}`}>
-                <Card className="h-full border-border bg-card transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30">
-                  <CardContent className="flex flex-col gap-2 p-4">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-sm bg-primary/10">
-                      <BookOpen className="h-4 w-4 text-primary" />
-                    </div>
-                    <h3 className="font-display text-sm font-semibold text-foreground">{path.title}</h3>
-                    <p className="text-xs text-muted-foreground">{path.description}</p>
-                    <span className="mt-auto flex items-center gap-1 text-xs text-primary">
-                      Start <ArrowRight className="h-3 w-3" />
-                    </span>
-                  </CardContent>
-                </Card>
-              </Link>
+            {rooms.map((room, i) => (
+              <RoomCard key={room.to} {...room} index={i} />
             ))}
           </div>
         </div>
-
-        {/* Category Filter */}
-        <div className="mb-8">
-          <h2 className="mb-4 font-display text-xl font-bold text-foreground">Browse by Category</h2>
-          <CategoryGrid selectedCategory={selectedCategory} onSelect={setSelectedCategory} />
-        </div>
-
-        {/* Protocol Grid */}
-        <div className="mb-12">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-display text-xl font-bold text-foreground">
-              {selectedCategory ? `${selectedCategory === 'defi' ? 'DeFi' : selectedCategory.charAt(0).toUpperCase() + selectedCategory.slice(1)} Protocols` : 'Core Infrastructure'}
-            </h2>
-            {selectedCategory && (
-              <button onClick={() => setSelectedCategory(null)} className="text-xs text-primary hover:underline">
-                Show all
-              </button>
-            )}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {displayedProtocols.map((p) => (
-              <ProtocolCard key={p.id} protocol={p} />
-            ))}
-          </div>
-        </div>
-
-        {/* Recently Updated */}
-        {!selectedCategory && (
-          <div>
-            <h2 className="mb-4 font-display text-xl font-bold text-foreground">Recently Updated</h2>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {recentlyUpdated.map((p) => (
-                <ProtocolCard key={p.id} protocol={p} />
-              ))}
-            </div>
-          </div>
-        )}
       </section>
     </Layout>
   );
