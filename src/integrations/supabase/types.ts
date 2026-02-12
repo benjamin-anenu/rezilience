@@ -552,6 +552,41 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_secrets: {
+        Row: {
+          created_at: string
+          github_access_token: string | null
+          github_token_scope: string | null
+          id: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          github_access_token?: string | null
+          github_token_scope?: string | null
+          id?: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          github_access_token?: string | null
+          github_token_scope?: string | null
+          id?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_secrets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "claimed_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_subscribers: {
         Row: {
           email: string

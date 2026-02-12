@@ -46,13 +46,22 @@ function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
   return { owner: match[1], repo: match[2].replace(/\.git$/, "") };
 }
 
-// Fetch stored GitHub token for a project from claimed_profiles
+// Fetch stored GitHub token for a project from profile_secrets
 async function getStoredGitHubToken(supabase: ReturnType<typeof createClient>, projectId: string): Promise<string | null> {
-  const { data } = await supabase
+  // First get the profile id for this project
+  const { data: profile } = await supabase
     .from("claimed_profiles")
-    .select("github_access_token")
+    .select("id")
     .eq("project_id", projectId)
     .eq("verified", true)
+    .maybeSingle();
+  
+  if (!profile?.id) return null;
+
+  const { data } = await supabase
+    .from("profile_secrets")
+    .select("github_access_token")
+    .eq("profile_id", profile.id)
     .maybeSingle();
   
   return data?.github_access_token || null;
