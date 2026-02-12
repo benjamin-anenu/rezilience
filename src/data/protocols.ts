@@ -703,6 +703,649 @@ const { transaction } = await marinade.deposit(
     ],
     keywords: ['staking', 'liquid', 'msol', 'yield', 'defi', 'stake', 'delegate', 'validator'],
   },
+  {
+    id: 'orca',
+    slug: 'orca',
+    name: 'Orca',
+    category: 'defi',
+    tier: 2,
+    description: 'Leading concentrated liquidity DEX on Solana. Whirlpools provide capital-efficient trading with tight spreads.',
+    status: 'Active',
+    lastUpdated: '2025-01-22',
+    links: {
+      official: 'https://www.orca.so',
+      docs: 'https://docs.orca.so',
+      github: 'https://github.com/orca-so',
+      discord: 'https://discord.gg/nSwGWn5KSG',
+      twitter: 'https://twitter.com/orca_so',
+    },
+    quickFacts: {
+      useCase: 'Capital-efficient token swaps and concentrated liquidity provision',
+      maturity: 'Production',
+      maintainer: 'Orca Team',
+      license: 'Apache-2.0',
+    },
+    integrationDifficulty: 'Medium',
+    estimatedIntegrationTime: '1-3 hours',
+    installCommands: ['npm install @orca-so/whirlpools-sdk @orca-so/common-sdk'],
+    codeExample: `import { WhirlpoolContext, buildWhirlpoolClient, ORCA_WHIRLPOOL_PROGRAM_ID } from '@orca-so/whirlpools-sdk';
+import { Connection } from '@solana/web3.js';
+
+const connection = new Connection('https://api.mainnet-beta.solana.com');
+const ctx = WhirlpoolContext.from(connection, wallet, ORCA_WHIRLPOOL_PROGRAM_ID);
+const client = buildWhirlpoolClient(ctx);
+
+// Fetch a whirlpool
+const poolAddress = 'POOL_ADDRESS';
+const whirlpool = await client.getPool(poolAddress);
+const data = whirlpool.getData();
+
+console.log('Current price:', data.sqrtPrice);`,
+    commonIssues: [
+      {
+        problem: 'Whirlpool SDK version mismatch',
+        solution: 'Ensure @orca-so/whirlpools-sdk and @orca-so/common-sdk versions are compatible. Check the Orca GitHub releases for matching versions.',
+      },
+      {
+        problem: 'Position out of range',
+        solution: 'Concentrated liquidity positions only earn fees when the price is within your range. Monitor positions and rebalance as needed.',
+      },
+    ],
+    whenToUse: [
+      'Building concentrated liquidity integrations',
+      'Need direct Whirlpool pool interaction',
+      'Creating LP management dashboards',
+      'Want capital-efficient liquidity provision',
+    ],
+    whenNotToUse: [
+      'Simple token swaps (use Jupiter for routing)',
+      'Need cross-DEX aggregation',
+      'Building on non-Solana chains',
+    ],
+    keywords: ['dex', 'clmm', 'whirlpool', 'liquidity', 'swap', 'concentrated', 'orca', 'lp'],
+  },
+  {
+    id: 'drift',
+    slug: 'drift',
+    name: 'Drift Protocol',
+    category: 'defi',
+    tier: 2,
+    description: 'Decentralized perpetuals and spot exchange on Solana. Supports up to 10x leverage with cross-margin and insurance fund.',
+    status: 'Active',
+    lastUpdated: '2025-01-18',
+    links: {
+      official: 'https://www.drift.trade',
+      docs: 'https://docs.drift.trade',
+      github: 'https://github.com/drift-labs',
+      discord: 'https://discord.gg/driftprotocol',
+      twitter: 'https://twitter.com/DriftProtocol',
+    },
+    quickFacts: {
+      useCase: 'Perpetual futures and spot trading with leverage on Solana',
+      maturity: 'Production',
+      maintainer: 'Drift Labs',
+      license: 'Apache-2.0',
+    },
+    integrationDifficulty: 'Advanced',
+    estimatedIntegrationTime: '4-8 hours',
+    installCommands: ['npm install @drift-labs/sdk'],
+    codeExample: `import { DriftClient, initialize } from '@drift-labs/sdk';
+import { Connection, Keypair } from '@solana/web3.js';
+
+const connection = new Connection('https://api.mainnet-beta.solana.com');
+const wallet = { publicKey: Keypair.generate().publicKey };
+
+const sdkConfig = initialize({ env: 'mainnet-beta' });
+const driftClient = new DriftClient({
+  connection,
+  wallet,
+  programID: sdkConfig.DRIFT_PROGRAM_ID,
+});
+
+await driftClient.subscribe();
+const markets = driftClient.getPerpMarketAccounts();
+console.log('Perp markets:', markets.length);`,
+    commonIssues: [
+      {
+        problem: 'SDK subscription timeout',
+        solution: 'Use a dedicated RPC with websocket support (Helius, Triton). The public endpoint often drops websocket connections.',
+      },
+      {
+        problem: 'Insufficient collateral error',
+        solution: 'Ensure the user account has deposited USDC as collateral before opening positions. Use getUser().getTotalCollateral() to check.',
+      },
+    ],
+    whenToUse: [
+      'Building perpetual trading interfaces',
+      'Need leveraged trading capabilities',
+      'Creating portfolio margin systems',
+      'Building trading bots on Solana',
+    ],
+    whenNotToUse: [
+      'Simple spot token swaps (use Jupiter)',
+      'Non-trading applications',
+      'Need options trading (use different protocol)',
+    ],
+    keywords: ['perpetuals', 'perps', 'leverage', 'trading', 'futures', 'margin', 'drift', 'dex'],
+  },
+  {
+    id: 'marginfi',
+    slug: 'marginfi',
+    name: 'Marginfi',
+    category: 'defi',
+    tier: 2,
+    description: 'Decentralized lending and borrowing protocol on Solana. Deposit assets to earn yield or borrow against collateral.',
+    status: 'Active',
+    lastUpdated: '2025-01-14',
+    links: {
+      official: 'https://www.marginfi.com',
+      docs: 'https://docs.marginfi.com',
+      github: 'https://github.com/mrgnlabs',
+      discord: 'https://discord.gg/marginfi',
+      twitter: 'https://twitter.com/marginaborfi',
+    },
+    quickFacts: {
+      useCase: 'Lending, borrowing, and earning yield on deposited Solana assets',
+      maturity: 'Production',
+      maintainer: 'mrgn labs',
+      license: 'Apache-2.0',
+    },
+    integrationDifficulty: 'Medium',
+    estimatedIntegrationTime: '2-4 hours',
+    installCommands: ['npm install @mrgnlabs/marginfi-client-v2'],
+    codeExample: `import { MarginfiClient, getConfig } from '@mrgnlabs/marginfi-client-v2';
+import { Connection } from '@solana/web3.js';
+
+const connection = new Connection('https://api.mainnet-beta.solana.com');
+const config = getConfig('production');
+
+const client = await MarginfiClient.fetch(config, wallet, connection);
+
+// Get all available banks (lending pools)
+const banks = client.banks;
+for (const [address, bank] of banks) {
+  console.log(bank.label, 'APY:', bank.computeInterestRates());
+}`,
+    commonIssues: [
+      {
+        problem: 'Account not initialized',
+        solution: 'Users need to create a marginfi account first via client.createMarginfiAccount() before depositing or borrowing.',
+      },
+      {
+        problem: 'Borrow capacity exceeded',
+        solution: 'Check the health factor and available borrow capacity. Use account.computeHealthComponents() to verify before borrowing.',
+      },
+    ],
+    whenToUse: [
+      'Building lending/borrowing interfaces',
+      'Need yield generation for deposited assets',
+      'Creating leverage strategies via borrow loops',
+      'Portfolio apps showing lending positions',
+    ],
+    whenNotToUse: [
+      'Simple token transfers',
+      'Need perpetual futures (use Drift)',
+      'Cross-chain lending',
+    ],
+    keywords: ['lending', 'borrowing', 'yield', 'defi', 'collateral', 'interest', 'marginfi', 'loan'],
+  },
+  {
+    id: 'switchboard',
+    slug: 'switchboard',
+    name: 'Switchboard',
+    category: 'infrastructure',
+    tier: 2,
+    description: 'Decentralized oracle network for Solana. Provides customizable data feeds, VRF (verifiable random functions), and serverless functions.',
+    status: 'Active',
+    lastUpdated: '2025-01-20',
+    links: {
+      official: 'https://switchboard.xyz',
+      docs: 'https://docs.switchboard.xyz',
+      github: 'https://github.com/switchboard-xyz',
+      discord: 'https://discord.gg/switchboardxyz',
+      twitter: 'https://twitter.com/switchboardxyz',
+    },
+    quickFacts: {
+      useCase: 'Custom oracle data feeds, VRF for randomness, and serverless compute on-chain',
+      maturity: 'Production',
+      maintainer: 'Switchboard Labs',
+      license: 'MIT',
+    },
+    integrationDifficulty: 'Medium',
+    estimatedIntegrationTime: '2-3 hours',
+    installCommands: ['npm install @switchboard-xyz/solana.js'],
+    codeExample: `import { SwitchboardProgram, AggregatorAccount } from '@switchboard-xyz/solana.js';
+import { Connection, PublicKey } from '@solana/web3.js';
+
+const connection = new Connection('https://api.mainnet-beta.solana.com');
+const program = await SwitchboardProgram.load('mainnet-beta', connection);
+
+// Read a data feed
+const aggregatorPubkey = new PublicKey('FEED_ADDRESS');
+const aggregator = new AggregatorAccount(program, aggregatorPubkey);
+
+const result = await aggregator.fetchLatestValue();
+console.log('Feed value:', result?.toNumber());`,
+    commonIssues: [
+      {
+        problem: 'Feed returns stale data',
+        solution: 'Check the aggregator minUpdateDelaySeconds config. Some feeds update infrequently. Use Switchboard Explorer to verify feed freshness.',
+      },
+      {
+        problem: 'VRF callback not executing',
+        solution: 'Ensure your program has the VRF callback handler properly implemented and the VRF account is funded with enough SOL for compute.',
+      },
+    ],
+    whenToUse: [
+      'Need custom oracle data feeds beyond crypto prices',
+      'Require verifiable on-chain randomness (VRF)',
+      'Building protocols that need off-chain data',
+      'Want an alternative to Pyth for specific data',
+    ],
+    whenNotToUse: [
+      'Only need standard crypto price feeds (Pyth is simpler)',
+      'Client-side data fetching only',
+      'Non-blockchain applications',
+    ],
+    keywords: ['oracle', 'vrf', 'randomness', 'data feed', 'switchboard', 'off-chain', 'compute'],
+  },
+  {
+    id: 'sablier',
+    slug: 'sablier',
+    name: 'Sablier (formerly Clockwork)',
+    category: 'infrastructure',
+    tier: 2,
+    description: 'On-chain automation for Solana. Schedule cron jobs, recurring transactions, and time-based triggers directly on the blockchain.',
+    status: 'Active',
+    lastUpdated: '2024-12-15',
+    links: {
+      official: 'https://sablier.com',
+      docs: 'https://docs.sablier.com',
+      github: 'https://github.com/sablier-labs',
+      twitter: 'https://twitter.com/Sablier_Labs',
+    },
+    quickFacts: {
+      useCase: 'Scheduling automated on-chain transactions and cron-like jobs on Solana',
+      maturity: 'Beta',
+      maintainer: 'Sablier Labs',
+      license: 'AGPL-3.0',
+    },
+    integrationDifficulty: 'Advanced',
+    estimatedIntegrationTime: '3-6 hours',
+    installCommands: ['npm install @sablier/sdk'],
+    codeExample: `// Sablier thread creation (conceptual)
+import { Connection, PublicKey } from '@solana/web3.js';
+
+// Create an automation thread
+// Threads execute your instruction at specified intervals
+const thread = {
+  authority: wallet.publicKey,
+  trigger: { cron: { schedule: '0 */6 * * *' } }, // Every 6 hours
+  instructions: [
+    // Your instruction to execute automatically
+  ],
+};
+
+console.log('Thread created for recurring execution');`,
+    commonIssues: [
+      {
+        problem: 'Thread not executing on schedule',
+        solution: 'Ensure the thread account has enough SOL to pay for execution fees. Each execution costs a small amount of SOL.',
+      },
+      {
+        problem: 'Migration from Clockwork to Sablier',
+        solution: 'Sablier is the successor to Clockwork. Check the migration guide for updated APIs and program IDs.',
+      },
+    ],
+    whenToUse: [
+      'Need recurring on-chain transactions',
+      'Building automated DeFi strategies (auto-compound, rebalance)',
+      'Scheduling governance proposal execution',
+      'Time-based unlock or vesting schedules',
+    ],
+    whenNotToUse: [
+      'One-time transactions (just send them directly)',
+      'Off-chain automation (use traditional cron jobs)',
+      'High-frequency operations (block time limits apply)',
+    ],
+    keywords: ['automation', 'cron', 'scheduler', 'clockwork', 'sablier', 'thread', 'recurring'],
+  },
+  {
+    id: 'tensor',
+    slug: 'tensor',
+    name: 'Tensor',
+    category: 'nfts',
+    tier: 2,
+    description: 'Professional NFT trading platform on Solana. Provides real-time analytics, AMM-based NFT liquidity, and advanced trading tools.',
+    status: 'Active',
+    lastUpdated: '2025-01-28',
+    links: {
+      official: 'https://www.tensor.trade',
+      docs: 'https://docs.tensor.trade',
+      github: 'https://github.com/tensor-hq',
+      discord: 'https://discord.gg/tensor',
+      twitter: 'https://twitter.com/tensor_hq',
+    },
+    quickFacts: {
+      useCase: 'NFT trading, analytics, and AMM-based liquidity for NFT collections',
+      maturity: 'Production',
+      maintainer: 'Tensor Foundation',
+      license: 'Proprietary',
+    },
+    integrationDifficulty: 'Medium',
+    estimatedIntegrationTime: '2-4 hours',
+    installCommands: ['npm install @tensor-oss/tensorswap-sdk'],
+    codeExample: `import { TensorSwapSDK } from '@tensor-oss/tensorswap-sdk';
+import { Connection } from '@solana/web3.js';
+
+const connection = new Connection('https://api.mainnet-beta.solana.com');
+
+const sdk = new TensorSwapSDK({ provider: { connection } });
+
+// Fetch active listings for a collection
+// Use Tensor API for collection-level data
+const response = await fetch('https://api.tensor.so/graphql', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    query: \`{ activeListings(slug: "mad_lads") { mint price } }\`,
+  }),
+});
+
+console.log('Listings:', await response.json());`,
+    commonIssues: [
+      {
+        problem: 'API rate limiting',
+        solution: 'Tensor API has rate limits for free usage. Cache responses and implement backoff. Contact Tensor for higher limits.',
+      },
+      {
+        problem: 'TensorSwap SDK initialization',
+        solution: 'The SDK requires a valid Anchor provider. Use AnchorProvider.env() or construct one with your connection and wallet.',
+      },
+    ],
+    whenToUse: [
+      'Building NFT trading interfaces',
+      'Need floor price and collection analytics',
+      'Creating NFT portfolio trackers',
+      'Want AMM-based NFT liquidity',
+    ],
+    whenNotToUse: [
+      'Minting new NFTs (use Metaplex)',
+      'Fungible token trading',
+      'Need cross-chain NFT support',
+    ],
+    keywords: ['nft', 'trading', 'marketplace', 'analytics', 'tensor', 'floor price', 'collection'],
+  },
+  {
+    id: 'solana-playground',
+    slug: 'solana-playground',
+    name: 'Solana Playground',
+    category: 'developer-tools',
+    tier: 2,
+    description: 'Browser-based IDE for writing, building, testing, and deploying Solana programs. No local setup required.',
+    status: 'Active',
+    lastUpdated: '2025-01-25',
+    links: {
+      official: 'https://beta.solpg.io',
+      docs: 'https://docs.solpg.io',
+      github: 'https://github.com/nicholasgasior/solana-playground',
+      twitter: 'https://twitter.com/nicholasgasor',
+    },
+    quickFacts: {
+      useCase: 'Rapid prototyping and learning Solana program development in the browser',
+      maturity: 'Production',
+      maintainer: 'acheron (community)',
+      license: 'GPL-3.0',
+    },
+    integrationDifficulty: 'Easy',
+    estimatedIntegrationTime: '< 5 min',
+    installCommands: ['# No installation needed — open https://beta.solpg.io in your browser'],
+    codeExample: `// In Solana Playground (beta.solpg.io):
+// 1. Click "New Project" → Select "Anchor"
+// 2. Write your program in lib.rs:
+
+use anchor_lang::prelude::*;
+
+declare_id!("11111111111111111111111111111111");
+
+#[program]
+pub mod hello {
+    use super::*;
+
+    pub fn say_hello(ctx: Context<SayHello>) -> Result<()> {
+        msg!("Hello, Solana!");
+        Ok(())
+    }
+}
+
+#[derive(Accounts)]
+pub struct SayHello {}
+
+// 3. Click "Build" → "Deploy" → "Test"`,
+    commonIssues: [
+      {
+        problem: 'Deploy fails with insufficient SOL',
+        solution: 'Click the wallet icon in Playground and airdrop devnet SOL. Each deploy costs ~2-3 SOL on devnet.',
+      },
+      {
+        problem: 'Build takes too long',
+        solution: 'Solana Playground builds on remote servers. During peak times, builds may queue. Refresh and retry if it stalls over 2 minutes.',
+      },
+    ],
+    whenToUse: [
+      'Learning Solana development for the first time',
+      'Quick prototyping without local setup',
+      'Teaching workshops or demos',
+      'Testing small program changes rapidly',
+    ],
+    whenNotToUse: [
+      'Production program development (use local Anchor setup)',
+      'Large multi-file projects',
+      'Need custom toolchain or dependencies',
+    ],
+    keywords: ['ide', 'browser', 'playground', 'prototyping', 'learn', 'deploy', 'devnet', 'beginner'],
+  },
+  {
+    id: 'seahorse',
+    slug: 'seahorse',
+    name: 'Seahorse',
+    category: 'developer-tools',
+    tier: 2,
+    description: 'Write Solana programs in Python that compile to Anchor Rust. Lowers the barrier for Python developers entering Solana.',
+    status: 'Maintained',
+    lastUpdated: '2024-11-20',
+    links: {
+      official: 'https://seahorse-lang.org',
+      docs: 'https://seahorse-lang.org/docs',
+      github: 'https://github.com/ameliatastic/seahorse-lang',
+      twitter: 'https://twitter.com/seahaborselang',
+    },
+    quickFacts: {
+      useCase: 'Writing Solana programs in Python syntax for developers unfamiliar with Rust',
+      maturity: 'Beta',
+      maintainer: 'ameliatastic (community)',
+      license: 'MIT',
+    },
+    integrationDifficulty: 'Medium',
+    estimatedIntegrationTime: '1-2 hours',
+    installCommands: [
+      'pip install seahorse-lang',
+      'seahorse init my_project',
+    ],
+    codeExample: `# programs_py/counter.py
+from seahorse.prelude import *
+
+declare_id('11111111111111111111111111111111')
+
+class Counter(Account):
+    count: u64
+
+@instruction
+def initialize(counter: Empty[Counter], signer: Signer):
+    counter = counter.init(payer=signer, seeds=[])
+    counter.count = 0
+
+@instruction
+def increment(counter: Counter):
+    counter.count += 1
+
+# Compiles to Anchor Rust automatically!`,
+    commonIssues: [
+      {
+        problem: 'Seahorse not compiling to valid Rust',
+        solution: 'Seahorse supports a subset of Python. Avoid advanced Python features (generators, decorators beyond @instruction). Check supported types in docs.',
+      },
+      {
+        problem: 'Missing Anchor features',
+        solution: 'Some Anchor features (custom errors, events) have limited Seahorse support. For complex programs, write the Rust directly.',
+      },
+    ],
+    whenToUse: [
+      'Python developers learning Solana',
+      'Rapid prototyping before writing Rust',
+      'Educational settings teaching blockchain concepts',
+      'Simple programs that fit within Seahorse\'s feature set',
+    ],
+    whenNotToUse: [
+      'Production programs (use Anchor directly for full control)',
+      'Complex programs with advanced Rust features',
+      'Need latest Anchor features immediately',
+    ],
+    keywords: ['python', 'seahorse', 'compile', 'anchor', 'beginner', 'learn', 'transpile'],
+  },
+  {
+    id: 'bankrun',
+    slug: 'bankrun',
+    name: 'Bankrun',
+    category: 'developer-tools',
+    tier: 2,
+    description: 'Blazing-fast Solana program testing framework. Runs a lightweight BanksServer instead of a full validator for instant test execution.',
+    status: 'Active',
+    lastUpdated: '2025-01-10',
+    links: {
+      official: 'https://github.com/kevinheavey/solana-bankrun',
+      docs: 'https://kevinheavey.github.io/solana-bankrun',
+      github: 'https://github.com/kevinheavey/solana-bankrun',
+      twitter: 'https://twitter.com/kevinheavey',
+    },
+    quickFacts: {
+      useCase: 'Fast unit and integration testing for Solana programs without a full validator',
+      maturity: 'Production',
+      maintainer: 'Kevin Heavey (community)',
+      license: 'MIT',
+    },
+    integrationDifficulty: 'Easy',
+    estimatedIntegrationTime: '< 30 min',
+    installCommands: ['npm install solana-bankrun'],
+    codeExample: `import { start } from 'solana-bankrun';
+import { PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
+
+// Start a lightweight test environment
+const context = await start([], []);
+const client = context.banksClient;
+const payer = context.payer;
+
+// Create and send a transaction
+const tx = new Transaction().add(
+  SystemProgram.transfer({
+    fromPubkey: payer.publicKey,
+    toPubkey: new PublicKey('11111111111111111111111111111111'),
+    lamports: 1_000_000,
+  })
+);
+
+tx.recentBlockhash = context.lastBlockhash;
+tx.sign(payer);
+await client.processTransaction(tx);
+
+console.log('Transaction processed instantly!');`,
+    commonIssues: [
+      {
+        problem: 'Program not found in test context',
+        solution: 'Load your program BPF file in the start() call: start([{ name: "my_program", programId: MY_PROGRAM_ID }], []).',
+      },
+      {
+        problem: 'Clock not advancing',
+        solution: 'Use context.warpToSlot() or context.warpToEpoch() to simulate time progression in tests.',
+      },
+    ],
+    whenToUse: [
+      'Unit testing Solana programs (10-100x faster than solana-test-validator)',
+      'CI/CD pipelines needing fast test execution',
+      'Testing account state changes and transactions',
+      'Programs with time-dependent logic (warp slots)',
+    ],
+    whenNotToUse: [
+      'Testing RPC-specific behavior',
+      'Need full validator features (gossip, voting)',
+      'Integration tests with external services',
+    ],
+    keywords: ['testing', 'bankrun', 'fast', 'unit test', 'ci', 'validator', 'banks', 'mock'],
+  },
+  {
+    id: 'solflare',
+    slug: 'solflare',
+    name: 'Solflare',
+    category: 'wallets',
+    tier: 2,
+    description: 'Multi-platform Solana wallet with built-in staking, swaps, and NFT management. Available as browser extension, mobile, and web app.',
+    status: 'Active',
+    lastUpdated: '2025-01-30',
+    links: {
+      official: 'https://solflare.com',
+      docs: 'https://docs.solflare.com',
+      github: 'https://github.com/nicholasgasior/solflare-wallet',
+      twitter: 'https://twitter.com/solflare_wallet',
+    },
+    quickFacts: {
+      useCase: 'Alternative wallet connection for Solana dApps with built-in staking and portfolio features',
+      maturity: 'Production',
+      maintainer: 'Solflare Team',
+      license: 'Proprietary',
+    },
+    integrationDifficulty: 'Easy',
+    estimatedIntegrationTime: '< 15 min',
+    installCommands: [
+      'npm install @solana/wallet-adapter-react @solana/wallet-adapter-wallets',
+    ],
+    codeExample: `import { SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
+
+// Add Solflare to your wallet list
+const wallets = [
+  new SolflareWalletAdapter(),
+  // ... other wallets
+];
+
+// Use with WalletProvider (same as Phantom)
+// <WalletProvider wallets={wallets}>
+//   <WalletMultiButton />
+// </WalletProvider>
+
+// Solflare also supports Solana Mobile Stack
+// for in-app wallet on mobile devices`,
+    commonIssues: [
+      {
+        problem: 'Solflare not appearing in wallet list',
+        solution: 'Import SolflareWalletAdapter from @solana/wallet-adapter-wallets and add it to the wallets array in your WalletProvider.',
+      },
+      {
+        problem: 'Mobile deep linking issues',
+        solution: 'For mobile dApps, use the Solana Mobile Wallet Adapter standard. Solflare supports the MWA protocol for native mobile connections.',
+      },
+    ],
+    whenToUse: [
+      'Want to support multiple wallets beyond Phantom',
+      'Users prefer built-in staking in their wallet',
+      'Building mobile-first Solana apps',
+      'Need hardware wallet support (Ledger via Solflare)',
+    ],
+    whenNotToUse: [
+      'Only targeting Phantom users',
+      'Server-side applications',
+      'Automated transaction signing',
+    ],
+    keywords: ['wallet', 'solflare', 'staking', 'mobile', 'extension', 'connect', 'multi-platform'],
+  },
 ];
 
 export function getProtocolBySlug(slug: string): Protocol | undefined {
