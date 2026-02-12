@@ -20,7 +20,7 @@ function GrantCard({ grant }: { grant: SolanaGrant }) {
   const status = statusConfig[grant.status] || statusConfig.Open;
 
   return (
-    <div className="group flex h-full flex-col rounded-sm border border-primary/30 bg-transparent transition-all duration-300 card-lift hover:border-primary/60">
+    <div className="group relative flex h-full flex-col overflow-hidden rounded-sm border border-primary/30 bg-transparent transition-all duration-300 card-lift hover:border-primary/60">
       {/* Header strip */}
       <div className="border-b border-primary/20 px-5 py-4">
         <div className="flex items-start justify-between gap-3">
@@ -90,6 +90,13 @@ function GrantCard({ grant }: { grant: SolanaGrant }) {
           </Button>
         </div>
       </div>
+
+      {/* Watermark logo */}
+      <img
+        src={grant.logoUrl}
+        alt=""
+        className="pointer-events-none absolute bottom-3 right-3 h-16 w-16 select-none object-contain opacity-[0.08] grayscale"
+      />
     </div>
   );
 }

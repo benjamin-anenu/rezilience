@@ -9,6 +9,7 @@ export interface SolanaGrant {
   applyUrl: string;
   learnMoreUrl: string;
   criteriaHighlights: string[];
+  logoUrl: string;
 }
 
 export const lastUpdated = '2025-02-10';
@@ -33,6 +34,7 @@ export const solanaGrants: SolanaGrant[] = [
       'Alignment with Solana ecosystem needs',
       'Milestone-based delivery plan',
     ],
+    logoUrl: 'https://solana.org/favicon.ico',
   },
   {
     name: 'Solana Foundation RFPs',
@@ -51,6 +53,7 @@ export const solanaGrants: SolanaGrant[] = [
       'Detailed implementation timeline',
       'Prior contributions to Solana or comparable ecosystems',
     ],
+    logoUrl: 'https://solana.org/favicon.ico',
   },
   {
     name: 'Superteam Instagrants',
@@ -69,6 +72,7 @@ export const solanaGrants: SolanaGrant[] = [
       'Active engagement with a regional Superteam chapter',
       'Existing portfolio or track record of contributions',
     ],
+    logoUrl: 'https://superteam.fun/favicon.ico',
   },
   {
     name: 'Colosseum Hackathons & Accelerator',
@@ -88,6 +92,7 @@ export const solanaGrants: SolanaGrant[] = [
       'Viable go-to-market strategy',
       'Willingness to participate in accelerator program',
     ],
+    logoUrl: 'https://www.colosseum.org/favicon.ico',
   },
   {
     name: 'Marinade Ecosystem Grants',
@@ -106,6 +111,7 @@ export const solanaGrants: SolanaGrant[] = [
       'Open-source commitment',
       'Clear integration timeline and milestones',
     ],
+    logoUrl: 'https://marinade.finance/favicon.ico',
   },
   {
     name: 'Jupiter Ecosystem Grants',
@@ -124,6 +130,7 @@ export const solanaGrants: SolanaGrant[] = [
       'Community benefit and open-source approach',
       'Technical depth and team capability',
     ],
+    logoUrl: 'https://www.jup.ag/favicon.ico',
   },
   {
     name: 'Solana Microgrants (via Merge Club)',
@@ -142,6 +149,7 @@ export const solanaGrants: SolanaGrant[] = [
       'Realistic timeline (typically weeks, not months)',
       'Prior work or portfolio demonstrating capability',
     ],
+    logoUrl: 'https://merge.club/favicon.ico',
   },
 ];
 
