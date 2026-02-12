@@ -1,82 +1,83 @@
 
 
-# Update README.md — Professional, Platform-Agnostic Documentation
+# Enhance README with Dependencies, Contributing Guide, and Standard Sections
 
 ## Overview
-Replace the current boilerplate README with a professional README that accurately describes Rezilience as a product, its tech stack, features, and standard deployment instructions (not tied to any specific hosting platform).
+Expand the existing README.md with industry-standard sections that were missing: a key dependencies table, contributing guidelines, security policy, roadmap overview, and acknowledgments.
 
-## What the new README will include
+## What will be added
 
-### 1. Project Identity
-- **Name**: Rezilience
-- **Tagline**: "The Assurance Layer of Solana"
-- **One-paragraph description**: A developer tooling platform that provides transparent, verifiable project health scoring for the Solana ecosystem — bridging builders and the public through audited metrics across Code, Liveness, Originality, Governance, Dependencies, and Economics.
+### 1. Key Dependencies Table
+A curated table of the major libraries (not every transitive dep, just the ones contributors need to know about):
 
-### 2. Features Section
-Highlight the core product capabilities derived from the actual codebase:
-- **Explorer** — Browse and search indexed Solana programs with health scores and leaderboard
-- **Program Profiles** — Detailed views with GitHub analytics, TVL, governance, dependency health, and vulnerability data
-- **Claim and Verify** — Builders can claim their program profiles with on-chain authority verification and GitHub/X OAuth
-- **Scoring Methodology** — Transparent hybrid formula with adaptive weighting and continuity decay
-- **Dependency Tree** — Visual dependency graph explorer for Solana programs
-- **Staking / Bonds** — Economic commitment layer (coming soon)
-- **Rezilience GPT** — AI-powered chat for ecosystem intelligence
-- **Pitch Deck** — Built-in investor presentation
-- **Grants Directory** — Curated Solana ecosystem grants listing
+| Category | Package | Purpose |
+|---|---|---|
+| Blockchain | @solana/web3.js, wallet-adapter | On-chain interaction and wallet connectivity |
+| UI Framework | React 18, Tailwind CSS, shadcn/ui | Component library and styling |
+| Animation | Framer Motion | Page transitions and cinematic reveals |
+| Data Viz | Recharts, @xyflow/react | Charts, graphs, dependency tree canvas |
+| Rich Text | TipTap | Build-in-public post editor |
+| Backend | @supabase/supabase-js | Database, auth, and edge function client |
+| Routing | react-router-dom | Client-side navigation |
+| Forms | react-hook-form, zod | Form state and validation |
+| Markdown | react-markdown, remark-gfm | Rendering markdown content |
 
-### 3. Tech Stack
-- **Frontend**: React 18, TypeScript, Vite, Tailwind CSS, shadcn/ui, Framer Motion
-- **Backend**: Supabase (PostgreSQL, Auth, Edge Functions)
-- **Blockchain**: Solana Web3.js, Wallet Adapter
-- **Data Visualization**: Recharts, XY Flow (React Flow)
-- **Rich Text**: TipTap editor
+This goes after the Tech Stack section.
 
-### 4. Prerequisites
-- Node.js >= 18
-- npm or bun
-- A Supabase project (with the required tables and edge functions)
-- Environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`
+### 2. Contributing Section
+Add a "Contributing" section covering:
+- Fork the repo, create a feature branch
+- Install dependencies and run locally
+- Follow existing code patterns (component structure, hooks, Tailwind classes)
+- Write meaningful commit messages
+- Open a PR against `main` with a clear description
+- Note: For large features, open an issue first to discuss
 
-### 5. Getting Started (standard, platform-agnostic)
-```
-git clone <repo-url>
-cd rezilience
-npm install
-npm run dev
-```
-Plus instructions for setting up the `.env` file.
+### 3. Security Policy
+Since Rezilience is literally a security/assurance platform, this is especially important:
+- How to responsibly disclose vulnerabilities
+- Contact method (e.g., email or GitHub Security Advisories)
+- What constitutes a security issue vs. a bug
 
-### 6. Available Scripts
-- `npm run dev` — Start dev server
-- `npm run build` — Production build
-- `npm run preview` — Preview production build
-- `npm run lint` — Run ESLint
-- `npm test` — Run tests
+### 4. Roadmap (Brief)
+A high-level list of planned features:
+- Score Oracle (on-chain Anchor program)
+- Economic Commitment Layer (staking/bonds)
+- AEGIS Supply Chain Intelligence
+- Multi-chain expansion
 
-### 7. Project Structure
-A brief overview of the directory layout (`src/pages`, `src/components`, `src/hooks`, `supabase/functions`, etc.)
-
-### 8. Edge Functions
-List the 20 backend functions with a one-line description each (e.g., `analyze-github-repo` — Fetches and analyzes GitHub repository metrics).
-
-### 9. Deployment
-Standard instructions for deploying to any static hosting provider:
-- Build with `npm run build`
-- Deploy the `dist/` folder to Vercel, Netlify, Cloudflare Pages, or any static host
-- Configure environment variables on the hosting platform
-- Set up Supabase edge functions deployment via `supabase functions deploy`
-
-### 10. Environment Variables
-A table listing required env vars without exposing actual values.
-
-### 11. License and Contact
-Placeholder for license type and contact info.
+### 5. Acknowledgments
+Credit key infrastructure and ecosystem partners:
+- Solana Foundation
+- Helius (RPC infrastructure)
+- OpenSSF Scorecard (security posture data)
+- OSV.dev (vulnerability data)
+- DeFiLlama (TVL data)
 
 ## Technical Details
 
 ### File changed
-- **`README.md`** — Complete rewrite (the current file contains only the Lovable boilerplate template with placeholder URLs and Lovable-specific deployment instructions)
+- **`README.md`** — Add 5 new sections after the existing content, inserted before the License section. The existing content remains untouched; this is purely additive.
+
+### Section order in the final README
+1. Project Identity (existing)
+2. Features (existing)
+3. Tech Stack (existing)
+4. **Key Dependencies (new)**
+5. Prerequisites (existing)
+6. Getting Started (existing)
+7. Available Scripts (existing)
+8. Project Structure (existing)
+9. Edge Functions (existing)
+10. Environment Variables (existing)
+11. Deployment (existing)
+12. **Roadmap (new)**
+13. **Contributing (new)**
+14. **Security Policy (new)**
+15. **Acknowledgments (new)**
+16. License (existing)
+17. Contact (existing)
 
 ### No other files are modified
-This is a documentation-only change.
+Documentation-only change.
 
