@@ -28,6 +28,22 @@ A developer tooling platform that provides transparent, verifiable project healt
 | **Data Visualization** | Recharts, XY Flow (React Flow) |
 | **Rich Text** | TipTap editor |
 
+## Key Dependencies
+
+| Category | Package(s) | Purpose |
+|---|---|---|
+| Blockchain | `@solana/web3.js`, `@solana/wallet-adapter-*` | On-chain interaction and wallet connectivity |
+| UI Framework | `react`, `tailwindcss`, `shadcn/ui` | Component library and styling |
+| Animation | `framer-motion` | Page transitions and cinematic reveals |
+| Data Visualization | `recharts`, `@xyflow/react` | Charts, graphs, and dependency tree canvas |
+| Rich Text | `@tiptap/react`, `@tiptap/starter-kit` | Build-in-public post editor |
+| Backend Client | `@supabase/supabase-js` | Database, auth, and edge function client |
+| Routing | `react-router-dom` | Client-side navigation |
+| Forms | `react-hook-form`, `zod` | Form state management and validation |
+| Markdown | `react-markdown`, `remark-gfm` | Rendering markdown content |
+| State Management | `@tanstack/react-query` | Server state, caching, and data fetching |
+| Theming | `next-themes` | Dark/light mode support |
+
 ## Prerequisites
 
 - Node.js >= 18
@@ -183,10 +199,70 @@ Set secrets on your Supabase project:
 supabase secrets set GITHUB_TOKEN=<value> RPC_URL=<value> ...
 ```
 
+## Roadmap
+
+High-level planned milestones:
+
+- **Score Oracle** — On-chain Anchor program to publish `(program_id, score, timestamp)` for protocol-level composability
+- **Economic Commitment Layer** — Staking and assurance bonds with yield tied to Resilience Score thresholds
+- **AEGIS Supply Chain Intelligence** — Real-time CVE propagation and risk mapping across the ecosystem dependency graph
+- **Multi-chain Expansion** — Extend scoring and indexing beyond Solana
+
+## Contributing
+
+Contributions are welcome! To get started:
+
+1. **Fork** the repository and create a feature branch:
+   ```sh
+   git checkout -b feat/your-feature-name
+   ```
+2. **Install dependencies** and run locally:
+   ```sh
+   npm install
+   npm run dev
+   ```
+3. **Follow existing patterns** — component structure in `src/components/`, hooks in `src/hooks/`, Tailwind utility classes, and shadcn/ui primitives.
+4. **Write meaningful commit messages** (e.g., `feat: add dependency health badge` or `fix: scoring decay calculation`).
+5. **Open a Pull Request** against `main` with a clear description of what changed and why.
+
+> **Note:** For large features or architectural changes, please [open an issue](../../issues) first to discuss the approach before investing significant effort.
+
+## Security Policy
+
+Rezilience is a security and assurance platform — we take vulnerability reports seriously.
+
+### Reporting a Vulnerability
+
+If you discover a security vulnerability, **please do not open a public issue.** Instead:
+
+1. Use [GitHub Security Advisories](../../security/advisories/new) to report privately, **or**
+2. Email **security@rezilience.io** with a detailed description
+
+### What Qualifies as a Security Issue
+
+- Authentication or authorization bypasses
+- Data exposure or leakage through API endpoints
+- RLS policy misconfigurations
+- Cross-site scripting (XSS) or injection vulnerabilities
+- Edge function vulnerabilities
+
+General bugs (UI glitches, broken links, incorrect scores) should be reported as regular [issues](../../issues).
+
+## Acknowledgments
+
+Rezilience is built on the shoulders of incredible open-source and ecosystem infrastructure:
+
+- [Solana Foundation](https://solana.org) — Ecosystem support and grants
+- [Helius](https://helius.dev) — RPC infrastructure for on-chain data
+- [OpenSSF Scorecard](https://securityscorecards.dev) — Repository security posture data
+- [OSV.dev](https://osv.dev) — Open-source vulnerability database
+- [DeFiLlama](https://defillama.com) — TVL and DeFi protocol data
+- [Supabase](https://supabase.com) — Backend infrastructure
+
 ## License
 
 MIT
 
 ## Contact
 
-For questions or collaboration, reach out via the project's GitHub Issues or X (Twitter).
+For questions or collaboration, reach out via the project's [GitHub Issues](../../issues) or [X (Twitter)](https://x.com/rezaborhani).
