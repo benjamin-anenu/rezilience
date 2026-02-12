@@ -4,10 +4,10 @@ import { Github, Twitter, FileText, Shield, ChevronDown } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import logo from '@/assets/logo.png';
- 
- export function Footer() {
-   return (
-     <footer className="border-t border-border bg-background">
+
+export function Footer() {
+  return (
+    <footer className="border-t border-border bg-background">
        <div className="container mx-auto px-4 py-12 lg:px-8">
          <div className="flex flex-col items-center justify-between gap-8 md:flex-row">
            {/* Logo & Tagline */}
@@ -19,34 +19,34 @@ import logo from '@/assets/logo.png';
                 </span>
              </Link>
               <p className="text-sm text-muted-foreground">
-                On-Chain Assurance Layer for Solana
+                Decentralized Assurance Layer for Solana
               </p>
             </div>
  
            {/* Links */}
            <div className="flex items-center gap-6">
               <Link
-                to="/readme"
-                className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-              >
+              to="/readme"
+              className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+
                 <FileText className="h-4 w-4" />
                 <span>README</span>
               </Link>
              <a
-               href="https://github.com/rezilience-protocol"
-               target="_blank"
-               rel="noopener noreferrer"
-               className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-             >
+              href="https://github.com/rezilience-protocol"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+
                <Github className="h-4 w-4" />
                <span>GitHub</span>
              </a>
              <a
-               href="https://twitter.com/RezilienceSol"
-               target="_blank"
-               rel="noopener noreferrer"
-               className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-             >
+              href="https://twitter.com/RezilienceSol"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+
                <Twitter className="h-4 w-4" />
                <span>Twitter</span>
              </a>
@@ -92,6 +92,6 @@ import logo from '@/assets/logo.png';
           </p>
         </div>
       </div>
-    </footer>
-  );
+    </footer>);
+
 }
