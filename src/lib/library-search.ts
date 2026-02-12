@@ -62,8 +62,8 @@ export async function searchProtocols(query: string): Promise<{
 }> {
   const usage = getRequestCount();
 
-  const algoliaAppId = import.meta.env.VITE_ALGOLIA_APP_ID;
-  const algoliaSearchKey = import.meta.env.VITE_ALGOLIA_SEARCH_KEY;
+  const algoliaAppId = import.meta.env.VITE_ALGOLIA_APP_ID || 'T66N1QX69X';
+  const algoliaSearchKey = import.meta.env.VITE_ALGOLIA_SEARCH_KEY || '7920e48930df873606b53623036302ab';
 
   if (algoliaAppId && algoliaSearchKey && usage.count < REQUEST_LIMIT) {
     try {
