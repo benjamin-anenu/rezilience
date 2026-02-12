@@ -3,7 +3,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, Send, Sparkles } from 'lucide-react';
+import { Bot, Send, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -248,11 +248,11 @@ export function AskGptButton({ onClick, className }: { onClick: (e: React.MouseE
     <button
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-[#9945FF] to-[#14F195] px-3.5 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-white shadow-[0_0_14px_rgba(153,69,255,0.25)] transition-all hover:shadow-[0_0_22px_rgba(153,69,255,0.45)] hover:brightness-110 active:scale-[0.97]',
+        'inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-[#7B3FCC] to-[#10C77E] px-3.5 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-white/90 shadow-[0_0_12px_rgba(123,63,204,0.2)] transition-all hover:shadow-[0_0_18px_rgba(123,63,204,0.35)] hover:brightness-105 active:scale-[0.97]',
         className
       )}
     >
-      <Sparkles className="h-3.5 w-3.5" />
+      <MessageCircle className="h-3.5 w-3.5" />
       Ask GPT
     </button>
   );
