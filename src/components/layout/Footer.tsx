@@ -25,15 +25,13 @@ import logo from '@/assets/logo.png';
  
            {/* Links */}
            <div className="flex items-center gap-6">
-             <a
-               href="https://docs.rezilience.dev"
-               target="_blank"
-               rel="noopener noreferrer"
-               className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-             >
-               <FileText className="h-4 w-4" />
-               <span>Documentation</span>
-             </a>
+              <Link
+                to="/readme"
+                className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+              >
+                <FileText className="h-4 w-4" />
+                <span>README</span>
+              </Link>
              <a
                href="https://github.com/rezilience-protocol"
                target="_blank"

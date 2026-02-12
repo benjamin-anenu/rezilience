@@ -18,6 +18,7 @@ import MyBonds from "./pages/MyBonds";
 import Readme from "./pages/Readme";
 import DependencyTree from "./pages/DependencyTree";
 import Grants from "./pages/Grants";
+import Library from "./pages/Library";
 import PitchDeck from "./pages/PitchDeck";
 import ResilienceGPT from "./pages/ResilienceGPT";
 import NotFound from "./pages/NotFound";
@@ -46,6 +47,7 @@ const App = () => (
               <Route path="/my-bonds" element={<MyBonds />} />
               <Route path="/deps/:id" element={<DependencyTree />} />
               <Route path="/grants" element={<Grants />} />
+              <Route path="/library" element={<Library />} />
               <Route path="/pitch" element={<PitchDeck />} />
               <Route path="/gpt" element={<ResilienceGPT />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
