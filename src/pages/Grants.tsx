@@ -8,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { solanaGrants, criteriaGuidance, lastUpdated, type SolanaGrant } from '@/data/solana-grants';
+import { solanaGrants, criteriaGuidance, lastUpdated, type SolanaGrant, type ProviderId } from '@/data/solana-grants';
 
 const statusConfig: Record<string, { label: string; className: string }> = {
   Open: { label: 'OPEN', className: 'border-primary/40 bg-primary/10 text-primary' },
@@ -91,14 +91,63 @@ function GrantCard({ grant }: { grant: SolanaGrant }) {
         </div>
       </div>
 
-      {/* Watermark logo */}
-      <img
-        src={grant.logoUrl}
-        alt=""
-        className="pointer-events-none absolute bottom-3 right-3 h-24 w-24 select-none object-contain opacity-[0.08] grayscale"
-      />
+      <ProviderLogo providerId={grant.providerId} />
     </div>
   );
+}
+
+function ProviderLogo({ providerId }: { providerId: ProviderId }) {
+  const className = "pointer-events-none absolute bottom-3 right-3 h-24 w-24 select-none opacity-[0.08]";
+
+  switch (providerId) {
+    case 'solana':
+      return (
+        <svg viewBox="0 0 397.7 311.7" className={className} fill="none">
+          <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z" fill="currentColor" />
+          <path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z" fill="currentColor" />
+          <path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z" fill="currentColor" />
+        </svg>
+      );
+    case 'jupiter':
+      return (
+        <svg viewBox="0 0 100 100" className={className} fill="none">
+          <circle cx="50" cy="50" r="48" fill="currentColor" />
+          <ellipse cx="50" cy="50" rx="35" ry="12" transform="rotate(-20 50 50)" fill="currentColor" opacity="0.3" />
+          <circle cx="50" cy="50" r="20" fill="currentColor" opacity="0.5" />
+          <circle cx="44" cy="42" r="5" fill="currentColor" opacity="0.8" />
+        </svg>
+      );
+    case 'superteam':
+      return (
+        <svg viewBox="0 0 100 100" className={className} fill="none">
+          <path d="M50 5L90 30V70L50 95L10 70V30L50 5Z" fill="currentColor" />
+          <path d="M50 20L75 35V65L50 80L25 65V35L50 20Z" fill="currentColor" opacity="0.4" />
+          <path d="M35 45L50 35L65 45L65 60L50 70L35 60Z" fill="currentColor" opacity="0.6" />
+        </svg>
+      );
+    case 'colosseum':
+      return (
+        <svg viewBox="0 0 100 100" className={className} fill="none">
+          <path d="M20 85V35L30 25V85H20Z" fill="currentColor" />
+          <path d="M35 85V30L45 20V85H35Z" fill="currentColor" />
+          <path d="M50 85V25L60 15V85H50Z" fill="currentColor" opacity="0.8" />
+          <path d="M65 85V30L75 20V85H65Z" fill="currentColor" />
+          <path d="M80 85V35L90 25V85H80Z" fill="currentColor" />
+          <path d="M15 85H95V92H15Z" fill="currentColor" />
+          <path d="M10 15C10 15 30 5 55 5C80 5 100 15 100 15" stroke="currentColor" strokeWidth="4" fill="none" />
+        </svg>
+      );
+    case 'marinade':
+      return (
+        <svg viewBox="0 0 100 100" className={className} fill="none">
+          <path d="M50 10C30 10 15 25 15 45C15 55 20 63 28 68L50 90L72 68C80 63 85 55 85 45C85 25 70 10 50 10Z" fill="currentColor" />
+          <path d="M35 45C35 37 42 30 50 30C58 30 65 37 65 45C65 53 58 60 50 60C42 60 35 53 35 45Z" fill="currentColor" opacity="0.4" />
+          <path d="M20 70Q35 80 50 75Q65 80 80 70" stroke="currentColor" strokeWidth="3" fill="none" opacity="0.5" />
+        </svg>
+      );
+    default:
+      return null;
+  }
 }
 
 export default function Grants() {

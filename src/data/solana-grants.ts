@@ -1,6 +1,9 @@
+export type ProviderId = 'solana' | 'superteam' | 'colosseum' | 'jupiter' | 'marinade';
+
 export interface SolanaGrant {
   name: string;
   provider: string;
+  providerId: ProviderId;
   fundingRange: string;
   status: 'Open' | 'Rolling' | 'Seasonal';
   focusAreas: string[];
@@ -9,7 +12,6 @@ export interface SolanaGrant {
   applyUrl: string;
   learnMoreUrl: string;
   criteriaHighlights: string[];
-  logoUrl: string;
 }
 
 export const lastUpdated = '2025-02-10';
@@ -18,6 +20,7 @@ export const solanaGrants: SolanaGrant[] = [
   {
     name: 'Solana Foundation Grants',
     provider: 'Solana Foundation',
+    providerId: 'solana',
     fundingRange: '$5K – $250K+',
     status: 'Rolling',
     focusAreas: ['Infrastructure', 'Developer Tooling', 'Public Goods', 'DeFi', 'Education'],
@@ -34,11 +37,11 @@ export const solanaGrants: SolanaGrant[] = [
       'Alignment with Solana ecosystem needs',
       'Milestone-based delivery plan',
     ],
-    logoUrl: 'https://avatars.githubusercontent.com/u/35608259',
   },
   {
     name: 'Solana Foundation RFPs',
     provider: 'Solana Foundation',
+    providerId: 'solana',
     fundingRange: 'Varies by RFP',
     status: 'Rolling',
     focusAreas: ['Infrastructure', 'Security', 'Core Protocol', 'Tooling'],
@@ -53,11 +56,11 @@ export const solanaGrants: SolanaGrant[] = [
       'Detailed implementation timeline',
       'Prior contributions to Solana or comparable ecosystems',
     ],
-    logoUrl: 'https://avatars.githubusercontent.com/u/35608259',
   },
   {
     name: 'Superteam Instagrants',
     provider: 'Superteam',
+    providerId: 'superteam',
     fundingRange: '$500 – $5K',
     status: 'Rolling',
     focusAreas: ['Community', 'Content', 'Developer Tooling', 'Education', 'Regional Growth'],
@@ -72,11 +75,11 @@ export const solanaGrants: SolanaGrant[] = [
       'Active engagement with a regional Superteam chapter',
       'Existing portfolio or track record of contributions',
     ],
-    logoUrl: 'https://avatars.githubusercontent.com/u/102339943',
   },
   {
     name: 'Colosseum Hackathons & Accelerator',
     provider: 'Colosseum',
+    providerId: 'colosseum',
     fundingRange: 'Up to $250K (accelerator pre-seed)',
     status: 'Seasonal',
     focusAreas: ['DeFi', 'Infrastructure', 'Consumer', 'DePIN', 'AI', 'Gaming'],
@@ -92,11 +95,11 @@ export const solanaGrants: SolanaGrant[] = [
       'Viable go-to-market strategy',
       'Willingness to participate in accelerator program',
     ],
-    logoUrl: 'https://avatars.githubusercontent.com/u/147508312',
   },
   {
     name: 'Marinade Ecosystem Grants',
     provider: 'Marinade Finance',
+    providerId: 'marinade',
     fundingRange: '$5K – $50K',
     status: 'Rolling',
     focusAreas: ['Liquid Staking', 'DeFi', 'Validator Tooling', 'Governance'],
@@ -111,11 +114,11 @@ export const solanaGrants: SolanaGrant[] = [
       'Open-source commitment',
       'Clear integration timeline and milestones',
     ],
-    logoUrl: 'https://avatars.githubusercontent.com/u/81361879',
   },
   {
     name: 'Jupiter Ecosystem Grants',
     provider: 'Jupiter',
+    providerId: 'jupiter',
     fundingRange: '$5K – $100K',
     status: 'Rolling',
     focusAreas: ['DeFi', 'Aggregation', 'Developer Tooling', 'Trading Infrastructure'],
@@ -130,11 +133,11 @@ export const solanaGrants: SolanaGrant[] = [
       'Community benefit and open-source approach',
       'Technical depth and team capability',
     ],
-    logoUrl: 'https://avatars.githubusercontent.com/u/92518539',
   },
   {
     name: 'Solana Microgrants (via Merge Club)',
     provider: 'Merge Club / Solana',
+    providerId: 'solana',
     fundingRange: '$2K – $10K',
     status: 'Rolling',
     focusAreas: ['Public Goods', 'Developer Tooling', 'Education', 'Community'],
@@ -149,7 +152,6 @@ export const solanaGrants: SolanaGrant[] = [
       'Realistic timeline (typically weeks, not months)',
       'Prior work or portfolio demonstrating capability',
     ],
-    logoUrl: 'https://avatars.githubusercontent.com/u/35608259',
   },
 ];
 
