@@ -87,8 +87,8 @@ export function Footer() {
         </div>
 
         <div className="mt-8 border-t border-border pt-8 text-center">
-          <p className="text-xs text-muted-foreground">
-            © 2024 Rezilience Protocol. Built on Solana.
+          <p className="text-xs text-muted-foreground">© 2024 Rezilience Protocol. Built for Solana.
+
           </p>
         </div>
       </div>
