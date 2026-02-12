@@ -99,7 +99,7 @@ export default function LibraryBlueprintDetail() {
   if (!blueprint) return <NotFound />;
 
   return (
-    <Layout>
+    <Layout showFooter={false}>
       <section className="sticky top-16 z-10 bg-background border-b border-border/50 container mx-auto px-4 py-6 lg:px-8">
         <Link to="/library/blueprints" className="mb-4 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-3 w-3" /> Back to Blueprints
@@ -132,9 +132,22 @@ export default function LibraryBlueprintDetail() {
           <BlueprintControls />
         </ReactFlow>
       </div>
-      <p className="container mx-auto px-4 py-2 font-mono text-[10px] text-muted-foreground/50">
-        Use arrow keys to pan · +/- to zoom
-      </p>
+      <div className="container mx-auto px-4 py-4 lg:px-8 flex items-center gap-3">
+        <div className="flex items-center gap-4 font-mono text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">←</kbd>
+            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">↑</kbd>
+            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">↓</kbd>
+            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">→</kbd>
+            <span className="ml-1">Pan</span>
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">+</kbd>
+            <kbd className="rounded border border-border bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-foreground">−</kbd>
+            <span className="ml-1">Zoom</span>
+          </span>
+        </div>
+      </div>
     </Layout>
   );
 }
