@@ -27,9 +27,9 @@ export default function LibraryBlueprintDetail() {
     const ns: Node<BlueprintNodeData>[] = [];
     const es: Edge[] = [];
 
-    const nodeWidth = 280;
-    const verticalGap = 180;
-    const centerX = 400;
+    const nodeWidth = 320;
+    const verticalGap = 340;
+    const centerX = 500;
 
     // Goal node at top
     ns.push({
@@ -46,8 +46,8 @@ export default function LibraryBlueprintDetail() {
     });
 
     // Step nodes below
-    const cols = Math.min(blueprint.steps.length, 3);
-    const totalWidth = cols * (nodeWidth + 40) - 40;
+    const cols = Math.min(blueprint.steps.length, 2);
+    const totalWidth = cols * (nodeWidth + 80) - 80;
     const startX = centerX - totalWidth / 2;
 
     blueprint.steps.forEach((step, i) => {
@@ -59,7 +59,7 @@ export default function LibraryBlueprintDetail() {
         id: nodeId,
         type: 'blueprint',
         position: {
-          x: startX + col * (nodeWidth + 40),
+          x: startX + col * (nodeWidth + 80),
           y: 120 + (row + 1) * verticalGap,
         },
         data: {
@@ -74,6 +74,8 @@ export default function LibraryBlueprintDetail() {
           apis: step.apis,
           estimatedCost: step.estimatedCost,
           docsUrl: step.docsUrl,
+          dictionaryTerms: step.dictionaryTerms,
+          protocolSlugs: step.protocolSlugs,
         },
       });
 
