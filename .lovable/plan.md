@@ -1,83 +1,45 @@
 
 
-# Enhance README with Dependencies, Contributing Guide, and Standard Sections
+# Navigation Updates and New Library Page
 
-## Overview
-Expand the existing README.md with industry-standard sections that were missing: a key dependencies table, contributing guidelines, security policy, roadmap overview, and acknowledgments.
+## Summary
+1. Remove "MY BONDS" from the top nav (it's already accessible from Staking)
+2. Reorder nav links to: README, EXPLORER, STAKING, GPT, GRANTS, LIBRARY
+3. Create a new Library page at `/library`
+4. Change the footer "Documentation" link to "README" pointing to `/readme`
 
-## What will be added
+## Changes
 
-### 1. Key Dependencies Table
-A curated table of the major libraries (not every transitive dep, just the ones contributors need to know about):
+### 1. Navigation (`src/components/layout/Navigation.tsx`)
+Update the `navLinks` array to:
+- README -> /readme
+- EXPLORER -> /explorer
+- STAKING -> /staking
+- GPT -> /gpt
+- GRANTS -> /grants
+- LIBRARY -> /library
 
-| Category | Package | Purpose |
-|---|---|---|
-| Blockchain | @solana/web3.js, wallet-adapter | On-chain interaction and wallet connectivity |
-| UI Framework | React 18, Tailwind CSS, shadcn/ui | Component library and styling |
-| Animation | Framer Motion | Page transitions and cinematic reveals |
-| Data Viz | Recharts, @xyflow/react | Charts, graphs, dependency tree canvas |
-| Rich Text | TipTap | Build-in-public post editor |
-| Backend | @supabase/supabase-js | Database, auth, and edge function client |
-| Routing | react-router-dom | Client-side navigation |
-| Forms | react-hook-form, zod | Form state and validation |
-| Markdown | react-markdown, remark-gfm | Rendering markdown content |
+Only "MY BONDS" is removed.
 
-This goes after the Tech Stack section.
+### 2. Footer (`src/components/layout/Footer.tsx`)
+Change the external "Documentation" link (pointing to `https://docs.rezilience.dev`) to an internal `<Link>` pointing to `/readme` with label "README".
 
-### 2. Contributing Section
-Add a "Contributing" section covering:
-- Fork the repo, create a feature branch
-- Install dependencies and run locally
-- Follow existing code patterns (component structure, hooks, Tailwind classes)
-- Write meaningful commit messages
-- Open a PR against `main` with a clear description
-- Note: For large features, open an issue first to discuss
+### 3. New Library Page (`src/pages/Library.tsx`)
+A new resource hub page with:
+- Header with title and description
+- Placeholder category sections (Guides, Research, Tools, Community Resources)
+- Uses the same Layout wrapper as other pages
 
-### 3. Security Policy
-Since Rezilience is literally a security/assurance platform, this is especially important:
-- How to responsibly disclose vulnerabilities
-- Contact method (e.g., email or GitHub Security Advisories)
-- What constitutes a security issue vs. a bug
-
-### 4. Roadmap (Brief)
-A high-level list of planned features:
-- Score Oracle (on-chain Anchor program)
-- Economic Commitment Layer (staking/bonds)
-- AEGIS Supply Chain Intelligence
-- Multi-chain expansion
-
-### 5. Acknowledgments
-Credit key infrastructure and ecosystem partners:
-- Solana Foundation
-- Helius (RPC infrastructure)
-- OpenSSF Scorecard (security posture data)
-- OSV.dev (vulnerability data)
-- DeFiLlama (TVL data)
+### 4. Route Registration (`src/App.tsx`)
+Add `/library` route for the new page.
 
 ## Technical Details
 
-### File changed
-- **`README.md`** — Add 5 new sections after the existing content, inserted before the License section. The existing content remains untouched; this is purely additive.
+### Files modified
+- `src/components/layout/Navigation.tsx` — Remove MY BONDS, add LIBRARY, reorder
+- `src/components/layout/Footer.tsx` — Change Documentation to internal README link
+- `src/App.tsx` — Add `/library` route
 
-### Section order in the final README
-1. Project Identity (existing)
-2. Features (existing)
-3. Tech Stack (existing)
-4. **Key Dependencies (new)**
-5. Prerequisites (existing)
-6. Getting Started (existing)
-7. Available Scripts (existing)
-8. Project Structure (existing)
-9. Edge Functions (existing)
-10. Environment Variables (existing)
-11. Deployment (existing)
-12. **Roadmap (new)**
-13. **Contributing (new)**
-14. **Security Policy (new)**
-15. **Acknowledgments (new)**
-16. License (existing)
-17. Contact (existing)
-
-### No other files are modified
-Documentation-only change.
+### Files created
+- `src/pages/Library.tsx` — New Library resource hub page
 
