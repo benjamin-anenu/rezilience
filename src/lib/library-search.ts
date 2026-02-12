@@ -81,7 +81,8 @@ export async function searchProtocols(query: string): Promise<{
         .filter(Boolean) as Protocol[];
 
       return { results: matched, searchMethod: 'algolia', limitReached: false };
-    } catch {
+    } catch (err) {
+      console.error('[Algolia] Search failed:', err);
       // Fall through to fallback
     }
   }
