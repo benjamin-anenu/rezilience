@@ -56,3 +56,6 @@ verify_jwt = false
 
 [functions.analyze-security-posture]
 verify_jwt = false
+
+[functions.algolia-reindex]
+verify_jwt = false
