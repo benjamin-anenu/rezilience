@@ -22,6 +22,7 @@ import Library from "./pages/Library";
 import LibraryLearn from "./pages/LibraryLearn";
 import LibraryDictionary from "./pages/LibraryDictionary";
 import LibraryBlueprints from "./pages/LibraryBlueprints";
+import LibraryBlueprintDetail from "./pages/LibraryBlueprintDetail";
 import LibraryProtocols from "./pages/LibraryProtocols";
 import ProtocolDetail from "./pages/ProtocolDetail";
 import PitchDeck from "./pages/PitchDeck";
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="/library/learn/:level" element={<LibraryLearn />} />
               <Route path="/library/dictionary" element={<LibraryDictionary />} />
               <Route path="/library/blueprints" element={<LibraryBlueprints />} />
+              <Route path="/library/blueprints/:slug" element={<LibraryBlueprintDetail />} />
               <Route path="/library/protocols" element={<LibraryProtocols />} />
               <Route path="/library/:slug" element={<ProtocolDetail />} />
               <Route path="/pitch" element={<PitchDeck />} />
