@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { ExternalLink, Info, BookOpen, DollarSign, Target, Users, ChevronRight } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,8 +9,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { solanaGrants, criteriaGuidance, lastUpdated, SolanaGrant } from '@/data/solana-grants';
-import { AskGptButton, AskGptModal } from '@/components/library/AskGptModal';
+import { solanaGrants, criteriaGuidance, lastUpdated } from '@/data/solana-grants';
 
 const statusColor: Record<string, string> = {
   Open: 'bg-primary/20 text-primary border-primary/30',
@@ -20,16 +18,7 @@ const statusColor: Record<string, string> = {
 };
 
 export default function Grants() {
-  const [gptGrant, setGptGrant] = useState<SolanaGrant | null>(null);
-
   return (
-    <>
-      <AskGptModal
-        open={!!gptGrant}
-        onOpenChange={(o) => !o && setGptGrant(null)}
-        topic={gptGrant?.name ?? ''}
-        context={gptGrant ? `Provider: ${gptGrant.provider}. Funding: ${gptGrant.fundingRange}. Focus areas: ${gptGrant.focusAreas.join(', ')}. ${gptGrant.description}` : undefined}
-      />
     <Layout>
       <div className="container mx-auto px-4 py-12 lg:px-8">
         {/* Header */}
@@ -142,11 +131,6 @@ export default function Grants() {
                     </ul>
                   </div>
 
-                  {/* Ask GPT */}
-                  <div className="border-t border-border/30 pt-3 mt-1">
-                    <AskGptButton onClick={() => setGptGrant(grant)} className="w-full justify-center" />
-                  </div>
-
                   {/* Actions */}
                   <div className="mt-auto flex gap-2 pt-2">
                     <Button asChild size="sm" className="flex-1 font-display text-xs font-semibold uppercase tracking-wider">
@@ -207,6 +191,5 @@ export default function Grants() {
         </section>
       </div>
     </Layout>
-    </>
   );
 }
