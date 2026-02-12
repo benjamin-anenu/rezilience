@@ -95,7 +95,7 @@ function GrantCard({ grant }: { grant: SolanaGrant }) {
       <img
         src={grant.logoUrl}
         alt=""
-        className="pointer-events-none absolute bottom-3 right-3 h-16 w-16 select-none object-contain opacity-[0.08] grayscale"
+        className="pointer-events-none absolute bottom-3 right-3 h-24 w-24 select-none object-contain opacity-[0.08] grayscale"
       />
     </div>
   );
