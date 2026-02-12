@@ -1,83 +1,54 @@
 
 
-# "Ask GPT" Tutor Modal -- Across the Entire Library
+# Blueprint Tree Static Layout + Keyboard Controls & Grant Card Uniformity
 
-## Overview
+## Part 1: Blueprint Tree -- Static Layout with Zoom/Arrow Key Controls
 
-Add a reusable "Ask GPT" button that opens a slide-up modal dialog with a self-contained mini chat interface. When clicked, it sends a pre-crafted tutoring prompt to the existing `chat-gpt` edge function and streams back a response. The user can then ask follow-up questions inside the modal without leaving the page.
+### What Changes
 
-The button will appear in **four locations**:
-1. **Guided Learning** -- inside each expanded module's detail panel
-2. **Solana Dictionary** -- inside each expanded dictionary entry
-3. **Project Blueprints** -- on each blueprint step node
-4. **Protocol Detail** -- below the "Full Documentation" button in the sidebar
+The interactive ReactFlow canvas on the Blueprint Detail page will become a **static, non-draggable tree** rendered at a **slightly smaller scale**. Users will gain **keyboard arrow key navigation** (panning the viewport) and **zoom controls** (reusing the existing `TreeControls` component from the Dependency Tree page).
 
-## How It Works
+### Technical Details
 
-1. User clicks "Ask GPT" on any item
-2. A Dialog slides up with a pre-seeded first message like: *"Explain [topic] to me like I'm a beginner. Use real Solana examples with projects like Jupiter, Marinade, Raydium. Include code snippets where helpful. After explaining, ask me a follow-up question to test my understanding."*
-3. The modal streams the response from the existing `chat-gpt` edge function (same SSE streaming logic already used on the /gpt page)
-4. User can type follow-up questions in the modal -- full conversational thread
-5. Close button dismisses the modal; conversation is ephemeral (not persisted)
+**File: `src/pages/LibraryBlueprintDetail.tsx`**
 
-## New Component: `AskGptModal`
+1. **Reduce canvas height** from `h-[70vh]` to `h-[60vh]` for a more compact feel
+2. **Reduce node spacing**: Shrink `verticalGap` from 340 to 280, and node width from 320 to 280
+3. **Import and add `TreeControls`** component inside the ReactFlow canvas (already built for the Dependency Tree page -- fully reusable)
+4. **Add keyboard event handler**: Attach an `onKeyDown` listener to the canvas wrapper that maps arrow keys to viewport panning (using `useReactFlow().setViewport()`) and `+`/`-` keys to zoom
+5. **Add `tabIndex={0}`** to the wrapper div so it can receive keyboard focus
+6. **Keep `nodesDraggable={false}` and `nodesConnectable={false}`** (already set -- nodes stay static)
+7. Add a small hint text below the canvas: "Use arrow keys to pan, +/- to zoom"
 
-**File: `src/components/library/AskGptModal.tsx`**
+**File: `src/components/library/BlueprintNode.tsx`**
 
-A self-contained Dialog component that:
-- Accepts a `topic: string` and optional `context: string` prop
-- Manages its own `messages[]` state, `isLoading`, and streaming logic
-- Reuses the same SSE streaming approach from `ResilienceGPT.tsx` (extracted into a helper or duplicated inline since it's ~40 lines)
-- Renders messages with `ReactMarkdown` + `remarkGfm` (same as `ChatMessage.tsx`)
-- Has a compact input bar at the bottom
-- Auto-scrolls on new tokens
-- Shows the "R" branding and a "Searching database..." pulse while loading
+8. Reduce `max-w-[320px]` to `max-w-[280px]` and tighten padding from `px-5 py-4` to `px-4 py-3`
 
-### Prompt Engineering
+### New Component: `BlueprintControls`
 
-The initial prompt sent to the edge function will be contextual:
+A thin wrapper around keyboard logic + the existing `TreeControls` UI. It will:
+- Listen for ArrowUp/Down/Left/Right to pan the viewport by 50px per keypress
+- Listen for `+`/`-` to zoom in/out
+- Render the existing zoom/fit/reset button panel (same as `TreeControls`)
 
-- **Learning module**: "Teach me about '{module.title}'. Topics: {module.topics.join(', ')}. {module.description}. Explain like I'm a beginner using real Solana projects (Jupiter, Marinade, Helius, Metaplex) as examples. Include TypeScript/Rust code snippets where relevant. After your explanation, ask me one follow-up question to check my understanding."
+---
 
-- **Dictionary term**: "Explain the Solana concept '{entry.term}' ({entry.abbreviation}). Definition: {entry.definition}. When to use: {entry.whenToUse}. Teach me like I'm 10 years old, using real-world analogies and Solana project examples. Include a code snippet. Then ask me a question."
+## Part 2: Grant Cards -- Uniform Size Matching Other Cards
 
-- **Blueprint step**: "Explain step {stepNumber}: '{step.label}' in building a {blueprintTitle}. It involves: {step.description}. Tools: {step.tools}. Dependencies: {step.dependencies}. Teach me the concepts with examples from Jupiter, Marinade, etc. Include code. Then quiz me."
+### What Changes
 
-- **Protocol**: "Teach me about the {protocol.name} protocol on Solana. {protocol.description}. Use cases: {protocol.whenToUse.join(', ')}. Explain it simply with practical examples and code snippets. Then ask me a question."
+The Grant cards will be restructured to have a **fixed, uniform height** and a cleaner layout that matches the premium card pattern used elsewhere (Protocol cards, Explorer cards).
 
-## Integration Points
+### Technical Details
 
-### 1. Learning Page (`LibraryLearn.tsx`)
-- Add an "Ask GPT" button inside the expanded detail panel (after the Resources section, before Prerequisites)
-- Button styled as: teal outline, mono font, small icon
+**File: `src/pages/Grants.tsx`**
 
-### 2. Dictionary Entry (`DictionaryEntry.tsx`)
-- Add an "Ask GPT" button inside the expanded panel (after Related Terms section)
+1. **Fixed card height**: Add `h-full` to the card and use `flex flex-col` with `flex-1` on the body to ensure all cards stretch to the same height within the grid row
+2. **Simplify the card structure**: Remove the inner "Key Criteria" bordered box -- move criteria to a compact comma-separated line or a 2-line cap to reduce height variance
+3. **Cap focus areas** to 4 tags max with `slice(0, 4)` to prevent overflow differences
+4. **Cap criteria highlights** to 3 items max
+5. **Move description to a `line-clamp-2`** to ensure uniform text height across cards
+6. **Ensure the grid uses `grid-rows-subgrid`** or the wrapper div uses `h-full` so cards in each row align
 
-### 3. Blueprint Node (`BlueprintNode.tsx`)
-- Add a small "Ask GPT" button at the bottom of each step node (not goal node)
-- Uses `onClick={(e) => e.stopPropagation()}` to prevent node selection
-
-### 4. Protocol Detail (`ProtocolDetail.tsx`)
-- Add an "Ask GPT" button below the existing "Full Documentation" link in the sidebar
-
-## Technical Details
-
-### Files Created
-- `src/components/library/AskGptModal.tsx` -- The reusable modal with streaming chat
-
-### Files Modified
-- `src/pages/LibraryLearn.tsx` -- Import `AskGptModal`, add button + state in expanded panel
-- `src/components/library/DictionaryEntry.tsx` -- Import `AskGptModal`, add button + state in expanded panel
-- `src/components/library/BlueprintNode.tsx` -- Import `AskGptModal`, add button on step nodes
-- `src/pages/ProtocolDetail.tsx` -- Import `AskGptModal`, add button in sidebar
-
-### No New Dependencies
-- Uses existing `@radix-ui/react-dialog` (Dialog component)
-- Uses existing `react-markdown` + `remark-gfm`
-- Uses existing `framer-motion` for slide-up animation
-- Calls existing `chat-gpt` edge function via the same `CHAT_URL` pattern
-
-### No Edge Function Changes
-The existing `chat-gpt` edge function already handles general Solana knowledge questions perfectly. The tutoring prompt is crafted on the frontend to instruct the AI to teach + quiz.
+The result: all grant cards will be the same height per row, with a clean premium look matching the Protocol cards and other library components.
 
