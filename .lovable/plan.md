@@ -1,35 +1,27 @@
 
 
-# Grant Card Provider Logo Watermarks
+# Fix Logo CORS Issues + Increase Watermark Size
 
 ## What Changes
 
-Each grant card will display the provider's logo as a **subtle, semi-transparent watermark** positioned in the **bottom-right corner** of the card. The logos will have low opacity (~10-15%) to create a premium watermark effect without distracting from card content.
-
-## Approach
-
-Since these are external brand logos, we will use each provider's publicly available favicon/logo URL (from their official websites) as the image source. This avoids needing to download and store assets locally.
+1. **Replace all favicon URLs** with CORS-friendly GitHub organization avatar URLs that always load reliably
+2. **Increase watermark size** from 64px to 96px for a more premium, visible effect
 
 ## Technical Details
 
-**File: `src/data/solana-grants.ts`**
+**File: `src/data/solana-grants.ts`** -- Replace `logoUrl` values:
 
-1. Add a `logoUrl` field to the `SolanaGrant` interface
-2. Add logo URLs for each provider:
-   - Solana Foundation: `https://solana.org/favicon.ico`
-   - Superteam: `https://superteam.fun/favicon.ico`
-   - Colosseum: `https://www.colosseum.org/favicon.ico`
-   - Marinade Finance: `https://marinade.finance/favicon.ico`
-   - Jupiter: `https://www.jup.ag/favicon.ico`
-   - Merge Club: `https://merge.club/favicon.ico`
+| Provider | Current (broken) | New (CORS-friendly) |
+|---|---|---|
+| Solana Foundation (x2) | `solana.org/favicon.ico` | `https://avatars.githubusercontent.com/u/35608259` |
+| Superteam | `superteam.fun/favicon.ico` | `https://avatars.githubusercontent.com/u/102339943` |
+| Colosseum | `colosseum.org/favicon.ico` | `https://avatars.githubusercontent.com/u/147508312` |
+| Marinade Finance | `marinade.finance/favicon.ico` | `https://avatars.githubusercontent.com/u/81361879` |
+| Jupiter | `jup.ag/favicon.ico` | `https://avatars.githubusercontent.com/u/92518539` |
+| Merge Club | `merge.club/favicon.ico` | `https://avatars.githubusercontent.com/u/35608259` (Solana fallback) |
 
-**File: `src/pages/Grants.tsx`**
+**File: `src/pages/Grants.tsx`** -- Update watermark `<img>` styling:
 
-3. Add a `relative overflow-hidden` to the card wrapper div (line ~23)
-4. Add an `<img>` element inside the card body, positioned with:
-   - `absolute bottom-3 right-3` for bottom-right placement
-   - `w-16 h-16` size (64px)
-   - `opacity-[0.08]` for a subtle watermark effect
-   - `pointer-events-none select-none` so it doesn't interfere with interactions
-   - `grayscale` filter to keep it monochromatic and on-brand
+- Size: `h-16 w-16` to `h-24 w-24` (64px to 96px)
+- Opacity stays at `opacity-[0.08]` (larger logos will already feel more present)
 
