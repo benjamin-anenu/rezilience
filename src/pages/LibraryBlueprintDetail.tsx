@@ -29,7 +29,7 @@ export default function LibraryBlueprintDetail() {
     const es: Edge[] = [];
 
     const nodeWidth = 280;
-    const verticalGap = 280;
+    const verticalGap = 420;
     const centerX = 500;
 
     // Goal node at top
@@ -48,7 +48,7 @@ export default function LibraryBlueprintDetail() {
 
     // Step nodes below
     const cols = Math.min(blueprint.steps.length, 2);
-    const totalWidth = cols * (nodeWidth + 80) - 80;
+    const totalWidth = cols * (nodeWidth + 120) - 120;
     const startX = centerX - totalWidth / 2;
 
     blueprint.steps.forEach((step, i) => {
@@ -60,7 +60,7 @@ export default function LibraryBlueprintDetail() {
         id: nodeId,
         type: 'blueprint',
         position: {
-          x: startX + col * (nodeWidth + 80),
+          x: startX + col * (nodeWidth + 120),
           y: 120 + (row + 1) * verticalGap,
         },
         data: {
