@@ -14,10 +14,10 @@ import logo from '@/assets/logo.png';
 const navLinks = [
   { href: '/readme', label: 'README', external: false },
   { href: '/explorer', label: 'EXPLORER', external: false },
-  { href: '/grants', label: 'GRANTS', external: false },
-  { href: '/gpt', label: 'GPT', external: false },
   { href: '/staking', label: 'STAKING', external: false },
-  { href: '/my-bonds', label: 'MY BONDS', external: false },
+  { href: '/gpt', label: 'GPT', external: false },
+  { href: '/grants', label: 'GRANTS', external: false },
+  { href: '/library', label: 'LIBRARY', external: false },
 ];
 
 export function Navigation() {
