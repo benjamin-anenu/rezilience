@@ -1,86 +1,83 @@
 
 
-# Learning Room -- Premium UI Redesign
+# "Ask GPT" Tutor Modal -- Across the Entire Library
 
-## Problem
+## Overview
 
-The current module cards are flat, plain bordered boxes that look clickable but aren't interactive. The information (topics, resources, prerequisites) is crammed together without visual hierarchy. It reads like a basic list rather than a premium curriculum experience.
+Add a reusable "Ask GPT" button that opens a slide-up modal dialog with a self-contained mini chat interface. When clicked, it sends a pre-crafted tutoring prompt to the existing `chat-gpt` edge function and streams back a response. The user can then ask follow-up questions inside the modal without leaving the page.
 
-## Solution: Accordion-Based Curriculum Timeline
+The button will appear in **four locations**:
+1. **Guided Learning** -- inside each expanded module's detail panel
+2. **Solana Dictionary** -- inside each expanded dictionary entry
+3. **Project Blueprints** -- on each blueprint step node
+4. **Protocol Detail** -- below the "Full Documentation" button in the sidebar
 
-Replace the flat card list with a sophisticated vertical timeline + accordion pattern. Each module shows a compact summary row by default, and expands to reveal full details on click. This creates a clear visual progression and eliminates the "everything at once" overwhelm.
+## How It Works
 
-### Visual Structure
+1. User clicks "Ask GPT" on any item
+2. A Dialog slides up with a pre-seeded first message like: *"Explain [topic] to me like I'm a beginner. Use real Solana examples with projects like Jupiter, Marinade, Raydium. Include code snippets where helpful. After explaining, ask me a follow-up question to test my understanding."*
+3. The modal streams the response from the existing `chat-gpt` edge function (same SSE streaming logic already used on the /gpt page)
+4. User can type follow-up questions in the modal -- full conversational thread
+5. Close button dismisses the modal; conversation is ephemeral (not persisted)
 
-```text
-[01] ─── What is Solana? ──────────── 15 min ── CONCEPT
-              (click to expand)
-         |
-[02] ─── The Accounts Model ──────── 30 min ── CONCEPT
-              (click to expand)
-         |
-[03] ─── Transactions 101 ─────────── 30 min ── CONCEPT
-              (click to expand)
-         |
-[04] ─── Setting Up Your Environment ─ 45 min ── HANDS-ON
-              (click to expand)
-         |
-[05] ─── Hello World Program ─────── 1 hour ── PROJECT
-              (click to expand)
-```
+## New Component: `AskGptModal`
 
-### Collapsed State (Summary Row)
-Each module shows:
-- Left: vertical timeline connector line with a numbered circle node (teal glow)
-- Module title (Space Grotesk, bold)
-- Difficulty/type badge: CONCEPT, HANDS-ON, or PROJECT (derived from estimated time -- under 30min = concept, 30-59min = hands-on, 1hr+ = project)
-- Estimated time with clock icon (right-aligned, mono)
-- Subtle chevron indicating expandability
+**File: `src/components/library/AskGptModal.tsx`**
 
-### Expanded State (Detail Panel)
-On click, the card expands with a smooth animation (framer-motion) to reveal:
-- Description paragraph with slightly larger text
-- **What You'll Learn** section: topics rendered as a clean checklist (check-circle icons) instead of tiny badges
-- **Resources** section: each resource as a full-width row with icon, label, source domain, and external link arrow -- not just inline text links
-- **Prerequisites** section (if any): rendered as linked badges pointing to the prerequisite module's anchor on the page
-- A subtle inner border-left accent line in teal
+A self-contained Dialog component that:
+- Accepts a `topic: string` and optional `context: string` prop
+- Manages its own `messages[]` state, `isLoading`, and streaming logic
+- Reuses the same SSE streaming approach from `ResilienceGPT.tsx` (extracted into a helper or duplicated inline since it's ~40 lines)
+- Renders messages with `ReactMarkdown` + `remarkGfm` (same as `ChatMessage.tsx`)
+- Has a compact input bar at the bottom
+- Auto-scrolls on new tokens
+- Shows the "R" branding and a "Searching database..." pulse while loading
 
-### Additional Enhancements
+### Prompt Engineering
 
-**Data Enhancement** -- Add a `difficulty` field to `LearningModule` type:
-- `'concept'` -- reading/theory modules
-- `'hands-on'` -- setup and practice modules
-- `'project'` -- build something end-to-end
+The initial prompt sent to the edge function will be contextual:
 
-This gets set on each module in `learning-paths.ts` and renders as a colored badge (teal for concept, amber for hands-on, primary for project).
+- **Learning module**: "Teach me about '{module.title}'. Topics: {module.topics.join(', ')}. {module.description}. Explain like I'm a beginner using real Solana projects (Jupiter, Marinade, Helius, Metaplex) as examples. Include TypeScript/Rust code snippets where relevant. After your explanation, ask me one follow-up question to check my understanding."
 
-**Progress Indicator** -- The timeline nodes use three visual states:
-- Filled teal circle = current/expanded module
-- Outlined circle with number = collapsed module
-- Connected by a vertical dashed line
+- **Dictionary term**: "Explain the Solana concept '{entry.term}' ({entry.abbreviation}). Definition: {entry.definition}. When to use: {entry.whenToUse}. Teach me like I'm 10 years old, using real-world analogies and Solana project examples. Include a code snippet. Then ask me a question."
 
-**"Other Paths" Section** -- Upgrade from plain cards to glass cards with the tier icon, module count, and a progress-style indicator showing what content awaits.
+- **Blueprint step**: "Explain step {stepNumber}: '{step.label}' in building a {blueprintTitle}. It involves: {step.description}. Tools: {step.tools}. Dependencies: {step.dependencies}. Teach me the concepts with examples from Jupiter, Marinade, etc. Include code. Then quiz me."
+
+- **Protocol**: "Teach me about the {protocol.name} protocol on Solana. {protocol.description}. Use cases: {protocol.whenToUse.join(', ')}. Explain it simply with practical examples and code snippets. Then ask me a question."
+
+## Integration Points
+
+### 1. Learning Page (`LibraryLearn.tsx`)
+- Add an "Ask GPT" button inside the expanded detail panel (after the Resources section, before Prerequisites)
+- Button styled as: teal outline, mono font, small icon
+
+### 2. Dictionary Entry (`DictionaryEntry.tsx`)
+- Add an "Ask GPT" button inside the expanded panel (after Related Terms section)
+
+### 3. Blueprint Node (`BlueprintNode.tsx`)
+- Add a small "Ask GPT" button at the bottom of each step node (not goal node)
+- Uses `onClick={(e) => e.stopPropagation()}` to prevent node selection
+
+### 4. Protocol Detail (`ProtocolDetail.tsx`)
+- Add an "Ask GPT" button below the existing "Full Documentation" link in the sidebar
 
 ## Technical Details
 
+### Files Created
+- `src/components/library/AskGptModal.tsx` -- The reusable modal with streaming chat
+
 ### Files Modified
-
-**`src/data/learning-paths.ts`**
-- Add `difficulty: 'concept' | 'hands-on' | 'project'` to `LearningModule` interface
-- Set appropriate difficulty value on each of the 15 modules
-
-**`src/pages/LibraryLearn.tsx`**
-- Replace the flat `space-y-4` div with a timeline-based accordion layout
-- Use `useState` to track which module is expanded (or null for all collapsed)
-- Add framer-motion `AnimatePresence` + `motion.div` for smooth expand/collapse
-- Render timeline connector lines between modules
-- Upgrade "Other Paths" section with icons and glass styling
-- Add difficulty badges with color coding
-- Render resources as full-width rows instead of inline links
-- Render topics as a checklist instead of tiny badges
+- `src/pages/LibraryLearn.tsx` -- Import `AskGptModal`, add button + state in expanded panel
+- `src/components/library/DictionaryEntry.tsx` -- Import `AskGptModal`, add button + state in expanded panel
+- `src/components/library/BlueprintNode.tsx` -- Import `AskGptModal`, add button on step nodes
+- `src/pages/ProtocolDetail.tsx` -- Import `AskGptModal`, add button in sidebar
 
 ### No New Dependencies
-- `framer-motion` already installed for animations
-- All UI primitives (Badge, etc.) already available
-- Lucide icons for CheckCircle2, ChevronDown, etc. already available
+- Uses existing `@radix-ui/react-dialog` (Dialog component)
+- Uses existing `react-markdown` + `remark-gfm`
+- Uses existing `framer-motion` for slide-up animation
+- Calls existing `chat-gpt` edge function via the same `CHAT_URL` pattern
+
+### No Edge Function Changes
+The existing `chat-gpt` edge function already handles general Solana knowledge questions perfectly. The tutoring prompt is crafted on the frontend to instruct the AI to teach + quiz.
 
