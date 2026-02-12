@@ -1,6 +1,7 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
+import { AskGptModal, AskGptButton } from '@/components/library/AskGptModal';
 import { CodeBlock, UpdateBadge } from '@/components/library';
 import { getProtocolBySlug } from '@/data/protocols';
 import { Badge } from '@/components/ui/badge';
@@ -12,6 +13,7 @@ export default function ProtocolDetail() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
   const protocol = slug ? getProtocolBySlug(slug) : undefined;
+  const [gptOpen, setGptOpen] = useState(false);
 
   useEffect(() => {
     if (slug && !protocol) {
@@ -152,9 +154,22 @@ export default function ProtocolDetail() {
             <a href={protocol.links.docs} target="_blank" rel="noopener noreferrer" className="flex items-center justify-center gap-2 rounded-sm border border-primary bg-primary/10 px-4 py-3 font-display text-sm font-semibold text-primary transition-colors hover:bg-primary/20">
               <ExternalLink className="h-4 w-4" /> Full Documentation
             </a>
+
+            <div className="flex justify-center">
+              <AskGptButton onClick={() => setGptOpen(true)} className="w-full justify-center py-2.5" />
+            </div>
           </div>
         </div>
       </section>
+
+      {protocol && (
+        <AskGptModal
+          open={gptOpen}
+          onOpenChange={setGptOpen}
+          topic={protocol.name}
+          context={`${protocol.description}. Use cases: ${protocol.whenToUse.join(', ')}`}
+        />
+      )}
     </Layout>
   );
 }

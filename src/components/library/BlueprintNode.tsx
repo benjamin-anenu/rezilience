@@ -1,8 +1,9 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ExternalLink, BookOpen, FileText } from 'lucide-react';
+import { AskGptModal, AskGptButton } from './AskGptModal';
 
 export type BlueprintNodeData = {
   label: string;
@@ -25,6 +26,7 @@ export const BlueprintNode = memo(function BlueprintNode({
   selected,
 }: NodeProps & { data: BlueprintNodeData }) {
   const isGoal = data.type === 'goal';
+  const [gptOpen, setGptOpen] = useState(false);
 
   return (
     <div
@@ -161,6 +163,21 @@ export const BlueprintNode = memo(function BlueprintNode({
         >
           Docs <ExternalLink className="h-2.5 w-2.5" />
         </a>
+      )}
+
+      {/* Ask GPT for step nodes */}
+      {!isGoal && (
+        <>
+          <div className="mt-2">
+            <AskGptButton onClick={(e) => { e.stopPropagation(); setGptOpen(true); }} />
+          </div>
+          <AskGptModal
+            open={gptOpen}
+            onOpenChange={setGptOpen}
+            topic={data.label}
+            context={`Step ${data.stepNumber}: ${data.description}. Tools: ${data.tools.join(', ')}. Dependencies: ${data.dependencies.join(', ')}`}
+          />
+        </>
       )}
     </div>
   );
