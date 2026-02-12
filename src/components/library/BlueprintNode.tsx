@@ -1,7 +1,8 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
+import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, BookOpen, FileText } from 'lucide-react';
 
 export type BlueprintNodeData = {
   label: string;
@@ -15,6 +16,8 @@ export type BlueprintNodeData = {
   apis?: string[];
   estimatedCost?: string;
   docsUrl?: string;
+  dictionaryTerms?: string[];
+  protocolSlugs?: string[];
 };
 
 export const BlueprintNode = memo(function BlueprintNode({
@@ -26,10 +29,10 @@ export const BlueprintNode = memo(function BlueprintNode({
   return (
     <div
       className={cn(
-        'rounded-lg border-2 px-5 py-4 shadow-lg transition-all bg-card max-w-[280px]',
+        'rounded-lg border-2 px-5 py-4 transition-all max-w-[320px]',
         isGoal
-          ? 'border-primary bg-primary/10 min-w-[260px]'
-          : 'border-border hover:border-primary/50',
+          ? 'border-primary bg-primary/10 min-w-[280px] shadow-[0_0_20px_rgba(0,194,182,0.15)]'
+          : 'border-primary/30 bg-background/80 backdrop-blur-sm hover:border-primary shadow-[0_0_15px_rgba(0,194,182,0.08)]',
         selected && 'ring-2 ring-primary ring-offset-2 ring-offset-background'
       )}
     >
@@ -106,6 +109,44 @@ export const BlueprintNode = memo(function BlueprintNode({
       {data.estimatedCost && (
         <div className="mt-2 flex items-center gap-1 font-mono text-[10px] text-destructive">
           💰 {data.estimatedCost}
+        </div>
+      )}
+
+      {/* Protocol links */}
+      {data.protocolSlugs && data.protocolSlugs.length > 0 && (
+        <div className="mb-2">
+          <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><BookOpen className="h-2.5 w-2.5" /> Protocols</span>
+          <div className="mt-0.5 flex flex-wrap gap-1">
+            {data.protocolSlugs.map((slug) => (
+              <Link
+                key={slug}
+                to={`/library/${slug}`}
+                onClick={(e) => e.stopPropagation()}
+                className="rounded-sm border border-primary/40 bg-primary/10 px-1.5 py-0.5 font-mono text-[10px] text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+              >
+                {slug}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Dictionary links */}
+      {data.dictionaryTerms && data.dictionaryTerms.length > 0 && (
+        <div className="mb-2">
+          <span className="font-mono text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1"><FileText className="h-2.5 w-2.5" /> Dictionary</span>
+          <div className="mt-0.5 flex flex-wrap gap-1">
+            {data.dictionaryTerms.map((term) => (
+              <Link
+                key={term}
+                to={`/library/dictionary?term=${term}`}
+                onClick={(e) => e.stopPropagation()}
+                className="rounded-sm border border-muted-foreground/30 bg-muted/30 px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors cursor-pointer"
+              >
+                {term}
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 
