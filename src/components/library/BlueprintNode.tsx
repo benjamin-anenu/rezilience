@@ -168,7 +168,7 @@ export const BlueprintNode = memo(function BlueprintNode({
       {/* Ask GPT for step nodes */}
       {!isGoal && (
         <>
-          <div className="mt-2">
+          <div className="mt-3 border-t border-border/30 pt-2">
             <AskGptButton onClick={(e) => { e.stopPropagation(); setGptOpen(true); }} />
           </div>
           <AskGptModal
