@@ -357,8 +357,6 @@ Deno.serve(async (req) => {
       claimer_wallet: profile_data?.walletAddress || null,
       github_org_url: githubOrgUrl || primaryRepo?.html_url || null,
       github_username: githubUser.login,
-      github_access_token: accessToken,
-      github_token_scope: tokenScope,
       x_user_id: xUserId || null,
       x_username: profile_data?.xUsername || null,
       discord_url: profile_data?.socials?.discordUrl || null,
@@ -392,6 +390,18 @@ Deno.serve(async (req) => {
         JSON.stringify({ error: `Failed to save profile: ${saveError.message}` }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Store GitHub token in separate secrets table
+    if (savedProfile?.id && accessToken) {
+      await supabase
+        .from("profile_secrets")
+        .upsert({
+          profile_id: savedProfile.id,
+          github_access_token: accessToken,
+          github_token_scope: tokenScope,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "profile_id" });
     }
 
     // Trigger full analytics fetch to populate all extended fields
