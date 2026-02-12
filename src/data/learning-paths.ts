@@ -1,9 +1,11 @@
 export type ExperienceLevel = 'explorer' | 'builder' | 'architect';
+export type ModuleDifficulty = 'concept' | 'hands-on' | 'project';
 
 export interface LearningModule {
   id: string;
   title: string;
   description: string;
+  difficulty: ModuleDifficulty;
   estimatedTime: string;
   topics: string[];
   resources: { label: string; url: string }[];
@@ -16,7 +18,7 @@ export interface ExperienceTier {
   tagline: string;
   experience: string;
   description: string;
-  icon: string; // lucide icon name
+  icon: string;
   modules: LearningModule[];
 }
 
@@ -33,6 +35,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'what-is-solana',
         title: 'What is Solana?',
         description: 'A non-technical overview of Solana\'s architecture, consensus mechanism, and why it\'s different from Ethereum.',
+        difficulty: 'concept',
         estimatedTime: '15 min',
         topics: ['Proof of History', 'Transaction throughput', 'SOL token', 'Validator network'],
         resources: [
@@ -44,6 +47,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'accounts-model',
         title: 'The Accounts Model',
         description: 'Solana stores everything in accounts. Learn how accounts, programs, and data relate to each other.',
+        difficulty: 'concept',
         estimatedTime: '30 min',
         topics: ['Account structure', 'Owner vs Authority', 'Rent & rent-exemption', 'Program accounts'],
         resources: [
@@ -55,6 +59,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'transactions-101',
         title: 'Transactions 101',
         description: 'How transactions work on Solana — instructions, signers, blockhashes, and confirmation.',
+        difficulty: 'concept',
         estimatedTime: '30 min',
         topics: ['Instructions', 'Signers', 'Blockhash lifetime', 'Confirmation levels'],
         resources: [
@@ -65,6 +70,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'setup-environment',
         title: 'Setting Up Your Environment',
         description: 'Install the Solana CLI, Anchor, and connect a wallet for development on devnet.',
+        difficulty: 'hands-on',
         estimatedTime: '45 min',
         topics: ['Solana CLI install', 'Anchor install', 'Devnet airdrop', 'Phantom wallet setup'],
         resources: [
@@ -76,6 +82,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'hello-world',
         title: 'Hello World Program',
         description: 'Write, build, and deploy your first Solana program using Anchor. A counter that increments.',
+        difficulty: 'project',
         estimatedTime: '1 hour',
         topics: ['anchor init', 'Program structure', 'Build & deploy', 'Client interaction'],
         resources: [
@@ -97,6 +104,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'advanced-anchor',
         title: 'Advanced Anchor Patterns',
         description: 'Constraints, zero-copy deserialization, remaining accounts, and program-level access control patterns.',
+        difficulty: 'hands-on',
         estimatedTime: '2 hours',
         topics: ['Custom constraints', 'Zero-copy', 'Remaining accounts', 'Access control'],
         resources: [
@@ -109,6 +117,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'cpi-patterns',
         title: 'Cross-Program Invocation (CPI)',
         description: 'Call other programs from your program — token transfers, minting, and composability patterns.',
+        difficulty: 'hands-on',
         estimatedTime: '1.5 hours',
         topics: ['CPI basics', 'PDA signing', 'Token transfers', 'Composability'],
         resources: [
@@ -120,6 +129,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'token-extensions',
         title: 'Token Extensions (Token-2022)',
         description: 'The next-generation token standard: transfer fees, confidential transfers, permanent delegates, and transfer hooks.',
+        difficulty: 'project',
         estimatedTime: '2 hours',
         topics: ['Transfer fees', 'Confidential transfers', 'Transfer hooks', 'Interest-bearing tokens'],
         resources: [
@@ -131,6 +141,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'compressed-nfts',
         title: 'Compressed NFTs',
         description: 'Mint millions of NFTs for pennies using state compression and Merkle trees.',
+        difficulty: 'project',
         estimatedTime: '1.5 hours',
         topics: ['State compression', 'Merkle trees', 'Bubblegum', 'DAS API'],
         resources: [
@@ -142,6 +153,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'versioned-transactions',
         title: 'Versioned Transactions & ALTs',
         description: 'Handle complex transactions with Address Lookup Tables for DeFi integrations.',
+        difficulty: 'hands-on',
         estimatedTime: '1 hour',
         topics: ['v0 transactions', 'Address Lookup Tables', 'Serialization', 'Jupiter integration'],
         resources: [
@@ -162,6 +174,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'security-auditing',
         title: 'Program Security Auditing',
         description: 'Common Solana vulnerabilities, how to audit programs, and security best practices for production.',
+        difficulty: 'concept',
         estimatedTime: '3 hours',
         topics: ['Signer validation', 'Account confusion', 'Arithmetic overflow', 'Reentrancy', 'Missing owner checks'],
         resources: [
@@ -173,6 +186,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'clockwork-automation',
         title: 'On-Chain Automation',
         description: 'Automate recurring transactions with Clockwork — cron jobs for Solana programs.',
+        difficulty: 'hands-on',
         estimatedTime: '1.5 hours',
         topics: ['Thread scheduling', 'Trigger types', 'Fee management', 'Use cases'],
         resources: [
@@ -184,6 +198,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'multisig-governance',
         title: 'Multi-sig Governance Patterns',
         description: 'Design governance systems with Squads multisig, program upgrade controls, and treasury management.',
+        difficulty: 'project',
         estimatedTime: '2 hours',
         topics: ['Squads Protocol', 'Upgrade authority management', 'Treasury operations', 'Time-locks'],
         resources: [
@@ -195,6 +210,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'custom-oracles',
         title: 'Custom Oracle Integration',
         description: 'Build beyond Pyth — design custom oracle patterns for specialized data feeds and cross-program price consumption.',
+        difficulty: 'project',
         estimatedTime: '2 hours',
         topics: ['Pyth advanced usage', 'Switchboard', 'Custom oracle design', 'Staleness protection'],
         resources: [
@@ -206,6 +222,7 @@ export const experienceTiers: ExperienceTier[] = [
         id: 'zk-compression',
         title: 'ZK Compression',
         description: 'Leverage zero-knowledge proofs for scalable state management and privacy-preserving applications on Solana.',
+        difficulty: 'project',
         estimatedTime: '2.5 hours',
         topics: ['ZK fundamentals', 'Light Protocol', 'Compressed accounts', 'Privacy patterns'],
         resources: [
