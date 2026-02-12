@@ -20,9 +20,9 @@ function GrantCard({ grant }: { grant: SolanaGrant }) {
   const status = statusConfig[grant.status] || statusConfig.Open;
 
   return (
-    <div className="group flex h-full flex-col rounded-sm border border-border bg-card transition-all duration-300 card-lift card-premium">
+    <div className="group flex h-full flex-col rounded-sm border border-primary/30 bg-transparent transition-all duration-300 card-lift hover:border-primary/60">
       {/* Header strip */}
-      <div className="border-b border-border px-5 py-4">
+      <div className="border-b border-primary/20 px-5 py-4">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
