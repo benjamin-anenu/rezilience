@@ -100,7 +100,7 @@ export default function LibraryBlueprintDetail() {
 
   return (
     <Layout>
-      <section className="container mx-auto px-4 py-8 lg:px-8">
+      <section className="sticky top-16 z-10 bg-background border-b border-border/50 container mx-auto px-4 py-6 lg:px-8">
         <Link to="/library/blueprints" className="mb-4 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
           <ArrowLeft className="h-3 w-3" /> Back to Blueprints
         </Link>
