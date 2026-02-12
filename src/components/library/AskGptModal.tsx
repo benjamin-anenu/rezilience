@@ -242,17 +242,17 @@ export function AskGptModal({ open, onOpenChange, topic, context }: AskGptModalP
   );
 }
 
-/** Reusable trigger button */
+/** Reusable trigger button – Solana-branded purple gradient */
 export function AskGptButton({ onClick, className }: { onClick: (e: React.MouseEvent) => void; className?: string }) {
   return (
     <button
       onClick={onClick}
       className={cn(
-        'inline-flex items-center gap-1.5 rounded-sm border border-primary/30 bg-primary/5 px-2.5 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-primary transition-all hover:bg-primary/15 hover:border-primary/50 hover:shadow-[0_0_10px_rgba(0,194,182,0.15)]',
+        'inline-flex items-center gap-2 rounded-md bg-gradient-to-r from-[#9945FF] to-[#14F195] px-3.5 py-2 font-mono text-[11px] font-bold uppercase tracking-wider text-white shadow-[0_0_14px_rgba(153,69,255,0.25)] transition-all hover:shadow-[0_0_22px_rgba(153,69,255,0.45)] hover:brightness-110 active:scale-[0.97]',
         className
       )}
     >
-      <Sparkles className="h-3 w-3" />
+      <Sparkles className="h-3.5 w-3.5" />
       Ask GPT
     </button>
   );

@@ -190,8 +190,8 @@ export default function LibraryLearn() {
                             </div>
                           </div>
 
-                          {/* Ask GPT */}
-                          <div className="mb-4">
+                          {/* Ask GPT – standalone section with breathing room */}
+                          <div className="my-5 pt-4 border-t border-border/30">
                             <AskGptButton onClick={() => setGptTopic({
                               topic: mod.title,
                               context: `Topics: ${mod.topics.join(', ')}. ${mod.description}`
