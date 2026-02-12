@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { Layout } from '@/components/layout/Layout';
 import { experienceTiers } from '@/data/learning-paths';
 import { ExperienceSelector } from '@/components/library/ExperienceSelector';
+import { AskGptModal, AskGptButton } from '@/components/library/AskGptModal';
 import { ArrowLeft, Clock, ExternalLink, ChevronRight, ChevronDown, CheckCircle2, BookOpen, Wrench, Rocket, Compass, Hammer, Building2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -23,6 +24,7 @@ function extractDomain(url: string): string {
 export default function LibraryLearn() {
   const { level } = useParams<{ level?: string }>();
   const [expandedModule, setExpandedModule] = useState<string | null>(null);
+  const [gptTopic, setGptTopic] = useState<{ topic: string; context: string } | null>(null);
 
   const tier = level ? experienceTiers.find((t) => t.id === level) : null;
 
@@ -188,6 +190,14 @@ export default function LibraryLearn() {
                             </div>
                           </div>
 
+                          {/* Ask GPT */}
+                          <div className="mb-4">
+                            <AskGptButton onClick={() => setGptTopic({
+                              topic: mod.title,
+                              context: `Topics: ${mod.topics.join(', ')}. ${mod.description}`
+                            })} />
+                          </div>
+
                           {/* Prerequisites */}
                           {mod.prerequisites && mod.prerequisites.length > 0 && (
                             <div>
@@ -250,6 +260,13 @@ export default function LibraryLearn() {
           </div>
         </div>
       </section>
+
+      <AskGptModal
+        open={!!gptTopic}
+        onOpenChange={(open) => !open && setGptTopic(null)}
+        topic={gptTopic?.topic ?? ''}
+        context={gptTopic?.context}
+      />
     </Layout>
   );
 }

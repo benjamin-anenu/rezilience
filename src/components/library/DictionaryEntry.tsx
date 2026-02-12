@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { CodeBlock } from './CodeBlock';
+import { AskGptModal, AskGptButton } from './AskGptModal';
 import { CheckCircle2, ChevronDown, BookOpen, Link2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { DictionaryEntry as DictEntry } from '@/data/dictionary';
@@ -22,6 +24,7 @@ const categoryColors: Record<string, string> = {
 
 export function DictionaryEntryCard({ entry, isExpanded, onToggle }: DictionaryEntryProps) {
   const catColor = categoryColors[entry.category] ?? 'border-primary/40 bg-primary/10 text-primary';
+  const [gptOpen, setGptOpen] = useState(false);
 
   return (
     <div className="relative flex gap-4 px-4 sm:px-6" id={`term-${entry.id}`}>
@@ -118,11 +121,21 @@ export function DictionaryEntryCard({ entry, isExpanded, onToggle }: DictionaryE
                     </div>
                   </div>
                 )}
+
+                {/* Ask GPT */}
+                <AskGptButton onClick={(e) => { e.stopPropagation(); setGptOpen(true); }} />
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      <AskGptModal
+        open={gptOpen}
+        onOpenChange={setGptOpen}
+        topic={entry.term}
+        context={`${entry.abbreviation ? `(${entry.abbreviation}) ` : ''}Definition: ${entry.definition}. When to use: ${entry.whenToUse}`}
+      />
     </div>
   );
 }
