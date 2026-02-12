@@ -94,7 +94,7 @@ export default function LibraryBlueprints() {
 
         <div className="mt-12 rounded-sm border border-border bg-card/50 p-6 text-center">
           <p className="font-mono text-xs text-muted-foreground">
-            Interactive blueprint trees with @xyflow/react coming in Round 3. Currently showing overview cards.
+            Click any blueprint to explore the interactive dependency tree with tools, APIs, costs, and alternatives.
           </p>
         </div>
       </section>
