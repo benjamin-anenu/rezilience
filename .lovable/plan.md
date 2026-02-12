@@ -1,48 +1,86 @@
 
 
-# Blueprint Tree Enhancement
+# Learning Room -- Premium UI Redesign
 
-## Three Fixes
+## Problem
 
-### 1. Clickable Links to Protocols and Dictionary Terms
+The current module cards are flat, plain bordered boxes that look clickable but aren't interactive. The information (topics, resources, prerequisites) is crammed together without visual hierarchy. It reads like a basic list rather than a premium curriculum experience.
 
-The blueprint data already contains `dictionaryTerms` and `protocolSlugs` arrays on each step -- they're just not being passed through to the node component or rendered.
+## Solution: Accordion-Based Curriculum Timeline
 
-**Changes:**
-- Update `BlueprintNodeData` type to include `dictionaryTerms` and `protocolSlugs`
-- Pass these fields through in `LibraryBlueprintDetail.tsx` when constructing node data
-- Render them in `BlueprintNode.tsx` as clickable links:
-  - Protocol slugs link to `/library/{slug}` (e.g., "Jupiter" links to `/library/jupiter`)
-  - Dictionary terms link to `/library/dictionary?term={term}` (e.g., "PDA" links to the dictionary with that term highlighted)
-- Use `react-router-dom`'s `Link` component wrapped in `onClick={(e) => e.stopPropagation()}` to prevent node selection conflicts
+Replace the flat card list with a sophisticated vertical timeline + accordion pattern. Each module shows a compact summary row by default, and expands to reveal full details on click. This creates a clear visual progression and eliminates the "everything at once" overwhelm.
 
-### 2. Fix Overlapping Cards -- More Spacing
+### Visual Structure
 
-The current layout uses:
-- `nodeWidth = 280`, horizontal gap of only `40px`, vertical gap of `180px`
-- 3 columns max, which causes cards with lots of content (deps, APIs, cost) to overlap vertically
+```text
+[01] ─── What is Solana? ──────────── 15 min ── CONCEPT
+              (click to expand)
+         |
+[02] ─── The Accounts Model ──────── 30 min ── CONCEPT
+              (click to expand)
+         |
+[03] ─── Transactions 101 ─────────── 30 min ── CONCEPT
+              (click to expand)
+         |
+[04] ─── Setting Up Your Environment ─ 45 min ── HANDS-ON
+              (click to expand)
+         |
+[05] ─── Hello World Program ─────── 1 hour ── PROJECT
+              (click to expand)
+```
 
-**Changes in `LibraryBlueprintDetail.tsx`:**
-- Increase horizontal gap from `40` to `80` pixels between columns
-- Increase vertical gap from `180` to `320` pixels between rows (cards can be 250px+ tall with all metadata)
-- Increase `centerX` from `400` to `500` to better center the wider layout
-- Use 2 columns max instead of 3 to give each card more breathing room
+### Collapsed State (Summary Row)
+Each module shows:
+- Left: vertical timeline connector line with a numbered circle node (teal glow)
+- Module title (Space Grotesk, bold)
+- Difficulty/type badge: CONCEPT, HANDS-ON, or PROJECT (derived from estimated time -- under 30min = concept, 30-59min = hands-on, 1hr+ = project)
+- Estimated time with clock icon (right-aligned, mono)
+- Subtle chevron indicating expandability
 
-### 3. Premium Card Styling -- Teal Border on Dark/Transparent Background
+### Expanded State (Detail Panel)
+On click, the card expands with a smooth animation (framer-motion) to reveal:
+- Description paragraph with slightly larger text
+- **What You'll Learn** section: topics rendered as a clean checklist (check-circle icons) instead of tiny badges
+- **Resources** section: each resource as a full-width row with icon, label, source domain, and external link arrow -- not just inline text links
+- **Prerequisites** section (if any): rendered as linked badges pointing to the prerequisite module's anchor on the page
+- A subtle inner border-left accent line in teal
 
-Replace the grey `bg-card` / `border-border` styling with the premium look used elsewhere in the platform.
+### Additional Enhancements
 
-**Changes in `BlueprintNode.tsx`:**
-- Goal node: Keep `border-primary bg-primary/10` (already looks good)
-- Step nodes: Change from `border-border bg-card` to `border-primary/30 bg-background/80 backdrop-blur-sm` -- giving a dark/transparent card with a subtle teal border
-- On hover: `hover:border-primary` (full teal glow)
-- Add subtle `shadow-[0_0_15px_rgba(0,194,182,0.08)]` for the premium glow effect matching the platform's verified-glow pattern
+**Data Enhancement** -- Add a `difficulty` field to `LearningModule` type:
+- `'concept'` -- reading/theory modules
+- `'hands-on'` -- setup and practice modules
+- `'project'` -- build something end-to-end
+
+This gets set on each module in `learning-paths.ts` and renders as a colored badge (teal for concept, amber for hands-on, primary for project).
+
+**Progress Indicator** -- The timeline nodes use three visual states:
+- Filled teal circle = current/expanded module
+- Outlined circle with number = collapsed module
+- Connected by a vertical dashed line
+
+**"Other Paths" Section** -- Upgrade from plain cards to glass cards with the tier icon, module count, and a progress-style indicator showing what content awaits.
 
 ## Technical Details
 
 ### Files Modified
-- `src/components/library/BlueprintNode.tsx` -- Add link rendering for protocols/dictionary terms, update card styling
-- `src/pages/LibraryBlueprintDetail.tsx` -- Pass `dictionaryTerms`/`protocolSlugs` to node data, fix spacing constants
+
+**`src/data/learning-paths.ts`**
+- Add `difficulty: 'concept' | 'hands-on' | 'project'` to `LearningModule` interface
+- Set appropriate difficulty value on each of the 15 modules
+
+**`src/pages/LibraryLearn.tsx`**
+- Replace the flat `space-y-4` div with a timeline-based accordion layout
+- Use `useState` to track which module is expanded (or null for all collapsed)
+- Add framer-motion `AnimatePresence` + `motion.div` for smooth expand/collapse
+- Render timeline connector lines between modules
+- Upgrade "Other Paths" section with icons and glass styling
+- Add difficulty badges with color coding
+- Render resources as full-width rows instead of inline links
+- Render topics as a checklist instead of tiny badges
 
 ### No New Dependencies
-All routing and UI components already exist.
+- `framer-motion` already installed for animations
+- All UI primitives (Badge, etc.) already available
+- Lucide icons for CheckCircle2, ChevronDown, etc. already available
+
