@@ -62,7 +62,7 @@ export function HeroSection() {
           <div className="flex flex-col justify-center">
             <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-sm border border-primary/30 bg-primary/10 px-3 py-1">
               <Activity className="h-4 w-4 text-primary" />
-              <span className="font-mono text-xs text-primary">ON-CHAIN ASSURANCE</span>
+              <span className="font-mono text-xs text-primary">DECENTRALIZED ASSURANCE OF SOLANA </span>
             </div>
 
             <h1 className="mb-6 font-display text-3xl font-bold uppercase leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
@@ -71,7 +71,7 @@ export function HeroSection() {
             </h1>
 
             <p className="mb-8 max-w-xl text-base text-muted-foreground sm:text-lg">
-              Any dev can copy a repo. You can't fake a heartbeat. We turn your development velocity into an immutable Resilience score that Public can bank on. Don't just launch. Outlast.
+              Any dev can copy a repo. You can't fake a heartbeat. We turn your development velocity into an immutable Resilience score that investors can bank on. Don't just launch. Outlast.
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
