@@ -12,6 +12,7 @@ import '@xyflow/react/dist/style.css';
 import { ArrowLeft } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { BlueprintNode, type BlueprintNodeData } from '@/components/library/BlueprintNode';
+import { BlueprintControls } from '@/components/library/BlueprintControls';
 import { getBlueprintBySlug } from '@/data/blueprints';
 import NotFound from './NotFound';
 
@@ -27,8 +28,8 @@ export default function LibraryBlueprintDetail() {
     const ns: Node<BlueprintNodeData>[] = [];
     const es: Edge[] = [];
 
-    const nodeWidth = 320;
-    const verticalGap = 340;
+    const nodeWidth = 280;
+    const verticalGap = 280;
     const centerX = 500;
 
     // Goal node at top
@@ -113,7 +114,7 @@ export default function LibraryBlueprintDetail() {
         </div>
       </section>
 
-      <div className="h-[70vh] w-full border-y border-border">
+      <div className="h-[60vh] w-full border-y border-border relative" tabIndex={0}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
@@ -128,8 +129,12 @@ export default function LibraryBlueprintDetail() {
           nodesConnectable={false}
         >
           <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="hsl(var(--muted-foreground) / 0.15)" />
+          <BlueprintControls />
         </ReactFlow>
       </div>
+      <p className="container mx-auto px-4 py-2 font-mono text-[10px] text-muted-foreground/50">
+        Use arrow keys to pan · +/- to zoom
+      </p>
     </Layout>
   );
 }

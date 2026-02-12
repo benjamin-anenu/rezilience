@@ -1,4 +1,4 @@
-import { ExternalLink, Info, BookOpen, DollarSign, Target, Users, ChevronRight, ArrowUpRight } from 'lucide-react';
+import { ExternalLink, Info, BookOpen, DollarSign, Users, ChevronRight, ArrowUpRight } from 'lucide-react';
 import { Layout } from '@/components/layout/Layout';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -20,7 +20,7 @@ function GrantCard({ grant }: { grant: SolanaGrant }) {
   const status = statusConfig[grant.status] || statusConfig.Open;
 
   return (
-    <div className="group flex flex-col rounded-sm border border-border bg-card transition-all duration-300 card-lift card-premium">
+    <div className="group flex h-full flex-col rounded-sm border border-border bg-card transition-all duration-300 card-lift card-premium">
       {/* Header strip */}
       <div className="border-b border-border px-5 py-4">
         <div className="flex items-start justify-between gap-3">
@@ -42,9 +42,8 @@ function GrantCard({ grant }: { grant: SolanaGrant }) {
       </div>
 
       {/* Body */}
-      <div className="flex flex-1 flex-col gap-5 px-5 py-4">
-        {/* Funding & Eligibility data rows */}
-        <div className="space-y-2.5">
+      <div className="flex flex-1 flex-col gap-4 px-5 py-4">
+        <div className="space-y-2">
           <div className="flex items-center gap-2.5">
             <div className="flex h-6 w-6 items-center justify-center rounded-sm bg-primary/10">
               <DollarSign className="h-3 w-3 text-primary" />
@@ -55,64 +54,38 @@ function GrantCard({ grant }: { grant: SolanaGrant }) {
             <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-muted">
               <Users className="h-3 w-3 text-muted-foreground" />
             </div>
-            <span className="text-xs leading-relaxed text-muted-foreground">{grant.eligibility}</span>
+            <span className="text-xs leading-relaxed text-muted-foreground line-clamp-2">{grant.eligibility}</span>
           </div>
         </div>
 
-        {/* Description */}
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          {grant.description}
-        </p>
+        <p className="text-xs leading-relaxed text-muted-foreground line-clamp-2">{grant.description}</p>
 
-        {/* Focus Areas */}
         <div className="flex flex-wrap gap-1">
-          {grant.focusAreas.map((area) => (
-            <span
-              key={area}
-              className="rounded-sm border border-border bg-background px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground"
-            >
+          {grant.focusAreas.slice(0, 4).map((area) => (
+            <span key={area} className="rounded-sm border border-border bg-background px-2 py-0.5 font-mono text-[9px] uppercase tracking-wider text-muted-foreground">
               {area}
             </span>
           ))}
         </div>
 
-        {/* Criteria */}
-        <div className="rounded-sm border border-border bg-background/50 p-3">
-          <p className="mb-2.5 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
-            <Target className="h-3 w-3 text-primary" />
-            Key Criteria
-          </p>
-          <ul className="space-y-1.5">
-            {grant.criteriaHighlights.slice(0, 4).map((c) => (
-              <li key={c} className="flex items-start gap-2 text-xs text-muted-foreground">
-                <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-primary/60" />
-                <span>{c}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <ul className="space-y-1">
+          {grant.criteriaHighlights.slice(0, 3).map((c) => (
+            <li key={c} className="flex items-start gap-2 text-xs text-muted-foreground">
+              <ChevronRight className="mt-0.5 h-3 w-3 shrink-0 text-primary/60" />
+              <span className="line-clamp-1">{c}</span>
+            </li>
+          ))}
+        </ul>
 
-        {/* Actions */}
         <div className="mt-auto flex gap-2 pt-1">
-          <Button
-            asChild
-            size="sm"
-            className="flex-1 rounded-sm font-mono text-[10px] font-semibold uppercase tracking-widest"
-          >
+          <Button asChild size="sm" className="flex-1 rounded-sm font-mono text-[10px] font-semibold uppercase tracking-widest">
             <a href={grant.applyUrl} target="_blank" rel="noopener noreferrer">
-              Apply
-              <ArrowUpRight className="ml-1 h-3 w-3" />
+              Apply <ArrowUpRight className="ml-1 h-3 w-3" />
             </a>
           </Button>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="rounded-sm font-mono text-[10px] font-semibold uppercase tracking-widest"
-          >
+          <Button asChild variant="outline" size="sm" className="rounded-sm font-mono text-[10px] font-semibold uppercase tracking-widest">
             <a href={grant.learnMoreUrl} target="_blank" rel="noopener noreferrer">
-              Details
-              <ExternalLink className="ml-1 h-3 w-3" />
+              Details <ExternalLink className="ml-1 h-3 w-3" />
             </a>
           </Button>
         </div>

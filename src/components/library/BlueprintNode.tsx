@@ -31,7 +31,7 @@ export const BlueprintNode = memo(function BlueprintNode({
   return (
     <div
       className={cn(
-        'rounded-lg border-2 px-5 py-4 transition-all max-w-[320px]',
+        'rounded-lg border-2 px-4 py-3 transition-all max-w-[280px]',
         isGoal
           ? 'border-primary bg-primary/10 min-w-[280px] shadow-[0_0_20px_rgba(0,194,182,0.15)]'
           : 'border-primary/30 bg-background/80 backdrop-blur-sm hover:border-primary shadow-[0_0_15px_rgba(0,194,182,0.08)]',
