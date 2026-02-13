@@ -1,84 +1,108 @@
 
 
-# Fix Remaining Security Vulnerabilities
+# Fix: Subscriber Email & Wallet Address Exposure
 
-## Analysis of the Three Findings
+## Analysis
 
-### Finding 1: "Project Owner Contact Information Could Be Harvested"
-**Status: Already resolved.** GitHub tokens were migrated to `profile_secrets` in a previous fix. A database query confirms zero tokens remain in `claimed_profiles`. Wallet addresses were already reviewed and marked as accepted (public blockchain data required for SIWS verification). No action needed.
+### Finding 1: Subscriber Emails
+**Current state**: The `project_subscribers` table has RLS enabled with only an INSERT policy. There is **no SELECT policy**, which means no client can read emails. This is already secure by default (RLS denies all operations without an explicit ALLOW policy). However, adding an explicit deny-all SELECT policy makes the intent crystal clear and prevents accidental future changes from opening access.
 
-### Finding 2: "Subscriber Email Addresses Could Be Stolen"
-**Status: Already secure.** The `project_subscribers` table has no SELECT policy -- meaning no client can read emails. Only INSERT is allowed (for subscription). No action needed.
+### Finding 2: Wallet Addresses in `claimed_profiles`
+**Current state**: Three SELECT policies allow public reads: verified profiles, unclaimed profiles, and claimer-owned profiles. All queries use `select('*')`, which returns **all 80+ columns** including `claimer_wallet`, `wallet_address`, `authority_wallet`, `authority_signature`, `multisig_address`, and `governance_address`. While no profiles currently have wallet data populated, once profiles are claimed and verified these fields will be exposed.
 
-### Finding 3: "Chat History Could Be Accessed by Wrong Users" -- CRITICAL
-**Status: Actively vulnerable.** This is a real, exploitable bug.
-
-The RLS policies on `chat_conversations` use `user_id = user_id`, which is a **column comparing to itself** (always true when not null). This means **any request can read, update, or delete ALL conversations**. The `chat_messages` policies similarly check only `c.user_id IS NOT NULL`, granting universal access.
-
-Additionally, the app uses X (Twitter) OAuth with localStorage-based sessions -- **not** Supabase Auth. This means `auth.uid()` returns null for all requests, making traditional RLS comparisons impossible.
+**Root cause**: Every frontend query fetches `select('*')` instead of explicitly listing needed columns. A database view solves this cleanly -- the frontend queries the view (which excludes sensitive columns), while edge functions using `service_role` can still access the base table directly.
 
 ---
 
-## Fix for Finding 3: Secure Chat via Edge Function
+## Solution
 
-Since there is no Supabase Auth session, RLS alone cannot verify user identity. The fix is to:
+### Step 1: Database Migration
 
-1. **Lock down both chat tables** with deny-all policies (like we did for `claim_blacklist`)
-2. **Create one new edge function** (`chat-history`) that handles all chat CRUD operations using `service_role`, verifying the user's X identity from the request
-3. **Update the frontend** to call the edge function instead of querying the tables directly
-
-### Database Migration
+Add one explicit deny-all SELECT policy and create a public view:
 
 ```sql
--- Drop broken policies on chat_conversations
-DROP POLICY IF EXISTS "Users can read own conversations" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Users can update own conversations" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Users can delete own conversations" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Users can insert own conversations" ON public.chat_conversations;
+-- 1. Explicit deny-all SELECT on project_subscribers
+CREATE POLICY "No public read access"
+  ON public.project_subscribers FOR SELECT
+  USING (false);
 
--- Drop broken policies on chat_messages
-DROP POLICY IF EXISTS "Users can read messages of own conversations" ON public.chat_messages;
-DROP POLICY IF EXISTS "Users can insert messages to own conversations" ON public.chat_messages;
-DROP POLICY IF EXISTS "Users can update own messages feedback" ON public.chat_messages;
-
--- Deny all direct client access (service_role bypasses RLS)
-CREATE POLICY "No direct access" ON public.chat_conversations FOR ALL USING (false);
-CREATE POLICY "No direct access" ON public.chat_messages FOR ALL USING (false);
+-- 2. Create a public view that excludes sensitive wallet/auth fields
+CREATE VIEW public.claimed_profiles_public
+WITH (security_invoker = on) AS
+  SELECT
+    id, project_name, description, category, website_url, logo_url,
+    program_id, project_id, github_org_url, github_username,
+    x_user_id, x_username, discord_url, telegram_url,
+    media_assets, milestones, verified, verified_at,
+    created_at, updated_at, resilience_score, liveness_status,
+    github_stars, github_forks, github_contributors, github_language,
+    github_languages, github_last_commit, github_commit_velocity,
+    github_commits_30d, github_releases_30d, github_open_issues,
+    github_topics, github_top_contributors, github_recent_events,
+    github_is_fork, github_homepage, github_analyzed_at,
+    github_push_events_30d, github_pr_events_30d, github_issue_events_30d,
+    github_last_activity, bytecode_hash, bytecode_verified_at,
+    bytecode_match_status, bytecode_confidence, bytecode_deploy_slot,
+    bytecode_on_chain_hash, build_in_public_videos,
+    twitter_followers, twitter_engagement_rate, twitter_recent_tweets,
+    twitter_last_synced, team_members, staking_pitch,
+    dependency_health_score, dependency_outdated_count,
+    dependency_critical_count, dependency_analyzed_at,
+    governance_tx_30d, governance_address, governance_last_activity,
+    governance_analyzed_at, tvl_usd, tvl_market_share, tvl_risk_ratio,
+    tvl_analyzed_at, integrated_score, score_breakdown, claim_status,
+    vulnerability_count, vulnerability_details, vulnerability_analyzed_at,
+    openssf_score, openssf_checks, openssf_analyzed_at,
+    country, discovery_source
+  FROM public.claimed_profiles;
+  -- EXCLUDED: claimer_wallet, wallet_address, authority_wallet,
+  --           authority_signature, authority_type, multisig_address,
+  --           multisig_verified_via, squads_version,
+  --           github_access_token, github_token_scope
 ```
 
-### New Edge Function: `chat-history`
+The view inherits RLS from the base table via `security_invoker = on`, so the same read policies apply. Sensitive wallet/auth fields are simply not in the view.
 
-Handles these operations via query parameter `action`:
+### Step 2: Frontend Changes
 
-- `GET ?action=list&user_id=X` -- List user's conversations
-- `GET ?action=messages&conversation_id=X&user_id=X` -- Load messages (verifies ownership)
-- `POST ?action=create` -- Create conversation (body: `{user_id, title}`)
-- `POST ?action=message` -- Save a message (body: `{conversation_id, user_id, role, content}`)
-- `POST ?action=feedback` -- Update feedback (body: `{message_id, user_id, feedback}`)
-- `DELETE ?action=delete&conversation_id=X&user_id=X` -- Delete conversation (verifies ownership)
+Replace `select('*')` queries on `claimed_profiles` with queries on the `claimed_profiles_public` view in these files:
 
-All operations verify that the `user_id` in the request matches the `user_id` on the conversation record before allowing access.
+**`src/hooks/useClaimedProfiles.ts`** (6 queries):
+- `useClaimedProfile` -- change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
+- `useClaimedProfileByProgramId` -- same
+- `useClaimedProfileByProjectId` -- same
+- `useMyVerifiedProfiles` -- same
+- `useExistingProfile` -- same (only selects `id, verified`, but still routes through view for consistency)
+- `useVerifiedProfiles` -- same
+- `useUnclaimedProfile` -- same
 
-### Frontend Changes
+**`src/hooks/useExplorerProjects.ts`** (1 query):
+- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
 
-**Files modified:**
-- `src/components/gpt/ChatSidebar.tsx` -- Replace direct Supabase queries with edge function calls
-- `src/pages/ResilienceGPT.tsx` -- Replace `saveMessageToDb`, `createConversation`, `loadConversation`, and `handleFeedback` to use edge function
+**`src/hooks/useHeroStats.ts`** (1 query):
+- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
 
-**New file:**
-- `supabase/functions/chat-history/index.ts`
+**`src/hooks/useEcosystemPulse.ts`** (1 query):
+- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
 
-**Config update:**
-- `supabase/config.toml` -- Add `[functions.chat-history]` with `verify_jwt = false`
+**`src/hooks/useBuildersFeed.ts`** (1 query):
+- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
+
+**`src/hooks/useDependencyGraph.ts`** (1 query):
+- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
+
+**`src/hooks/useRoadmapStats.ts`** (1 query):
+- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
 
 ### What Does NOT Change
 
-- The `chat-gpt` edge function (handles AI responses) remains untouched
-- Chat streaming logic stays the same
-- Anonymous/guest localStorage chat is unaffected
-- No changes to the claim flow, profiles, or any other feature
+- **`src/pages/ClaimProfile.tsx`** -- writes via `.insert()` / `.update()` on the base table (needs wallet fields for claim flow) -- unchanged
+- **Edge functions** -- all use `service_role` which bypasses RLS and accesses the base table directly -- unchanged
+- **Realtime subscription** in `useExplorerProjects` -- subscribes to the base table `claimed_profiles` for change notifications, which is correct -- unchanged
+- **`src/hooks/useUpdateProfile.ts`** -- calls the `update-profile` edge function, not direct DB -- unchanged
 
-### Security Note
+### Security Finding Updates
 
-This approach is not cryptographically verified (the X user ID is passed from the client). However, it is a significant improvement over the current state where **any** request can access **all** conversations. A proper solution would require server-side session tokens, which is a larger architectural change that can be planned separately.
+- Delete the "subscriber emails exposed" finding (resolved by explicit deny-all policy)
+- Update the "wallet addresses exposed" finding to resolved (view excludes sensitive columns)
 
