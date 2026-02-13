@@ -290,6 +290,87 @@
     );
   }
 }
+
+/* Print stylesheet for Grant Reporter PDF export */
+@media print {
+  /* Hide everything except the report */
+  body * { visibility: hidden !important; }
+  .print-report, .print-report * { visibility: visible !important; }
+  .print-report { position: absolute; left: 0; top: 0; width: 100%; }
+
+  /* Hide interactive controls */
+  .no-print { display: none !important; }
+
+  /* Force light background for print */
+  .print-report {
+    background: #ffffff !important;
+    color: #1a1a2e !important;
+    padding: 40px !important;
+    font-family: 'Inter', sans-serif !important;
+  }
+
+  .print-report .print-header {
+    border-bottom: 2px solid #00C2B6;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+  }
+
+  .print-report .print-header h1 {
+    color: #0F1216 !important;
+    font-size: 22px !important;
+    font-weight: 700 !important;
+  }
+
+  .print-report .print-header p {
+    color: #666 !important;
+    font-size: 10px !important;
+  }
+
+  .print-report .glass-card,
+  .print-report .glass-chart {
+    background: #f8f9fa !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 6px !important;
+    box-shadow: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-report h3 { color: #333 !important; }
+  .print-report p, .print-report span { color: #444 !important; }
+  .print-report .text-primary { color: #00897B !important; font-weight: 600 !important; }
+
+  .print-report .kpi-strip {
+    display: flex !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 6px !important;
+    background: #f0f4f8 !important;
+  }
+
+  .print-report .kpi-strip > * {
+    border-color: #ddd !important;
+  }
+
+  /* Chart SVG contrast */
+  .print-report .recharts-wrapper text { fill: #333 !important; }
+  .print-report .recharts-cartesian-grid line { stroke: #ddd !important; }
+
+  .print-footer {
+    margin-top: 32px;
+    padding-top: 12px;
+    border-top: 1px solid #ccc;
+    font-size: 9px;
+    color: #999 !important;
+    text-align: center;
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 15mm;
+  }
+}
  
  /* Solana Wallet Adapter Styles Override */
  .wallet-adapter-button {

@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Download, Calendar } from 'lucide-react';
+import { Loader2, Download, Calendar, FileText } from 'lucide-react';
 import { StatCard } from '@/components/admin/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -102,6 +102,7 @@ async function fetchReportData(startDate: string, endDate: string) {
 }
 
 export function AdminReporter() {
+  const reportRef = useRef<HTMLDivElement>(null);
   const today = new Date().toISOString().substring(0, 10);
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString().substring(0, 10);
   const [startDate, setStartDate] = useState(thirtyDaysAgo);
@@ -135,9 +136,22 @@ export function AdminReporter() {
     URL.revokeObjectURL(url);
   };
 
+  const exportPDF = () => {
+    if (!reportRef.current) return;
+    reportRef.current.classList.add('print-report');
+    window.print();
+    setTimeout(() => reportRef.current?.classList.remove('print-report'), 500);
+  };
+
   return (
-    <div className="p-6 lg:p-8 space-y-5 admin-gradient-bg min-h-full">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div ref={reportRef} className="p-6 lg:p-8 space-y-5 admin-gradient-bg min-h-full">
+      {/* Print-only branded header */}
+      <div className="hidden print-header">
+        <h1 style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Rezilience — Milestone Report</h1>
+        <p style={{ fontFamily: 'JetBrains Mono, monospace' }}>SOLANA FOUNDATION GRANT · {startDate} → {endDate} · Generated {new Date().toLocaleDateString()}</p>
+      </div>
+
+      <div className="flex items-center justify-between flex-wrap gap-4 no-print">
         <div>
           <h1 className="font-display text-xl font-bold tracking-tight text-foreground">Grant Reporter</h1>
           <p className="text-[10px] text-muted-foreground font-mono mt-0.5">SOLANA FOUNDATION MILESTONE REPORTING</p>
@@ -212,9 +226,19 @@ export function AdminReporter() {
             </p>
           </div>
 
-          <Button onClick={exportCSV} className="font-display">
-            <Download className="h-4 w-4 mr-2" /> EXPORT CSV
-          </Button>
+          <div className="flex gap-3 no-print">
+            <Button onClick={exportPDF} className="font-display">
+              <FileText className="h-4 w-4 mr-2" /> EXPORT PDF
+            </Button>
+            <Button onClick={exportCSV} variant="outline" className="font-display">
+              <Download className="h-4 w-4 mr-2" /> EXPORT CSV
+            </Button>
+          </div>
+
+          {/* Print-only footer */}
+          <div className="hidden print-footer">
+            Rezilience · Solana Ecosystem Resilience Intelligence · rezilience.lovable.app · Confidential
+          </div>
         </>
       ) : null}
     </div>
