@@ -62,18 +62,13 @@ export function HeroSection() {
           <div className="flex flex-col justify-center">
             <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-sm border border-primary/30 bg-primary/10 px-3 py-1">
               <Activity className="h-4 w-4 text-primary" />
-              <span className="font-mono text-xs text-primary">DECENTRALIZED ASSURANCE OF SOLANA </span>
+              <span className="font-mono text-xs text-primary">DECENTRALIZED ASSURANCE lAYER OF SOLANA</span>
             </div>
 
-            <h1 className="mb-2 font-display text-3xl font-bold uppercase leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
+            <h1 className="mb-6 font-display text-3xl font-bold uppercase leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
               REPUTATION CAN'T BE{' '}
               <span className="text-primary">FORKED.</span>
             </h1>
-
-            <p className="mt-2 mb-6 font-display text-lg font-semibold uppercase tracking-wide text-muted-foreground sm:text-xl">
-              Secure the Ecosystem. Get{' '}
-              <span className="text-primary">Rewarded</span> for Longevity.
-            </p>
 
             <p className="mb-8 max-w-xl text-base text-muted-foreground sm:text-lg">The Solana Ecosystem needs projects built for the long haul. Join the Resilience Registry to establish an undeniable, off-chain & on-chain reputation for maintaining your code. Secure your spot today in anticipation of public SOL staking driven by proven project health.
 
