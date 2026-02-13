@@ -28,7 +28,7 @@ export function AdminSidebar() {
   const { signOut, user } = useAdminAuth();
 
   return (
-    <aside className="flex h-screen w-64 flex-col border-r border-border bg-card/50 backdrop-blur-sm">
+    <aside className="flex h-screen w-64 flex-col border-r border-border/30 bg-card/20 backdrop-blur-xl">
       {/* Header */}
       <div className="flex items-center gap-3 border-b border-border px-5 py-4">
         <img src={logoImg} alt="Rezilience" className="h-7 w-auto" />

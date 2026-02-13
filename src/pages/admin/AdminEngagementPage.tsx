@@ -1,49 +1,81 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Loader2, Eye, Search, MousePointer, Smartphone, Monitor, Tablet } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { StatCard } from '@/components/admin/StatCard';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar,
+  BarChart, Bar, PieChart, Pie, Cell,
 } from 'recharts';
 
-const COLORS = {
+const C = {
   teal: 'hsl(174, 100%, 38%)',
   orange: 'hsl(24, 100%, 38%)',
   steel: 'hsl(212, 11%, 58%)',
+  light: 'hsl(216, 33%, 94%)',
+  violet: 'hsl(270, 60%, 55%)',
+  grid: 'hsl(214, 18%, 20%)',
 };
 
-const tooltipStyle = {
-  background: 'hsl(214, 18%, 19%)',
-  border: '1px solid hsl(214, 18%, 25%)',
-  borderRadius: '2px',
-  fontSize: 12,
+const tip = {
+  contentStyle: {
+    background: 'hsl(214, 18%, 12%)',
+    border: '1px solid hsl(214, 18%, 22%)',
+    borderRadius: '4px',
+    fontSize: 11,
+    fontFamily: 'JetBrains Mono, monospace',
+  },
 };
 
 async function fetchEngagementData() {
-  const { data: events, error } = await supabase
+  const { data: events } = await supabase
     .from('admin_analytics')
     .select('event_type, event_target, device_type, session_id, created_at')
     .order('created_at', { ascending: false })
     .limit(1000);
 
-  if (error) throw error;
   const all = events || [];
-
-  const totalEvents = all.length;
   const pageViews = all.filter(e => e.event_type === 'page_view').length;
   const clicks = all.filter(e => e.event_type === 'click').length;
   const searches = all.filter(e => e.event_type === 'search').length;
+  const featureUses = all.filter(e => e.event_type === 'feature_use').length;
   const uniqueSessions = new Set(all.map(e => e.session_id)).size;
 
-  // Device breakdown
-  const devices = { desktop: 0, mobile: 0, tablet: 0 };
+  // Device breakdown for donut
+  const devices: Record<string, number> = { desktop: 0, mobile: 0, tablet: 0 };
   all.forEach(e => {
-    const d = (e.device_type || 'desktop') as keyof typeof devices;
+    const d = (e.device_type || 'desktop') as string;
     if (d in devices) devices[d]++;
   });
+  const deviceData = Object.entries(devices).map(([name, value]) => ({ name, value }));
 
-  // Page popularity
+  // Daily activity by type
+  const dailyMap: Record<string, { views: number; clicks: number; searches: number; features: number }> = {};
+  all.forEach(e => {
+    const day = e.created_at.substring(0, 10);
+    if (!dailyMap[day]) dailyMap[day] = { views: 0, clicks: 0, searches: 0, features: 0 };
+    if (e.event_type === 'page_view') dailyMap[day].views++;
+    else if (e.event_type === 'click') dailyMap[day].clicks++;
+    else if (e.event_type === 'search') dailyMap[day].searches++;
+    else if (e.event_type === 'feature_use') dailyMap[day].features++;
+  });
+  const dailyActivity = Object.entries(dailyMap)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, d]) => ({ date, ...d }));
+
+  // Library engagement breakdown
+  const libraryPages = all.filter(e => e.event_target.includes('/library'));
+  const libBreakdown: Record<string, number> = {};
+  libraryPages.forEach(e => {
+    const parts = e.event_target.split('/');
+    const room = parts[2] || 'overview';
+    const label = room.charAt(0).toUpperCase() + room.slice(1);
+    libBreakdown[label] = (libBreakdown[label] || 0) + 1;
+  });
+  const libraryData = Object.entries(libBreakdown)
+    .sort(([, a], [, b]) => b - a)
+    .map(([name, count]) => ({ name, count }));
+
+  // Page popularity top 10
   const pageCounts: Record<string, number> = {};
   all.filter(e => e.event_type === 'page_view').forEach(e => {
     const page = e.event_target.split('?')[0];
@@ -51,18 +83,8 @@ async function fetchEngagementData() {
   });
   const pagePopularity = Object.entries(pageCounts)
     .sort(([, a], [, b]) => b - a)
-    .slice(0, 12)
+    .slice(0, 10)
     .map(([page, count]) => ({ page, count }));
-
-  // Daily events
-  const dailyCounts: Record<string, number> = {};
-  all.forEach(e => {
-    const day = e.created_at.substring(0, 10);
-    dailyCounts[day] = (dailyCounts[day] || 0) + 1;
-  });
-  const dailyActivity = Object.entries(dailyCounts)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([date, count]) => ({ date, count }));
 
   // GPT stats
   const { count: conversations } = await supabase
@@ -73,16 +95,9 @@ async function fetchEngagementData() {
     .select('*', { count: 'exact', head: true });
 
   return {
-    totalEvents,
-    pageViews,
-    clicks,
-    searches,
-    uniqueSessions,
-    devices,
-    pagePopularity,
-    dailyActivity,
-    gptConversations: conversations || 0,
-    gptMessages: messages || 0,
+    totalEvents: all.length, pageViews, clicks, searches, featureUses, uniqueSessions,
+    deviceData, dailyActivity, libraryData, pagePopularity,
+    gptConversations: conversations || 0, gptMessages: messages || 0,
   };
 }
 
@@ -101,75 +116,150 @@ export function AdminEngagement() {
     );
   }
 
+  const DEVICE_COLORS = [C.teal, C.orange, C.violet];
+
   return (
-    <div className="p-6 lg:p-8 space-y-6">
+    <div className="p-6 lg:p-8 space-y-5 admin-gradient-bg min-h-full">
       <div>
-        <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-          User Engagement
-        </h1>
-        <p className="text-sm text-muted-foreground font-mono mt-1">
-          TRACKING BUILDER, DEVELOPER & INVESTOR INTERACTIONS
-        </p>
+        <h1 className="font-display text-xl font-bold tracking-tight text-foreground">User Engagement</h1>
+        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">BUILDER, DEVELOPER & INVESTOR INTERACTIONS</p>
       </div>
 
-      {/* KPI Row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard title="Total Events" value={data.totalEvents.toLocaleString()} icon={<MousePointer className="h-4 w-4" />} />
-        <StatCard title="Page Views" value={data.pageViews.toLocaleString()} icon={<Eye className="h-4 w-4" />} />
-        <StatCard title="Unique Sessions" value={data.uniqueSessions.toLocaleString()} />
-        <StatCard title="Search Queries" value={data.searches.toLocaleString()} icon={<Search className="h-4 w-4" />} />
+      {/* KPI Strip */}
+      <div className="glass-card rounded-sm kpi-strip divide-x divide-border/20">
+        <StatCard compact title="Events" value={data.totalEvents.toLocaleString()} />
+        <StatCard compact title="Page Views" value={data.pageViews.toLocaleString()} />
+        <StatCard compact title="Clicks" value={data.clicks.toLocaleString()} />
+        <StatCard compact title="Searches" value={data.searches.toLocaleString()} />
+        <StatCard compact title="Features" value={data.featureUses.toLocaleString()} />
+        <StatCard compact title="Sessions" value={data.uniqueSessions.toLocaleString()} />
+        <StatCard compact title="GPT Convos" value={data.gptConversations} />
+        <StatCard compact title="GPT Msgs" value={data.gptMessages} />
       </div>
 
-      {/* Device + GPT Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-        <StatCard title="Desktop" value={data.devices.desktop} icon={<Monitor className="h-4 w-4" />} />
-        <StatCard title="Mobile" value={data.devices.mobile} icon={<Smartphone className="h-4 w-4" />} />
-        <StatCard title="Tablet" value={data.devices.tablet} icon={<Tablet className="h-4 w-4" />} />
-        <StatCard title="GPT Conversations" value={data.gptConversations} subtitle="ResilienceGPT" />
-        <StatCard title="GPT Messages" value={data.gptMessages} subtitle="total processed" />
+      {/* HERO: Daily Activity — multi-line stacked */}
+      <div className="glass-chart p-5 glow-pulse">
+        <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          Daily Activity Breakdown
+        </h3>
+        <div className="h-72">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data.dailyActivity}>
+              <defs>
+                <linearGradient id="viewsFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={C.teal} stopOpacity={0.4} />
+                  <stop offset="100%" stopColor={C.teal} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="clicksFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={C.orange} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={C.orange} stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id="featuresFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={C.violet} stopOpacity={0.3} />
+                  <stop offset="100%" stopColor={C.violet} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
+              <XAxis dataKey="date" tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
+              <Tooltip {...tip} />
+              <Area type="monotone" dataKey="views" stackId="1" stroke={C.teal} fill="url(#viewsFill)" strokeWidth={2} name="Page Views" />
+              <Area type="monotone" dataKey="clicks" stackId="1" stroke={C.orange} fill="url(#clicksFill)" strokeWidth={2} name="Clicks" />
+              <Area type="monotone" dataKey="features" stackId="1" stroke={C.violet} fill="url(#featuresFill)" strokeWidth={2} name="Features" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="flex justify-center gap-6 mt-2">
+          {[
+            { label: 'Views', color: C.teal },
+            { label: 'Clicks', color: C.orange },
+            { label: 'Features', color: C.violet },
+          ].map(l => (
+            <div key={l.label} className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ background: l.color }} />
+              <span className="text-[10px] font-mono text-muted-foreground">{l.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Daily Activity */}
-        <div className="rounded-sm border border-border bg-card/80 p-5">
-          <h3 className="mb-4 text-xs font-mono uppercase tracking-wider text-muted-foreground">
-            Daily Activity
+      {/* Row 2: Library Engagement + Device Donut */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+        <div className="lg:col-span-3 glass-chart p-5">
+          <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            Library Room Engagement
           </h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.dailyActivity}>
-                <defs>
-                  <linearGradient id="actGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={COLORS.teal} stopOpacity={0.3} />
-                    <stop offset="95%" stopColor={COLORS.teal} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 18%, 25%)" />
-                <XAxis dataKey="date" tick={{ fontSize: 9, fill: COLORS.steel }} />
-                <YAxis tick={{ fontSize: 10, fill: COLORS.steel }} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Area type="monotone" dataKey="count" stroke={COLORS.teal} fill="url(#actGrad)" strokeWidth={2} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          {data.libraryData.length > 0 ? (
+            <div className="h-56">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.libraryData} layout="vertical">
+                  <defs>
+                    <linearGradient id="libBar" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor={C.teal} stopOpacity={0.8} />
+                      <stop offset="100%" stopColor={C.teal} stopOpacity={0.3} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke={C.grid} horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
+                  <YAxis dataKey="name" type="category" tick={{ fontSize: 10, fill: C.steel }} width={80} axisLine={false} tickLine={false} />
+                  <Tooltip {...tip} />
+                  <Bar dataKey="count" fill="url(#libBar)" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <div className="h-56 flex items-center justify-center text-[11px] font-mono text-muted-foreground/50">
+              NO LIBRARY ENGAGEMENT DATA YET
+            </div>
+          )}
         </div>
 
-        {/* Page Popularity */}
-        <div className="rounded-sm border border-border bg-card/80 p-5">
-          <h3 className="mb-4 text-xs font-mono uppercase tracking-wider text-muted-foreground">
-            Page Popularity
+        <div className="lg:col-span-2 glass-chart p-5">
+          <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            Device Distribution
           </h3>
-          <div className="h-64">
+          <div className="h-44 flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.pagePopularity} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(214, 18%, 25%)" />
-                <XAxis type="number" tick={{ fontSize: 10, fill: COLORS.steel }} />
-                <YAxis dataKey="page" type="category" tick={{ fontSize: 9, fill: COLORS.steel }} width={120} />
-                <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="count" fill={COLORS.teal} radius={[0, 2, 2, 0]} />
-              </BarChart>
+              <PieChart>
+                <Pie data={data.deviceData} cx="50%" cy="50%" innerRadius={40} outerRadius={65} paddingAngle={4} dataKey="value" strokeWidth={0}>
+                  {data.deviceData.map((_, i) => (
+                    <Cell key={i} fill={DEVICE_COLORS[i]} />
+                  ))}
+                </Pie>
+                <Tooltip {...tip} />
+              </PieChart>
             </ResponsiveContainer>
           </div>
+          <div className="flex justify-center gap-4 mt-1">
+            {data.deviceData.map((d, i) => (
+              <div key={d.name} className="flex items-center gap-1.5">
+                <span className="h-2 w-2 rounded-full" style={{ background: DEVICE_COLORS[i] }} />
+                <span className="text-[10px] font-mono text-muted-foreground">{d.name} <span className="text-foreground font-semibold">{d.value}</span></span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Row 3: Page Popularity */}
+      <div className="glass-chart p-5">
+        <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+          Page Popularity
+        </h3>
+        <div className="space-y-1.5">
+          {data.pagePopularity.map((p, i) => {
+            const maxVal = data.pagePopularity[0]?.count || 1;
+            const pct = (p.count / maxVal) * 100;
+            return (
+              <div key={p.page} className="flex items-center gap-3 animate-card-enter" style={{ animationDelay: `${i * 30}ms` }}>
+                <span className="text-[9px] font-mono text-muted-foreground w-32 truncate text-right">{p.page}</span>
+                <div className="flex-1 h-5 bg-card/40 rounded-sm overflow-hidden">
+                  <div className="h-full rounded-sm" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${C.teal}, hsl(174, 80%, 28%))` }} />
+                </div>
+                <span className="text-[10px] font-mono text-foreground font-semibold w-8 text-right">{p.count}</span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
