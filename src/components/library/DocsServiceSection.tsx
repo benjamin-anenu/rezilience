@@ -1,13 +1,24 @@
+import { useState } from 'react';
 import { ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import type { SolanaService } from '@/data/solana-docs';
+import { DocsSectionPanel } from '@/components/library/DocsSectionPanel';
+import type { SolanaService, DocSection } from '@/data/solana-docs';
 
 interface DocsServiceSectionProps {
   service: SolanaService;
   index: number;
+  onAskGpt: (topic: string, context: string) => void;
 }
 
-export function DocsServiceSection({ service, index }: DocsServiceSectionProps) {
+export function DocsServiceSection({ service, index, onAskGpt }: DocsServiceSectionProps) {
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<DocSection>(service.sections[0]);
+
+  const openPanel = (sec: DocSection) => {
+    setActiveSection(sec);
+    setPanelOpen(true);
+  };
+
   return (
     <section id={service.slug} className="scroll-mt-24">
       {/* Service Header */}
@@ -37,15 +48,13 @@ export function DocsServiceSection({ service, index }: DocsServiceSectionProps) 
       {/* Description */}
       <p className="mb-6 text-sm text-muted-foreground leading-relaxed">{service.description}</p>
 
-      {/* API Sections */}
+      {/* API Section Cards — now buttons that open the panel */}
       <div className="grid gap-3 sm:grid-cols-2">
         {service.sections.map((sec, i) => (
-          <a
+          <button
             key={sec.title}
-            href={sec.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group rounded-sm border border-border bg-card/50 p-4 transition-all hover:border-primary/30 hover:shadow-[0_0_12px_rgba(0,194,182,0.08)]"
+            onClick={() => openPanel(sec)}
+            className="group text-left rounded-sm border border-border bg-card/50 p-4 transition-all hover:border-primary/30 hover:shadow-[0_0_12px_rgba(0,194,182,0.08)]"
             style={{ animationDelay: `${(index * 5 + i) * 30}ms` }}
           >
             <div className="flex items-center justify-between mb-2">
@@ -55,9 +64,19 @@ export function DocsServiceSection({ service, index }: DocsServiceSectionProps) 
               <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">{sec.description}</p>
-          </a>
+          </button>
         ))}
       </div>
+
+      {/* Slide-out Panel */}
+      <DocsSectionPanel
+        open={panelOpen}
+        onOpenChange={setPanelOpen}
+        service={service}
+        activeSection={activeSection}
+        onSectionChange={setActiveSection}
+        onAskGpt={onAskGpt}
+      />
     </section>
   );
 }

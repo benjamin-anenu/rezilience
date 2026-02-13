@@ -101,7 +101,7 @@ export default function LibraryDocs() {
 
           <div className="flex-1 min-w-0 space-y-16">
             {filtered.map((service, i) => (
-              <DocsServiceSection key={service.slug} service={service} index={i} />
+              <DocsServiceSection key={service.slug} service={service} index={i} onAskGpt={handleAskGpt} />
             ))}
 
             {filtered.length === 0 && (
