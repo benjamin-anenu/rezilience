@@ -48,7 +48,9 @@ export default function LibraryLearn() {
     );
   }
 
-  const toggle = (id: string) => setExpandedModule((prev) => (prev === id ? null : id));
+  const toggle = (id: string) => {
+    setExpandedModule((prev) => (prev === id ? null : id));
+  };
 
   return (
     <Layout>
