@@ -1,115 +1,117 @@
 
 
-# Harden Bonds Table & Subscriber Insert Rate Limiting
+# New Library Room: Solana Ecosystem Documentation
 
-## Finding 1: Bonds Table Exposes Wallet Addresses
+## Overview
 
-**Current state**: The `bonds` table has a single RLS policy `"Bonds are publicly readable"` with `USING (true)`, making all bond data (wallet addresses, staked amounts, yield) visible to anyone. The table currently has 0 rows and bonding is a Phase 2 feature, but the policy should be locked down before any data is written.
+Add a fifth room to the Library called **"Solana Ecosystem Documentation"** at `/library/docs`. This page surfaces official documentation for the 10 most-used Solana services in a README-style layout with a sticky Table of Contents, AI-powered search via the existing Ask GPT modal, category filters, and direct links to official docs.
 
-**Solution**: Create a `bonds_public` view that excludes the `user_wallet` column (similar to the `claimed_profiles_public` pattern). The view will expose `id`, `project_id`, `staked_amount`, `locked_until`, `created_at`, and `yield_earned` -- enough for aggregate project stats without linking to individual wallets. Then restrict the base table's SELECT policy to only the bond owner (`user_wallet` matches a request header or parameter).
+## What Gets Built
 
-However, since this app uses wallet-based auth (SIWS) rather than Supabase Auth, there's no `auth.uid()` to reference in RLS. The practical approach is:
+### 1. Static Data File: `src/data/solana-docs.ts`
 
-1. **Drop** the permissive `"Bonds are publicly readable"` SELECT policy
-2. **Add** a deny-all SELECT policy on the base table (`USING (false)`)
-3. **Create** a `bonds_public` view (without `user_wallet`) with `security_invoker = on` for public aggregate/project-level queries
-4. **Update** `useProjectBonds` to query the view (it doesn't need wallet addresses)
-5. **Keep** `useWalletBonds` querying the base table -- but since RLS now denies reads, route it through an edge function that takes the wallet address and returns only that wallet's bonds using `service_role`
+A curated list of 10 Solana services, each with:
+- Name, slug, logo URL, official docs URL, short description
+- Category tag (e.g., "RPC & Data", "DeFi", "Wallets", "NFTs", "Dev Tools", "Identity")
+- Key API sections (endpoints, SDKs, CLI tools) with brief descriptions and direct links
+- Tags for filtering
 
-**Revised simpler approach** (given Phase 2 status and 0 data): Since bonding is not yet live and there are 0 bonds, the simplest secure fix is:
-- Replace the public-read policy with deny-all on the base table
-- Create a public view excluding `user_wallet` for project-level aggregate queries
-- Update `useProjectBonds` to use the view
-- Update `useWalletBonds`/`useWalletBondStats` to use the view (they won't need `user_wallet` in the response since the caller already knows the wallet)
+**Initial 10 services:**
+1. **Helius** (RPC, DAS API, webhooks, enhanced transactions)
+2. **Jupiter** (Swap API, Limit Orders, DCA, Perpetuals)
+3. **Metaplex** (Token Metadata, Bubblegum cNFTs, Candy Machine, Umi SDK)
+4. **Anchor** (Framework, IDL, Program testing, CLI)
+5. **Solana Web3.js** (Core SDK, transactions, keypairs, connections)
+6. **Phantom** (Wallet Adapter, deeplinks, provider API)
+7. **Marinade** (Liquid staking API, mSOL, native stake)
+8. **Raydium** (AMM SDK, CLMM, AcceleRaytor)
+9. **Squads** (Multisig SDK, program manager, v4 API)
+10. **Jito** (MEV, bundles, tip program, block engine)
 
----
+### 2. New Page: `src/pages/LibraryDocs.tsx`
 
-## Finding 2: Subscriber INSERT Abuse
+**Layout mirrors the README page:**
+- Hero section with "ECOSYSTEM DOCUMENTATION" badge
+- Sticky Table of Contents sidebar (left) listing all 10 services
+- Main content area (right) with one section per service, each containing:
+  - Service header with logo, name, category badge, and "View Official Docs" external link button
+  - Short description card
+  - API/SDK subsections as cards (same premium card style as README) listing key features with direct links
+  - Each subsection links out to the exact official docs page for that feature
 
-**Current state**: The `project_subscribers` INSERT policy allows anyone to insert with basic email validation (`email IS NOT NULL AND email <> '' AND length(email) <= 255`). No rate limiting exists, enabling:
-- Email bombing (subscribing a victim's email to every project)
-- Spam list building (inserting thousands of emails)
+**Search Box (top of page):**
+- A prominent search input styled like the Library hero search
+- When the user types a query and presses Enter (or clicks search):
+  1. The query is sent to the Ask GPT modal which opens automatically
+  2. GPT receives a specialized prompt: "The user is looking for Solana documentation about: [query]. Based on our documentation index, suggest which services and API sections are most relevant. If none match perfectly, suggest official documentation URLs that would help."
+  3. GPT responds with relevant service recommendations and direct links
+  4. If no exact match, GPT provides a disclaimer: "These are AI suggestions -- always verify against official documentation."
 
-**Solution**: Add a database function + trigger to rate-limit inserts per IP or email. Since we don't have IP access in RLS, rate-limit per email address -- max 5 subscriptions per hour per email:
+**Category Filter Pills:**
+- Horizontal pill bar (same pattern as Protocol room) for filtering by category: All, RPC & Data, DeFi, Wallets, NFTs, Dev Tools, Identity
+- Filters the visible service sections in real-time
 
-1. Create a PL/pgSQL trigger function that counts recent inserts for the same email
-2. Attach it as a BEFORE INSERT trigger on `project_subscribers`
-3. Reject with an exception if the limit is exceeded
+**Ask GPT Button:**
+- Positioned in a standalone section below the hero (same pattern as Learning room)
+- Opens the existing `AskGptModal` with context about Solana ecosystem documentation
 
----
+### 3. Room Card Addition
 
-## Technical Plan
+Update `src/pages/Library.tsx`:
+- Add a 5th room card: "Ecosystem Docs" with `FileText` icon, linking to `/library/docs`, count shows "10 services"
 
-### Step 1: Database Migration
+### 4. Route Registration
 
-```sql
--- ==========================================
--- BONDS: Replace public-read with deny-all + public view
--- ==========================================
+Update `src/App.tsx`:
+- Add route: `/library/docs` pointing to `LibraryDocs`
 
--- Drop the existing permissive policy
-DROP POLICY IF EXISTS "Bonds are publicly readable" ON public.bonds;
+## Technical Details
 
--- Deny all direct reads
-CREATE POLICY "No direct bond reads"
-  ON public.bonds FOR SELECT
-  USING (false);
+### File Changes
 
--- Public view excluding user_wallet
-CREATE VIEW public.bonds_public
-WITH (security_invoker = on) AS
-  SELECT id, project_id, staked_amount, locked_until, created_at, yield_earned
-  FROM public.bonds;
+| File | Action |
+|------|--------|
+| `src/data/solana-docs.ts` | **CREATE** -- Static data for 10 Solana services with API sections |
+| `src/pages/LibraryDocs.tsx` | **CREATE** -- Full page with README-style layout, TOC, search, filters |
+| `src/components/library/DocsTableOfContents.tsx` | **CREATE** -- Sticky TOC component (reuses pattern from `readme/TableOfContents`) |
+| `src/components/library/DocsServiceSection.tsx` | **CREATE** -- Individual service section component |
+| `src/components/library/DocsSearchBar.tsx` | **CREATE** -- AI-powered search bar that triggers Ask GPT |
+| `src/pages/Library.tsx` | **EDIT** -- Add 5th room card |
+| `src/App.tsx` | **EDIT** -- Add `/library/docs` route |
 
--- ==========================================
--- SUBSCRIBERS: Rate-limit inserts per email
--- ==========================================
+### AI Search Flow
 
-CREATE OR REPLACE FUNCTION public.check_subscriber_rate_limit()
-RETURNS trigger
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = public
-AS $$
-DECLARE
-  recent_count integer;
-BEGIN
-  SELECT count(*) INTO recent_count
-  FROM public.project_subscribers
-  WHERE email = NEW.email
-    AND subscribed_at > now() - interval '1 hour';
-
-  IF recent_count >= 5 THEN
-    RAISE EXCEPTION 'Rate limit exceeded: max 5 subscriptions per hour per email';
-  END IF;
-
-  RETURN NEW;
-END;
-$$;
-
-CREATE TRIGGER enforce_subscriber_rate_limit
-  BEFORE INSERT ON public.project_subscribers
-  FOR EACH ROW
-  EXECUTE FUNCTION public.check_subscriber_rate_limit();
+```text
+User types query in search box
+        |
+        v
+Press Enter / click search
+        |
+        v
+Open AskGptModal with specialized prompt:
+"User is searching Solana docs for: [query].
+ Review these services: [list from solana-docs.ts].
+ Suggest the most relevant docs sections with links.
+ If none match, suggest official URLs with disclaimer."
+        |
+        v
+GPT streams response with recommendations
 ```
 
-### Step 2: Frontend Changes
+### Component Architecture
 
-**`src/hooks/useBonds.ts`**:
-- `useProjectBonds`: change `.from('bonds')` to `.from('bonds_public' as any)` and remove `user_wallet` from the return type
-- `useWalletBonds`: change `.from('bonds')` to `.from('bonds_public' as any)` -- the caller already passes `walletAddress` as a param, but since `user_wallet` is excluded from the view, this query will need adjustment. Since there are 0 bonds and this is Phase 2, the simplest fix is to also use the view but note that wallet-specific filtering won't work without the column. Given the Phase 2 status, we'll disable the wallet filter and return empty until the feature is built with proper auth.
+- `DocsSearchBar` -- manages query state, triggers AskGptModal on submit
+- `DocsTableOfContents` -- sticky sidebar, IntersectionObserver for active section tracking (same as README TOC)
+- `DocsServiceSection` -- renders one service with its API subsections as premium cards
+- `AskGptModal` -- reused as-is from existing library components
 
-Actually, the cleanest approach: `useWalletBonds` filters by `user_wallet` which won't exist in the view. Since bonds is Phase 2 with 0 data, we'll keep the hook but have it return empty results gracefully. When Phase 2 launches, a proper edge function will handle authenticated wallet queries.
+### Design Patterns Followed
 
-**`src/components/staking/BondSummary.tsx`**: No changes needed (doesn't query DB directly).
-
-### Step 3: Security Finding Updates
-
-- Update/delete the bonds wallet exposure finding
-- Update/delete the subscriber email bombing finding
-
-### What Does NOT Change
-- The `project_subscribers` INSERT policy stays as-is (the trigger handles rate limiting)
-- Edge functions using `service_role` bypass RLS and can still read the base `bonds` table
-- The MyBonds page is a static placeholder with no DB queries
+- README page layout (hero + TOC sidebar + content sections)
+- Protocol room filter pills for category filtering
+- Library search bar styling for the search input
+- Premium card styling (`card-premium`) for API section cards
+- `ExternalLink` icon for all official doc links
+- `scroll-mt-24` on sections for smooth TOC scrolling
+- Same animation delays on cards (`animate-card-enter`)
 
