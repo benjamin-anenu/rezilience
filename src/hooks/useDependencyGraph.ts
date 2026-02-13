@@ -31,11 +31,11 @@ export function useDependencyGraph(profileId: string | undefined) {
       if (!profileId) return null;
 
       // Fetch profile metadata
-      const { data: profile, error: profileError } = await supabase
-        .from('claimed_profiles')
+      const { data: profile, error: profileError } = await (supabase
+        .from('claimed_profiles_public' as any)
         .select('project_name, github_forks, dependency_analyzed_at')
         .eq('id', profileId)
-        .single();
+        .single() as any);
 
       if (profileError || !profile) {
         console.error('Error fetching profile:', profileError);

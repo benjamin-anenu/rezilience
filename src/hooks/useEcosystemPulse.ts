@@ -92,9 +92,9 @@ export function useEcosystemPulse() {
   const aggregatesQuery = useQuery({
     queryKey: ['ecosystem-pulse-aggregates'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('claimed_profiles')
-        .select('resilience_score, github_commits_30d, github_contributors, tvl_usd, dependency_health_score, governance_tx_30d, liveness_status, category, github_languages');
+      const { data, error } = await (supabase
+        .from('claimed_profiles_public' as any)
+        .select('resilience_score, github_commits_30d, github_contributors, tvl_usd, dependency_health_score, governance_tx_30d, liveness_status, category, github_languages') as any);
       if (error) throw error;
       return computeAggregates(data || []);
     },

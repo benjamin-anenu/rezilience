@@ -17,11 +17,11 @@ export function useBuildersFeed() {
   return useQuery({
     queryKey: ['builders-feed'],
     queryFn: async (): Promise<BuilderPost[]> => {
-      const { data, error } = await supabase
-        .from('claimed_profiles')
+      const { data, error } = await (supabase
+        .from('claimed_profiles_public' as any)
         .select('id, project_name, logo_url, category, x_username, build_in_public_videos, claim_status')
         .eq('claim_status', 'claimed')
-        .not('build_in_public_videos', 'is', null);
+        .not('build_in_public_videos', 'is', null) as any);
 
       if (error) throw error;
 

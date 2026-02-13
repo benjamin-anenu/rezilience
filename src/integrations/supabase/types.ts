@@ -150,6 +150,13 @@ export type Database = {
             referencedRelation: "claimed_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "claim_blacklist_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       claimed_profiles: {
@@ -499,6 +506,13 @@ export type Database = {
             referencedRelation: "claimed_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "dependency_graph_source_profile_id_fkey"
+            columns: ["source_profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       ecosystem_snapshots: {
@@ -585,6 +599,13 @@ export type Database = {
             referencedRelation: "claimed_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "profile_secrets_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "claimed_profiles_public"
+            referencedColumns: ["id"]
+          },
         ]
       }
       project_subscribers: {
@@ -615,6 +636,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "claimed_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_subscribers_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles_public"
             referencedColumns: ["id"]
           },
         ]
@@ -744,6 +772,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "score_history_claimed_profile_id_fkey"
+            columns: ["claimed_profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "score_history_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
@@ -754,7 +789,257 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      claimed_profiles_public: {
+        Row: {
+          build_in_public_videos: Json | null
+          bytecode_confidence: string | null
+          bytecode_deploy_slot: number | null
+          bytecode_hash: string | null
+          bytecode_match_status: string | null
+          bytecode_on_chain_hash: string | null
+          bytecode_verified_at: string | null
+          category: string | null
+          claim_status: string | null
+          country: string | null
+          created_at: string | null
+          dependency_analyzed_at: string | null
+          dependency_critical_count: number | null
+          dependency_health_score: number | null
+          dependency_outdated_count: number | null
+          description: string | null
+          discord_url: string | null
+          discovery_source: string | null
+          github_analyzed_at: string | null
+          github_commit_velocity: number | null
+          github_commits_30d: number | null
+          github_contributors: number | null
+          github_forks: number | null
+          github_homepage: string | null
+          github_is_fork: boolean | null
+          github_issue_events_30d: number | null
+          github_language: string | null
+          github_languages: Json | null
+          github_last_activity: string | null
+          github_last_commit: string | null
+          github_open_issues: number | null
+          github_org_url: string | null
+          github_pr_events_30d: number | null
+          github_push_events_30d: number | null
+          github_recent_events: Json | null
+          github_releases_30d: number | null
+          github_stars: number | null
+          github_top_contributors: Json | null
+          github_topics: Json | null
+          github_username: string | null
+          governance_address: string | null
+          governance_analyzed_at: string | null
+          governance_last_activity: string | null
+          governance_tx_30d: number | null
+          id: string | null
+          integrated_score: number | null
+          liveness_status: string | null
+          logo_url: string | null
+          media_assets: Json | null
+          milestones: Json | null
+          openssf_analyzed_at: string | null
+          openssf_checks: Json | null
+          openssf_score: number | null
+          program_id: string | null
+          project_id: string | null
+          project_name: string | null
+          resilience_score: number | null
+          score_breakdown: Json | null
+          staking_pitch: string | null
+          team_members: Json | null
+          telegram_url: string | null
+          tvl_analyzed_at: string | null
+          tvl_market_share: number | null
+          tvl_risk_ratio: number | null
+          tvl_usd: number | null
+          twitter_engagement_rate: number | null
+          twitter_followers: number | null
+          twitter_last_synced: string | null
+          twitter_recent_tweets: Json | null
+          updated_at: string | null
+          verified: boolean | null
+          verified_at: string | null
+          vulnerability_analyzed_at: string | null
+          vulnerability_count: number | null
+          vulnerability_details: Json | null
+          website_url: string | null
+          x_user_id: string | null
+          x_username: string | null
+        }
+        Insert: {
+          build_in_public_videos?: Json | null
+          bytecode_confidence?: string | null
+          bytecode_deploy_slot?: number | null
+          bytecode_hash?: string | null
+          bytecode_match_status?: string | null
+          bytecode_on_chain_hash?: string | null
+          bytecode_verified_at?: string | null
+          category?: string | null
+          claim_status?: string | null
+          country?: string | null
+          created_at?: string | null
+          dependency_analyzed_at?: string | null
+          dependency_critical_count?: number | null
+          dependency_health_score?: number | null
+          dependency_outdated_count?: number | null
+          description?: string | null
+          discord_url?: string | null
+          discovery_source?: string | null
+          github_analyzed_at?: string | null
+          github_commit_velocity?: number | null
+          github_commits_30d?: number | null
+          github_contributors?: number | null
+          github_forks?: number | null
+          github_homepage?: string | null
+          github_is_fork?: boolean | null
+          github_issue_events_30d?: number | null
+          github_language?: string | null
+          github_languages?: Json | null
+          github_last_activity?: string | null
+          github_last_commit?: string | null
+          github_open_issues?: number | null
+          github_org_url?: string | null
+          github_pr_events_30d?: number | null
+          github_push_events_30d?: number | null
+          github_recent_events?: Json | null
+          github_releases_30d?: number | null
+          github_stars?: number | null
+          github_top_contributors?: Json | null
+          github_topics?: Json | null
+          github_username?: string | null
+          governance_address?: string | null
+          governance_analyzed_at?: string | null
+          governance_last_activity?: string | null
+          governance_tx_30d?: number | null
+          id?: string | null
+          integrated_score?: number | null
+          liveness_status?: string | null
+          logo_url?: string | null
+          media_assets?: Json | null
+          milestones?: Json | null
+          openssf_analyzed_at?: string | null
+          openssf_checks?: Json | null
+          openssf_score?: number | null
+          program_id?: string | null
+          project_id?: string | null
+          project_name?: string | null
+          resilience_score?: number | null
+          score_breakdown?: Json | null
+          staking_pitch?: string | null
+          team_members?: Json | null
+          telegram_url?: string | null
+          tvl_analyzed_at?: string | null
+          tvl_market_share?: number | null
+          tvl_risk_ratio?: number | null
+          tvl_usd?: number | null
+          twitter_engagement_rate?: number | null
+          twitter_followers?: number | null
+          twitter_last_synced?: string | null
+          twitter_recent_tweets?: Json | null
+          updated_at?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
+          vulnerability_analyzed_at?: string | null
+          vulnerability_count?: number | null
+          vulnerability_details?: Json | null
+          website_url?: string | null
+          x_user_id?: string | null
+          x_username?: string | null
+        }
+        Update: {
+          build_in_public_videos?: Json | null
+          bytecode_confidence?: string | null
+          bytecode_deploy_slot?: number | null
+          bytecode_hash?: string | null
+          bytecode_match_status?: string | null
+          bytecode_on_chain_hash?: string | null
+          bytecode_verified_at?: string | null
+          category?: string | null
+          claim_status?: string | null
+          country?: string | null
+          created_at?: string | null
+          dependency_analyzed_at?: string | null
+          dependency_critical_count?: number | null
+          dependency_health_score?: number | null
+          dependency_outdated_count?: number | null
+          description?: string | null
+          discord_url?: string | null
+          discovery_source?: string | null
+          github_analyzed_at?: string | null
+          github_commit_velocity?: number | null
+          github_commits_30d?: number | null
+          github_contributors?: number | null
+          github_forks?: number | null
+          github_homepage?: string | null
+          github_is_fork?: boolean | null
+          github_issue_events_30d?: number | null
+          github_language?: string | null
+          github_languages?: Json | null
+          github_last_activity?: string | null
+          github_last_commit?: string | null
+          github_open_issues?: number | null
+          github_org_url?: string | null
+          github_pr_events_30d?: number | null
+          github_push_events_30d?: number | null
+          github_recent_events?: Json | null
+          github_releases_30d?: number | null
+          github_stars?: number | null
+          github_top_contributors?: Json | null
+          github_topics?: Json | null
+          github_username?: string | null
+          governance_address?: string | null
+          governance_analyzed_at?: string | null
+          governance_last_activity?: string | null
+          governance_tx_30d?: number | null
+          id?: string | null
+          integrated_score?: number | null
+          liveness_status?: string | null
+          logo_url?: string | null
+          media_assets?: Json | null
+          milestones?: Json | null
+          openssf_analyzed_at?: string | null
+          openssf_checks?: Json | null
+          openssf_score?: number | null
+          program_id?: string | null
+          project_id?: string | null
+          project_name?: string | null
+          resilience_score?: number | null
+          score_breakdown?: Json | null
+          staking_pitch?: string | null
+          team_members?: Json | null
+          telegram_url?: string | null
+          tvl_analyzed_at?: string | null
+          tvl_market_share?: number | null
+          tvl_risk_ratio?: number | null
+          tvl_usd?: number | null
+          twitter_engagement_rate?: number | null
+          twitter_followers?: number | null
+          twitter_last_synced?: string | null
+          twitter_recent_tweets?: Json | null
+          updated_at?: string | null
+          verified?: boolean | null
+          verified_at?: string | null
+          vulnerability_analyzed_at?: string | null
+          vulnerability_count?: number | null
+          vulnerability_details?: Json | null
+          website_url?: string | null
+          x_user_id?: string | null
+          x_username?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claimed_profiles_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       get_score_changes: {

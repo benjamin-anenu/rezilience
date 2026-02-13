@@ -93,11 +93,11 @@ export function useExplorerProjects() {
     queryKey: ['explorer-projects'],
     queryFn: async (): Promise<ExplorerProject[]> => {
       // Fetch both verified profiles AND unclaimed profiles
-      const { data, error } = await supabase
-        .from('claimed_profiles')
+      const { data, error } = await (supabase
+        .from('claimed_profiles_public' as any)
         .select('*')
         .or('verified.eq.true,claim_status.eq.unclaimed')
-        .order('resilience_score', { ascending: false, nullsFirst: false });
+        .order('resilience_score', { ascending: false, nullsFirst: false }) as any);
 
       if (error) {
         console.error('Error fetching explorer projects:', error);
