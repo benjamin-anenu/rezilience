@@ -1,4 +1,4 @@
-export type DocsCategory = 'RPC & Data' | 'DeFi' | 'Wallets' | 'NFTs' | 'Dev Tools' | 'MEV';
+export type DocsCategory = 'RPC & Data' | 'DeFi' | 'Wallets' | 'NFTs' | 'Dev Tools' | 'MEV' | 'Oracles' | 'Automation' | 'Marketplaces';
 
 export interface DocSection {
   title: string;
@@ -18,7 +18,7 @@ export interface SolanaService {
 }
 
 export const docsCategories: DocsCategory[] = [
-  'RPC & Data', 'DeFi', 'Dev Tools', 'Wallets', 'NFTs', 'MEV',
+  'RPC & Data', 'DeFi', 'Dev Tools', 'Wallets', 'NFTs', 'MEV', 'Oracles', 'Automation', 'Marketplaces',
 ];
 
 export const solanaServices: SolanaService[] = [
@@ -176,6 +176,96 @@ export const solanaServices: SolanaService[] = [
       { title: 'Tip Program', description: 'Attach tips to transactions for priority inclusion by Jito validators.', url: 'https://jito-labs.gitbook.io/mev/searcher-resources/tip-program' },
       { title: 'Block Engine', description: 'Connect to the Jito block engine for submitting bundles and transactions.', url: 'https://jito-labs.gitbook.io/mev/searcher-resources/block-engine' },
       { title: 'Searcher Guide', description: 'Build MEV strategies with the Jito searcher client SDK.', url: 'https://jito-labs.gitbook.io/mev/searcher-resources/getting-started' },
+    ],
+  },
+  {
+    name: 'Orca',
+    slug: 'orca',
+    logoUrl: 'https://www.orca.so/favicon.ico',
+    docsUrl: 'https://docs.orca.so',
+    description: 'Concentrated liquidity DEX on Solana — Whirlpools, fair-price swaps, and developer-friendly SDK.',
+    category: 'DeFi',
+    tags: ['dex', 'clmm', 'whirlpools', 'swap', 'liquidity'],
+    sections: [
+      { title: 'Whirlpools SDK', description: 'Interact with concentrated liquidity pools — open positions, add/remove liquidity.', url: 'https://docs.orca.so/whirlpools/whirlpools-sdk' },
+      { title: 'Swap API', description: 'Execute token swaps through Orca pools with optimal routing.', url: 'https://docs.orca.so/developer-resources/orca-swap' },
+      { title: 'Pool Creation', description: 'Create and initialize new Whirlpool markets with custom parameters.', url: 'https://docs.orca.so/whirlpools/creating-a-whirlpool' },
+      { title: 'Fees & Rewards', description: 'Collect trading fees and reward emissions from liquidity positions.', url: 'https://docs.orca.so/whirlpools/collecting-fees-and-rewards' },
+    ],
+  },
+  {
+    name: 'Tensor',
+    slug: 'tensor',
+    logoUrl: 'https://www.tensor.trade/favicon.ico',
+    docsUrl: 'https://docs.tensor.so',
+    description: 'Advanced NFT marketplace and AMM — real-time trading, collection bids, and compressed NFT support.',
+    category: 'Marketplaces',
+    tags: ['nft', 'marketplace', 'amm', 'trading', 'compressed nft'],
+    sections: [
+      { title: 'Trade API', description: 'List, buy, bid, and delist NFTs programmatically via Tensor APIs.', url: 'https://docs.tensor.so/developers/trade-api' },
+      { title: 'Collection Bids', description: 'Place floor-level bids across entire NFT collections.', url: 'https://docs.tensor.so/developers/collection-bids' },
+      { title: 'AMM Pools', description: 'Create NFT liquidity pools with bonding curves for instant buy/sell.', url: 'https://docs.tensor.so/developers/amm' },
+      { title: 'Compressed NFTs', description: 'Trade and index compressed NFTs via Tensor with DAS integration.', url: 'https://docs.tensor.so/developers/compressed-nfts' },
+    ],
+  },
+  {
+    name: 'Magic Eden',
+    slug: 'magic-eden',
+    logoUrl: 'https://magiceden.io/favicon.ico',
+    docsUrl: 'https://docs.magiceden.io',
+    description: 'Leading multi-chain NFT marketplace — listing, auction, and launchpad APIs for Solana and beyond.',
+    category: 'Marketplaces',
+    tags: ['nft', 'marketplace', 'auction', 'launchpad', 'multi-chain'],
+    sections: [
+      { title: 'Marketplace API', description: 'Query collections, listings, activities, and token metadata.', url: 'https://docs.magiceden.io/reference/solana-overview' },
+      { title: 'Listing & Buying', description: 'Create listings, execute purchases, and manage offers on-chain.', url: 'https://docs.magiceden.io/reference/solana-instructions' },
+      { title: 'Launchpad', description: 'Launch new NFT collections with configurable mint mechanics.', url: 'https://docs.magiceden.io/reference/launchpad' },
+      { title: 'Wallet Actions', description: 'Fetch wallet-level holdings, activities, and offer history.', url: 'https://docs.magiceden.io/reference/solana-wallet-actions' },
+    ],
+  },
+  {
+    name: 'Pyth Network',
+    slug: 'pyth',
+    logoUrl: 'https://pyth.network/favicon.ico',
+    docsUrl: 'https://docs.pyth.network',
+    description: 'High-fidelity price feeds from institutional sources — real-time data for DeFi protocols on Solana.',
+    category: 'Oracles',
+    tags: ['oracle', 'price feed', 'data', 'defi', 'real-time'],
+    sections: [
+      { title: 'Price Feeds', description: 'Consume real-time price data with confidence intervals for 350+ assets.', url: 'https://docs.pyth.network/price-feeds' },
+      { title: 'Solana SDK', description: 'Integrate Pyth price feeds into Solana programs with the on-chain SDK.', url: 'https://docs.pyth.network/price-feeds/use-real-time-data/solana' },
+      { title: 'Benchmarks', description: 'Access historical price data for settlement and analytics.', url: 'https://docs.pyth.network/benchmarks' },
+      { title: 'TradingView Integration', description: 'Use Pyth data with TradingView charting for front-end price displays.', url: 'https://docs.pyth.network/price-feeds/integrations/tradingview' },
+    ],
+  },
+  {
+    name: 'Switchboard',
+    slug: 'switchboard',
+    logoUrl: 'https://switchboard.xyz/favicon.ico',
+    docsUrl: 'https://docs.switchboard.xyz',
+    description: 'Permissionless oracle network — custom data feeds, verifiable randomness, and serverless functions on Solana.',
+    category: 'Oracles',
+    tags: ['oracle', 'vrf', 'randomness', 'data feed', 'serverless'],
+    sections: [
+      { title: 'Data Feeds', description: 'Create and consume custom oracle data feeds with configurable update intervals.', url: 'https://docs.switchboard.xyz/solana/data-feeds' },
+      { title: 'Randomness (VRF)', description: 'Generate provably fair random numbers on-chain for games and lotteries.', url: 'https://docs.switchboard.xyz/solana/randomness' },
+      { title: 'Serverless Functions', description: 'Run off-chain compute in TEEs and post results on-chain trustlessly.', url: 'https://docs.switchboard.xyz/solana/functions' },
+      { title: 'SDK & CLI', description: 'TypeScript SDK and CLI for managing feeds, queues, and oracles.', url: 'https://docs.switchboard.xyz/solana/sdk' },
+    ],
+  },
+  {
+    name: 'Clockwork',
+    slug: 'clockwork',
+    logoUrl: 'https://clockwork.xyz/favicon.ico',
+    docsUrl: 'https://docs.clockwork.xyz',
+    description: 'Automation infrastructure for Solana — schedule transactions, cron jobs, and recurring on-chain operations.',
+    category: 'Automation',
+    tags: ['automation', 'cron', 'scheduler', 'threads', 'recurring'],
+    sections: [
+      { title: 'Threads', description: 'Create automated transaction threads that execute on a schedule or trigger condition.', url: 'https://docs.clockwork.xyz/developers/threads' },
+      { title: 'Cron Schedules', description: 'Define cron-style schedules for recurring on-chain operations.', url: 'https://docs.clockwork.xyz/developers/threads/cron-trigger' },
+      { title: 'Account Triggers', description: 'Trigger threads based on on-chain account state changes.', url: 'https://docs.clockwork.xyz/developers/threads/account-trigger' },
+      { title: 'SDK', description: 'Rust and TypeScript SDKs for creating and managing automation threads.', url: 'https://docs.clockwork.xyz/developers/sdk' },
     ],
   },
 ];
