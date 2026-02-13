@@ -70,8 +70,8 @@ export function HeroSection() {
               <span className="text-primary">FORKED.</span>
             </h1>
 
-            <p className="mb-8 max-w-xl text-base text-muted-foreground sm:text-lg">
-              Any dev can copy a repo. You can't fake a heartbeat. We turn your development velocity into an immutable Resilience score that investors can bank on. Don't just launch. Outlast.
+            <p className="mb-8 max-w-xl text-base text-muted-foreground sm:text-lg">The Solana Ecosystem needs projects built for the long haul. Join the Resilience Registry to establish an undeniable, off-chain & on-chain reputation for maintaining your code. Secure your spot today in anticipation of public SOL staking driven by proven project health.
+
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
