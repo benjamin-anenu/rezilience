@@ -42,7 +42,7 @@ const rooms = [
     icon: FileText,
     title: 'Ecosystem Docs',
     description: 'Official documentation for the most-used Solana services — APIs, SDKs, and integration guides.',
-    count: '29 services',
+    count: '33 services',
   },
 ];
 
