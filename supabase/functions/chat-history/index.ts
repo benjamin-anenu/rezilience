@@ -84,6 +84,19 @@ serve(async (req) => {
         const { user_id, title } = body;
         if (!user_id) return err("user_id required");
 
+        // Rate limit: max 10 conversations per hour per user
+        const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+        const { count, error: countErr } = await supabase
+          .from("chat_conversations")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user_id)
+          .gte("created_at", oneHourAgo);
+
+        if (countErr) return err(countErr.message, 500);
+        if ((count ?? 0) >= 10) {
+          return err("Rate limit exceeded: max 10 conversations per hour", 429);
+        }
+
         const { data, error } = await supabase
           .from("chat_conversations")
           .insert({ user_id, title: title || "New Conversation" })
