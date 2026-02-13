@@ -789,6 +789,41 @@ export type Database = {
       }
     }
     Views: {
+      bonds_public: {
+        Row: {
+          created_at: string | null
+          id: string | null
+          locked_until: string | null
+          project_id: string | null
+          staked_amount: number | null
+          yield_earned: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string | null
+          locked_until?: string | null
+          project_id?: string | null
+          staked_amount?: number | null
+          yield_earned?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string | null
+          locked_until?: string | null
+          project_id?: string | null
+          staked_amount?: number | null
+          yield_earned?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bonds_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       claimed_profiles_public: {
         Row: {
           build_in_public_videos: Json | null
