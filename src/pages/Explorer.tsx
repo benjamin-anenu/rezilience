@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/layout';
+import { useTrackEvent } from '@/components/layout/Layout';
 import { EcosystemStats, EcosystemHeatmap, EcosystemPulse, SearchBar, ProgramLeaderboard, BuildersInPublicFeed } from '@/components/explorer';
 import { useExplorerProjects } from '@/hooks/useExplorerProjects';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -21,6 +22,7 @@ type ActiveView = 'list' | 'heatmap' | 'pulse' | 'builders';
 const ITEMS_PER_PAGE = 60;
 
 const Explorer = () => {
+  const trackEvent = useTrackEvent();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [verificationFilter, setVerificationFilter] = useState('all');
@@ -67,7 +69,8 @@ const Explorer = () => {
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, statusFilter, verificationFilter, categoryFilter, countryFilter]);
+    if (searchQuery) trackEvent('search', searchQuery, { page: 'explorer' });
+  }, [searchQuery, statusFilter, verificationFilter, categoryFilter, countryFilter, trackEvent]);
 
   // Generate page numbers for pagination
   const getPageNumbers = () => {
@@ -114,7 +117,11 @@ const Explorer = () => {
             <Button
               variant={activeView === 'builders' ? 'default' : 'outline'}
               size="sm"
-              onClick={() => setActiveView(activeView === 'builders' ? 'list' : 'builders')}
+              onClick={() => {
+                const next = activeView === 'builders' ? 'list' : 'builders';
+                setActiveView(next);
+                trackEvent('tab_change', next, { page: 'explorer' });
+              }}
               className="flex items-center gap-2"
             >
               <Megaphone className="h-4 w-4" />
@@ -123,7 +130,7 @@ const Explorer = () => {
 
             <Tabs
               value={activeView === 'builders' ? '' : activeView}
-              onValueChange={(v) => { if (v) setActiveView(v as ActiveView); }}
+              onValueChange={(v) => { if (v) { setActiveView(v as ActiveView); trackEvent('tab_change', v, { page: 'explorer' }); } }}
               className="w-auto"
             >
               <TabsList className="grid w-full max-w-md grid-cols-3">

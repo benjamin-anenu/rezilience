@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { logServiceHealth } from "../_shared/service-health.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -258,6 +259,7 @@ Deno.serve(async (req) => {
 
     try {
       // Step 1a: Fetch program account to find programData address
+      const rpcStart = Date.now();
       const programAccountResponse = await fetch(rpcUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -268,6 +270,7 @@ Deno.serve(async (req) => {
           params: [program_id, { encoding: "base64", commitment: "confirmed" }],
         }),
       });
+      logServiceHealth("Solana RPC", "/getAccountInfo", programAccountResponse.status, Date.now() - rpcStart);
 
       const programAccountResult = await programAccountResponse.json();
 
@@ -375,6 +378,7 @@ Deno.serve(async (req) => {
     let otterSecOnChainHash: string | null = null;
 
     try {
+      const otterStart = Date.now();
       const verifyResponse = await fetch(
         `https://verify.osec.io/status/${program_id}`,
         {
@@ -382,6 +386,7 @@ Deno.serve(async (req) => {
           signal: AbortSignal.timeout(10000),
         }
       );
+      logServiceHealth("OtterSec API", `/status/${program_id}`, verifyResponse.status, Date.now() - otterStart);
 
       if (verifyResponse.ok) {
         const verifyData = await verifyResponse.json();

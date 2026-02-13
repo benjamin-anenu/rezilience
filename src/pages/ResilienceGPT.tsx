@@ -139,6 +139,7 @@ export default function ResilienceGPT() {
         },
         body: JSON.stringify({
           messages: allMessages.map(m => ({ role: m.role, content: m.content })),
+          conversation_id: convId,
         }),
       });
 

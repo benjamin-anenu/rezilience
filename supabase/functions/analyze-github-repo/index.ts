@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { logServiceHealth } from "../_shared/service-health.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,13 +55,16 @@ function parseGitHubUrl(url: string): { owner: string; repo: string } | null {
 }
 
 async function fetchWithAuth(url: string, token: string): Promise<Response> {
-  return fetch(url, {
+  const start = Date.now();
+  const response = await fetch(url, {
     headers: {
       Authorization: `token ${token}`,
       Accept: "application/vnd.github.v3+json",
       "User-Agent": "Rezilience-Registry",
     },
   });
+  logServiceHealth("GitHub API", new URL(url).pathname, response.status, Date.now() - start, response.ok ? undefined : `HTTP ${response.status}`);
+  return response;
 }
 
 /**
