@@ -3,7 +3,7 @@ import { Layout } from '@/components/layout/Layout';
 import { ExperienceSelector } from '@/components/library/ExperienceSelector';
 import { RoomCard } from '@/components/library/RoomCard';
 import { LibrarySearchBar } from '@/components/library/LibrarySearchBar';
-import { GraduationCap, BookA, Map, Search } from 'lucide-react';
+import { GraduationCap, BookA, Map, Search, FileText } from 'lucide-react';
 import { dictionary } from '@/data/dictionary';
 import { protocols } from '@/data/protocols';
 import type { ExperienceLevel } from '@/data/learning-paths';
@@ -36,6 +36,13 @@ const rooms = [
     title: 'Protocol Search',
     description: 'Find the right protocol, understand when to use it, and integrate in minutes.',
     count: `${protocols.length} protocols`,
+  },
+  {
+    to: '/library/docs',
+    icon: FileText,
+    title: 'Ecosystem Docs',
+    description: 'Official documentation for the most-used Solana services — APIs, SDKs, and integration guides.',
+    count: '10 services',
   },
 ];
 

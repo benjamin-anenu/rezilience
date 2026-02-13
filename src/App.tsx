@@ -25,6 +25,7 @@ import LibraryBlueprints from "./pages/LibraryBlueprints";
 import LibraryBlueprintDetail from "./pages/LibraryBlueprintDetail";
 import LibraryProtocols from "./pages/LibraryProtocols";
 import ProtocolDetail from "./pages/ProtocolDetail";
+import LibraryDocs from "./pages/LibraryDocs";
 import PitchDeck from "./pages/PitchDeck";
 import ResilienceGPT from "./pages/ResilienceGPT";
 import NotFound from "./pages/NotFound";
@@ -60,6 +61,7 @@ const App = () => (
               <Route path="/library/blueprints" element={<LibraryBlueprints />} />
               <Route path="/library/blueprints/:slug" element={<LibraryBlueprintDetail />} />
               <Route path="/library/protocols" element={<LibraryProtocols />} />
+              <Route path="/library/docs" element={<LibraryDocs />} />
               <Route path="/library/:slug" element={<ProtocolDetail />} />
               <Route path="/pitch" element={<PitchDeck />} />
               <Route path="/gpt" element={<ResilienceGPT />} />
