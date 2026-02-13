@@ -14,6 +14,153 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_ai_usage: {
+        Row: {
+          conversation_id: string | null
+          created_at: string
+          estimated_cost_usd: number | null
+          id: string
+          input_tokens: number | null
+          latency_ms: number | null
+          model: string | null
+          output_tokens: number | null
+          status_code: number | null
+          tool_calls: Json | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          created_at?: string
+          estimated_cost_usd?: number | null
+          id?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          status_code?: number | null
+          tool_calls?: Json | null
+        }
+        Update: {
+          conversation_id?: string | null
+          created_at?: string
+          estimated_cost_usd?: number | null
+          id?: string
+          input_tokens?: number | null
+          latency_ms?: number | null
+          model?: string | null
+          output_tokens?: number | null
+          status_code?: number | null
+          tool_calls?: Json | null
+        }
+        Relationships: []
+      }
+      admin_analytics: {
+        Row: {
+          created_at: string
+          device_type: string | null
+          event_metadata: Json | null
+          event_target: string
+          event_type: string
+          id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          device_type?: string | null
+          event_metadata?: Json | null
+          event_target: string
+          event_type: string
+          id?: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          device_type?: string | null
+          event_metadata?: Json | null
+          event_target?: string
+          event_type?: string
+          id?: string
+          session_id?: string
+        }
+        Relationships: []
+      }
+      admin_costs: {
+        Row: {
+          amount_usd: number
+          category: string
+          created_at: string
+          id: string
+          notes: string | null
+          period: string
+        }
+        Insert: {
+          amount_usd?: number
+          category: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period: string
+        }
+        Update: {
+          amount_usd?: number
+          category?: string
+          created_at?: string
+          id?: string
+          notes?: string | null
+          period?: string
+        }
+        Relationships: []
+      }
+      admin_service_health: {
+        Row: {
+          created_at: string
+          endpoint: string
+          error_message: string | null
+          id: string
+          latency_ms: number | null
+          service_name: string
+          status_code: number | null
+        }
+        Insert: {
+          created_at?: string
+          endpoint: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          service_name: string
+          status_code?: number | null
+        }
+        Update: {
+          created_at?: string
+          endpoint?: string
+          error_message?: string | null
+          id?: string
+          latency_ms?: number | null
+          service_name?: string
+          status_code?: number | null
+        }
+        Relationships: []
+      }
+      admin_users: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          role: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          role?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          role?: string
+        }
+        Relationships: []
+      }
       bonds: {
         Row: {
           created_at: string
