@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { logServiceHealth } from "../_shared/service-health.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,12 +24,14 @@ interface TVLAnalysisResult {
  */
 async function getSolanaTotalTVL(): Promise<number> {
   try {
+    const start = Date.now();
     const response = await fetch("https://api.llama.fi/chains", {
       headers: {
         Accept: "application/json",
         "User-Agent": "Rezilience-Registry",
       },
     });
+    logServiceHealth("DeFiLlama API", "/chains", response.status, Date.now() - start);
     
     if (!response.ok) return 0;
     
@@ -95,12 +98,14 @@ Deno.serve(async (req) => {
     const normalizedName = normalizeProtocolName(protocol_name);
     
     // Fetch protocol data from DeFiLlama
+    const start = Date.now();
     const response = await fetch(`https://api.llama.fi/protocol/${normalizedName}`, {
       headers: {
         Accept: "application/json",
         "User-Agent": "Rezilience-Registry",
       },
     });
+    logServiceHealth("DeFiLlama API", `/protocol/${normalizedName}`, response.status, Date.now() - start);
 
     if (!response.ok) {
       console.log(`Protocol ${protocol_name} not found on DeFiLlama`);

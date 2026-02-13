@@ -1,5 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { logAIUsage } from "../_shared/ai-usage.ts";
+import { logServiceHealth } from "../_shared/service-health.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -261,7 +263,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages } = await req.json();
+    const { messages, conversation_id } = await req.json();
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return new Response(
@@ -289,8 +291,11 @@ serve(async (req) => {
     // ── Step 1: Non-streaming call with tools ─────────────────────────────
     let toolLoopMessages = [...aiMessages];
     let maxToolRounds = 3;
+    const collectedToolCalls: string[] = [];
+    const requestStartTime = Date.now();
 
     for (let round = 0; round < maxToolRounds; round++) {
+      const gatewayStart = Date.now();
       const toolResponse = await fetch(
         "https://ai.gateway.lovable.dev/v1/chat/completions",
         {
@@ -307,6 +312,8 @@ serve(async (req) => {
           }),
         }
       );
+      const gatewayLatency = Date.now() - gatewayStart;
+      logServiceHealth("Lovable AI Gateway", "/v1/chat/completions", toolResponse.status, gatewayLatency, toolResponse.ok ? undefined : `HTTP ${toolResponse.status}`);
 
       if (!toolResponse.ok) {
         if (toolResponse.status === 429) {
@@ -361,6 +368,7 @@ serve(async (req) => {
         }
 
         console.log(`Tool call: ${fnName}(${JSON.stringify(fnArgs)})`);
+        collectedToolCalls.push(fnName);
         const result = await executeToolCall(fnName, fnArgs, supabase);
 
         toolLoopMessages.push({
@@ -386,8 +394,20 @@ serve(async (req) => {
       !("tool_calls" in lastMsg && lastMsg.tool_calls?.length);
 
     if (alreadyAnswered) {
-      // Construct a synthetic SSE stream from the already-generated text
       const text = lastMsg.content as string;
+      // Estimate tokens: ~4 chars per token
+      const estimatedInputTokens = Math.ceil(JSON.stringify(toolLoopMessages).length / 4);
+      const estimatedOutputTokens = Math.ceil(text.length / 4);
+      logAIUsage({
+        conversation_id: conversation_id || undefined,
+        model: "google/gemini-3-flash-preview",
+        input_tokens: estimatedInputTokens,
+        output_tokens: estimatedOutputTokens,
+        tool_calls: collectedToolCalls,
+        latency_ms: Date.now() - requestStartTime,
+        status_code: 200,
+      });
+
       const ssePayload = `data: ${JSON.stringify({
         choices: [{ delta: { content: text }, finish_reason: null }],
       })}\n\ndata: ${JSON.stringify({
@@ -424,6 +444,18 @@ serve(async (req) => {
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Log AI usage for streamed response (estimate tokens from input)
+    const estimatedInputTokens = Math.ceil(JSON.stringify(toolLoopMessages).length / 4);
+    logAIUsage({
+      conversation_id: conversation_id || undefined,
+      model: "google/gemini-3-flash-preview",
+      input_tokens: estimatedInputTokens,
+      output_tokens: 500, // Estimate for streamed responses
+      tool_calls: collectedToolCalls,
+      latency_ms: Date.now() - requestStartTime,
+      status_code: 200,
+    });
 
     return new Response(streamResponse.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },

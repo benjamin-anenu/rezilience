@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { logServiceHealth } from "../_shared/service-health.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -37,6 +38,7 @@ async function getSignaturesForAddress(
   limit: number = 100
 ): Promise<Array<{ signature: string; blockTime: number | null; slot: number }>> {
   try {
+    const start = Date.now();
     const response = await fetch(SOLANA_RPC_URL, {
       method: "POST",
       headers: {
@@ -52,6 +54,7 @@ async function getSignaturesForAddress(
         ],
       }),
     });
+    logServiceHealth("Solana RPC", "/getSignaturesForAddress", response.status, Date.now() - start);
 
     if (!response.ok) {
       throw new Error(`RPC request failed: ${response.status}`);

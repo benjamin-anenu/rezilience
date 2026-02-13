@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Layout } from '@/components/layout/Layout';
+import { useTrackEvent } from '@/components/layout/Layout';
 import { ExperienceSelector } from '@/components/library/ExperienceSelector';
 import { RoomCard } from '@/components/library/RoomCard';
 import { LibrarySearchBar } from '@/components/library/LibrarySearchBar';
@@ -47,6 +48,7 @@ const rooms = [
 ];
 
 export default function Library() {
+  const trackEvent = useTrackEvent();
   const [selectedLevel, setSelectedLevel] = useState<ExperienceLevel | null>(null);
 
   useEffect(() => {
@@ -57,6 +59,7 @@ export default function Library() {
   const handleSelectLevel = (level: ExperienceLevel) => {
     setSelectedLevel(level);
     localStorage.setItem('rez-experience-level', level);
+    trackEvent('feature_use', 'experience_level_select', { level });
   };
 
   return (
