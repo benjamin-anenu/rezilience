@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { ChatHeader } from '@/components/gpt/ChatHeader';
 import { ChatMessage } from '@/components/gpt/ChatMessage';
 import { ChatInput } from '@/components/gpt/ChatInput';
@@ -10,6 +9,17 @@ import { AlertTriangle } from 'lucide-react';
 type Msg = { role: 'user' | 'assistant'; content: string; dbId?: string };
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-gpt`;
+const HISTORY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-history`;
+
+const historyFetch = (path: string, opts?: RequestInit) =>
+  fetch(`${HISTORY_URL}${path}`, {
+    ...opts,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      ...opts?.headers,
+    },
+  });
 
 export default function ResilienceGPT() {
   const { user, isAuthenticated } = useAuth();
@@ -45,41 +55,53 @@ export default function ResilienceGPT() {
 
   const saveMessageToDb = useCallback(async (convId: string, role: string, content: string): Promise<string | null> => {
     if (!isAuthenticated || !user) return null;
-    const { data, error } = await supabase.from('chat_messages' as any).insert({
-      conversation_id: convId,
-      role,
-      content,
-    }).select('id').single();
-    if (error || !data) return null;
-    return (data as any).id;
+    try {
+      const resp = await historyFetch('?action=message', {
+        method: 'POST',
+        body: JSON.stringify({ conversation_id: convId, user_id: user.id, role, content }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        return data.id;
+      }
+    } catch (e) {
+      console.error('Failed to save message:', e);
+    }
+    return null;
   }, [isAuthenticated, user]);
 
   const createConversation = useCallback(async (firstMessage: string): Promise<string | null> => {
     if (!isAuthenticated || !user) return null;
     const title = firstMessage.slice(0, 80) + (firstMessage.length > 80 ? '...' : '');
-    const { data, error } = await supabase.from('chat_conversations' as any).insert({
-      user_id: user.id,
-      title,
-    }).select('id').single();
-    if (error || !data) {
-      console.error('Failed to create conversation:', error);
-      return null;
+    try {
+      const resp = await historyFetch('?action=create', {
+        method: 'POST',
+        body: JSON.stringify({ user_id: user.id, title }),
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        setSidebarRefresh(p => p + 1);
+        return data.id;
+      }
+    } catch (e) {
+      console.error('Failed to create conversation:', e);
     }
-    setSidebarRefresh(p => p + 1);
-    return (data as any).id;
+    return null;
   }, [isAuthenticated, user]);
 
   const loadConversation = useCallback(async (convId: string) => {
-    const { data, error } = await supabase
-      .from('chat_messages' as any)
-      .select('id, role, content, feedback, created_at')
-      .eq('conversation_id', convId)
-      .order('created_at', { ascending: true });
-    if (!error && data) {
-      setMessages((data as any[]).map(m => ({ role: m.role, content: m.content, dbId: m.id })));
-      setConversationId(convId);
+    if (!user) return;
+    try {
+      const resp = await historyFetch(`?action=messages&conversation_id=${encodeURIComponent(convId)}&user_id=${encodeURIComponent(user.id)}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        setMessages(data.map((m: any) => ({ role: m.role, content: m.content, dbId: m.id })));
+        setConversationId(convId);
+      }
+    } catch (e) {
+      console.error('Failed to load conversation:', e);
     }
-  }, []);
+  }, [user]);
 
   const handleNewChat = () => {
     setMessages([]);
@@ -218,11 +240,15 @@ export default function ResilienceGPT() {
 
   const handleFeedback = async (index: number, feedback: 'up' | 'down') => {
     const msg = messages[index];
-    if (!msg?.dbId || !isAuthenticated) return;
-    await supabase
-      .from('chat_messages' as any)
-      .update({ feedback })
-      .eq('id', msg.dbId);
+    if (!msg?.dbId || !isAuthenticated || !user) return;
+    try {
+      await historyFetch('?action=feedback', {
+        method: 'POST',
+        body: JSON.stringify({ message_id: msg.dbId, user_id: user.id, feedback }),
+      });
+    } catch (e) {
+      console.error('Failed to send feedback:', e);
+    }
   };
 
   return (

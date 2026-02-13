@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MessageSquare, Trash2, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
 
 interface Conversation {
   id: string;
@@ -19,6 +17,8 @@ interface ChatSidebarProps {
   refreshTrigger: number;
 }
 
+const HISTORY_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat-history`;
+
 export function ChatSidebar({ activeConversationId, onSelectConversation, onNewChat, refreshTrigger }: ChatSidebarProps) {
   const { user, isAuthenticated } = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -26,14 +26,15 @@ export function ChatSidebar({ activeConversationId, onSelectConversation, onNewC
 
   const loadConversations = useCallback(async () => {
     if (!isAuthenticated || !user) return;
-    const { data, error } = await supabase
-      .from('chat_conversations' as any)
-      .select('id, title, created_at, updated_at')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(50);
-    if (!error && data) {
-      setConversations(data as any);
+    try {
+      const resp = await fetch(`${HISTORY_URL}?action=list&user_id=${encodeURIComponent(user.id)}`, {
+        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      });
+      if (resp.ok) {
+        setConversations(await resp.json());
+      }
+    } catch (e) {
+      console.error('Failed to load conversations:', e);
     }
   }, [isAuthenticated, user]);
 
@@ -43,10 +44,18 @@ export function ChatSidebar({ activeConversationId, onSelectConversation, onNewC
 
   const handleDelete = async (e: React.MouseEvent, convId: string) => {
     e.stopPropagation();
-    await supabase.from('chat_conversations' as any).delete().eq('id', convId);
-    setConversations(prev => prev.filter(c => c.id !== convId));
-    if (activeConversationId === convId) {
-      onNewChat();
+    if (!user) return;
+    try {
+      await fetch(`${HISTORY_URL}?action=delete&conversation_id=${encodeURIComponent(convId)}&user_id=${encodeURIComponent(user.id)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+      });
+      setConversations(prev => prev.filter(c => c.id !== convId));
+      if (activeConversationId === convId) {
+        onNewChat();
+      }
+    } catch (e) {
+      console.error('Failed to delete conversation:', e);
     }
   };
 
