@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Session, User } from '@supabase/supabase-js';
 
@@ -16,13 +16,17 @@ export function useAdminAuth(): AdminAuth {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+  const checkedEmailRef = useRef<string | null>(null);
 
   const checkAdmin = useCallback(async (currentUser: User | null) => {
     if (!currentUser?.email) {
       setIsAdmin(false);
       return;
     }
-    // Check against admin_users table
+    // Prevent duplicate checks for the same email
+    if (checkedEmailRef.current === currentUser.email) return;
+    checkedEmailRef.current = currentUser.email;
+
     const { data } = await supabase
       .from('admin_users')
       .select('id')
@@ -32,38 +36,52 @@ export function useAdminAuth(): AdminAuth {
   }, []);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
+    let mounted = true;
+
+    // Get existing session first
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      if (!mounted) return;
+      setSession(s);
+      setUser(s?.user ?? null);
+      if (s?.user) {
+        checkAdmin(s.user).then(() => {
+          if (mounted) setLoading(false);
+        });
+      } else {
+        setLoading(false);
+      }
+    });
+
+    // Then listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, newSession) => {
+      (_event, newSession) => {
+        if (!mounted) return;
         setSession(newSession);
         setUser(newSession?.user ?? null);
         if (newSession?.user) {
-          // Defer admin check to avoid Supabase client deadlock
-          setTimeout(() => checkAdmin(newSession.user), 0);
+          // Reset check ref on new auth event so it re-checks
+          checkedEmailRef.current = null;
+          checkAdmin(newSession.user).then(() => {
+            if (mounted) setLoading(false);
+          });
         } else {
           setIsAdmin(false);
+          checkedEmailRef.current = null;
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
-    // Then get existing session
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
-      if (existingSession?.user) {
-        checkAdmin(existingSession.user);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, [checkAdmin]);
 
   const signIn = async (email: string, password: string) => {
+    checkedEmailRef.current = null; // Reset for fresh check
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      // If user doesn't exist yet, try sign up (first-time admin setup)
       if (error.message.includes('Invalid login credentials')) {
         const { error: signUpError } = await supabase.auth.signUp({
           email,
@@ -83,6 +101,7 @@ export function useAdminAuth(): AdminAuth {
     setSession(null);
     setUser(null);
     setIsAdmin(false);
+    checkedEmailRef.current = null;
   };
 
   return { session, user, isAdmin, loading, signIn, signOut };
