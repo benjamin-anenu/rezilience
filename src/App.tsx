@@ -34,7 +34,12 @@ import NotFound from "./pages/NotFound";
 import AdminLogin from "./pages/admin/AdminLogin";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import AdminOverview from "./pages/admin/AdminOverview";
-import { AdminEngagement, AdminAIUsage, AdminIntegrations, AdminCosts, AdminRegistry, AdminReporter } from "./pages/admin/AdminModules";
+import { AdminEngagement } from "./pages/admin/AdminEngagementPage";
+import { AdminAIUsage } from "./pages/admin/AdminAIUsagePage";
+import { AdminIntegrations } from "./pages/admin/AdminIntegrationsPage";
+import { AdminCosts } from "./pages/admin/AdminCostsPage";
+import { AdminRegistry } from "./pages/admin/AdminRegistryPage";
+import { AdminReporter } from "./pages/admin/AdminReporterPage";
 import { AdminProtectedRoute } from "./components/admin/AdminProtectedRoute";
 
 const queryClient = new QueryClient();
