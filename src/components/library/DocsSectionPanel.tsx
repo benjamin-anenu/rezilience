@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { ExternalLink, MessageCircle, Loader2, AlertTriangle } from 'lucide-react';
+import { ExternalLink, MessageCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import {
   Sheet,
@@ -9,7 +8,8 @@ import {
   SheetDescription,
 } from '@/components/ui/sheet';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { SolanaService, DocSection } from '@/data/solana-docs';
 
 interface DocsSectionPanelProps {
@@ -29,24 +29,6 @@ export function DocsSectionPanel({
   onSectionChange,
   onAskGpt,
 }: DocsSectionPanelProps) {
-  const [iframeLoading, setIframeLoading] = useState(true);
-  const [iframeError, setIframeError] = useState(false);
-
-  const handleSectionSwitch = (sec: DocSection) => {
-    setIframeLoading(true);
-    setIframeError(false);
-    onSectionChange(sec);
-  };
-
-  const handleIframeLoad = () => {
-    setIframeLoading(false);
-  };
-
-  const handleIframeError = () => {
-    setIframeLoading(false);
-    setIframeError(true);
-  };
-
   const handleAskGpt = () => {
     onAskGpt(
       `${activeSection.title} — ${service.name}`,
@@ -86,12 +68,12 @@ export function DocsSectionPanel({
               rel="noopener noreferrer"
               className="shrink-0 inline-flex items-center gap-1.5 rounded-sm border border-primary/30 bg-primary/5 px-3 py-1.5 font-mono text-[11px] text-primary transition-colors hover:bg-primary/10"
             >
-              View Original Docs <ExternalLink className="h-3 w-3" />
+              View Full Docs <ExternalLink className="h-3 w-3" />
             </a>
           </div>
         </SheetHeader>
 
-        {/* Body: TOC + iframe */}
+        {/* Body: TOC + Content */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* TOC Sidebar */}
           <div className="w-[200px] shrink-0 border-r border-border bg-muted/30">
@@ -104,7 +86,7 @@ export function DocsSectionPanel({
                   {service.sections.map((sec) => (
                     <button
                       key={sec.title}
-                      onClick={() => handleSectionSwitch(sec)}
+                      onClick={() => onSectionChange(sec)}
                       className={cn(
                         'w-full text-left rounded-sm px-2.5 py-2 text-xs transition-all duration-150',
                         sec.title === activeSection.title
@@ -120,47 +102,17 @@ export function DocsSectionPanel({
             </ScrollArea>
           </div>
 
-          {/* Iframe Area */}
-          <div className="flex-1 relative min-w-0 bg-background">
-            {iframeLoading && !iframeError && (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-background">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                <p className="text-xs text-muted-foreground">Loading documentation…</p>
-              </div>
-            )}
-
-            {iframeError ? (
-              <div className="flex flex-col items-center justify-center h-full gap-4 px-8 text-center">
-                <AlertTriangle className="h-10 w-10 text-muted-foreground/50" />
-                <div>
-                  <p className="text-sm font-medium text-foreground mb-1">
-                    Cannot embed this documentation
-                  </p>
-                  <p className="text-xs text-muted-foreground mb-4">
-                    This site restricts iframe embedding. View it directly instead.
-                  </p>
-                  <a
-                    href={activeSection.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Button variant="outline" size="sm" className="gap-1.5">
-                      Open in New Tab <ExternalLink className="h-3 w-3" />
-                    </Button>
-                  </a>
+          {/* Markdown Content Area */}
+          <div className="flex-1 min-w-0 bg-background">
+            <ScrollArea className="h-full">
+              <div className="px-8 py-6 max-w-3xl">
+                <div className="prose prose-invert prose-sm max-w-none prose-headings:font-display prose-headings:text-foreground prose-p:text-foreground/90 prose-strong:text-foreground prose-code:text-primary prose-code:bg-background/50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded-sm prose-code:text-xs prose-pre:bg-background prose-pre:border prose-pre:border-border prose-a:text-primary prose-th:text-foreground/80 prose-td:text-foreground/70 prose-table:text-xs">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {activeSection.content}
+                  </ReactMarkdown>
                 </div>
               </div>
-            ) : (
-              <iframe
-                key={activeSection.url}
-                src={activeSection.url}
-                title={`${service.name} - ${activeSection.title}`}
-                className="w-full h-full border-0"
-                onLoad={handleIframeLoad}
-                onError={handleIframeError}
-                sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
-              />
-            )}
+            </ScrollArea>
           </div>
         </div>
 
