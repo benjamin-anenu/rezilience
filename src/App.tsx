@@ -30,6 +30,13 @@ import PitchDeck from "./pages/PitchDeck";
 import ResilienceGPT from "./pages/ResilienceGPT";
 import NotFound from "./pages/NotFound";
 
+// Admin imports
+import AdminLogin from "./pages/admin/AdminLogin";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminOverview from "./pages/admin/AdminOverview";
+import { AdminEngagement, AdminAIUsage, AdminIntegrations, AdminCosts, AdminRegistry, AdminReporter } from "./pages/admin/AdminModules";
+import { AdminProtectedRoute } from "./components/admin/AdminProtectedRoute";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -65,6 +72,19 @@ const App = () => (
               <Route path="/library/:slug" element={<ProtocolDetail />} />
               <Route path="/pitch" element={<PitchDeck />} />
               <Route path="/gpt" element={<ResilienceGPT />} />
+
+              {/* Admin Portal */}
+              <Route path="/admin/login" element={<AdminLogin />} />
+              <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>}>
+                <Route index element={<AdminOverview />} />
+                <Route path="engagement" element={<AdminEngagement />} />
+                <Route path="ai" element={<AdminAIUsage />} />
+                <Route path="integrations" element={<AdminIntegrations />} />
+                <Route path="costs" element={<AdminCosts />} />
+                <Route path="registry" element={<AdminRegistry />} />
+                <Route path="reporter" element={<AdminReporter />} />
+              </Route>
+
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
