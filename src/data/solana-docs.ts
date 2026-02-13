@@ -1,4 +1,4 @@
-export type DocsCategory = 'RPC & Data' | 'DeFi' | 'Wallets' | 'NFTs' | 'Dev Tools' | 'MEV' | 'Oracles' | 'Automation' | 'Marketplaces';
+export type DocsCategory = 'RPC & Data' | 'DeFi' | 'Wallets' | 'NFTs' | 'Dev Tools' | 'MEV' | 'Oracles' | 'Automation' | 'Marketplaces' | 'Messaging' | 'Infrastructure' | 'Cross-Chain';
 
 export interface DocSection {
   title: string;
@@ -18,7 +18,7 @@ export interface SolanaService {
 }
 
 export const docsCategories: DocsCategory[] = [
-  'RPC & Data', 'DeFi', 'Dev Tools', 'Wallets', 'NFTs', 'MEV', 'Oracles', 'Automation', 'Marketplaces',
+  'RPC & Data', 'DeFi', 'Dev Tools', 'Wallets', 'NFTs', 'MEV', 'Oracles', 'Automation', 'Marketplaces', 'Messaging', 'Infrastructure', 'Cross-Chain',
 ];
 
 export const solanaServices: SolanaService[] = [
@@ -266,6 +266,96 @@ export const solanaServices: SolanaService[] = [
       { title: 'Cron Schedules', description: 'Define cron-style schedules for recurring on-chain operations.', url: 'https://docs.clockwork.xyz/developers/threads/cron-trigger' },
       { title: 'Account Triggers', description: 'Trigger threads based on on-chain account state changes.', url: 'https://docs.clockwork.xyz/developers/threads/account-trigger' },
       { title: 'SDK', description: 'Rust and TypeScript SDKs for creating and managing automation threads.', url: 'https://docs.clockwork.xyz/developers/sdk' },
+    ],
+  },
+  {
+    name: 'Helium',
+    slug: 'helium',
+    logoUrl: 'https://docs.helium.com/img/icons/logoblack.svg',
+    docsUrl: 'https://docs.helium.com',
+    description: 'Decentralized wireless network built on Solana — IoT and mobile hotspot coverage with token incentives.',
+    category: 'Infrastructure',
+    tags: ['iot', 'wireless', 'hotspot', 'mobile', 'depin', 'hnt'],
+    sections: [
+      { title: 'Network Overview', description: 'Understand the Helium network architecture, subDAOs, and token economics on Solana.', url: 'https://docs.helium.com/solana/' },
+      { title: 'Hotspot Onboarding', description: 'Register and manage IoT and mobile hotspots on the Helium network.', url: 'https://docs.helium.com/hotspot-makers/hotspot-integration-guide' },
+      { title: 'Token Migration', description: 'Details on HNT, MOBILE, and IOT token migration from L1 to Solana.', url: 'https://docs.helium.com/solana/migration/' },
+      { title: 'Governance', description: 'Participate in Helium Improvement Proposals (HIPs) and network governance.', url: 'https://docs.helium.com/governance/' },
+    ],
+  },
+  {
+    name: 'Dialect',
+    slug: 'dialect',
+    logoUrl: 'https://www.dialect.to/favicon.ico',
+    docsUrl: 'https://docs.dialect.to',
+    description: 'On-chain messaging and notifications for Solana — wallet-to-wallet chat, dApp alerts, and NFT-gated channels.',
+    category: 'Messaging',
+    tags: ['messaging', 'notifications', 'chat', 'alerts', 'wallet'],
+    sections: [
+      { title: 'Blinks (Blockchain Links)', description: 'Create shareable, interactive transaction links that work across any Solana app.', url: 'https://docs.dialect.to/documentation/actions/what-are-actions' },
+      { title: 'Actions SDK', description: 'Build Solana Actions — transaction-ready URLs that can be shared and executed anywhere.', url: 'https://docs.dialect.to/documentation/actions/sdk' },
+      { title: 'Notifications', description: 'Send wallet-targeted notifications and alerts from your dApp to users.', url: 'https://docs.dialect.to/documentation/notifications' },
+      { title: 'Smart Messaging', description: 'Integrate wallet-to-wallet messaging with token-gated and NFT-gated channels.', url: 'https://docs.dialect.to/documentation/messaging' },
+    ],
+  },
+  {
+    name: 'Solflare',
+    slug: 'solflare',
+    logoUrl: 'https://solflare.com/favicon.ico',
+    docsUrl: 'https://docs.solflare.com',
+    description: 'Feature-rich Solana wallet — staking, swaps, NFT gallery, and hardware wallet support with MetaMask Snaps.',
+    category: 'Wallets',
+    tags: ['wallet', 'staking', 'nft', 'hardware', 'metamask snaps'],
+    sections: [
+      { title: 'Wallet Adapter', description: 'Integrate Solflare via the standard Solana Wallet Adapter for seamless dApp connections.', url: 'https://docs.solflare.com/solflare/integrations/wallet-adapter' },
+      { title: 'MetaMask Snaps', description: 'Use Solflare through MetaMask via the Solana Snap extension.', url: 'https://docs.solflare.com/solflare/integrations/metamask-snap' },
+      { title: 'Staking', description: 'Delegate SOL to validators directly from the wallet with performance analytics.', url: 'https://docs.solflare.com/solflare/staking' },
+      { title: 'Transaction Simulation', description: 'Preview transaction effects before signing to prevent malicious approvals.', url: 'https://docs.solflare.com/solflare/security' },
+    ],
+  },
+  {
+    name: 'Light Protocol',
+    slug: 'light-protocol',
+    logoUrl: 'https://www.lightprotocol.com/favicon.ico',
+    docsUrl: 'https://www.zkcompression.com',
+    description: 'ZK Compression on Solana — reduce on-chain state costs by 1000x using zero-knowledge proofs for compressed accounts.',
+    category: 'Infrastructure',
+    tags: ['zk', 'compression', 'state', 'scaling', 'zero-knowledge'],
+    sections: [
+      { title: 'Overview', description: 'Understand ZK Compression and how it reduces Solana state costs dramatically.', url: 'https://www.zkcompression.com/introduction/intro' },
+      { title: 'Compressed Tokens', description: 'Mint and transfer SPL tokens using compressed accounts for massive cost savings.', url: 'https://www.zkcompression.com/developers/compressed-tokens' },
+      { title: 'TypeScript SDK', description: 'Build applications with compressed state using the stateless.js client library.', url: 'https://www.zkcompression.com/developers/typescript-client' },
+      { title: 'Node Operators', description: 'Run a Photon RPC node to index and serve compressed account data.', url: 'https://www.zkcompression.com/node-operators/run-a-node' },
+    ],
+  },
+  {
+    name: 'Wormhole',
+    slug: 'wormhole',
+    logoUrl: 'https://wormhole.com/favicon.ico',
+    docsUrl: 'https://docs.wormhole.com',
+    description: 'Cross-chain messaging and bridging protocol — transfer tokens and data between Solana and 30+ blockchains.',
+    category: 'Cross-Chain',
+    tags: ['bridge', 'cross-chain', 'messaging', 'interoperability', 'multichain'],
+    sections: [
+      { title: 'Solana Integration', description: 'Send and receive cross-chain messages from Solana programs via Wormhole.', url: 'https://docs.wormhole.com/docs/build/start-building/supported-networks/solana/' },
+      { title: 'Token Transfers', description: 'Bridge tokens between Solana and other chains using Wormhole Token Bridge.', url: 'https://docs.wormhole.com/docs/build/transfers/' },
+      { title: 'Wormhole SDK', description: 'TypeScript SDK for building cross-chain applications with Wormhole messaging.', url: 'https://docs.wormhole.com/docs/build/applications/wormhole-sdk/' },
+      { title: 'Queries', description: 'Pull cross-chain data on-demand without waiting for finality using Wormhole Queries.', url: 'https://docs.wormhole.com/docs/build/applications/queries/' },
+    ],
+  },
+  {
+    name: 'DFlow',
+    slug: 'dflow',
+    logoUrl: 'https://www.dflow.net/favicon.ico',
+    docsUrl: 'https://docs.dflow.net',
+    description: 'Decentralized order flow marketplace — route retail order flow to market makers with best execution guarantees on Solana.',
+    category: 'DeFi',
+    tags: ['order flow', 'market making', 'execution', 'retail', 'dex'],
+    sections: [
+      { title: 'Protocol Overview', description: 'Understand how DFlow creates a transparent marketplace for order flow on Solana.', url: 'https://docs.dflow.net/introduction' },
+      { title: 'Order Flow Auctions', description: 'Market makers bid for retail order flow with guaranteed price improvement.', url: 'https://docs.dflow.net/order-flow-auctions' },
+      { title: 'Integration Guide', description: 'Integrate DFlow into your application to route trades through the order flow marketplace.', url: 'https://docs.dflow.net/integration' },
+      { title: 'Endorsement Protocol', description: 'Endorse transactions to certify order flow quality and earn protocol incentives.', url: 'https://docs.dflow.net/endorsement-protocol' },
     ],
   },
 ];
