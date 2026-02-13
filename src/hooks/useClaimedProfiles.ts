@@ -203,7 +203,7 @@ export function useClaimedProfile(profileId: string) {
     queryKey: ['claimed-profile', profileId],
     queryFn: async (): Promise<ClaimedProfile | null> => {
       const { data, error } = await supabase
-        .from('claimed_profiles')
+        .from('claimed_profiles_public' as any)
         .select('*')
         .eq('id', profileId)
         .maybeSingle();
@@ -230,7 +230,7 @@ export function useClaimedProfileByProgramId(programId: string) {
     queryKey: ['claimed-profile-by-program', programId],
     queryFn: async (): Promise<ClaimedProfile | null> => {
       const { data, error } = await supabase
-        .from('claimed_profiles')
+        .from('claimed_profiles_public' as any)
         .select('*')
         .eq('program_id', programId)
         .eq('verified', true)
@@ -258,7 +258,7 @@ export function useClaimedProfileByProjectId(projectId: string) {
     queryKey: ['claimed-profile-by-project-id', projectId],
     queryFn: async (): Promise<ClaimedProfile | null> => {
       const { data, error } = await supabase
-        .from('claimed_profiles')
+        .from('claimed_profiles_public' as any)
         .select('*')
         .eq('project_id', projectId)
         .eq('verified', true)
@@ -289,7 +289,7 @@ export function useMyVerifiedProfiles(xUserId: string | undefined) {
       if (!xUserId) return [];
 
       const { data, error } = await supabase
-        .from('claimed_profiles')
+        .from('claimed_profiles_public' as any)
         .select('*')
         .eq('x_user_id', xUserId)
         .eq('verified', true)
@@ -317,11 +317,11 @@ export function useExistingProfile(xUserId: string | undefined) {
     queryFn: async (): Promise<{ hasProfile: boolean; profileId?: string }> => {
       if (!xUserId) return { hasProfile: false };
 
-      const { data, error } = await supabase
-        .from('claimed_profiles')
+      const { data, error } = await (supabase
+        .from('claimed_profiles_public' as any)
         .select('id, verified')
         .eq('x_user_id', xUserId)
-        .maybeSingle();
+        .maybeSingle() as any);
 
       if (error) {
         console.error('Error checking existing profile:', error);
@@ -347,7 +347,7 @@ export function useVerifiedProfiles() {
     queryKey: ['verified-profiles'],
     queryFn: async (): Promise<ClaimedProfile[]> => {
       const { data, error } = await supabase
-        .from('claimed_profiles')
+        .from('claimed_profiles_public' as any)
         .select('*')
         .eq('verified', true)
         .order('verified_at', { ascending: false });
@@ -373,7 +373,7 @@ export function useUnclaimedProfile(profileId: string | undefined) {
       if (!profileId) return null;
 
       const { data, error } = await supabase
-        .from('claimed_profiles')
+        .from('claimed_profiles_public' as any)
         .select('*')
         .eq('id', profileId)
         .eq('claim_status', 'unclaimed')

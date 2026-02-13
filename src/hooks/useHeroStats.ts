@@ -17,9 +17,9 @@ export function useHeroStats() {
     queryKey: ['hero-stats'],
     queryFn: async (): Promise<HeroStats> => {
       // Fetch all profiles in the registry (not just verified ones)
-      const { data: profiles, error } = await supabase
-        .from('claimed_profiles')
-        .select('resilience_score, liveness_status');
+      const { data: profiles, error } = await (supabase
+        .from('claimed_profiles_public' as any)
+        .select('resilience_score, liveness_status') as any);
 
       if (error) {
         console.error('Error fetching hero stats:', error);
