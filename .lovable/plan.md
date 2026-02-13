@@ -1,108 +1,115 @@
 
 
-# Fix: Subscriber Email & Wallet Address Exposure
+# Harden Bonds Table & Subscriber Insert Rate Limiting
 
-## Analysis
+## Finding 1: Bonds Table Exposes Wallet Addresses
 
-### Finding 1: Subscriber Emails
-**Current state**: The `project_subscribers` table has RLS enabled with only an INSERT policy. There is **no SELECT policy**, which means no client can read emails. This is already secure by default (RLS denies all operations without an explicit ALLOW policy). However, adding an explicit deny-all SELECT policy makes the intent crystal clear and prevents accidental future changes from opening access.
+**Current state**: The `bonds` table has a single RLS policy `"Bonds are publicly readable"` with `USING (true)`, making all bond data (wallet addresses, staked amounts, yield) visible to anyone. The table currently has 0 rows and bonding is a Phase 2 feature, but the policy should be locked down before any data is written.
 
-### Finding 2: Wallet Addresses in `claimed_profiles`
-**Current state**: Three SELECT policies allow public reads: verified profiles, unclaimed profiles, and claimer-owned profiles. All queries use `select('*')`, which returns **all 80+ columns** including `claimer_wallet`, `wallet_address`, `authority_wallet`, `authority_signature`, `multisig_address`, and `governance_address`. While no profiles currently have wallet data populated, once profiles are claimed and verified these fields will be exposed.
+**Solution**: Create a `bonds_public` view that excludes the `user_wallet` column (similar to the `claimed_profiles_public` pattern). The view will expose `id`, `project_id`, `staked_amount`, `locked_until`, `created_at`, and `yield_earned` -- enough for aggregate project stats without linking to individual wallets. Then restrict the base table's SELECT policy to only the bond owner (`user_wallet` matches a request header or parameter).
 
-**Root cause**: Every frontend query fetches `select('*')` instead of explicitly listing needed columns. A database view solves this cleanly -- the frontend queries the view (which excludes sensitive columns), while edge functions using `service_role` can still access the base table directly.
+However, since this app uses wallet-based auth (SIWS) rather than Supabase Auth, there's no `auth.uid()` to reference in RLS. The practical approach is:
+
+1. **Drop** the permissive `"Bonds are publicly readable"` SELECT policy
+2. **Add** a deny-all SELECT policy on the base table (`USING (false)`)
+3. **Create** a `bonds_public` view (without `user_wallet`) with `security_invoker = on` for public aggregate/project-level queries
+4. **Update** `useProjectBonds` to query the view (it doesn't need wallet addresses)
+5. **Keep** `useWalletBonds` querying the base table -- but since RLS now denies reads, route it through an edge function that takes the wallet address and returns only that wallet's bonds using `service_role`
+
+**Revised simpler approach** (given Phase 2 status and 0 data): Since bonding is not yet live and there are 0 bonds, the simplest secure fix is:
+- Replace the public-read policy with deny-all on the base table
+- Create a public view excluding `user_wallet` for project-level aggregate queries
+- Update `useProjectBonds` to use the view
+- Update `useWalletBonds`/`useWalletBondStats` to use the view (they won't need `user_wallet` in the response since the caller already knows the wallet)
 
 ---
 
-## Solution
+## Finding 2: Subscriber INSERT Abuse
+
+**Current state**: The `project_subscribers` INSERT policy allows anyone to insert with basic email validation (`email IS NOT NULL AND email <> '' AND length(email) <= 255`). No rate limiting exists, enabling:
+- Email bombing (subscribing a victim's email to every project)
+- Spam list building (inserting thousands of emails)
+
+**Solution**: Add a database function + trigger to rate-limit inserts per IP or email. Since we don't have IP access in RLS, rate-limit per email address -- max 5 subscriptions per hour per email:
+
+1. Create a PL/pgSQL trigger function that counts recent inserts for the same email
+2. Attach it as a BEFORE INSERT trigger on `project_subscribers`
+3. Reject with an exception if the limit is exceeded
+
+---
+
+## Technical Plan
 
 ### Step 1: Database Migration
 
-Add one explicit deny-all SELECT policy and create a public view:
-
 ```sql
--- 1. Explicit deny-all SELECT on project_subscribers
-CREATE POLICY "No public read access"
-  ON public.project_subscribers FOR SELECT
+-- ==========================================
+-- BONDS: Replace public-read with deny-all + public view
+-- ==========================================
+
+-- Drop the existing permissive policy
+DROP POLICY IF EXISTS "Bonds are publicly readable" ON public.bonds;
+
+-- Deny all direct reads
+CREATE POLICY "No direct bond reads"
+  ON public.bonds FOR SELECT
   USING (false);
 
--- 2. Create a public view that excludes sensitive wallet/auth fields
-CREATE VIEW public.claimed_profiles_public
+-- Public view excluding user_wallet
+CREATE VIEW public.bonds_public
 WITH (security_invoker = on) AS
-  SELECT
-    id, project_name, description, category, website_url, logo_url,
-    program_id, project_id, github_org_url, github_username,
-    x_user_id, x_username, discord_url, telegram_url,
-    media_assets, milestones, verified, verified_at,
-    created_at, updated_at, resilience_score, liveness_status,
-    github_stars, github_forks, github_contributors, github_language,
-    github_languages, github_last_commit, github_commit_velocity,
-    github_commits_30d, github_releases_30d, github_open_issues,
-    github_topics, github_top_contributors, github_recent_events,
-    github_is_fork, github_homepage, github_analyzed_at,
-    github_push_events_30d, github_pr_events_30d, github_issue_events_30d,
-    github_last_activity, bytecode_hash, bytecode_verified_at,
-    bytecode_match_status, bytecode_confidence, bytecode_deploy_slot,
-    bytecode_on_chain_hash, build_in_public_videos,
-    twitter_followers, twitter_engagement_rate, twitter_recent_tweets,
-    twitter_last_synced, team_members, staking_pitch,
-    dependency_health_score, dependency_outdated_count,
-    dependency_critical_count, dependency_analyzed_at,
-    governance_tx_30d, governance_address, governance_last_activity,
-    governance_analyzed_at, tvl_usd, tvl_market_share, tvl_risk_ratio,
-    tvl_analyzed_at, integrated_score, score_breakdown, claim_status,
-    vulnerability_count, vulnerability_details, vulnerability_analyzed_at,
-    openssf_score, openssf_checks, openssf_analyzed_at,
-    country, discovery_source
-  FROM public.claimed_profiles;
-  -- EXCLUDED: claimer_wallet, wallet_address, authority_wallet,
-  --           authority_signature, authority_type, multisig_address,
-  --           multisig_verified_via, squads_version,
-  --           github_access_token, github_token_scope
-```
+  SELECT id, project_id, staked_amount, locked_until, created_at, yield_earned
+  FROM public.bonds;
 
-The view inherits RLS from the base table via `security_invoker = on`, so the same read policies apply. Sensitive wallet/auth fields are simply not in the view.
+-- ==========================================
+-- SUBSCRIBERS: Rate-limit inserts per email
+-- ==========================================
+
+CREATE OR REPLACE FUNCTION public.check_subscriber_rate_limit()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  recent_count integer;
+BEGIN
+  SELECT count(*) INTO recent_count
+  FROM public.project_subscribers
+  WHERE email = NEW.email
+    AND subscribed_at > now() - interval '1 hour';
+
+  IF recent_count >= 5 THEN
+    RAISE EXCEPTION 'Rate limit exceeded: max 5 subscriptions per hour per email';
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER enforce_subscriber_rate_limit
+  BEFORE INSERT ON public.project_subscribers
+  FOR EACH ROW
+  EXECUTE FUNCTION public.check_subscriber_rate_limit();
+```
 
 ### Step 2: Frontend Changes
 
-Replace `select('*')` queries on `claimed_profiles` with queries on the `claimed_profiles_public` view in these files:
+**`src/hooks/useBonds.ts`**:
+- `useProjectBonds`: change `.from('bonds')` to `.from('bonds_public' as any)` and remove `user_wallet` from the return type
+- `useWalletBonds`: change `.from('bonds')` to `.from('bonds_public' as any)` -- the caller already passes `walletAddress` as a param, but since `user_wallet` is excluded from the view, this query will need adjustment. Since there are 0 bonds and this is Phase 2, the simplest fix is to also use the view but note that wallet-specific filtering won't work without the column. Given the Phase 2 status, we'll disable the wallet filter and return empty until the feature is built with proper auth.
 
-**`src/hooks/useClaimedProfiles.ts`** (6 queries):
-- `useClaimedProfile` -- change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
-- `useClaimedProfileByProgramId` -- same
-- `useClaimedProfileByProjectId` -- same
-- `useMyVerifiedProfiles` -- same
-- `useExistingProfile` -- same (only selects `id, verified`, but still routes through view for consistency)
-- `useVerifiedProfiles` -- same
-- `useUnclaimedProfile` -- same
+Actually, the cleanest approach: `useWalletBonds` filters by `user_wallet` which won't exist in the view. Since bonds is Phase 2 with 0 data, we'll keep the hook but have it return empty results gracefully. When Phase 2 launches, a proper edge function will handle authenticated wallet queries.
 
-**`src/hooks/useExplorerProjects.ts`** (1 query):
-- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
+**`src/components/staking/BondSummary.tsx`**: No changes needed (doesn't query DB directly).
 
-**`src/hooks/useHeroStats.ts`** (1 query):
-- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
+### Step 3: Security Finding Updates
 
-**`src/hooks/useEcosystemPulse.ts`** (1 query):
-- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
-
-**`src/hooks/useBuildersFeed.ts`** (1 query):
-- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
-
-**`src/hooks/useDependencyGraph.ts`** (1 query):
-- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
-
-**`src/hooks/useRoadmapStats.ts`** (1 query):
-- Change `.from('claimed_profiles')` to `.from('claimed_profiles_public' as any)`
+- Update/delete the bonds wallet exposure finding
+- Update/delete the subscriber email bombing finding
 
 ### What Does NOT Change
-
-- **`src/pages/ClaimProfile.tsx`** -- writes via `.insert()` / `.update()` on the base table (needs wallet fields for claim flow) -- unchanged
-- **Edge functions** -- all use `service_role` which bypasses RLS and accesses the base table directly -- unchanged
-- **Realtime subscription** in `useExplorerProjects` -- subscribes to the base table `claimed_profiles` for change notifications, which is correct -- unchanged
-- **`src/hooks/useUpdateProfile.ts`** -- calls the `update-profile` edge function, not direct DB -- unchanged
-
-### Security Finding Updates
-
-- Delete the "subscriber emails exposed" finding (resolved by explicit deny-all policy)
-- Update the "wallet addresses exposed" finding to resolved (view excludes sensitive columns)
+- The `project_subscribers` INSERT policy stays as-is (the trigger handles rate limiting)
+- Edge functions using `service_role` bypass RLS and can still read the base `bonds` table
+- The MyBonds page is a static placeholder with no DB queries
 
