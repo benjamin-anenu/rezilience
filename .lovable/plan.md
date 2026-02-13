@@ -1,75 +1,76 @@
 
-# In-App Documentation Panel (Slide-Out Sheet)
+
+# Display Documentation Content Inline (No Iframe)
 
 ## Overview
 
-Replace the external redirect behavior on the 4 section cards under each service with a wide slide-out panel from the right. Clicking a card opens the panel which embeds the external documentation inside an iframe, plus provides a Table of Contents sidebar, an "Ask GPT" tutor button, and a prominent link to the original documentation page. The "Official Docs" button on each service header stays untouched.
+Replace the broken iframe approach with rich inline documentation content rendered as Markdown directly inside the slide-out panel. Each documentation section will have a `content` field containing the most critical information -- key concepts, code snippets, API endpoints, and usage examples -- so users can learn without leaving the site. A "View Full Documentation" link at the top lets them access the complete official page when needed.
 
-## User Experience
-
-1. User clicks a section card (e.g. "Payment Links" under Sphere Pay)
-2. A wide panel slides in from the right (approx 75% of viewport width)
-3. Panel contains:
-   - **Header bar** -- section title, parent service name/logo, and a prominent "View on [service].docs" external link button
-   - **Body split into two columns**:
-     - **Left narrow column (~200px)**: mini Table of Contents listing all sibling sections for that service (click to switch), with the active one highlighted in teal
-     - **Right main column**: full-height iframe loading the external documentation URL
-   - **Footer bar** -- "Ask GPT about this" button that opens the existing GPT tutor modal pre-filled with the section topic and service context
-4. Clicking outside the panel or pressing the X closes it
-
-## Technical Changes
+## What Changes
 
 | File | Action | Details |
 |------|--------|---------|
-| `src/components/library/DocsSectionPanel.tsx` | **CREATE** | New slide-out panel component using the existing Sheet (Radix) primitive |
-| `src/components/library/DocsServiceSection.tsx` | **EDIT** | Change section cards from `<a>` tags to `<button>` elements that open the panel instead of navigating externally |
-| `src/components/ui/sheet.tsx` | **EDIT** | Override the `sm:max-w-sm` constraint on the right variant to allow a wider panel via className |
+| `src/data/solana-docs.ts` | **EDIT** | Add a `content` markdown string to the `DocSection` type and populate it for all ~140 sections across 33 services |
+| `src/components/library/DocsSectionPanel.tsx` | **EDIT** | Remove iframe, loading spinner, and error fallback; replace with a ScrollArea rendering the markdown content using ReactMarkdown |
 
-## Component: DocsSectionPanel
+## Data Model Change
 
-**Props:**
-- `open: boolean` -- controls visibility
-- `onOpenChange: (open: boolean) => void`
-- `service: SolanaService` -- the parent service (for logo, name, sibling sections)
-- `activeSection: DocSection` -- the clicked section
-- `onSectionChange: (section: DocSection) => void` -- switch between sibling sections
-- `onAskGpt: (topic: string, context: string) => void` -- triggers the existing GPT tutor
+The `DocSection` interface gains a `content` field:
 
-**Layout:**
-```
-+---------------------------------------------------------------+
-| [X]  Service Logo  Section Title     [View Original Docs ->]  |
-+---------------------------------------------------------------+
-|  TOC Sidebar   |          iframe (docs URL)                   |
-|  (200px)       |          (flex-1)                            |
-|                |                                              |
-|  - Section 1   |                                              |
-|  * Section 2   |                                              |  
-|  - Section 3   |                                              |
-|  - Section 4   |                                              |
-|                |                                              |
-+---------------------------------------------------------------+
-| [Ask GPT icon] Ask GPT about "Section Title"                  |
-+---------------------------------------------------------------+
+```text
+Before:
+  { title, description, url }
+
+After:
+  { title, description, url, content }
 ```
 
-## Changes to DocsServiceSection
+Each section's `content` will be a concise markdown document (200-400 words) covering:
+- What the feature/API does (1-2 sentence summary)
+- Key concepts or parameters
+- A practical code snippet (TypeScript/Rust where relevant)
+- Important notes or gotchas
 
-- The section cards currently render as `<a href={sec.url} target="_blank">` elements
-- They will become `<button onClick={() => openPanel(sec)}>` elements
-- State management (`selectedSection`, `panelOpen`) will be lifted into this component
-- The `onAskGpt` callback will be threaded from the parent `LibraryDocs` page
+## Panel Layout Change
 
-## Sheet Width Override
+The main content area (right column) changes from an iframe to:
 
-The existing Sheet component caps right-side panels at `sm:max-w-sm`. The new panel will pass a custom className to override this:
+```text
++----------------------------------------------------------+
+| [ScrollArea with rendered Markdown]                      |
+|                                                          |
+|  ## RPC Nodes                                            |
+|  Helius provides dedicated and shared Solana RPC...      |
+|                                                          |
+|  ### Quick Start                                         |
+|  ```typescript                                           |
+|  const connection = new Connection(                      |
+|    'https://mainnet.helius-rpc.com/?api-key=YOUR_KEY'   |
+|  );                                                      |
+|  ```                                                     |
+|                                                          |
+|  ### Key Features                                        |
+|  - Rate limiting and analytics dashboard                 |
+|  - Dedicated nodes for enterprise use                    |
+|  ...                                                     |
++----------------------------------------------------------+
 ```
-className="!max-w-none w-[75vw] lg:w-[70vw]"
-```
-No structural changes to the Sheet component itself -- just a className override on the instance.
 
-## Iframe Considerations
+## What Stays the Same
 
-- Some external documentation sites may block iframe embedding via `X-Frame-Options` or CSP headers
-- A fallback message will be shown if the iframe fails to load: "This documentation cannot be embedded. Click below to view it directly." with a direct link button
-- The iframe will have a loading spinner overlay while content loads
+- TOC sidebar (left column) for switching between sections
+- Header with service logo, section title, and "View Original Docs" link
+- Footer "Ask GPT" button
+- "Official Docs" button on each service card (untouched)
+
+## Technical Details
+
+- **ReactMarkdown + remarkGfm** are already installed and used in the AskGptModal, so no new dependencies needed
+- The existing prose styling from the GPT modal will be reused for consistent markdown rendering
+- The iframe-related state (`iframeLoading`, `iframeError`) and handlers will be removed entirely
+- Content is static and loads instantly -- no network requests, no CSP issues, no loading spinners needed
+
+## Content Scope
+
+All 33 services will have their sections populated with concise, developer-focused markdown covering the most critical documentation points. Each section focuses on giving developers enough to get started, with the "View Original Docs" link available for deeper reading.
+
