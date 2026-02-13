@@ -1,76 +1,33 @@
 
 
-# Display Documentation Content Inline (No Iframe)
+# Add Tagline Below Main Headline
 
-## Overview
+## Placement
 
-Replace the broken iframe approach with rich inline documentation content rendered as Markdown directly inside the slide-out panel. Each documentation section will have a `content` field containing the most critical information -- key concepts, code snippets, API endpoints, and usage examples -- so users can learn without leaving the site. A "View Full Documentation" link at the top lets them access the complete official page when needed.
+Insert "Secure the Ecosystem. Get Rewarded for Longevity." as a secondary headline between the H1 ("REPUTATION CAN'T BE FORKED.") and the paragraph text. This follows the hero information hierarchy: Category Badge, Hook Headline, Promise Tagline, Explanation, Call-to-Action.
 
-## What Changes
+## Visual Hierarchy
+
+```text
+[DECENTRALIZED ASSURANCE OF SOLANA]        <-- badge (category)
+REPUTATION CAN'T BE FORKED.                <-- h1 (hook)
+Secure the Ecosystem. Get Rewarded for Longevity.  <-- NEW tagline (promise)
+The Solana Ecosystem needs projects...      <-- paragraph (explain)
+[SOLANA PROJECT VITALS]  [STAKE NOW]        <-- CTAs (convert)
+```
+
+## File Change
 
 | File | Action | Details |
 |------|--------|---------|
-| `src/data/solana-docs.ts` | **EDIT** | Add a `content` markdown string to the `DocSection` type and populate it for all ~140 sections across 33 services |
-| `src/components/library/DocsSectionPanel.tsx` | **EDIT** | Remove iframe, loading spinner, and error fallback; replace with a ScrollArea rendering the markdown content using ReactMarkdown |
+| `src/components/landing/HeroSection.tsx` | **EDIT** | Add a styled `p` or `h2` element after the H1 closing tag and before the paragraph |
 
-## Data Model Change
+## Styling
 
-The `DocSection` interface gains a `content` field:
-
-```text
-Before:
-  { title, description, url }
-
-After:
-  { title, description, url, content }
-```
-
-Each section's `content` will be a concise markdown document (200-400 words) covering:
-- What the feature/API does (1-2 sentence summary)
-- Key concepts or parameters
-- A practical code snippet (TypeScript/Rust where relevant)
-- Important notes or gotchas
-
-## Panel Layout Change
-
-The main content area (right column) changes from an iframe to:
-
-```text
-+----------------------------------------------------------+
-| [ScrollArea with rendered Markdown]                      |
-|                                                          |
-|  ## RPC Nodes                                            |
-|  Helius provides dedicated and shared Solana RPC...      |
-|                                                          |
-|  ### Quick Start                                         |
-|  ```typescript                                           |
-|  const connection = new Connection(                      |
-|    'https://mainnet.helius-rpc.com/?api-key=YOUR_KEY'   |
-|  );                                                      |
-|  ```                                                     |
-|                                                          |
-|  ### Key Features                                        |
-|  - Rate limiting and analytics dashboard                 |
-|  - Dedicated nodes for enterprise use                    |
-|  ...                                                     |
-+----------------------------------------------------------+
-```
-
-## What Stays the Same
-
-- TOC sidebar (left column) for switching between sections
-- Header with service logo, section title, and "View Original Docs" link
-- Footer "Ask GPT" button
-- "Official Docs" button on each service card (untouched)
-
-## Technical Details
-
-- **ReactMarkdown + remarkGfm** are already installed and used in the AskGptModal, so no new dependencies needed
-- The existing prose styling from the GPT modal will be reused for consistent markdown rendering
-- The iframe-related state (`iframeLoading`, `iframeError`) and handlers will be removed entirely
-- Content is static and loads instantly -- no network requests, no CSP issues, no loading spinners needed
-
-## Content Scope
-
-All 33 services will have their sections populated with concise, developer-focused markdown covering the most critical documentation points. Each section focuses on giving developers enough to get started, with the "View Original Docs" link available for deeper reading.
+- Font: Space Grotesk (font-display), matching the headline family
+- Weight: semibold (not bold like the H1, to create hierarchy)
+- Size: text-lg on mobile, text-xl on desktop -- smaller than H1 but larger than body text
+- Color: `text-muted-foreground` with the word "Rewarded" in `text-primary` (teal) to echo the teal accent used in "FORKED." above
+- Uppercase tracking-wide to match the institutional Bloomberg terminal aesthetic
+- Small top margin (mb-6 reduced to mb-2 on H1, then mt-2 mb-6 on the tagline) to keep it visually grouped with the headline
 
