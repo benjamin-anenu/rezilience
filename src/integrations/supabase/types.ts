@@ -719,6 +719,60 @@ export type Database = {
         }
         Relationships: []
       }
+      ecosystem_trends: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          event_type: string
+          expires_at: string | null
+          id: string
+          metadata: Json | null
+          priority: string
+          profile_id: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          event_type: string
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          profile_id?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          event_type?: string
+          expires_at?: string | null
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          profile_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ecosystem_trends_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ecosystem_trends_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_secrets: {
         Row: {
           created_at: string

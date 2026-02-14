@@ -47,6 +47,7 @@ interface UpdateProfileParams {
     milestones?: MilestoneUpdate[];
     team_members?: TeamMemberUpdate[];
     staking_pitch?: string;
+    logo_url?: string;
   };
 }
 

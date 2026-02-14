@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { WebsitePreview } from './WebsitePreview';
+import { LogoUploader } from '@/components/profile/LogoUploader';
 import { PROJECT_CATEGORIES, type ProjectCategory } from '@/types';
 import { COUNTRIES } from '@/lib/countries';
 
@@ -24,6 +25,8 @@ interface CoreIdentityFormProps {
   setCountry: (value: string) => void;
   websiteUrl: string;
   setWebsiteUrl: (value: string) => void;
+  logoUrl?: string;
+  setLogoUrl?: (value: string) => void;
 }
 
 export const CoreIdentityForm = ({
@@ -37,6 +40,8 @@ export const CoreIdentityForm = ({
   setCountry,
   websiteUrl,
   setWebsiteUrl,
+  logoUrl,
+  setLogoUrl,
 }: CoreIdentityFormProps) => {
 
   return (
@@ -66,6 +71,19 @@ export const CoreIdentityForm = ({
               className="font-mono"
             />
           </div>
+
+          {setLogoUrl && (
+            <div className="space-y-2">
+              <Label className="font-display text-xs uppercase tracking-wider">
+                Project Logo
+              </Label>
+              <LogoUploader
+                currentLogoUrl={logoUrl}
+                onLogoUploaded={setLogoUrl}
+                compact
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description" className="font-display text-xs uppercase tracking-wider">

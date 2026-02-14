@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Globe, MessageCircle, Send, Loader2, Check } from 'lucide-react';
+import { Globe, MessageCircle, Send, Loader2, Check, ImageIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useUpdateProfile } from '@/hooks/useUpdateProfile';
+import { LogoUploader } from '@/components/profile/LogoUploader';
 import type { ClaimedProfile } from '@/types';
 
 interface SettingsTabProps {
@@ -16,6 +17,7 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
   const [websiteUrl, setWebsiteUrl] = useState(profile.websiteUrl || '');
   const [discordUrl, setDiscordUrl] = useState(profile.socials.discordUrl || '');
   const [telegramUrl, setTelegramUrl] = useState(profile.socials.telegramUrl || '');
+  const [logoUrl, setLogoUrl] = useState(profile.logoUrl || '');
   const [hasChanges, setHasChanges] = useState(false);
 
   const updateProfile = useUpdateProfile();
@@ -25,9 +27,10 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
     const changed =
       websiteUrl !== (profile.websiteUrl || '') ||
       discordUrl !== (profile.socials.discordUrl || '') ||
-      telegramUrl !== (profile.socials.telegramUrl || '');
+      telegramUrl !== (profile.socials.telegramUrl || '') ||
+      logoUrl !== (profile.logoUrl || '');
     setHasChanges(changed);
-  }, [websiteUrl, discordUrl, telegramUrl, profile]);
+  }, [websiteUrl, discordUrl, telegramUrl, logoUrl, profile]);
 
   const handleSave = () => {
     updateProfile.mutate({
@@ -37,6 +40,7 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
         website_url: websiteUrl || undefined,
         discord_url: discordUrl || undefined,
         telegram_url: telegramUrl || undefined,
+        logo_url: logoUrl || undefined,
       },
     });
   };
@@ -58,6 +62,26 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
 
   return (
     <div className="space-y-6">
+      {/* Project Logo */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-display text-lg uppercase tracking-tight">
+            <ImageIcon className="h-5 w-5 text-primary" />
+            Project Logo
+          </CardTitle>
+          <CardDescription>
+            Upload your project's logo. This appears in the explorer and on your profile.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <LogoUploader
+            profileId={profile.id}
+            currentLogoUrl={profile.logoUrl}
+            onLogoUploaded={setLogoUrl}
+          />
+        </CardContent>
+      </Card>
+
       {/* Website URL */}
       <Card className="border-border bg-card">
         <CardHeader>
