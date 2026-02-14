@@ -1,62 +1,106 @@
 
 
-# Fix: Persist GitHub Analysis + Full Draft Save/Resume
+# Review: Phase-Based Roadmap + Draft Persistence — One Fix Needed
 
-## Two Problems, One Fix
+## Status: 1 Issue Found, Everything Else Intact
 
-**Problem 1 — GitHub OAuth fires at final stage**: The `githubAnalysisResult` (score, repo URL, metrics from Step 3) is NOT saved to localStorage. If the component re-renders or state is lost, Step 5 falls into Case 3 (GitHub OAuth) instead of Case 2 (direct submit), triggering a second scan on the wrong repo and producing a different score.
+### What's Working Correctly
 
-**Problem 2 — No draft persistence across sessions**: If the user signs out or closes the browser, all form progress is lost. The user wants to resume exactly where they left off after signing back in.
+1. **Type System** -- `Phase` and `PhaseMilestone` interfaces are properly defined. `ClaimedProfile.milestones` and `ClaimProfileFormData.milestones` both use `Phase[]`. The old `Milestone` type is preserved for backward compatibility.
 
-## Changes — Single File: `src/pages/ClaimProfile.tsx`
+2. **Claim Flow (ClaimProfile.tsx)** -- Step 5 renders `RoadmapForm` with `phases={milestones}` and `setPhases={setMilestones}`. The `handleDirectSubmit` correctly serializes milestones as JSON for the edge function. All 3 cases at Step 5 (GitHub OAuth done, public repo analyzed, no analysis) are intact.
 
-### 1. Persist `githubAnalysisResult` to localStorage
+3. **Draft Persistence** -- All fields are saved to localStorage: `githubAnalysisResult`, `logoUrl`, `authorityData`, `authorityVerified`, `programVerified`, `githubVerified`, plus the original form fields and `milestones` (Phase[]). Restore logic on mount is complete. "Draft auto-saved" indicator is rendered.
 
-Add `githubAnalysisResult` to the save effect (line 164) alongside all other form fields:
+4. **RoadmapForm (Claim Step)** -- Add/remove phases, add/remove milestones within phases, collapsible UI, lock-all mechanism, optional target dates, required descriptions -- all correct.
 
+5. **RoadmapManagement (Dashboard)** -- Full CRUD with dialogs for add phase, add milestone, mark complete, request variance, remove phase/milestone. Locked phases block edits. Variance badge shown. Completion timestamps captured.
+
+6. **Public Display (RoadmapTabContent)** -- Progress bar, phase-level progress, collapsible phases, milestone status icons (completed/overdue/upcoming), optional dates, descriptions, variance badges -- all rendering correctly.
+
+7. **AboutTab (Owner Dashboard)** -- Correctly shows `RoadmapManagement` for owners and a static "Verified Timeline" view for public visitors, both using the Phase structure.
+
+8. **Data Layer** -- `useClaimedProfiles` maps DB JSON to `Phase[]`. `useUpdateProfile` accepts `Phase[]`. The `claim-profile` edge function uses `...rest` spread so it accepts any JSON shape without type issues.
+
+9. **Barrel Exports** -- `RoadmapForm` is properly exported from `src/components/claim/index.ts`.
+
+---
+
+### Issue: Stale Type in `update-profile` Edge Function
+
+**File:** `supabase/functions/update-profile/index.ts` (lines 31-39)
+
+The `UpdateProfileBody.updates.milestones` type still defines the OLD flat milestone shape:
+
+```text
+milestones?: Array<{
+  id: string;
+  title: string;
+  targetDate: string;      // <-- old shape
+  isLocked: boolean;       // <-- old shape
+  status: "upcoming" | "completed" | "overdue";
+  varianceRequested?: boolean;
+  completedAt?: string;
+  originalTargetDate?: string;
+}>
 ```
-githubAnalysisResult,
+
+This should be updated to the new Phase structure:
+
+```text
+milestones?: Array<{
+  id: string;
+  title: string;
+  isLocked: boolean;
+  varianceRequested?: boolean;
+  milestones: Array<{
+    id: string;
+    title: string;
+    description: string;
+    targetDate?: string;
+    status: "upcoming" | "completed" | "overdue";
+    completedAt?: string;
+  }>;
+  order: number;
+}>
 ```
 
-Add it to the dependency array of that effect (line 179).
+**Impact:** Currently non-breaking because the edge function just passes the JSON through to the DB without runtime validation against this TypeScript type. However, the type mismatch is technically incorrect and could cause issues if validation logic is added later.
 
-### 2. Persist additional state that is currently lost
+### Fix
 
-Also add these fields to the save/restore cycle so the full draft is complete:
-- `logoUrl` — project logo chosen in Step 2
-- `authorityData` — SIWS verification result
-- `authorityVerified` — boolean flag
-- `programVerified` — boolean flag
-- `githubVerified` — boolean flag (if came back from OAuth previously)
+Update lines 31-39 in `supabase/functions/update-profile/index.ts` to match the Phase structure.
 
-### 3. Restore all persisted fields on mount
+---
 
-In the restore effect (lines 182-202), add restore logic for each new field:
+### Summary Checklist
 
-```typescript
-if (data.githubAnalysisResult) setGithubAnalysisResult(data.githubAnalysisResult);
-if (data.logoUrl) setLogoUrl(data.logoUrl);
-if (data.authorityData) setAuthorityData(data.authorityData);
-if (data.authorityVerified) setAuthorityVerified(data.authorityVerified);
-if (data.programVerified) setProgramVerified(data.programVerified);
-if (data.githubVerified) setGithubVerified(data.githubVerified);
-```
-
-### 4. Add "Draft saved" indicator (optional UX touch)
-
-Show a subtle "Draft saved" label near the step indicator so the user knows their progress is being auto-saved and will be there when they return.
-
-### 5. Clear draft on successful submission (already done)
-
-Line 425 already calls `localStorage.removeItem('claimFormProgress')` on success — no change needed here.
-
-## What This Fixes
-
-- **No more GitHub OAuth at Step 5**: The `githubAnalysisResult` is always available, so Step 5 always renders Case 2 ("COMPLETE REGISTRATION") with the original score.
-- **Full session resume**: User can sign out after Step 4, sign back in days later, and all fields (project name, description, GitHub analysis score, logo, milestones, media, authority data) are restored. They land on the exact step they left off.
-- **No score drop**: The original analysis result (score 35) is preserved — no second scan ever runs.
-
-## No Other Files Change
-
-The save/restore logic is entirely within `ClaimProfile.tsx`. The edge function, components, and other pages are unaffected.
+| Checkpoint | Status |
+|---|---|
+| Phase/PhaseMilestone types defined | OK |
+| ClaimedProfile.milestones uses Phase[] | OK |
+| ClaimProfileFormData.milestones uses Phase[] | OK |
+| RoadmapForm (claim) - add/remove phases | OK |
+| RoadmapForm - add/remove milestones in phases | OK |
+| RoadmapForm - optional target dates | OK |
+| RoadmapForm - required descriptions | OK |
+| RoadmapForm - lock all phases | OK |
+| RoadmapManagement (dashboard) - CRUD | OK |
+| RoadmapManagement - mark complete with timestamp | OK |
+| RoadmapManagement - request variance on locked phase | OK |
+| RoadmapManagement - locked phases block edits | OK |
+| RoadmapTabContent (public) - phase progress bars | OK |
+| RoadmapTabContent - milestone status icons | OK |
+| RoadmapTabContent - descriptions displayed | OK |
+| RoadmapTabContent - optional dates displayed | OK |
+| AboutTab - owner vs public view | OK |
+| Draft persistence - all fields saved | OK |
+| Draft persistence - all fields restored | OK |
+| Draft persistence - "Draft auto-saved" indicator | OK |
+| Draft cleared on successful submit | OK |
+| githubAnalysisResult persisted (no OAuth at Step 5) | OK |
+| claim-profile edge function accepts Phase[] | OK |
+| update-profile edge function type matches Phase[] | **NEEDS FIX** |
+| useClaimedProfiles maps milestones as Phase[] | OK |
+| useUpdateProfile accepts Phase[] | OK |
 
