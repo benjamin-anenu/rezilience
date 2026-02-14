@@ -1,34 +1,42 @@
 
 
-## Originality Metrics: Unverified State Fixes
+## Fix: GitHub Originality Should Require OAuth Verification
 
 ### Problem
-Currently, the Bytecode Originality and GitHub Originality cards always show a progress bar, even when verification hasn't been performed. Unverified states also appear in neutral grey rather than signaling that action is needed.
+The GitHub Originality card shows a full green bar ("Original Repository" at 100%) even when the project owner has NOT connected via GitHub OAuth. This happens because the public URL analysis (during claim) already sets `github_is_fork: false`, and the current logic only checks whether that value is defined -- not whether the owner actually proved GitHub ownership.
 
-### What Will Change
+### Root Cause
+- During the claim flow, submitting a public GitHub URL triggers `analyze-github-repo`, which writes `github_is_fork` to the database.
+- The originality check (`githubIsFork === undefined`) passes because the field is `false`, not `undefined`.
+- There is no check for GitHub OAuth status (`github_username` is only set after OAuth).
 
-**1. Hide Progress Bar When Not Verified**
-- Bytecode Originality: If no wallet signature verification has been done (`bytecodeMatchStatus` is null and program is not verified), the progress bar will be hidden entirely.
-- GitHub Originality: If GitHub analysis hasn't run (`githubIsFork` is undefined), the progress bar will be hidden entirely.
-- A text label like "Awaiting Verification" or "Awaiting Analysis" will remain visible.
-
-**2. Dark Orange for Unverified States**
-- All unverified/not-analyzed subtitle text will use dark orange (`text-orange-600`) instead of grey.
-- If a bar does show (e.g. partial states like "fork"), warning bars will also use dark orange.
+### Solution
+Add a `githubOAuthVerified` flag (derived from whether `github_username` exists in the database) and pass it through to the originality metric. When OAuth has NOT been completed, GitHub Originality should show as "Awaiting Verification" in dark orange with no progress bar -- identical to the unverified bytecode state.
 
 ### Files to Update
 
 | File | Change |
 |------|--------|
-| `DevelopmentTabContent.tsx` (Program Detail) | Add `isUnverified` flag to hide bar + apply dark orange |
-| `DevelopmentTab.tsx` (Profile Detail) | Same logic for the claimed profile view |
-| `MetricCards.tsx` (Program Detail) | Same logic for the 4-card grid |
-| `IntelligenceGrid.tsx` (Explorer) | Update "Not Verified" bytecode color to dark orange |
+| `src/hooks/useClaimedProfiles.ts` | Already maps `githubUsername` -- no change needed |
+| `src/pages/ProgramDetail.tsx` | Pass `githubOAuthVerified={!!claimedProfile?.githubUsername}` to `DevelopmentTabContent` |
+| `src/pages/ProfileDetail.tsx` | Pass `githubOAuthVerified={!!profile.githubUsername}` to `DevelopmentTabContent` |
+| `src/components/program/tabs/DevelopmentTabContent.tsx` | Accept new `githubOAuthVerified` prop; update `getGithubOriginalityInfo()` to treat `!githubOAuthVerified` as unverified (dark orange, no bar) |
+| `src/components/profile/tabs/DevelopmentTab.tsx` | Same logic: check `profile.githubUsername` to determine verified state |
+| `src/components/program/MetricCards.tsx` | Accept `githubOAuthVerified` prop; apply same unverified logic |
 
-### Technical Details
+### Logic Change (in `getGithubOriginalityInfo`)
 
-- A new `isUnverified` boolean will be added to each metric object.
-- When `isUnverified` is true, the `<Progress>` component will not render, replaced by a small "Pending" indicator.
-- The color class for unverified states will change from `text-muted-foreground` to `text-orange-600` (dark orange) across all four files.
-- The `getBytecodeStatusInfo` helper in `useBytecodeVerification.ts` will also get an updated default return with `isUnverified: true` so downstream consumers can use it consistently.
+```text
+Before:
+  if githubIsFork === undefined -> "Awaiting Analysis" (unverified)
+  if githubIsFork === true      -> "Forked Repository" (warning)
+  if githubIsFork === false     -> "Original Repository" (full bar)
+
+After:
+  if !githubOAuthVerified       -> "Awaiting Verification" (dark orange, no bar)
+  if githubIsFork === true      -> "Forked Repository" (warning bar)
+  if githubIsFork === false     -> "Original Repository" (full bar)
+```
+
+Only profiles where the owner has completed GitHub OAuth will show the green bar. All others get the dark orange "Pending" indicator.
 
