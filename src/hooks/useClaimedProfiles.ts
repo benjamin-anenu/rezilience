@@ -89,6 +89,9 @@ interface DBClaimedProfile {
   openssf_score: number | null;
   openssf_checks: Json | null;
   openssf_analyzed_at: string | null;
+  // X Profile Data
+  x_avatar_url: string | null;
+  x_display_name: string | null;
 }
 
 // Transform database format to frontend ClaimedProfile format
@@ -192,6 +195,9 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
     openssfScore: db.openssf_score ?? undefined,
     openssfChecks: (db.openssf_checks && typeof db.openssf_checks === 'object' && !Array.isArray(db.openssf_checks)) ? db.openssf_checks as Record<string, unknown> : undefined,
     openssfAnalyzedAt: db.openssf_analyzed_at || undefined,
+    // X Profile Data
+    xAvatarUrl: db.x_avatar_url || undefined,
+    xDisplayName: db.x_display_name || undefined,
   };
 }
 

@@ -397,6 +397,8 @@ const ClaimProfile = () => {
         github_org_url: githubAnalysisResult.htmlUrl,
         x_user_id: user.id,
         x_username: user.username,
+        x_avatar_url: user.avatarUrl || null,
+        x_display_name: user.name || null,
         discord_url: discordUrl || null,
         telegram_url: telegramUrl || null,
         media_assets: JSON.parse(JSON.stringify(mediaAssets)),

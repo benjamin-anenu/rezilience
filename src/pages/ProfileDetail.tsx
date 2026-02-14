@@ -388,6 +388,8 @@ const ProfileDetail = () => {
                     ownerUsername={profile.xUsername}
                     ownerLogoUrl={profile.logoUrl}
                     ownerProjectName={profile.projectName}
+                    ownerAvatarUrl={profile.xAvatarUrl}
+                    ownerDisplayName={profile.xDisplayName}
                   />
                 ),
                 community: (

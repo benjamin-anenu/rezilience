@@ -267,9 +267,9 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
           {/* Owner Card - Locked, non-editable */}
           <div className="flex items-start gap-3 rounded-sm border border-primary/30 bg-primary/5 p-3">
             <Avatar className="h-10 w-10 border border-primary/30">
-              <AvatarImage src={profile.logoUrl || undefined} alt={profile.xUsername || profile.projectName} />
+              <AvatarImage src={profile.logoUrl || profile.xAvatarUrl || undefined} alt={profile.xDisplayName || profile.xUsername || profile.projectName} />
               <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                {getInitials(profile.xUsername || profile.projectName)}
+                {getInitials(profile.xDisplayName || profile.xUsername || profile.projectName)}
               </AvatarFallback>
             </Avatar>
             
