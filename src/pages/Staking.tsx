@@ -6,6 +6,7 @@ import { ComingSoonOverlay } from '@/components/staking/ComingSoonOverlay';
 import { Button } from '@/components/ui/button';
 import { Eye } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 const Staking = () => {
   const [formData, setFormData] = useState({
     programId: '',
@@ -14,7 +15,9 @@ const Staking = () => {
     lockupMonths: 12,
     isValid: false
   });
+  const { trackEvent } = useAnalyticsTracker();
   const handleJoinWaitlist = () => {
+    trackEvent('click', 'staking_waitlist');
     toast.success('Thanks for your interest!', {
       description: 'We\'ll notify you when Staking launches in Phase 2.'
     });

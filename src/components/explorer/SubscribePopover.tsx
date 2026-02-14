@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { z } from 'zod';
 import { Bell, Check, Loader2 } from 'lucide-react';
+import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -19,6 +20,7 @@ export function SubscribePopover({ profileId, projectName, isSubscribed, onSubsc
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const { trackEvent } = useAnalyticsTracker();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +31,7 @@ export function SubscribePopover({ profileId, projectName, isSubscribed, onSubsc
       return;
     }
     setLoading(true);
+    trackEvent('feature_use', 'subscribe', { project: projectName });
     const ok = await onSubscribe(profileId, result.data, projectName);
     setLoading(false);
     if (ok) {

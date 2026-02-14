@@ -40,7 +40,9 @@ export function useAnalyticsTracker() {
     if (bufferRef.current.length === 0) return;
     const batch = bufferRef.current.splice(0, MAX_BATCH_SIZE);
     try {
-      await supabase.from('admin_analytics').insert(batch);
+      await supabase.functions.invoke('track-analytics', {
+        body: { events: batch },
+      });
     } catch {
       // Silent fail — analytics should never break the app
     }
@@ -73,10 +75,7 @@ export function useAnalyticsTracker() {
     timerRef.current = setInterval(flush, BATCH_INTERVAL);
 
     const handleUnload = () => {
-      // Use sendBeacon for reliable delivery on page close
-      if (bufferRef.current.length > 0 && navigator.sendBeacon) {
-        const body = JSON.stringify(bufferRef.current);
-        // sendBeacon doesn't work with Supabase client, so just flush normally
+      if (bufferRef.current.length > 0) {
         flush();
       }
     };

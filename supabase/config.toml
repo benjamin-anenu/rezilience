@@ -65,3 +65,6 @@ verify_jwt = false
 
 [functions.generate-report-cover]
 verify_jwt = false
+
+[functions.track-analytics]
+verify_jwt = false

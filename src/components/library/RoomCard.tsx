@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 
 interface RoomCardProps {
   to: string;
@@ -12,9 +13,11 @@ interface RoomCardProps {
 }
 
 export function RoomCard({ to, icon: Icon, title, description, count, index }: RoomCardProps) {
+  const { trackEvent } = useAnalyticsTracker();
   return (
     <Link
       to={to}
+      onClick={() => trackEvent('click', `library_room_${title.toLowerCase()}`)}
       className={cn(
         'group flex flex-col gap-4 rounded-sm border border-border bg-card p-6 transition-all duration-300 card-lift animate-card-enter'
       )}
