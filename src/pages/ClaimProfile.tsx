@@ -373,9 +373,6 @@ const ClaimProfile = () => {
     try {
       const { supabase } = await import('@/integrations/supabase/client');
       
-      // Use existing profile ID if claiming unclaimed, otherwise generate new
-      const profileId = unclaimedProfileId || crypto.randomUUID();
-      
       const profileData = {
         project_name: projectName,
         description: description || null,
@@ -392,9 +389,6 @@ const ClaimProfile = () => {
         telegram_url: telegramUrl || null,
         media_assets: JSON.parse(JSON.stringify(mediaAssets)),
         milestones: JSON.parse(JSON.stringify(milestones)),
-        verified: true,
-        verified_at: new Date().toISOString(),
-        claim_status: 'claimed',
         resilience_score: githubAnalysisResult.resilienceScore,
         liveness_status: githubAnalysisResult.livenessStatus,
         github_stars: githubAnalysisResult.stars,
@@ -408,55 +402,25 @@ const ClaimProfile = () => {
         github_topics: githubAnalysisResult.topics || null,
         github_is_fork: githubAnalysisResult.isFork || false,
         github_analyzed_at: new Date().toISOString(),
-        // Authority verification data (SIWS)
         authority_wallet: authorityData?.authorityWallet || null,
         authority_verified_at: authorityVerified ? new Date().toISOString() : null,
         authority_signature: authorityData?.signature || null,
         authority_type: authorityData?.authorityType || null,
-        // Multisig verification data (Squads)
         multisig_address: authorityData?.multisigAddress || null,
         squads_version: authorityData?.squadsVersion || null,
         multisig_verified_via: authorityData?.multisigVerifiedVia || null,
+        // For the edge function routing
+        unclaimed_profile_id: unclaimedProfileId || undefined,
       };
       
-      let error;
-      
-      if (unclaimedProfileId) {
-        // Update existing unclaimed profile
-        const result = await supabase
-          .from('claimed_profiles')
-          .update(profileData)
-          .eq('id', unclaimedProfileId)
-          .eq('claim_status', 'unclaimed');
-        error = result.error;
-      } else {
-        // Insert new profile
-        const result = await supabase
-          .from('claimed_profiles')
-          .insert([{ id: profileId, ...profileData }]);
-        error = result.error;
-      }
+      const { data, error } = await supabase.functions.invoke('claim-profile', {
+        body: profileData,
+      });
       
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
       
-      // Insert ecosystem trend for the claim
-      try {
-        await supabase.functions.invoke('manage-trends', {
-          body: {
-            action: 'create',
-            admin_email: 'system',
-            trend: {
-              event_type: 'claim',
-              title: `${projectName} just joined the Rezilience Registry`,
-              profile_id: profileId,
-              created_by: 'system',
-            },
-          },
-        });
-      } catch (trendErr) {
-        // Non-critical, don't block the claim flow
-        console.warn('Failed to create trend:', trendErr);
-      }
+      const profileId = data.profile_id;
       
       localStorage.removeItem('claimFormProgress');
       localStorage.removeItem('claimingProfile');
