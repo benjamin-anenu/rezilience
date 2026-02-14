@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { StatCard } from '@/components/admin/StatCard';
+import { WorldMap } from '@/components/admin/WorldMap';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell,
@@ -26,6 +27,20 @@ const tip = {
   },
 };
 
+function formatDuration(seconds: number): string {
+  if (!seconds || seconds < 0) return '0s';
+  const m = Math.floor(seconds / 60);
+  const s = Math.round(seconds % 60);
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function median(arr: number[]): number {
+  if (arr.length === 0) return 0;
+  const sorted = [...arr].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 async function fetchEngagementData() {
   const { data: events } = await supabase
     .from('admin_analytics')
@@ -40,7 +55,24 @@ async function fetchEngagementData() {
   const featureUses = all.filter(e => e.event_type === 'feature_use' || e.event_type === 'tab_change').length;
   const uniqueSessions = new Set(all.map(e => e.session_id)).size;
 
-  // Device breakdown for donut
+  // Session durations
+  const sessionMap: Record<string, { first: number; last: number }> = {};
+  all.forEach(e => {
+    const ts = new Date(e.created_at).getTime();
+    if (!sessionMap[e.session_id]) {
+      sessionMap[e.session_id] = { first: ts, last: ts };
+    } else {
+      if (ts < sessionMap[e.session_id].first) sessionMap[e.session_id].first = ts;
+      if (ts > sessionMap[e.session_id].last) sessionMap[e.session_id].last = ts;
+    }
+  });
+  const durations = Object.values(sessionMap)
+    .map(s => (s.last - s.first) / 1000)
+    .filter(d => d > 0);
+  const avgSession = durations.length > 0 ? durations.reduce((a, b) => a + b, 0) / durations.length : 0;
+  const medianSession = median(durations);
+
+  // Device breakdown
   const devices: Record<string, number> = { desktop: 0, mobile: 0, tablet: 0 };
   all.forEach(e => {
     const d = (e.device_type || 'desktop') as string;
@@ -48,7 +80,7 @@ async function fetchEngagementData() {
   });
   const deviceData = Object.entries(devices).map(([name, value]) => ({ name, value }));
 
-  // Daily activity by type
+  // Daily activity
   const dailyMap: Record<string, { views: number; clicks: number; searches: number; features: number }> = {};
   all.forEach(e => {
     const day = e.created_at.substring(0, 10);
@@ -62,7 +94,7 @@ async function fetchEngagementData() {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([date, d]) => ({ date, ...d }));
 
-  // Library engagement breakdown
+  // Library engagement
   const libraryPages = all.filter(e => e.event_target.includes('/library'));
   const libBreakdown: Record<string, number> = {};
   libraryPages.forEach(e => {
@@ -86,7 +118,7 @@ async function fetchEngagementData() {
     .slice(0, 10)
     .map(([page, count]) => ({ page, count }));
 
-  // Geo breakdown: top countries
+  // Geo breakdown
   const countryCounts: Record<string, number> = {};
   all.forEach(e => {
     const c = (e as any).country as string | null;
@@ -107,6 +139,7 @@ async function fetchEngagementData() {
 
   return {
     totalEvents: all.length, pageViews, clicks, searches, featureUses, uniqueSessions,
+    avgSession, medianSession,
     deviceData, dailyActivity, libraryData, pagePopularity, geoData,
     gptConversations: conversations || 0, gptMessages: messages || 0,
   };
@@ -144,11 +177,13 @@ export function AdminEngagement() {
         <StatCard compact title="Searches" value={data.searches.toLocaleString()} />
         <StatCard compact title="Features" value={data.featureUses.toLocaleString()} />
         <StatCard compact title="Sessions" value={data.uniqueSessions.toLocaleString()} />
+        <StatCard compact title="Avg Session" value={formatDuration(data.avgSession)} />
+        <StatCard compact title="Median Session" value={formatDuration(data.medianSession)} />
         <StatCard compact title="GPT Convos" value={data.gptConversations} />
         <StatCard compact title="GPT Msgs" value={data.gptMessages} />
       </div>
 
-      {/* HERO: Daily Activity — multi-line stacked */}
+      {/* HERO: Daily Activity */}
       <div className="glass-chart p-5 glow-pulse">
         <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
           Daily Activity Breakdown
@@ -274,26 +309,37 @@ export function AdminEngagement() {
         </div>
       </div>
 
-      {/* Row 4: Visitor Locations */}
+      {/* Row 4: Visitor Locations — World Map + Bar Chart */}
       {data.geoData.length > 0 && (
-        <div className="glass-chart p-5">
-          <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-            Visitor Locations
-          </h3>
-          <div className="space-y-1.5">
-            {data.geoData.map((g, i) => {
-              const maxVal = data.geoData[0]?.count || 1;
-              const pct = (g.count / maxVal) * 100;
-              return (
-                <div key={g.country} className="flex items-center gap-3 animate-card-enter" style={{ animationDelay: `${i * 30}ms` }}>
-                  <span className="text-[9px] font-mono text-muted-foreground w-32 truncate text-right">{g.country}</span>
-                  <div className="flex-1 h-5 bg-card/40 rounded-sm overflow-hidden">
-                    <div className="h-full rounded-sm" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${C.orange}, hsl(24, 80%, 28%))` }} />
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-5">
+          <div className="lg:col-span-3 glass-chart p-5">
+            <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              Visitor Map
+            </h3>
+            <div className="h-56">
+              <WorldMap data={data.geoData} />
+            </div>
+          </div>
+
+          <div className="lg:col-span-2 glass-chart p-5">
+            <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              Top Locations
+            </h3>
+            <div className="space-y-1.5">
+              {data.geoData.map((g, i) => {
+                const maxVal = data.geoData[0]?.count || 1;
+                const pct = (g.count / maxVal) * 100;
+                return (
+                  <div key={g.country} className="flex items-center gap-3 animate-card-enter" style={{ animationDelay: `${i * 30}ms` }}>
+                    <span className="text-[9px] font-mono text-muted-foreground w-24 truncate text-right">{g.country}</span>
+                    <div className="flex-1 h-5 bg-card/40 rounded-sm overflow-hidden">
+                      <div className="h-full rounded-sm" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${C.orange}, hsl(24, 80%, 28%))` }} />
+                    </div>
+                    <span className="text-[10px] font-mono text-foreground font-semibold w-8 text-right">{g.count}</span>
                   </div>
-                  <span className="text-[10px] font-mono text-foreground font-semibold w-8 text-right">{g.count}</span>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
