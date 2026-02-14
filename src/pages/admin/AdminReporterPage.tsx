@@ -6,20 +6,25 @@ import { StatCard } from '@/components/admin/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from '@/components/ui/table';
-import {
   RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  AreaChart, Area, PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import logoImg from '@/assets/logo.png';
+import { useEcosystemPulse } from '@/hooks/useEcosystemPulse';
 
 const C = {
   teal: 'hsl(174, 100%, 38%)',
   orange: 'hsl(24, 100%, 38%)',
   steel: 'hsl(212, 11%, 58%)',
   grid: 'hsl(214, 18%, 20%)',
+  red: '#EF4444',
+  dark: '#1A1E24',
 };
+
+const LIVENESS_COLORS = [C.teal, C.orange, C.steel];
+const DEP_COLORS = [C.teal, C.orange, C.red, C.steel];
+const LANG_COLORS = [C.teal, '#3B82F6', C.orange, '#A855F7', '#EC4899', '#F59E0B', '#10B981', C.steel];
 
 const tip = {
   contentStyle: {
@@ -30,6 +35,13 @@ const tip = {
     fontFamily: 'JetBrains Mono, monospace',
   },
 };
+
+function formatTvl(v: number): string {
+  if (v >= 1e9) return `$${(v / 1e9).toFixed(2)}B`;
+  if (v >= 1e6) return `$${(v / 1e6).toFixed(1)}M`;
+  if (v >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
+  return `$${v.toFixed(0)}`;
+}
 
 async function fetchReportData(startDate: string, endDate: string) {
   const { data: newProfiles } = await supabase
@@ -64,7 +76,6 @@ async function fetchReportData(startDate: string, endDate: string) {
     ? Math.round(profiles.reduce((s, p) => s + Number(p.resilience_score || 0), 0) / profiles.length * 10) / 10
     : 0;
 
-  // Previous period comparison
   const periodDays = Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400_000);
   const prevStart = new Date(new Date(startDate).getTime() - periodDays * 86400_000).toISOString().substring(0, 10);
   const prevEnd = new Date(new Date(startDate).getTime() - 86400_000).toISOString().substring(0, 10);
@@ -97,17 +108,10 @@ async function fetchReportData(startDate: string, endDate: string) {
     { dim: 'Scoring', value: Math.min((scoreEntries || 0) / 50, 100) },
   ];
 
-  // All profiles for the project table
-  const { data: allProfiles } = await supabase
-    .from('claimed_profiles_public')
-    .select('id, project_name, claim_status, resilience_score, created_at')
-    .order('resilience_score', { ascending: false });
-
   return {
     newRegistrations: profiles.length, claimedInPeriod: claimed, avgScore,
     scoreEntries: scoreEntries || 0, engagementEvents: analyticsEvents || 0,
     uniqueVisitors: uniqueSessions, comparisonData, radarData, profiles,
-    allProfiles: allProfiles || [],
   };
 }
 
@@ -123,6 +127,8 @@ export function AdminReporter() {
     queryFn: () => fetchReportData(startDate, endDate),
     staleTime: 60_000,
   });
+
+  const { aggregates, snapshots } = useEcosystemPulse();
 
   const exportCSV = () => {
     if (!data) return;
@@ -153,12 +159,22 @@ export function AdminReporter() {
     setTimeout(() => reportRef.current?.classList.remove('print-report'), 500);
   };
 
-  const getScoreColor = (score: number | null) => {
-    const s = score || 0;
-    if (s >= 70) return '#00C2B6';
-    if (s >= 40) return '#C24E00';
-    return '#8B949E';
-  };
+  // Prepare ecosystem data for charts
+  const livenessData = aggregates ? [
+    { name: 'Active', value: aggregates.activeProjects },
+    { name: 'Evolving', value: aggregates.decayingProjects },
+    { name: 'Under Obs.', value: aggregates.staleProjects },
+  ] : [];
+
+  const depHealthData = aggregates ? [
+    { name: 'Healthy', value: aggregates.depHealthDistribution.healthy },
+    { name: 'Warning', value: aggregates.depHealthDistribution.warning },
+    { name: 'Critical', value: aggregates.depHealthDistribution.critical },
+    { name: 'Unknown', value: aggregates.depHealthDistribution.unknown },
+  ] : [];
+
+  const heartbeatScore = aggregates?.avgResilienceScore || 0;
+  const heartbeatColor = heartbeatScore >= 70 ? C.teal : heartbeatScore >= 40 ? C.orange : C.red;
 
   return (
     <div ref={reportRef} className="p-6 lg:p-8 space-y-5 admin-gradient-bg min-h-full">
@@ -261,50 +277,149 @@ export function AdminReporter() {
             </p>
           </div>
 
-          {/* ========== Registered Projects Table ========== */}
-          <div className="glass-chart p-5 print-section">
-            <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
-              Registered Projects — Milestone Evidence
-            </h3>
-            <div className="rounded-sm border border-border/40 overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border/30">
-                    <TableHead className="text-[9px] font-mono uppercase tracking-wider w-12">#</TableHead>
-                    <TableHead className="text-[9px] font-mono uppercase tracking-wider">Project</TableHead>
-                    <TableHead className="text-[9px] font-mono uppercase tracking-wider">Status</TableHead>
-                    <TableHead className="text-[9px] font-mono uppercase tracking-wider text-right">Score</TableHead>
-                    <TableHead className="text-[9px] font-mono uppercase tracking-wider text-right">Registered</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.allProfiles.map((p, i) => (
-                    <TableRow key={p.id} className="border-border/20 print-table-row">
-                      <TableCell className="font-mono text-xs text-muted-foreground">{i + 1}</TableCell>
-                      <TableCell className="font-medium text-sm">{p.project_name}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider ${
-                          p.claim_status === 'claimed'
-                            ? 'bg-primary/10 text-primary'
-                            : 'bg-muted text-muted-foreground'
-                        }`}>
-                          {p.claim_status || 'unclaimed'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-sm font-semibold" style={{ color: getScoreColor(p.resilience_score) }}>
-                        {p.resilience_score ?? '—'}
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-[10px] text-muted-foreground">
-                        {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          {/* ========== ECOSYSTEM INTELLIGENCE ========== */}
+          <div className="print-section">
+            <h3 className="mb-4 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Ecosystem Intelligence</h3>
+
+            {/* Row 1: Rezilience Trend + Heartbeat */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-5">
+              <div className="glass-chart p-5 lg:col-span-2">
+                <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Aggregate Rezilience Trend</h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={snapshots}>
+                      <defs>
+                        <linearGradient id="rptScoreGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={C.teal} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={C.teal} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
+                      <XAxis dataKey="snapshot_date" tick={{ fontSize: 8, fill: C.steel }} axisLine={false} tickLine={false} tickFormatter={d => d?.slice(5)} />
+                      <YAxis domain={[0, 100]} tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
+                      <Tooltip {...tip} />
+                      <Area type="monotone" dataKey="avg_resilience_score" stroke={C.teal} fill="url(#rptScoreGrad)" strokeWidth={2} name="Avg Score" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="glass-chart p-5 flex flex-col items-center justify-center">
+                <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Ecosystem Heartbeat</h3>
+                <div className="relative w-32 h-32 flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full border-2 opacity-30" style={{ borderColor: heartbeatColor }} />
+                  <div className="absolute inset-2 rounded-full border opacity-20" style={{ borderColor: heartbeatColor }} />
+                  <div className="absolute inset-4 rounded-full" style={{ background: `${heartbeatColor}15` }} />
+                  <div className="text-center z-10">
+                    <span className="text-3xl font-bold font-display" style={{ color: heartbeatColor }}>{heartbeatScore}</span>
+                    <p className="text-[8px] font-mono text-muted-foreground mt-1">AVG SCORE</p>
+                  </div>
+                </div>
+                {aggregates && (
+                  <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1 text-[9px] font-mono">
+                    <span className="text-muted-foreground">Projects</span>
+                    <span className="text-foreground text-right">{aggregates.totalProjects}</span>
+                    <span className="text-muted-foreground">Active</span>
+                    <span className="text-right" style={{ color: C.teal }}>{aggregates.activeProjects}</span>
+                    <span className="text-muted-foreground">Healthy</span>
+                    <span className="text-right" style={{ color: C.teal }}>{aggregates.healthyProjects}</span>
+                  </div>
+                )}
+              </div>
             </div>
-            <p className="text-[9px] text-muted-foreground font-mono mt-2">
-              {data.allProfiles.length} projects registered · Sorted by Rezilience Score (descending)
-            </p>
+
+            {/* Row 2: Dev Activity + Indexed TVL */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-5">
+              <div className="glass-chart p-5">
+                <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Development Activity Over Time</h3>
+                <div className="h-56">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={snapshots}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
+                      <XAxis dataKey="snapshot_date" tick={{ fontSize: 8, fill: C.steel }} axisLine={false} tickLine={false} tickFormatter={d => d?.slice(5)} />
+                      <YAxis tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
+                      <Tooltip {...tip} />
+                      <Bar dataKey="total_commits_30d" fill={C.teal} radius={[3, 3, 0, 0]} name="Commits (30d)" />
+                      <Bar dataKey="total_contributors" fill={C.orange} radius={[3, 3, 0, 0]} name="Contributors" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="glass-chart p-5">
+                <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Indexed TVL</h3>
+                {aggregates && (
+                  <p className="text-2xl font-bold font-display mb-2" style={{ color: C.teal }}>{formatTvl(aggregates.totalTvlUsd)}</p>
+                )}
+                <div className="h-48">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={snapshots}>
+                      <defs>
+                        <linearGradient id="rptTvlGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor={C.orange} stopOpacity={0.3} />
+                          <stop offset="95%" stopColor={C.orange} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
+                      <XAxis dataKey="snapshot_date" tick={{ fontSize: 8, fill: C.steel }} axisLine={false} tickLine={false} tickFormatter={d => d?.slice(5)} />
+                      <YAxis tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} tickFormatter={v => formatTvl(Number(v))} />
+                      <Tooltip {...tip} formatter={(v: number) => formatTvl(v)} />
+                      <Area type="monotone" dataKey="total_tvl_usd" stroke={C.orange} fill="url(#rptTvlGrad)" strokeWidth={2} name="TVL" />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: Liveness + Supply Chain + Top Languages */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="glass-chart p-5">
+                <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Liveness Categories</h3>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={livenessData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" paddingAngle={3} stroke="none">
+                        {livenessData.map((_, i) => <Cell key={i} fill={LIVENESS_COLORS[i]} />)}
+                      </Pie>
+                      <Tooltip {...tip} />
+                      <Legend wrapperStyle={{ fontSize: 9, fontFamily: 'JetBrains Mono' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="glass-chart p-5">
+                <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Supply Chain Health</h3>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie data={depHealthData} cx="50%" cy="50%" innerRadius={40} outerRadius={70} dataKey="value" paddingAngle={3} stroke="none">
+                        {depHealthData.map((_, i) => <Cell key={i} fill={DEP_COLORS[i]} />)}
+                      </Pie>
+                      <Tooltip {...tip} />
+                      <Legend wrapperStyle={{ fontSize: 9, fontFamily: 'JetBrains Mono' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="glass-chart p-5">
+                <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Top Languages</h3>
+                <div className="h-52">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={aggregates?.languageBreakdown || []} layout="vertical">
+                      <CartesianGrid strokeDasharray="3 3" stroke={C.grid} horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} width={70} />
+                      <Tooltip {...tip} />
+                      <Bar dataKey="count" radius={[0, 3, 3, 0]} name="Projects">
+                        {(aggregates?.languageBreakdown || []).map((_, i) => <Cell key={i} fill={LANG_COLORS[i % LANG_COLORS.length]} />)}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 no-print">
