@@ -63,7 +63,7 @@ export function DevelopmentTabContent({
   programId,
   profileId,
   // Multi-dimensional props with defaults
-  dependencyHealthScore = 50,
+  dependencyHealthScore = 0,
   dependencyOutdatedCount = 0,
   dependencyCriticalCount = 0,
   dependencyAnalyzedAt,
@@ -89,7 +89,7 @@ export function DevelopmentTabContent({
   // Get GitHub originality status
   const getGithubOriginalityInfo = () => {
     if (githubIsFork === undefined) {
-      return { subtitle: 'Not Analyzed', value: 50, isPositive: false, isWarning: false };
+      return { subtitle: 'Awaiting Analysis', value: 0, isPositive: false, isWarning: false, isNA: true };
     }
     if (githubIsFork) {
       return { subtitle: 'Forked Repository', value: 30, isPositive: false, isWarning: true };
@@ -111,9 +111,9 @@ export function DevelopmentTabContent({
       case 'fork':
         return { label: 'Known Fork', value: 45, isPositive: false, isWarning: true, isNA: false, description: '', confidence: 'LOW' };
       case 'not-deployed':
-        return { label: 'Not On-Chain', value: 0, isPositive: false, isWarning: false, isNA: true, description: '', confidence: 'NOT_DEPLOYED' };
+        return { label: 'Not On-Chain', value: 0, isPositive: false, isWarning: false, isNA: true, description: 'This project is off-chain and has no deployed program.', confidence: 'NOT_DEPLOYED' };
       default:
-        return { label: 'Unverified', value: 60, isPositive: false, isWarning: false, isNA: false, description: '', confidence: 'LOW' };
+        return { label: 'Awaiting Verification', value: 0, isPositive: false, isWarning: false, isNA: true, description: 'Bytecode verification has not run yet.', confidence: 'PENDING' };
     }
   };
 

@@ -138,57 +138,72 @@ export function GovernanceHealthCard({
         </div>
       </CardHeader>
       <CardContent>
-        {/* Health Score Progress */}
-        <div className="mb-4">
-          <div className="mb-1 flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Decentralization</span>
-            <span className={`font-mono text-sm font-bold ${status.color}`}>
-              {status.score}/100
-            </span>
-          </div>
-          <Progress
-            value={status.score}
-            className={`h-2 ${status.score < 30 ? '[&>div]:bg-destructive' : status.score < 70 ? '[&>div]:bg-amber-500' : ''}`}
-          />
-        </div>
-
-        {/* Stats Row */}
-        {governanceAddress && (
-          <div className="flex items-center gap-4 text-xs">
-            <div className="flex items-center gap-1.5">
-              <Badge variant="outline" className="font-mono text-xs">
-                {transactions30d}
-              </Badge>
-              <span className="text-muted-foreground">Tx (30d)</span>
+        {!analyzedAt && !governanceAddress ? (
+          /* Awaiting Analysis State */
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 rounded bg-muted/30 px-3 py-2">
+              <Shield className="h-3.5 w-3.5 text-muted-foreground/50" />
+              <span className="text-xs text-muted-foreground">Awaiting first analysis...</span>
             </div>
-            
-            {lastActivity && (
-              <div className="flex items-center gap-1.5 text-muted-foreground">
-                Last: {formatDistanceToNow(new Date(lastActivity), { addSuffix: true })}
+            <p className="text-xs text-muted-foreground/70">
+              Governance data will appear after the initial scan completes.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Health Score Progress */}
+            <div className="mb-4">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Decentralization</span>
+                <span className={`font-mono text-sm font-bold ${status.color}`}>
+                  {status.score}/100
+                </span>
+              </div>
+              <Progress
+                value={status.score}
+                className={`h-2 ${status.score < 30 ? '[&>div]:bg-destructive' : status.score < 70 ? '[&>div]:bg-amber-500' : ''}`}
+              />
+            </div>
+
+            {/* Stats Row */}
+            {governanceAddress && (
+              <div className="flex items-center gap-4 text-xs">
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="outline" className="font-mono text-xs">
+                    {transactions30d}
+                  </Badge>
+                  <span className="text-muted-foreground">Tx (30d)</span>
+                </div>
+                
+                {lastActivity && (
+                  <div className="flex items-center gap-1.5 text-muted-foreground">
+                    Last: {formatDistanceToNow(new Date(lastActivity), { addSuffix: true })}
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
 
-        {/* Description */}
-        <p className="mt-3 text-xs text-muted-foreground">
-          {status.description}
-        </p>
+            {/* Description */}
+            <p className="mt-3 text-xs text-muted-foreground">
+              {status.description}
+            </p>
 
-        {/* Governance Address */}
-        {governanceAddress && (
-          <div className="mt-3 rounded bg-muted/30 px-2 py-1">
-            <code className="font-mono text-[10px] text-muted-foreground">
-              {governanceAddress.slice(0, 8)}...{governanceAddress.slice(-8)}
-            </code>
-          </div>
-        )}
+            {/* Governance Address */}
+            {governanceAddress && (
+              <div className="mt-3 rounded bg-muted/30 px-2 py-1">
+                <code className="font-mono text-[10px] text-muted-foreground">
+                  {governanceAddress.slice(0, 8)}...{governanceAddress.slice(-8)}
+                </code>
+              </div>
+            )}
 
-        {/* Last Analyzed */}
-        {analyzedAt && (
-          <p className="mt-2 text-[10px] text-muted-foreground/70">
-            Last checked: {formatDistanceToNow(new Date(analyzedAt), { addSuffix: true })}
-          </p>
+            {/* Last Analyzed */}
+            {analyzedAt && (
+              <p className="mt-2 text-[10px] text-muted-foreground/70">
+                Last checked: {formatDistanceToNow(new Date(analyzedAt), { addSuffix: true })}
+              </p>
+            )}
+          </>
         )}
       </CardContent>
     </Card>

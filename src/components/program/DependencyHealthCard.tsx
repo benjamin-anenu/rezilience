@@ -103,49 +103,62 @@ export function DependencyHealthCard({
         </div>
       </CardHeader>
       <CardContent>
-        {/* Health Score Progress */}
-        <div className="mb-4">
-          <div className="mb-1 flex items-center justify-between">
-            <span className="text-xs text-muted-foreground">Health Score</span>
-            <span className={`font-mono text-sm font-bold ${getHealthColor(healthScore)}`}>
-              {healthScore}/100
-            </span>
-          </div>
-          <Progress
-            value={healthScore}
-            className={`h-2 ${healthScore < 50 ? '[&>div]:bg-destructive' : healthScore < 80 ? '[&>div]:bg-amber-500' : ''}`}
-          />
-        </div>
-
-        {/* Stats Row */}
-        <div className="flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-1.5">
-            <Badge variant="outline" className="font-mono text-xs">
-              {outdatedCount}
-            </Badge>
-            <span className="text-muted-foreground">Outdated</span>
-          </div>
-          
-          {criticalCount > 0 && (
-            <div className="flex items-center gap-1.5">
-              <Badge variant="destructive" className="font-mono text-xs">
-                {criticalCount}
-              </Badge>
-              <span className="text-destructive">Critical</span>
+        {!analyzedAt ? (
+          /* Awaiting Analysis State */
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 rounded bg-muted/30 px-3 py-2">
+              <RefreshCw className="h-3.5 w-3.5 animate-spin text-muted-foreground/50" />
+              <span className="text-xs text-muted-foreground">Awaiting first analysis...</span>
             </div>
-          )}
-        </div>
+            <p className="text-xs text-muted-foreground/70">
+              Dependency data will appear after the initial scan completes.
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Health Score Progress */}
+            <div className="mb-4">
+              <div className="mb-1 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Health Score</span>
+                <span className={`font-mono text-sm font-bold ${getHealthColor(healthScore)}`}>
+                  {healthScore}/100
+                </span>
+              </div>
+              <Progress
+                value={healthScore}
+                className={`h-2 ${healthScore < 50 ? '[&>div]:bg-destructive' : healthScore < 80 ? '[&>div]:bg-amber-500' : ''}`}
+              />
+            </div>
 
-        {/* Description */}
-        <p className="mt-3 text-xs text-muted-foreground">
-          Supply chain health based on Cargo.toml dependency versions vs. latest crates.io releases.
-        </p>
+            {/* Stats Row */}
+            <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-1.5">
+                <Badge variant="outline" className="font-mono text-xs">
+                  {outdatedCount}
+                </Badge>
+                <span className="text-muted-foreground">Outdated</span>
+              </div>
+              
+              {criticalCount > 0 && (
+                <div className="flex items-center gap-1.5">
+                  <Badge variant="destructive" className="font-mono text-xs">
+                    {criticalCount}
+                  </Badge>
+                  <span className="text-destructive">Critical</span>
+                </div>
+              )}
+            </div>
 
-        {/* Last Analyzed */}
-        {analyzedAt && (
-          <p className="mt-2 text-[10px] text-muted-foreground/70">
-            Last analyzed: {formatDistanceToNow(new Date(analyzedAt), { addSuffix: true })}
-          </p>
+            {/* Description */}
+            <p className="mt-3 text-xs text-muted-foreground">
+              Supply chain health based on Cargo.toml dependency versions vs. latest crates.io releases.
+            </p>
+
+            {/* Last Analyzed */}
+            <p className="mt-2 text-[10px] text-muted-foreground/70">
+              Last analyzed: {formatDistanceToNow(new Date(analyzedAt), { addSuffix: true })}
+            </p>
+          </>
         )}
       </CardContent>
     </Card>
