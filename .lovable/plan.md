@@ -1,88 +1,77 @@
 
 
-# Fix Analytics Tracking + Add Visitor Geo-Location
+# Session Duration Tracking, World Map, and Rate Limiter Fix
 
-## Problem Summary
+## Critical Bug Fix First
 
-### Tracking Gaps
-- **Clicks**: The dashboard counts them but nothing in the app ever fires a `click` event -- always shows 0
-- **Tab changes**: Explorer tracks these but the dashboard ignores the `tab_change` event type -- data is lost
-- **Searches**: Only Explorer search is tracked; Library search is not
-- **Feature uses**: Only one place (Library level selector) fires `feature_use`; dozens of interactive features are untracked
-- **Key pages** like ProgramDetail, ClaimProfile, Dashboard, ResilienceGPT, Staking have zero tracking beyond page views
+The rate limiter trigger (`check_analytics_rate_limit`) is blocking most event inserts. Currently only 115 page_view events exist -- all click, search, and feature events are being silently dropped because the batch insert triggers the rate check per row, and the 100 events/minute/session limit gets exhausted by page views alone. This must be fixed for any tracking to work.
 
-### Missing Geo-Location
-- No IP-based location tracking exists
-- Cannot see which countries/cities are actively visiting
+## Changes
 
----
+### 1. Fix Rate Limiter (Database Migration)
 
-## Plan
+Increase the rate limit from 100 to 500 events/minute/session. The current 100 limit is too aggressive for batch inserts where a single flush can contain 50 events, and multiple flushes per minute are normal during active browsing.
 
-### 1. Add Geo-Location Tracking via Edge Function
+```sql
+-- Replace the function body to allow 500 events/min/session
+CREATE OR REPLACE FUNCTION public.check_analytics_rate_limit()
+  RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+  SET search_path TO 'public' AS $$
+DECLARE recent_count integer;
+BEGIN
+  SELECT count(*) INTO recent_count
+  FROM public.admin_analytics
+  WHERE session_id = NEW.session_id
+    AND created_at > now() - interval '1 minute';
+  IF recent_count >= 500 THEN
+    RAISE EXCEPTION 'Analytics rate limit exceeded';
+  END IF;
+  RETURN NEW;
+END; $$;
+```
 
-Since the browser cannot reliably determine a visitor's location from IP, we capture it server-side.
+### 2. Session Duration Tracking
 
-**New edge function: `supabase/functions/track-analytics/index.ts`**
-- Receives a batch of analytics events from the frontend
-- Reads the visitor's IP from the request headers (`x-forwarded-for` or Deno's `remoteAddr`)
-- Calls a free IP geolocation API (ip-api.com, no key needed, or Cloudflare headers already available on Supabase Edge) to resolve country/city
-- Attaches `country` and `city` fields to each event before inserting into `admin_analytics`
+**`src/hooks/useAnalyticsTracker.ts`** -- Add a `session_start` event on mount with a timestamp, and a `session_end` event on `beforeunload`/unmount. No schema change needed -- we use `event_metadata` to store the start timestamp.
 
-**Database migration:**
-- Add two nullable columns to `admin_analytics`:
-  - `country TEXT`
-  - `city TEXT`
+- On hook mount: fire `trackEvent('session_start', location.pathname, { ts: Date.now() })`
+- On `beforeunload`: fire `trackEvent('session_end', location.pathname, { ts: Date.now() })`
 
-**Update `useAnalyticsTracker.ts`:**
-- Change the flush function to POST batched events to the new edge function instead of inserting directly via the Supabase client
-- The edge function handles the insert with geo data appended
+**`src/pages/admin/AdminEngagementPage.tsx`** -- Compute session duration from the data:
+- Group events by `session_id`
+- Duration = last event `created_at` minus first event `created_at` (in seconds)
+- Calculate average and median session duration
+- Add two new KPI cards: "Avg Session" and "Median Session" (formatted as "Xm Ys")
 
-### 2. Add Click + Feature Tracking Across Key Pages
+### 3. World Map Visualization
 
-Add `trackEvent` calls to the most important interactive elements:
+Add an SVG-based world map to `AdminEngagementPage.tsx` showing visitor locations as glowing dots. No external library needed -- use an inline simplified world map SVG with country centroids mapped to coordinates.
 
-| Page/Component | Event Type | Target | What It Tracks |
-|---|---|---|---|
-| `ProgramDetail` | `click` | `program_view` | Viewing a specific project |
-| `ClaimProfile` (each step) | `feature_use` | `claim_step_N` | Progress through claim funnel |
-| `ResilienceGPT` send | `feature_use` | `gpt_message_send` | GPT usage |
-| `Staking` page CTA | `click` | `staking_cta` | Interest in staking |
-| `Navigation` links | `click` | link target | Nav bar clicks |
-| `LibrarySearchBar` | `search` | query text | Library searches |
-| `ProgramLeaderboard` row | `click` | program ID | Which projects get clicked |
-| `RoomCard` (Library) | `click` | room name | Which library rooms are entered |
-| `ProfileDetail` | `click` | `profile_view` | Dashboard profile views |
-| `SubscribePopover` | `feature_use` | `subscribe` | Subscription interest |
+**Implementation approach:**
+- Create a `src/components/admin/WorldMap.tsx` component
+- Include a lightweight world map outline as an SVG path (Natural Earth simplified -- ~50 lines of path data for continent outlines)
+- Maintain a lookup table of ~50 common country names to `[x, y]` coordinates on the SVG viewBox
+- Render colored, sized dots for each country proportional to event count
+- Tooltip on hover showing country name and count
+- Use the teal/orange color palette matching the rest of the dashboard
+- Replace the existing "Visitor Locations" bar chart with a split layout: world map (3 cols) + bar chart (2 cols)
 
-### 3. Fix `tab_change` Event in Dashboard
+### 4. Dashboard Layout Update
 
-Update `AdminEngagementPage.tsx` to include `tab_change` in the daily activity breakdown (count it under "features" or add its own line), so Explorer tab switches show up in the chart.
+**`src/pages/admin/AdminEngagementPage.tsx`** changes:
 
-### 4. Add Geo Visualization to Engagement Dashboard
-
-Add a new panel to `AdminEngagementPage.tsx`:
-
-- **"Visitor Locations"** -- a horizontal bar chart showing top 10 countries by event count
-- Pull `country` from `admin_analytics` and aggregate
-- Uses the same `glass-chart` styling as existing panels
-
----
+| Section | Change |
+|---------|--------|
+| KPI strip | Add "Avg Session" and "Median Session" cards |
+| Visitor Locations | Split into 2-panel row: World Map (left) + existing bar chart (right) |
+| Data fetch | Add session duration computation from event timestamps |
 
 ## Files Changed
 
 | File | Action |
 |---|---|
-| `supabase/functions/track-analytics/index.ts` | **New** -- edge function for geo-enriched event ingestion |
-| `src/hooks/useAnalyticsTracker.ts` | **Edit** -- flush to edge function instead of direct insert |
-| `src/pages/admin/AdminEngagementPage.tsx` | **Edit** -- add geo chart + fix `tab_change` counting |
-| `src/components/layout/Navigation.tsx` | **Edit** -- add click tracking to nav links |
-| `src/components/library/LibrarySearchBar.tsx` | **Edit** -- add search tracking |
-| `src/components/library/RoomCard.tsx` | **Edit** -- add click tracking |
-| `src/components/explorer/ProgramLeaderboard.tsx` or `LeaderboardRow.tsx` | **Edit** -- add click tracking on row |
-| `src/pages/ProgramDetail.tsx` | **Edit** -- add view tracking |
-| `src/pages/ClaimProfile.tsx` | **Edit** -- add step tracking |
-| `src/pages/ResilienceGPT.tsx` | **Edit** -- add message send tracking |
-| `src/pages/Staking.tsx` | **Edit** -- add CTA click tracking |
-| **Database migration** | Add `country TEXT`, `city TEXT` columns to `admin_analytics` |
+| Database migration | Fix rate limiter: 100 -> 500 events/min |
+| `src/hooks/useAnalyticsTracker.ts` | Add `session_start` and `session_end` events |
+| `src/components/admin/WorldMap.tsx` | **New** -- SVG world map with country dots |
+| `src/pages/admin/AdminEngagementPage.tsx` | Add session duration KPIs, integrate world map, keep bar chart alongside |
 
