@@ -239,6 +239,7 @@ const ProfileDetail = () => {
                       analytics={profile.githubAnalytics}
                       program={programForComponents}
                       githubIsFork={profile.githubAnalytics?.github_is_fork}
+                      githubOAuthVerified={!!profile.githubUsername}
                       dependencyHealthScore={profile.dependencyMetrics?.dependency_health_score}
                       dependencyOutdatedCount={profile.dependencyMetrics?.dependency_outdated_count}
                       dependencyCriticalCount={profile.dependencyMetrics?.dependency_critical_count}
@@ -364,6 +365,7 @@ const ProfileDetail = () => {
                     analytics={profile.githubAnalytics}
                     program={programForComponents}
                     githubIsFork={profile.githubAnalytics?.github_is_fork}
+                    githubOAuthVerified={!!profile.githubUsername}
                     dependencyHealthScore={profile.dependencyMetrics?.dependency_health_score}
                     dependencyOutdatedCount={profile.dependencyMetrics?.dependency_outdated_count}
                     dependencyCriticalCount={profile.dependencyMetrics?.dependency_critical_count}
