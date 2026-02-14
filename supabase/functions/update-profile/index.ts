@@ -31,12 +31,17 @@ interface UpdateProfileRequest {
     milestones?: Array<{
       id: string;
       title: string;
-      targetDate: string;
       isLocked: boolean;
-      status: "upcoming" | "completed" | "overdue";
       varianceRequested?: boolean;
-      completedAt?: string;
-      originalTargetDate?: string;
+      milestones: Array<{
+        id: string;
+        title: string;
+        description: string;
+        targetDate?: string;
+        status: "upcoming" | "completed" | "overdue";
+        completedAt?: string;
+      }>;
+      order: number;
     }>;
     team_members?: Array<{
       id: string;
