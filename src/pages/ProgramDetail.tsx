@@ -1,4 +1,5 @@
 import { useParams, Link, useSearchParams } from 'react-router-dom';
+import { useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { 
@@ -18,11 +19,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useProject } from '@/hooks/useProjects';
 import { useClaimedProfileByProgramId, useClaimedProfileByProjectId, useClaimedProfile } from '@/hooks/useClaimedProfiles';
 import { useAutoRefreshProfile } from '@/hooks/useAutoRefreshProfile';
+import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 import { PROJECT_CATEGORIES } from '@/types';
 
 const ProgramDetail = () => {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
+  const { trackEvent } = useAnalyticsTracker();
+
+  // Track program view
+  useEffect(() => {
+    if (id) trackEvent('click', 'program_view', { program_id: id });
+  }, [id, trackEvent]);
   
   // Try to fetch project from projects table by program_id first
   const { data: projectByProgramId, isLoading: loadingByProgramId } = useProject(id || '');

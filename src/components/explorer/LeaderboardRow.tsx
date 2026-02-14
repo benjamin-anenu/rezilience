@@ -1,4 +1,5 @@
 import React, { useCallback } from 'react';
+import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 import { useNavigate } from 'react-router-dom';
 import { 
   Activity, CheckCircle, AlertCircle, Copy, ShieldCheck, 
@@ -164,6 +165,7 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
   velocityHistory,
 }: LeaderboardRowProps) {
   const navigate = useNavigate();
+  const { trackEvent } = useAnalyticsTracker();
   const isPrivate = isPrivateRepo(project);
   const programIdInfo = formatProgramId(project.program_id, project.id);
   const decayPercentage = calculateDecayPercentage(project.github_last_activity);
@@ -175,8 +177,9 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
 
   const handleRowClick = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
+    trackEvent('click', 'leaderboard_row', { program: project.program_name });
     navigate(`/program/${project.id}`);
-  }, [navigate, project.id]);
+  }, [navigate, project.id, project.program_name, trackEvent]);
 
   const handleClaimClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();

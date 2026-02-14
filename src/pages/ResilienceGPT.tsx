@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 import { ChatHeader } from '@/components/gpt/ChatHeader';
 import { ChatMessage } from '@/components/gpt/ChatMessage';
 import { ChatInput } from '@/components/gpt/ChatInput';
@@ -23,6 +24,7 @@ const historyFetch = (path: string, opts?: RequestInit) =>
 
 export default function ResilienceGPT() {
   const { user, isAuthenticated } = useAuth();
+  const { trackEvent } = useAnalyticsTracker();
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -112,6 +114,7 @@ export default function ResilienceGPT() {
   };
 
   const handleSend = async (input: string) => {
+    trackEvent('feature_use', 'gpt_message_send');
     const userMsg: Msg = { role: 'user', content: input };
     setMessages(prev => [...prev, userMsg]);
     setIsLoading(true);

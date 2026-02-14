@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, User, LogOut, ExternalLink, X as XIcon } from 'lucide-react';
+import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -23,6 +24,7 @@ const navLinks = [
 export function Navigation() {
   const location = useLocation();
   const { user, isAuthenticated, signOut } = useAuth();
+  const { trackEvent } = useAnalyticsTracker();
 
   const isActiveRoute = (href: string) => location.pathname === href;
 
@@ -55,6 +57,7 @@ export function Navigation() {
                 <Link
                   key={link.label}
                   to={link.href}
+                  onClick={() => trackEvent('click', `nav_${link.label.toLowerCase()}`)}
                   className={cn(
                     'font-display text-sm font-medium tracking-wider transition-colors hover:text-foreground',
                     isActiveRoute(link.href)

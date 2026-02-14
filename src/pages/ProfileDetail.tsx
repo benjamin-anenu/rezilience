@@ -1,5 +1,5 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Layout } from '@/components/layout';
@@ -20,6 +20,7 @@ import { RoadmapManagement } from '@/components/profile/tabs/RoadmapManagement';
 import { PROJECT_CATEGORIES } from '@/types';
 import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
 import { useAuth } from '@/context/AuthContext';
+import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -28,7 +29,12 @@ const ProfileDetail = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
+  const { trackEvent } = useAnalyticsTracker();
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (id) trackEvent('click', 'profile_view', { profile_id: id });
+  }, [id, trackEvent]);
 
   const { data: profile, isLoading, error } = useClaimedProfile(id || '');
 

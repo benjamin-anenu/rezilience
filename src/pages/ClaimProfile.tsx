@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, AlertCircle, Loader2, Shield, Wallet, ChevronLeft, ChevronRight, AlertTriangle, Flag } from 'lucide-react';
 import { Layout } from '@/components/layout';
@@ -22,6 +22,7 @@ import {
 } from '@/components/claim';
 import type { MediaAsset, Milestone, ProjectCategory } from '@/types';
 import { type GitHubAnalysisResult, suggestCategory } from '@/hooks/useGitHubAnalysis';
+import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 
 const ClaimProfile = () => {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ const ClaimProfile = () => {
   const { user, isAuthenticated, loading: authLoading, signInWithX } = useAuth();
   const { publicKey, connected } = useWallet();
   const { toast } = useToast();
+  const { trackEvent } = useAnalyticsTracker();
   
   // Check if returning from GitHub OAuth with verification
   const isVerified = searchParams.get('verified') === 'true';
@@ -462,7 +464,9 @@ const ClaimProfile = () => {
 
   const handleNext = () => {
     if (currentStep < 5) {
-      setCurrentStep(currentStep + 1);
+      const nextStep = currentStep + 1;
+      trackEvent('feature_use', `claim_step_${nextStep}`, { from: currentStep });
+      setCurrentStep(nextStep);
     }
   };
 

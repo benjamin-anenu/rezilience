@@ -55,6 +55,8 @@ export type Database = {
       }
       admin_analytics: {
         Row: {
+          city: string | null
+          country: string | null
           created_at: string
           device_type: string | null
           event_metadata: Json | null
@@ -64,6 +66,8 @@ export type Database = {
           session_id: string
         }
         Insert: {
+          city?: string | null
+          country?: string | null
           created_at?: string
           device_type?: string | null
           event_metadata?: Json | null
@@ -73,6 +77,8 @@ export type Database = {
           session_id: string
         }
         Update: {
+          city?: string | null
+          country?: string | null
           created_at?: string
           device_type?: string | null
           event_metadata?: Json | null

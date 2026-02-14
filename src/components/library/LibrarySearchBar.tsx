@@ -3,6 +3,7 @@ import { Search, X, Zap, Cpu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { searchProtocols } from '@/lib/library-search';
 import { Badge } from '@/components/ui/badge';
+import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 import type { Protocol } from '@/data/protocols';
 
 interface LibrarySearchBarProps {
@@ -18,11 +19,13 @@ export function LibrarySearchBar({ size = 'default', autoFocus = false }: Librar
   const [searchMethod, setSearchMethod] = useState<'algolia' | 'fallback'>('fallback');
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { trackEvent } = useAnalyticsTracker();
 
   useEffect(() => {
     const timeout = setTimeout(async () => {
       if (query.length > 1) {
         setIsLoading(true);
+        trackEvent('search', query, { source: 'library' });
         const res = await searchProtocols(query);
         setResults(res.results.slice(0, 5));
         setSearchMethod(res.searchMethod);

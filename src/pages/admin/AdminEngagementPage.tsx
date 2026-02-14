@@ -29,7 +29,7 @@ const tip = {
 async function fetchEngagementData() {
   const { data: events } = await supabase
     .from('admin_analytics')
-    .select('event_type, event_target, device_type, session_id, created_at')
+    .select('event_type, event_target, device_type, session_id, created_at, country, city')
     .order('created_at', { ascending: false })
     .limit(1000);
 
@@ -37,7 +37,7 @@ async function fetchEngagementData() {
   const pageViews = all.filter(e => e.event_type === 'page_view').length;
   const clicks = all.filter(e => e.event_type === 'click').length;
   const searches = all.filter(e => e.event_type === 'search').length;
-  const featureUses = all.filter(e => e.event_type === 'feature_use').length;
+  const featureUses = all.filter(e => e.event_type === 'feature_use' || e.event_type === 'tab_change').length;
   const uniqueSessions = new Set(all.map(e => e.session_id)).size;
 
   // Device breakdown for donut
@@ -56,7 +56,7 @@ async function fetchEngagementData() {
     if (e.event_type === 'page_view') dailyMap[day].views++;
     else if (e.event_type === 'click') dailyMap[day].clicks++;
     else if (e.event_type === 'search') dailyMap[day].searches++;
-    else if (e.event_type === 'feature_use') dailyMap[day].features++;
+    else if (e.event_type === 'feature_use' || e.event_type === 'tab_change') dailyMap[day].features++;
   });
   const dailyActivity = Object.entries(dailyMap)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -86,6 +86,17 @@ async function fetchEngagementData() {
     .slice(0, 10)
     .map(([page, count]) => ({ page, count }));
 
+  // Geo breakdown: top countries
+  const countryCounts: Record<string, number> = {};
+  all.forEach(e => {
+    const c = (e as any).country as string | null;
+    if (c) countryCounts[c] = (countryCounts[c] || 0) + 1;
+  });
+  const geoData = Object.entries(countryCounts)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 10)
+    .map(([country, count]) => ({ country, count }));
+
   // GPT stats
   const { count: conversations } = await supabase
     .from('chat_conversations')
@@ -96,7 +107,7 @@ async function fetchEngagementData() {
 
   return {
     totalEvents: all.length, pageViews, clicks, searches, featureUses, uniqueSessions,
-    deviceData, dailyActivity, libraryData, pagePopularity,
+    deviceData, dailyActivity, libraryData, pagePopularity, geoData,
     gptConversations: conversations || 0, gptMessages: messages || 0,
   };
 }
@@ -262,6 +273,30 @@ export function AdminEngagement() {
           })}
         </div>
       </div>
+
+      {/* Row 4: Visitor Locations */}
+      {data.geoData.length > 0 && (
+        <div className="glass-chart p-5">
+          <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+            Visitor Locations
+          </h3>
+          <div className="space-y-1.5">
+            {data.geoData.map((g, i) => {
+              const maxVal = data.geoData[0]?.count || 1;
+              const pct = (g.count / maxVal) * 100;
+              return (
+                <div key={g.country} className="flex items-center gap-3 animate-card-enter" style={{ animationDelay: `${i * 30}ms` }}>
+                  <span className="text-[9px] font-mono text-muted-foreground w-32 truncate text-right">{g.country}</span>
+                  <div className="flex-1 h-5 bg-card/40 rounded-sm overflow-hidden">
+                    <div className="h-full rounded-sm" style={{ width: `${pct}%`, background: `linear-gradient(90deg, ${C.orange}, hsl(24, 80%, 28%))` }} />
+                  </div>
+                  <span className="text-[10px] font-mono text-foreground font-semibold w-8 text-right">{g.count}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
