@@ -174,9 +174,15 @@ const ClaimProfile = () => {
       currentStep,
       mediaAssets,
       milestones,
+      githubAnalysisResult,
+      logoUrl,
+      authorityData,
+      authorityVerified,
+      programVerified,
+      githubVerified,
     };
     localStorage.setItem('claimFormProgress', JSON.stringify(formData));
-  }, [projectName, description, category, country, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones]);
+  }, [projectName, description, category, country, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones, githubAnalysisResult, logoUrl, authorityData, authorityVerified, programVerified, githubVerified]);
 
   // Restore form state on mount
   useEffect(() => {
@@ -195,6 +201,12 @@ const ClaimProfile = () => {
         if (data.telegramUrl) setTelegramUrl(data.telegramUrl);
         if (data.mediaAssets) setMediaAssets(data.mediaAssets);
         if (data.milestones) setMilestones(data.milestones);
+        if (data.githubAnalysisResult) setGithubAnalysisResult(data.githubAnalysisResult);
+        if (data.logoUrl) setLogoUrl(data.logoUrl);
+        if (data.authorityData) setAuthorityData(data.authorityData);
+        if (data.authorityVerified) setAuthorityVerified(data.authorityVerified);
+        if (data.programVerified) setProgramVerified(data.programVerified);
+        if (data.githubVerified) setGithubVerified(data.githubVerified);
       } catch (e) {
         // Invalid JSON, ignore
       }
@@ -514,6 +526,9 @@ const ClaimProfile = () => {
           {/* Step Indicator */}
           <div className="mb-8">
             <StepIndicator steps={steps} />
+            <p className="mt-2 text-center text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60">
+              Draft auto-saved
+            </p>
           </div>
 
           {/* Step 1: X Authentication */}
