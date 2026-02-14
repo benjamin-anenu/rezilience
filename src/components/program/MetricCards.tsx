@@ -15,7 +15,7 @@ export function MetricCards({ program, githubIsFork, bytecodeMatchStatus, byteco
   // Get GitHub originality status and styling
   const getGithubOriginalityInfo = () => {
     if (githubIsFork === undefined) {
-      return { subtitle: 'Not Analyzed', value: 50, isPositive: false, isWarning: false };
+      return { subtitle: 'Awaiting Analysis', value: 0, isPositive: false, isWarning: false, isUnverified: true };
     }
     if (githubIsFork) {
       return { subtitle: 'Forked Repository', value: 30, isPositive: false, isWarning: true };
@@ -29,17 +29,17 @@ export function MetricCards({ program, githubIsFork, bytecodeMatchStatus, byteco
   const getBytecodeOriginalityInfo = () => {
     if (bytecodeMatchStatus) {
       const info = getBytecodeStatusInfo(bytecodeMatchStatus, bytecodeConfidence);
-      return { subtitle: info.label, value: info.value, isPositive: info.isPositive, isWarning: info.isWarning, isNA: info.isNA };
+      return { subtitle: info.label, value: info.value, isPositive: info.isPositive, isWarning: info.isWarning, isNA: info.isNA, isUnverified: (info as any).isUnverified };
     }
     switch (program.originalityStatus) {
       case 'verified':
-        return { subtitle: 'Verified Original', value: 100, isPositive: true, isWarning: false, isNA: false };
+        return { subtitle: 'Verified Original', value: 100, isPositive: true, isWarning: false, isNA: false, isUnverified: false };
       case 'fork':
-        return { subtitle: 'Known Fork', value: 45, isPositive: false, isWarning: true, isNA: false };
+        return { subtitle: 'Known Fork', value: 45, isPositive: false, isWarning: true, isNA: false, isUnverified: false };
       case 'not-deployed':
-        return { subtitle: 'Not On-Chain', value: 0, isPositive: false, isWarning: false, isNA: true };
+        return { subtitle: 'Not On-Chain', value: 0, isPositive: false, isWarning: false, isNA: true, isUnverified: false };
       default:
-        return { subtitle: 'Unverified', value: 60, isPositive: false, isWarning: false, isNA: false };
+        return { subtitle: 'Awaiting Verification', value: 0, isPositive: false, isWarning: false, isNA: false, isUnverified: true };
     }
   };
 
@@ -55,6 +55,7 @@ export function MetricCards({ program, githubIsFork, bytecodeMatchStatus, byteco
       isPositive: bytecodeOriginality.isPositive,
       isWarning: bytecodeOriginality.isWarning,
       isNA: bytecodeOriginality.isNA,
+      isUnverified: bytecodeOriginality.isUnverified,
     },
     {
       icon: GitBranch,
@@ -64,6 +65,7 @@ export function MetricCards({ program, githubIsFork, bytecodeMatchStatus, byteco
       description: 'Source code provenance verification via GitHub metadata.',
       isPositive: githubOriginality.isPositive,
       isWarning: githubOriginality.isWarning,
+      isUnverified: githubOriginality.isUnverified,
     },
     {
       icon: Shield,
@@ -101,7 +103,9 @@ export function MetricCards({ program, githubIsFork, bytecodeMatchStatus, byteco
                   {metric.title}
                 </CardTitle>
                 <CardDescription className={
-                  metric.isNA
+                  metric.isUnverified
+                    ? 'text-orange-600'
+                    : metric.isNA
                     ? 'text-muted-foreground/50'
                     : metric.isWarning 
                     ? 'text-amber-500' 
@@ -115,12 +119,19 @@ export function MetricCards({ program, githubIsFork, bytecodeMatchStatus, byteco
             </div>
           </CardHeader>
           <CardContent>
-            <div className="mb-2">
-              <Progress 
-                value={metric.value} 
-                className={`h-2 ${metric.isWarning ? '[&>div]:bg-amber-500' : ''}`} 
-              />
-            </div>
+            {!metric.isUnverified ? (
+              <div className="mb-2">
+                <Progress 
+                  value={metric.value} 
+                  className={`h-2 ${metric.isWarning ? '[&>div]:bg-amber-500' : ''}`} 
+                />
+              </div>
+            ) : (
+              <div className="mb-2 flex items-center gap-1.5 text-[11px] text-orange-600 font-medium">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-600 animate-pulse" />
+                Pending
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">{metric.description}</p>
           </CardContent>
         </Card>

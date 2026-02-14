@@ -89,7 +89,7 @@ export function DevelopmentTabContent({
   // Get GitHub originality status
   const getGithubOriginalityInfo = () => {
     if (githubIsFork === undefined) {
-      return { subtitle: 'Awaiting Analysis', value: 0, isPositive: false, isWarning: false, isNA: true };
+      return { subtitle: 'Awaiting Analysis', value: 0, isPositive: false, isWarning: false, isNA: true, isUnverified: true };
     }
     if (githubIsFork) {
       return { subtitle: 'Forked Repository', value: 30, isPositive: false, isWarning: true };
@@ -113,7 +113,7 @@ export function DevelopmentTabContent({
       case 'not-deployed':
         return { label: 'Not On-Chain', value: 0, isPositive: false, isWarning: false, isNA: true, description: 'This project is off-chain and has no deployed program.', confidence: 'NOT_DEPLOYED' };
       default:
-        return { label: 'Awaiting Verification', value: 0, isPositive: false, isWarning: false, isNA: true, description: 'Bytecode verification has not run yet.', confidence: 'PENDING' };
+        return { label: 'Awaiting Verification', value: 0, isPositive: false, isWarning: false, isNA: true, description: 'Bytecode verification has not run yet.', confidence: 'PENDING', isUnverified: true };
     }
   };
 
@@ -143,6 +143,7 @@ export function DevelopmentTabContent({
       isPositive: bytecodeOriginality.isPositive,
       isWarning: bytecodeOriginality.isWarning,
       isNA: bytecodeOriginality.isNA,
+      isUnverified: (bytecodeOriginality as any).isUnverified || false,
       canVerify: !!programId && !!profileId,
       lastVerified: bytecodeVerifiedAt,
       confidence: bytecodeOriginality.confidence,
@@ -157,6 +158,7 @@ export function DevelopmentTabContent({
       isPositive: githubOriginality.isPositive,
       isWarning: githubOriginality.isWarning,
       isNA: false,
+      isUnverified: githubOriginality.isUnverified || false,
       canVerify: false,
       lastVerified: null,
     },
@@ -185,7 +187,9 @@ export function DevelopmentTabContent({
                       </CardTitle>
                       <CardDescription
                         className={`flex items-center gap-1.5 ${
-                          metric.isNA
+                          metric.isUnverified
+                            ? 'text-orange-600'
+                            : metric.isNA
                             ? 'text-muted-foreground/50'
                             : metric.isWarning
                             ? 'text-amber-500'
@@ -220,12 +224,19 @@ export function DevelopmentTabContent({
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="mb-2">
-                  <Progress
-                    value={metric.value}
-                    className={`h-2 ${metric.isWarning ? '[&>div]:bg-amber-500' : ''}`}
-                  />
-                </div>
+                {!metric.isUnverified ? (
+                  <div className="mb-2">
+                    <Progress
+                      value={metric.value}
+                      className={`h-2 ${metric.isWarning ? '[&>div]:bg-amber-500' : ''}`}
+                    />
+                  </div>
+                ) : (
+                  <div className="mb-2 flex items-center gap-1.5 text-[11px] text-orange-600 font-medium">
+                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-600 animate-pulse" />
+                    Pending
+                  </div>
+                )}
                 <p className="text-xs text-muted-foreground">{metric.description}</p>
                 {metric.confidence && metric.confidence !== 'NOT_DEPLOYED' && (
                   <div className="mt-1.5 flex items-center gap-2">

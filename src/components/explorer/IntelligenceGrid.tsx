@@ -83,7 +83,7 @@ export function IntelligenceGrid({
   }
 
   const getBytecodeLabel = (status: string | null) => {
-    if (!status) return { label: 'Not Verified', color: 'text-muted-foreground' };
+    if (!status) return { label: 'Not Verified', color: 'text-orange-600' };
     switch (status) {
       case 'MATCH': return { label: 'Original', color: 'text-primary' };
       case 'MISMATCH': return { label: 'Suspicious', color: 'text-destructive' };

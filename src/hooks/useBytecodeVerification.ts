@@ -140,6 +140,7 @@ export function getBytecodeStatusInfo(
         isPositive: false,
         isWarning: isSuspicious,
         isNA: false,
+        isUnverified: !isSuspicious,
         confidence: tier || 'LOW',
       };
     }
