@@ -18,7 +18,7 @@ export function DevelopmentTab({ profile }: DevelopmentTabProps) {
   // Get GitHub originality status
   const getGithubOriginalityInfo = () => {
     if (githubIsFork === undefined) {
-      return { subtitle: 'Not Analyzed', value: 50, isPositive: false, isWarning: false };
+      return { subtitle: 'Awaiting Analysis', value: 0, isPositive: false, isWarning: false, isUnverified: true };
     }
     if (githubIsFork) {
       return { subtitle: 'Forked Repository', value: 30, isPositive: false, isWarning: true };
@@ -32,12 +32,13 @@ export function DevelopmentTab({ profile }: DevelopmentTabProps) {
     {
       icon: Fingerprint,
       title: 'BYTECODE ORIGINALITY',
-      subtitle: 'Not On-Chain',
+      subtitle: 'Awaiting Verification',
       value: 0,
       description: 'Cryptographic fingerprint comparison against known program database.',
       isPositive: false,
       isWarning: false,
       isNA: true,
+      isUnverified: true,
     },
     {
       icon: GitBranch,
@@ -48,6 +49,7 @@ export function DevelopmentTab({ profile }: DevelopmentTabProps) {
       isPositive: githubOriginality.isPositive,
       isWarning: githubOriginality.isWarning,
       isNA: false,
+      isUnverified: githubOriginality.isUnverified,
     },
   ];
 
@@ -92,7 +94,9 @@ export function DevelopmentTab({ profile }: DevelopmentTabProps) {
                   </CardTitle>
                   <CardDescription
                     className={
-                      metric.isNA
+                      metric.isUnverified
+                        ? 'text-orange-600'
+                        : metric.isNA
                         ? 'text-muted-foreground/50'
                         : metric.isWarning
                         ? 'text-amber-500'
@@ -107,12 +111,19 @@ export function DevelopmentTab({ profile }: DevelopmentTabProps) {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="mb-2">
-                <Progress
-                  value={metric.value}
-                  className={`h-2 ${metric.isWarning ? '[&>div]:bg-amber-500' : ''}`}
-                />
-              </div>
+              {!metric.isUnverified ? (
+                <div className="mb-2">
+                  <Progress
+                    value={metric.value}
+                    className={`h-2 ${metric.isWarning ? '[&>div]:bg-amber-500' : ''}`}
+                  />
+                </div>
+              ) : (
+                <div className="mb-2 flex items-center gap-1.5 text-[11px] text-orange-600 font-medium">
+                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-orange-600 animate-pulse" />
+                  Pending
+                </div>
+              )}
               <p className="text-xs text-muted-foreground">{metric.description}</p>
             </CardContent>
           </Card>
