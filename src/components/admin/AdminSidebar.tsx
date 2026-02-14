@@ -9,6 +9,7 @@ import {
   FileText,
   LogOut,
   Shield,
+  Gauge,
 } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import logoImg from '@/assets/logo.png';
@@ -21,6 +22,7 @@ const navItems = [
   { to: '/admin/integrations', icon: Plug, label: 'Integrations' },
   { to: '/admin/costs', icon: DollarSign, label: 'Costs' },
   { to: '/admin/registry', icon: Database, label: 'Registry' },
+  { to: '/admin/recalibrate', icon: Gauge, label: 'Recalibrate' },
   { to: '/admin/reporter', icon: FileText, label: 'Grant Reporter' },
 ];
 

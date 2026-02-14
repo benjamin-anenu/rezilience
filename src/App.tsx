@@ -40,6 +40,7 @@ import { AdminIntegrations } from "./pages/admin/AdminIntegrationsPage";
 import { AdminCosts } from "./pages/admin/AdminCostsPage";
 import { AdminRegistry } from "./pages/admin/AdminRegistryPage";
 import { AdminReporter } from "./pages/admin/AdminReporterPage";
+import { AdminRecalibrate } from "./pages/admin/AdminRecalibratePage";
 import { AdminProtectedRoute } from "./components/admin/AdminProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -87,6 +88,7 @@ const App = () => (
                 <Route path="integrations" element={<AdminIntegrations />} />
                 <Route path="costs" element={<AdminCosts />} />
                 <Route path="registry" element={<AdminRegistry />} />
+                <Route path="recalibrate" element={<AdminRecalibrate />} />
                 <Route path="reporter" element={<AdminReporter />} />
               </Route>
 
