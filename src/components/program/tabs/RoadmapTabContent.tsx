@@ -1,54 +1,56 @@
-import { Calendar, CheckCircle, AlertTriangle, Lock, Clock, MapPin } from 'lucide-react';
+import { Calendar, CheckCircle, AlertTriangle, Lock, Clock, MapPin, ChevronDown, ChevronRight } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { UnclaimedBanner } from '../UnclaimedBanner';
-import type { Milestone } from '@/types';
+import type { Phase } from '@/types';
+import { useState } from 'react';
 
 interface RoadmapTabContentProps {
-  milestones?: Milestone[];
+  milestones?: Phase[];
   isVerified?: boolean;
   claimStatus?: string;
 }
 
-function getMilestoneIcon(status: string) {
+function getMilestoneStatusIcon(status: string) {
   switch (status) {
     case 'completed':
-      return <CheckCircle className="h-5 w-5 text-primary" />;
+      return <CheckCircle className="h-4 w-4 text-primary" />;
     case 'overdue':
-      return <AlertTriangle className="h-5 w-5 text-destructive" />;
+      return <AlertTriangle className="h-4 w-4 text-destructive" />;
     default:
-      return <Clock className="h-5 w-5 text-muted-foreground" />;
-  }
-}
-
-function getMilestoneColors(status: string) {
-  switch (status) {
-    case 'completed':
-      return 'border-primary/30 bg-primary/5';
-    case 'overdue':
-      return 'border-destructive/30 bg-destructive/5';
-    default:
-      return 'border-border bg-muted/30';
+      return <Clock className="h-4 w-4 text-muted-foreground" />;
   }
 }
 
 export function RoadmapTabContent({ milestones, isVerified, claimStatus }: RoadmapTabContentProps) {
-  const hasMilestones = milestones && milestones.length > 0;
+  const hasPhases = milestones && milestones.length > 0;
   const isUnclaimed = claimStatus === 'unclaimed';
+  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set(milestones?.map((p) => p.id) || []));
 
-  // Sort milestones by target date
-  const sortedMilestones = hasMilestones
-    ? [...milestones].sort(
-        (a, b) => new Date(a.targetDate).getTime() - new Date(b.targetDate).getTime()
-      )
+  const togglePhase = (id: string) => {
+    setExpandedPhases((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  // Sort by order
+  const sortedPhases = hasPhases
+    ? [...milestones].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
     : [];
 
-  // Calculate progress
-  const completedCount = sortedMilestones.filter((m) => m.status === 'completed').length;
-  const progressPercent = hasMilestones ? (completedCount / sortedMilestones.length) * 100 : 0;
+  // Calculate overall progress
+  const totalMilestones = sortedPhases.reduce((sum, p) => sum + p.milestones.length, 0);
+  const completedMilestones = sortedPhases.reduce(
+    (sum, p) => sum + p.milestones.filter((m) => m.status === 'completed').length,
+    0
+  );
+  const progressPercent = totalMilestones > 0 ? (completedMilestones / totalMilestones) * 100 : 0;
 
-  if (!isVerified || !hasMilestones) {
+  if (!isVerified || !hasPhases) {
     if (isUnclaimed) {
       return (
         <UnclaimedBanner reason="Claim this project to publish your roadmap, set delivery commitments, and demonstrate long-term vision to stakers and users." />
@@ -84,23 +86,26 @@ export function RoadmapTabContent({ milestones, isVerified, claimStatus }: Roadm
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="font-display text-sm uppercase tracking-wider text-muted-foreground">
-              Milestone Progress
+              Roadmap Progress
             </CardTitle>
-            <Badge variant="outline" className="font-mono">
-              {completedCount} / {sortedMilestones.length}
-            </Badge>
+            <div className="flex items-center gap-3">
+              <Badge variant="outline" className="font-mono">
+                {completedMilestones} / {totalMilestones} milestones
+              </Badge>
+              <Badge variant="outline" className="font-mono">
+                {sortedPhases.length} phase{sortedPhases.length !== 1 ? 's' : ''}
+              </Badge>
+            </div>
           </div>
         </CardHeader>
-        <CardContent className="pb-0">
-          {/* Progress Bar */}
-          <div className="relative mb-6">
+        <CardContent className="pb-4">
+          <div className="relative">
             <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
               <div
                 className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
-            {/* Progress glow - softened */}
             <div
               className="absolute top-0 h-2 bg-primary/20 blur-sm rounded-full"
               style={{ width: `${progressPercent}%` }}
@@ -109,141 +114,115 @@ export function RoadmapTabContent({ milestones, isVerified, claimStatus }: Roadm
         </CardContent>
       </Card>
 
-      {/* Timeline - Desktop Horizontal */}
-      <Card className="card-premium border-border bg-card hidden lg:block">
-        <CardHeader className="pb-3">
-          <CardTitle className="font-display text-sm uppercase tracking-wider text-muted-foreground">
-            Verified Timeline
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
-            {/* Connecting line */}
-            <div className="absolute left-0 right-0 top-6 h-0.5 bg-border" />
-            <div
-              className="absolute left-0 top-6 h-0.5 bg-primary transition-all duration-500"
-              style={{ width: `${progressPercent}%` }}
-            />
+      {/* Phases */}
+      <div className="space-y-4">
+        {sortedPhases.map((phase, index) => {
+          const phaseCompleted = phase.milestones.length > 0 && phase.milestones.every((m) => m.status === 'completed');
+          const phaseProgress = phase.milestones.length > 0
+            ? phase.milestones.filter((m) => m.status === 'completed').length / phase.milestones.length
+            : 0;
+          const isExpanded = expandedPhases.has(phase.id);
 
-            {/* Milestones */}
-            <div className="relative flex justify-between gap-4">
-              {sortedMilestones.map((milestone, index) => (
-                <div
-                  key={milestone.id}
-                  className="flex flex-col items-center"
-                  style={{ flex: 1 }}
-                >
-                  {/* Dot */}
-                  <div
-                    className={cn(
-                      'relative z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 bg-card transition-all',
-                      milestone.status === 'completed'
-                        ? 'border-primary'
-                        : milestone.status === 'overdue'
-                        ? 'border-destructive'
-                        : 'border-border'
-                    )}
-                  >
-                    {getMilestoneIcon(milestone.status)}
-                    {milestone.isLocked && (
-                      <div className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-muted">
-                        <Lock className="h-3 w-3 text-muted-foreground" />
+          return (
+            <Collapsible key={phase.id} open={isExpanded} onOpenChange={() => togglePhase(phase.id)}>
+              <Card
+                className={cn(
+                  'card-premium border-border bg-card overflow-hidden transition-all',
+                  phaseCompleted && 'border-primary/30'
+                )}
+              >
+                <CollapsibleTrigger asChild>
+                  <CardHeader className="cursor-pointer hover:bg-muted/20 transition-colors pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
+                        <div>
+                          <CardTitle className="font-display text-sm uppercase tracking-wider">
+                            Phase {index + 1}: {phase.title}
+                          </CardTitle>
+                          <div className="mt-1 h-1.5 w-32 overflow-hidden rounded-full bg-muted">
+                            <div
+                              className="h-full bg-primary transition-all duration-300"
+                              style={{ width: `${phaseProgress * 100}%` }}
+                            />
+                          </div>
+                        </div>
                       </div>
-                    )}
-                  </div>
+                      <div className="flex items-center gap-2">
+                        {phase.isLocked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                        {phase.varianceRequested && (
+                          <Badge variant="outline" className="text-[10px] border-amber-500/30 text-amber-500">
+                            Update Requested
+                          </Badge>
+                        )}
+                        <Badge variant="outline" className="font-mono text-[10px]">
+                          {phase.milestones.filter((m) => m.status === 'completed').length}/{phase.milestones.length}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                </CollapsibleTrigger>
 
-                  {/* Content */}
-                  <div className="mt-3 text-center max-w-[140px]">
-                    <h4 className="font-display text-xs font-semibold uppercase text-foreground line-clamp-2">
-                      {milestone.title}
-                    </h4>
-                    <p className="mt-1 text-[10px] text-muted-foreground">
-                      {new Date(milestone.targetDate).toLocaleDateString()}
-                    </p>
-                    {milestone.varianceRequested && (
-                      <Badge
-                        variant="outline"
-                        className="mt-1 text-[10px] border-amber-500/30 text-amber-500"
+                <CollapsibleContent>
+                  <CardContent className="pt-0 space-y-2">
+                    {phase.milestones.map((ms) => (
+                      <div
+                        key={ms.id}
+                        className={cn(
+                          'rounded-sm border p-3 transition-all',
+                          ms.status === 'completed'
+                            ? 'border-primary/20 bg-primary/5'
+                            : ms.status === 'overdue'
+                            ? 'border-destructive/20 bg-destructive/5'
+                            : 'border-border bg-muted/20'
+                        )}
                       >
-                        Update Requested
-                      </Badge>
+                        <div className="flex items-start gap-3">
+                          {getMilestoneStatusIcon(ms.status)}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-display text-sm font-semibold uppercase text-foreground">
+                              {ms.title}
+                            </h4>
+                            {ms.description && (
+                              <p className="mt-1 text-xs text-muted-foreground">{ms.description}</p>
+                            )}
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              {ms.targetDate && (
+                                <span className="flex items-center gap-1 text-[10px] font-mono text-muted-foreground">
+                                  <Calendar className="h-3 w-3" />
+                                  {new Date(ms.targetDate).toLocaleDateString('en-US', {
+                                    month: 'short',
+                                    day: 'numeric',
+                                    year: 'numeric',
+                                  })}
+                                </span>
+                              )}
+                              {ms.completedAt && (
+                                <span className="text-[10px] font-mono text-primary">
+                                  Completed {new Date(ms.completedAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {phase.milestones.length === 0 && (
+                      <p className="py-4 text-center text-xs text-muted-foreground">
+                        No milestones defined for this phase yet.
+                      </p>
                     )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Timeline - Mobile Vertical */}
-      <Card className="card-premium border-border bg-card lg:hidden">
-        <CardHeader className="pb-3">
-          <CardTitle className="font-display text-sm uppercase tracking-wider text-muted-foreground">
-            Verified Timeline
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="relative space-y-4 pl-8">
-            {/* Vertical line */}
-            <div className="absolute left-3 top-0 bottom-0 w-0.5 bg-border" />
-            <div
-              className="absolute left-3 top-0 w-0.5 bg-primary transition-all duration-500"
-              style={{ height: `${progressPercent}%` }}
-            />
-
-            {sortedMilestones.map((milestone) => (
-              <div key={milestone.id} className="relative">
-                {/* Dot */}
-                <div
-                  className={cn(
-                    'absolute -left-5 flex h-6 w-6 items-center justify-center rounded-full border-2 bg-card',
-                    milestone.status === 'completed'
-                      ? 'border-primary'
-                      : milestone.status === 'overdue'
-                      ? 'border-destructive'
-                      : 'border-border'
-                  )}
-                >
-                  {milestone.status === 'completed' && (
-                    <CheckCircle className="h-3 w-3 text-primary" />
-                  )}
-                  {milestone.status === 'overdue' && (
-                    <AlertTriangle className="h-3 w-3 text-destructive" />
-                  )}
-                </div>
-
-                {/* Card */}
-                <div
-                  className={cn(
-                    'rounded-sm border p-4 transition-all',
-                    getMilestoneColors(milestone.status)
-                  )}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <h4 className="font-display text-sm font-semibold uppercase text-foreground">
-                      {milestone.title}
-                    </h4>
-                    {milestone.isLocked && <Lock className="h-3 w-3 text-muted-foreground" />}
-                  </div>
-                  <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                    <Calendar className="h-3 w-3" />
-                    <span>{new Date(milestone.targetDate).toLocaleDateString()}</span>
-                    {milestone.varianceRequested && (
-                      <Badge
-                        variant="outline"
-                        className="text-[10px] border-amber-500/30 text-amber-500"
-                      >
-                        Update Requested
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                  </CardContent>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
+          );
+        })}
+      </div>
     </div>
   );
 }

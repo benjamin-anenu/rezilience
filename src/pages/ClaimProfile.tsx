@@ -20,7 +20,7 @@ import {
   RoadmapForm,
   AuthorityVerificationModal,
 } from '@/components/claim';
-import type { MediaAsset, Milestone, ProjectCategory } from '@/types';
+import type { MediaAsset, Phase, ProjectCategory } from '@/types';
 import { type GitHubAnalysisResult, suggestCategory } from '@/hooks/useGitHubAnalysis';
 import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 
@@ -122,8 +122,8 @@ const ClaimProfile = () => {
   // Step 4: Media
   const [mediaAssets, setMediaAssets] = useState<MediaAsset[]>([]);
 
-  // Step 5: Roadmap
-  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  // Step 5: Roadmap (Phase-based)
+  const [milestones, setMilestones] = useState<Phase[]>([]);
 
   // GitHub Analysis State
   const [githubAnalysisResult, setGithubAnalysisResult] = useState<GitHubAnalysisResult | null>(null);
@@ -820,8 +820,8 @@ const ClaimProfile = () => {
           {isAuthenticated && currentStep === 5 && (
             <>
               <RoadmapForm
-                milestones={milestones}
-                setMilestones={setMilestones}
+                phases={milestones}
+                setPhases={setMilestones}
               />
 
               {/* Final Submit */}

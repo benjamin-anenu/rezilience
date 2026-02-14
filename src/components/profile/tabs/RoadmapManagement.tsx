@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { CheckCircle, Calendar, Lock, AlertTriangle, Plus, Loader2 } from 'lucide-react';
+import { CheckCircle, Calendar, Lock, AlertTriangle, Plus, Loader2, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Dialog,
   DialogContent,
@@ -14,7 +16,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useUpdateProfile } from '@/hooks/useUpdateProfile';
-import type { ClaimedProfile, Milestone } from '@/types';
+import type { ClaimedProfile, Phase, PhaseMilestone } from '@/types';
+import { cn } from '@/lib/utils';
 
 interface RoadmapManagementProps {
   profile: ClaimedProfile;
@@ -25,90 +28,107 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
   const updateProfile = useUpdateProfile();
   const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
   const [varianceDialogOpen, setVarianceDialogOpen] = useState(false);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [selectedMilestone, setSelectedMilestone] = useState<Milestone | null>(null);
-  const [newTargetDate, setNewTargetDate] = useState('');
-  const [newMilestoneTitle, setNewMilestoneTitle] = useState('');
-  const [newMilestoneDate, setNewMilestoneDate] = useState('');
+  const [addPhaseDialogOpen, setAddPhaseDialogOpen] = useState(false);
+  const [addMilestonePhaseId, setAddMilestonePhaseId] = useState<string | null>(null);
+  const [selectedMilestone, setSelectedMilestone] = useState<{ phaseId: string; milestone: PhaseMilestone } | null>(null);
+  const [newPhaseTitle, setNewPhaseTitle] = useState('');
+  const [newMilestone, setNewMilestone] = useState({ title: '', description: '', targetDate: '' });
+  const [expandedPhases, setExpandedPhases] = useState<Set<string>>(
+    new Set((profile.milestones || []).map((p) => p.id))
+  );
 
-  const milestones = profile.milestones || [];
+  const phases: Phase[] = profile.milestones || [];
 
-  const handleMarkComplete = () => {
-    if (!selectedMilestone) return;
-
-    const updatedMilestones = milestones.map((m) =>
-      m.id === selectedMilestone.id
-        ? { ...m, status: 'completed' as const, completedAt: new Date().toISOString() }
-        : m
-    );
-
-    updateProfile.mutate(
-      { profileId: profile.id, xUserId, updates: { milestones: updatedMilestones } },
-      { onSuccess: () => setCompleteDialogOpen(false) }
-    );
-  };
-
-  const handleRequestVariance = () => {
-    if (!selectedMilestone || !newTargetDate) return;
-
-    const updatedMilestones = milestones.map((m) =>
-      m.id === selectedMilestone.id
-        ? {
-            ...m,
-            varianceRequested: true,
-            originalTargetDate: m.originalTargetDate || m.targetDate,
-            targetDate: newTargetDate,
-          }
-        : m
-    );
-
-    updateProfile.mutate(
-      { profileId: profile.id, xUserId, updates: { milestones: updatedMilestones } },
-      {
-        onSuccess: () => {
-          setVarianceDialogOpen(false);
-          setNewTargetDate('');
-        },
-      }
-    );
-  };
-
-  const handleAddMilestone = () => {
-    if (!newMilestoneTitle || !newMilestoneDate) return;
-
-    const newMilestone: Milestone = {
-      id: crypto.randomUUID(),
-      title: newMilestoneTitle,
-      targetDate: newMilestoneDate,
-      isLocked: false,
-      status: 'upcoming',
-    };
-
-    const updatedMilestones = [...milestones, newMilestone];
-
-    updateProfile.mutate(
-      { profileId: profile.id, xUserId, updates: { milestones: updatedMilestones } },
-      {
-        onSuccess: () => {
-          setAddDialogOpen(false);
-          setNewMilestoneTitle('');
-          setNewMilestoneDate('');
-        },
-      }
-    );
-  };
-
-  const handleLockAllMilestones = () => {
-    const updatedMilestones = milestones.map((m) => ({ ...m, isLocked: true }));
-
-    updateProfile.mutate({
-      profileId: profile.id,
-      xUserId,
-      updates: { milestones: updatedMilestones },
+  const togglePhase = (id: string) => {
+    setExpandedPhases((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
     });
   };
 
-  const hasUnlockedMilestones = milestones.some((m) => !m.isLocked);
+  const savePhases = (updated: Phase[], onSuccess?: () => void) => {
+    updateProfile.mutate(
+      { profileId: profile.id, xUserId, updates: { milestones: updated as any } },
+      { onSuccess }
+    );
+  };
+
+  const handleMarkComplete = () => {
+    if (!selectedMilestone) return;
+    const updated = phases.map((p) =>
+      p.id === selectedMilestone.phaseId
+        ? {
+            ...p,
+            milestones: p.milestones.map((m) =>
+              m.id === selectedMilestone.milestone.id
+                ? { ...m, status: 'completed' as const, completedAt: new Date().toISOString() }
+                : m
+            ),
+          }
+        : p
+    );
+    savePhases(updated, () => setCompleteDialogOpen(false));
+  };
+
+  const handleRequestVariance = () => {
+    if (!selectedMilestone) return;
+    const updated = phases.map((p) =>
+      p.id === selectedMilestone.phaseId ? { ...p, varianceRequested: true } : p
+    );
+    savePhases(updated, () => setVarianceDialogOpen(false));
+  };
+
+  const handleAddPhase = () => {
+    if (!newPhaseTitle.trim()) return;
+    const newPhase: Phase = {
+      id: crypto.randomUUID(),
+      title: newPhaseTitle,
+      isLocked: false,
+      milestones: [],
+      order: phases.length,
+    };
+    savePhases([...phases, newPhase], () => {
+      setAddPhaseDialogOpen(false);
+      setNewPhaseTitle('');
+      setExpandedPhases((prev) => new Set(prev).add(newPhase.id));
+    });
+  };
+
+  const handleAddMilestone = () => {
+    if (!addMilestonePhaseId || !newMilestone.title.trim()) return;
+    const ms: PhaseMilestone = {
+      id: crypto.randomUUID(),
+      title: newMilestone.title,
+      description: newMilestone.description,
+      targetDate: newMilestone.targetDate || undefined,
+      status: 'upcoming',
+    };
+    const updated = phases.map((p) =>
+      p.id === addMilestonePhaseId ? { ...p, milestones: [...p.milestones, ms] } : p
+    );
+    savePhases(updated, () => {
+      setAddMilestonePhaseId(null);
+      setNewMilestone({ title: '', description: '', targetDate: '' });
+    });
+  };
+
+  const handleRemovePhase = (phaseId: string) => {
+    savePhases(phases.filter((p) => p.id !== phaseId));
+  };
+
+  const handleRemoveMilestone = (phaseId: string, msId: string) => {
+    const updated = phases.map((p) =>
+      p.id === phaseId ? { ...p, milestones: p.milestones.filter((m) => m.id !== msId) } : p
+    );
+    savePhases(updated);
+  };
+
+  const handleLockAll = () => {
+    savePhases(phases.map((p) => ({ ...p, isLocked: true })));
+  };
+
+  const hasUnlocked = phases.some((p) => !p.isLocked);
 
   return (
     <Card className="border-border bg-card">
@@ -118,11 +138,11 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
             Roadmap Management
           </CardTitle>
           <div className="flex gap-2">
-            {hasUnlockedMilestones && (
+            {hasUnlocked && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleLockAllMilestones}
+                onClick={handleLockAll}
                 disabled={updateProfile.isPending}
                 className="font-display text-xs uppercase"
               >
@@ -133,129 +153,175 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setAddDialogOpen(true)}
+              onClick={() => setAddPhaseDialogOpen(true)}
               className="font-display text-xs uppercase"
             >
               <Plus className="mr-1 h-3 w-3" />
-              Add Milestone
+              Add Phase
             </Button>
           </div>
         </div>
       </CardHeader>
       <CardContent>
-        {milestones.length === 0 ? (
+        {phases.length === 0 ? (
           <div className="py-8 text-center">
             <Calendar className="mx-auto mb-3 h-10 w-10 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">No milestones yet</p>
+            <p className="text-sm text-muted-foreground">No phases yet</p>
             <p className="mt-1 text-xs text-muted-foreground/70">
-              Add milestones to track your project's progress
+              Add phases with milestones to track your project's progress
             </p>
           </div>
         ) : (
           <div className="space-y-3">
-            {milestones.map((milestone) => {
-              const targetDate = new Date(milestone.targetDate);
-              const isOverdue =
-                targetDate < new Date() && milestone.status !== 'completed';
-              const isCompleted = milestone.status === 'completed';
-
+            {phases.map((phase, index) => {
+              const isExpanded = expandedPhases.has(phase.id);
               return (
-                <div
-                  key={milestone.id}
-                  className={`rounded-sm border p-4 ${
-                    isCompleted
-                      ? 'border-primary/30 bg-primary/5'
-                      : isOverdue
-                      ? 'border-destructive/30 bg-destructive/5'
-                      : milestone.varianceRequested
-                      ? 'border-yellow-500/30 bg-yellow-500/5'
-                      : 'border-border bg-muted/30'
-                  }`}
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex items-start gap-3">
-                      {isCompleted ? (
-                        <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                      ) : isOverdue ? (
-                        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" />
-                      ) : milestone.isLocked ? (
-                        <Lock className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                      ) : (
-                        <Calendar className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                      )}
-                      <div>
-                        <span className="font-mono text-sm font-medium">
-                          {milestone.title}
-                        </span>
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          <span className="font-mono text-xs text-muted-foreground">
-                            Target:{' '}
-                            {targetDate.toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
+                <Collapsible key={phase.id} open={isExpanded} onOpenChange={() => togglePhase(phase.id)}>
+                  <div
+                    className={cn(
+                      'rounded-sm border',
+                      phase.isLocked ? 'border-primary/30 bg-primary/5' : 'border-border bg-muted/20'
+                    )}
+                  >
+                    <CollapsibleTrigger asChild>
+                      <div className="flex cursor-pointer items-center justify-between p-3 hover:bg-muted/30 transition-colors">
+                        <div className="flex items-center gap-2">
+                          {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                          <span className="font-display text-sm font-semibold uppercase tracking-wide">
+                            Phase {index + 1}: {phase.title}
                           </span>
-                          {milestone.varianceRequested && (
-                            <Badge className="bg-yellow-500/20 text-yellow-500">
-                              TIMELINE VARIANCE
-                            </Badge>
-                          )}
-                          {isOverdue && !isCompleted && (
-                            <Badge className="bg-destructive/20 text-destructive">
-                              OVERDUE
-                            </Badge>
-                          )}
-                          {!milestone.isLocked && (
-                            <Badge variant="outline" className="text-xs">
-                              Unlocked
-                            </Badge>
+                          {phase.isLocked && <Lock className="h-3 w-3 text-primary" />}
+                          {phase.varianceRequested && (
+                            <Badge className="bg-yellow-500/20 text-yellow-500 text-[10px]">VARIANCE</Badge>
                           )}
                         </div>
-                        {milestone.completedAt && (
-                          <p className="mt-1 text-xs text-primary">
-                            Completed on{' '}
-                            {new Date(milestone.completedAt).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </p>
-                        )}
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono text-muted-foreground">
+                            {phase.milestones.filter((m) => m.status === 'completed').length}/{phase.milestones.length}
+                          </span>
+                          {!phase.isLocked && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={(e) => { e.stopPropagation(); handleRemovePhase(phase.id); }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </CollapsibleTrigger>
 
-                    {!isCompleted && (
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="default"
-                          onClick={() => {
-                            setSelectedMilestone(milestone);
-                            setCompleteDialogOpen(true);
-                          }}
-                          className="font-display text-xs uppercase"
-                        >
-                          Mark Complete
-                        </Button>
-                        {milestone.isLocked && (
+                    <CollapsibleContent>
+                      <div className="border-t border-border/50 px-3 pb-3 pt-2 space-y-2">
+                        {phase.milestones.map((ms) => {
+                          const isCompleted = ms.status === 'completed';
+                          const isOverdue = ms.targetDate && new Date(ms.targetDate) < new Date() && !isCompleted;
+
+                          return (
+                            <div
+                              key={ms.id}
+                              className={cn(
+                                'rounded-sm border p-3',
+                                isCompleted ? 'border-primary/20 bg-primary/5' : isOverdue ? 'border-destructive/20 bg-destructive/5' : 'border-border/50 bg-background/50'
+                              )}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-start gap-2 flex-1 min-w-0">
+                                  {isCompleted ? (
+                                    <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                                  ) : isOverdue ? (
+                                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
+                                  ) : (
+                                    <Calendar className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                                  )}
+                                  <div className="flex-1 min-w-0">
+                                    <span className="font-mono text-sm font-medium">{ms.title}</span>
+                                    {ms.description && (
+                                      <p className="mt-1 text-xs text-muted-foreground">{ms.description}</p>
+                                    )}
+                                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                                      {ms.targetDate && (
+                                        <span className="font-mono text-[10px] text-muted-foreground">
+                                          Target: {new Date(ms.targetDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </span>
+                                      )}
+                                      {ms.completedAt && (
+                                        <span className="text-[10px] text-primary">
+                                          Completed {new Date(ms.completedAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                                        </span>
+                                      )}
+                                      {isOverdue && !isCompleted && (
+                                        <Badge className="bg-destructive/20 text-destructive text-[10px]">OVERDUE</Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-1 shrink-0">
+                                  {!isCompleted && (
+                                    <Button
+                                      size="sm"
+                                      variant="default"
+                                      onClick={() => {
+                                        setSelectedMilestone({ phaseId: phase.id, milestone: ms });
+                                        setCompleteDialogOpen(true);
+                                      }}
+                                      className="h-7 font-display text-[10px] uppercase"
+                                    >
+                                      Complete
+                                    </Button>
+                                  )}
+                                  {!phase.isLocked && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                      onClick={() => handleRemoveMilestone(phase.id, ms.id)}
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+
+                        {/* Add milestone button */}
+                        {!phase.isLocked && (
                           <Button
+                            variant="ghost"
                             size="sm"
-                            variant="outline"
+                            className="w-full border border-dashed border-border/50 font-display text-xs uppercase text-muted-foreground"
                             onClick={() => {
-                              setSelectedMilestone(milestone);
-                              setNewTargetDate(milestone.targetDate);
+                              setAddMilestonePhaseId(phase.id);
+                              setNewMilestone({ title: '', description: '', targetDate: '' });
+                            }}
+                          >
+                            <Plus className="mr-1 h-3 w-3" />
+                            Add Milestone
+                          </Button>
+                        )}
+
+                        {/* Variance request for locked phases */}
+                        {phase.isLocked && !phase.varianceRequested && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full font-display text-xs uppercase"
+                            onClick={() => {
+                              setSelectedMilestone({ phaseId: phase.id, milestone: phase.milestones[0] });
                               setVarianceDialogOpen(true);
                             }}
-                            className="font-display text-xs uppercase"
                           >
-                            Request Update
+                            Request Phase Update
                           </Button>
                         )}
                       </div>
-                    )}
+                    </CollapsibleContent>
                   </div>
-                </div>
+                </Collapsible>
               );
             })}
           </div>
@@ -266,30 +332,21 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
       <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-display uppercase tracking-tight">
-              Mark Milestone Complete
-            </DialogTitle>
+            <DialogTitle className="font-display uppercase tracking-tight">Mark Milestone Complete</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. The milestone will be publicly marked as
-              completed with today's date.
+              This action cannot be undone. The milestone will be publicly marked as completed with today's date.
             </DialogDescription>
           </DialogHeader>
           <div className="rounded-sm border border-border bg-muted/30 p-4">
-            <p className="font-mono text-sm font-medium">{selectedMilestone?.title}</p>
-            <p className="mt-1 font-mono text-xs text-muted-foreground">
-              Target:{' '}
-              {selectedMilestone &&
-                new Date(selectedMilestone.targetDate).toLocaleDateString()}
-            </p>
+            <p className="font-mono text-sm font-medium">{selectedMilestone?.milestone.title}</p>
+            {selectedMilestone?.milestone.description && (
+              <p className="mt-1 text-xs text-muted-foreground">{selectedMilestone.milestone.description}</p>
+            )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCompleteDialogOpen(false)}>
-              Cancel
-            </Button>
+            <Button variant="outline" onClick={() => setCompleteDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleMarkComplete} disabled={updateProfile.isPending}>
-              {updateProfile.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+              {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Confirm Complete
             </Button>
           </DialogFooter>
@@ -300,97 +357,89 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
       <Dialog open={varianceDialogOpen} onOpenChange={setVarianceDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-display uppercase tracking-tight">
-              Request Timeline Update
-            </DialogTitle>
+            <DialogTitle className="font-display uppercase tracking-tight">Request Phase Update</DialogTitle>
             <DialogDescription>
-              Update the target date for this milestone. A "Timeline Variance" badge will
-              be shown on your public profile to maintain transparency.
+              Request an update to this locked phase. A "Timeline Variance" badge will be shown on your public profile.
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="rounded-sm border border-border bg-muted/30 p-4">
-              <p className="font-mono text-sm font-medium">{selectedMilestone?.title}</p>
-              <p className="mt-1 font-mono text-xs text-muted-foreground">
-                Original Target:{' '}
-                {selectedMilestone &&
-                  new Date(
-                    selectedMilestone.originalTargetDate || selectedMilestone.targetDate
-                  ).toLocaleDateString()}
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-date">New Target Date</Label>
-              <Input
-                id="new-date"
-                type="date"
-                value={newTargetDate}
-                onChange={(e) => setNewTargetDate(e.target.value)}
-              />
-            </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setVarianceDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleRequestVariance} disabled={updateProfile.isPending}>
+              {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Request Update
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Phase Dialog */}
+      <Dialog open={addPhaseDialogOpen} onOpenChange={setAddPhaseDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="font-display uppercase tracking-tight">Add New Phase</DialogTitle>
+            <DialogDescription>
+              Create a new phase for your project roadmap. Add milestones to it after creation.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="phase-title">Phase Title</Label>
+            <Input
+              id="phase-title"
+              placeholder="e.g., Foundation"
+              value={newPhaseTitle}
+              onChange={(e) => setNewPhaseTitle(e.target.value)}
+            />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setVarianceDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleRequestVariance}
-              disabled={updateProfile.isPending || !newTargetDate}
-            >
-              {updateProfile.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
-              Update Timeline
+            <Button variant="outline" onClick={() => setAddPhaseDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddPhase} disabled={updateProfile.isPending || !newPhaseTitle.trim()}>
+              {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Add Phase
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Add Milestone Dialog */}
-      <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
+      <Dialog open={!!addMilestonePhaseId} onOpenChange={(open) => !open && setAddMilestonePhaseId(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle className="font-display uppercase tracking-tight">
-              Add New Milestone
-            </DialogTitle>
+            <DialogTitle className="font-display uppercase tracking-tight">Add Milestone</DialogTitle>
             <DialogDescription>
-              Create a new milestone for your project roadmap. New milestones are
-              unlocked until you explicitly lock them.
+              Add a milestone to this phase. Target date is optional.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="milestone-title">Milestone Title</Label>
+              <Label>Title</Label>
               <Input
-                id="milestone-title"
-                placeholder="e.g., Mainnet V2 Launch"
-                value={newMilestoneTitle}
-                onChange={(e) => setNewMilestoneTitle(e.target.value)}
+                placeholder="e.g., Smart Contract Audit"
+                value={newMilestone.title}
+                onChange={(e) => setNewMilestone((p) => ({ ...p, title: e.target.value }))}
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="milestone-date">Target Date</Label>
+              <Label>Description</Label>
+              <Textarea
+                placeholder="What does this milestone deliver?"
+                value={newMilestone.description}
+                onChange={(e) => setNewMilestone((p) => ({ ...p, description: e.target.value }))}
+                className="min-h-[60px]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Target Date (optional)</Label>
               <Input
-                id="milestone-date"
                 type="date"
-                value={newMilestoneDate}
-                onChange={(e) => setNewMilestoneDate(e.target.value)}
+                value={newMilestone.targetDate}
+                onChange={(e) => setNewMilestone((p) => ({ ...p, targetDate: e.target.value }))}
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialogOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleAddMilestone}
-              disabled={
-                updateProfile.isPending || !newMilestoneTitle || !newMilestoneDate
-              }
-            >
-              {updateProfile.isPending && (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              )}
+            <Button variant="outline" onClick={() => setAddMilestonePhaseId(null)}>Cancel</Button>
+            <Button onClick={handleAddMilestone} disabled={updateProfile.isPending || !newMilestone.title.trim()}>
+              {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Add Milestone
             </Button>
           </DialogFooter>

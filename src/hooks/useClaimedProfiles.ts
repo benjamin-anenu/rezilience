@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { ClaimedProfile, MediaAsset, Milestone, BuildInPublicVideo, TwitterTweet, TeamMember } from '@/types';
+import type { ClaimedProfile, MediaAsset, Phase, BuildInPublicVideo, TwitterTweet, TeamMember } from '@/types';
 import type { Json } from '@/integrations/supabase/types';
 
 interface DBClaimedProfile {
@@ -112,7 +112,7 @@ function transformToClaimedProfile(db: DBClaimedProfile): ClaimedProfile {
       telegramUrl: db.telegram_url || undefined,
     },
     mediaAssets: (Array.isArray(db.media_assets) ? db.media_assets : []) as unknown as MediaAsset[],
-    milestones: (Array.isArray(db.milestones) ? db.milestones : []) as unknown as Milestone[],
+    milestones: (Array.isArray(db.milestones) ? db.milestones : []) as unknown as Phase[],
     verified: db.verified,
     verifiedAt: db.verified_at || db.created_at,
     score: db.resilience_score ?? 0,

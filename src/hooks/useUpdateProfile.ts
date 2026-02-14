@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import type { MediaAsset } from '@/types';
+import type { MediaAsset, Phase } from '@/types';
 
 interface BuildInPublicEntry {
   id: string;
@@ -12,16 +12,6 @@ interface BuildInPublicEntry {
   thumbnailUrl?: string;
 }
 
-interface MilestoneUpdate {
-  id: string;
-  title: string;
-  targetDate: string;
-  isLocked: boolean;
-  status: 'upcoming' | 'completed' | 'overdue';
-  varianceRequested?: boolean;
-  completedAt?: string;
-  originalTargetDate?: string;
-}
 
 interface TeamMemberUpdate {
   id: string;
@@ -44,7 +34,7 @@ interface UpdateProfileParams {
     telegram_url?: string;
     media_assets?: MediaAsset[];
     build_in_public_videos?: BuildInPublicEntry[];
-    milestones?: MilestoneUpdate[];
+    milestones?: Phase[];
     team_members?: TeamMemberUpdate[];
     staking_pitch?: string;
     logo_url?: string;
