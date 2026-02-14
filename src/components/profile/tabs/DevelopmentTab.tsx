@@ -57,17 +57,13 @@ export function DevelopmentTab({ profile, isOwner, profileId, programId }: Devel
     if (!profileId) return;
     setIsGitHubRedirecting(true);
 
-    // Store profile ID so GitHubCallback knows to redirect back here
+    // Store profile ID so GitHubCallback knows to redirect back here (re-verification mode)
     localStorage.setItem('verifyGithubProfileId', profileId);
-    localStorage.setItem('claimingProfile', JSON.stringify({
-      profile_id: profileId,
-      github_url: githubUrl,
-    }));
 
     const state = generateOAuthState();
     localStorage.setItem('github_oauth_state', state);
 
-    const redirectUri = `${window.location.origin}/github/callback`;
+    const redirectUri = `${window.location.origin}/github-callback`;
     const oauthUrl = buildGitHubOAuthUrl(redirectUri, state);
     window.location.href = oauthUrl;
   };

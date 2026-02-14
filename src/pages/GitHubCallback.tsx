@@ -44,36 +44,58 @@ const GitHubCallback = () => {
           throw new Error('No authorization code received from GitHub');
         }
 
-        // Verify CSRF state token
+        // Verify CSRF state token (fail-closed)
         const storedState = localStorage.getItem('github_oauth_state');
-        if (state && storedState && state !== storedState) {
+        if (!state || !storedState || state !== storedState) {
           throw new Error('Invalid state parameter. Please try again.');
         }
         localStorage.removeItem('github_oauth_state');
 
-        // Get stored claiming profile data
-        const storedProfile = localStorage.getItem('claimingProfile');
-        let profileFormData: Record<string, unknown> = {};
-        if (storedProfile) {
-          try {
-            profileFormData = JSON.parse(storedProfile);
-          } catch {
-            // Ignore parse errors
-          }
-        }
+        // Determine if this is a profile re-verification (not initial claim)
+        const verifyProfileId = localStorage.getItem('verifyGithubProfileId');
 
-        // Step 2: Exchange code for token via edge function
         setCurrentStep('Verifying GitHub authorization...');
-        
-        const { data, error: fnError } = await supabase.functions.invoke<OAuthResult>(
-          'github-oauth-callback',
-          {
-            body: {
-              code,
-              profile_data: profileFormData,
-            },
+
+        let data: OAuthResult | null = null;
+        let fnError: Error | null = null;
+
+        if (verifyProfileId) {
+          // Re-verification: use dedicated lightweight function
+          const result = await supabase.functions.invoke<OAuthResult>(
+            'verify-github-ownership',
+            {
+              body: {
+                code,
+                profile_id: verifyProfileId,
+              },
+            }
+          );
+          data = result.data;
+          fnError = result.error;
+        } else {
+          // Initial claim: use full claim-time function
+          const storedProfile = localStorage.getItem('claimingProfile');
+          let profileFormData: Record<string, unknown> = {};
+          if (storedProfile) {
+            try {
+              profileFormData = JSON.parse(storedProfile);
+            } catch {
+              // Ignore parse errors
+            }
           }
-        );
+
+          const result = await supabase.functions.invoke<OAuthResult>(
+            'github-oauth-callback',
+            {
+              body: {
+                code,
+                profile_data: profileFormData,
+              },
+            }
+          );
+          data = result.data;
+          fnError = result.error;
+        }
 
         if (fnError) {
           throw new Error(fnError.message || 'Failed to verify GitHub authorization');
@@ -88,9 +110,6 @@ const GitHubCallback = () => {
 
         setCurrentStep('Calculating Resilience Score...');
         await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Determine if this is a profile re-verification (not initial claim)
-        const verifyProfileId = localStorage.getItem('verifyGithubProfileId');
 
         // FIX #3 & #8: Clean up ALL temp storage including form progress on success
         localStorage.removeItem('claimingProgramId');
