@@ -1,10 +1,11 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useState, useEffect } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   HeroBanner,
   QuickStats,
@@ -146,12 +147,20 @@ const ProfileDetail = () => {
     programId: profile.programId || '',
     score: profile.score,
     livenessStatus: profile.livenessStatus as 'active' | 'dormant' | 'degraded',
-    originalityStatus: 'verified' as const,
+    originalityStatus: (profile.programId && profile.programId !== profile.id)
+      ? 'unverified' as const
+      : 'not-deployed' as const,
     stakedAmount: 0,
     lastUpgrade: profile.verifiedAt || new Date().toISOString(),
     upgradeCount: 0,
     rank: 0,
   };
+
+  // Detect fresh profiles with no analysis data yet
+  const isFreshProfile = !profile.githubAnalytics?.github_analyzed_at
+    && !profile.dependencyMetrics?.dependency_analyzed_at
+    && !profile.governanceMetrics?.governance_analyzed_at
+    && !profile.tvlMetrics?.tvl_analyzed_at;
 
   // ========== OWNER VIEW: Premium Dashboard with Management ==========
   if (isOwner) {
@@ -171,6 +180,16 @@ const ProfileDetail = () => {
                   Back to Dashboard
                 </Button>
               </div>
+
+              {/* Fresh Profile Banner */}
+              {(isFreshProfile || isRefreshing) && (
+                <Alert className="mb-4 border-primary/20 bg-primary/5">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <AlertDescription className="text-sm text-muted-foreground">
+                    {isRefreshing ? 'Refreshing all dimensions...' : 'First analysis in progress — metrics will appear shortly.'}
+                  </AlertDescription>
+                </Alert>
+              )}
 
               {/* 1. HERO BANNER - Same as public but with owner badge */}
               <div className="mb-6">
@@ -290,7 +309,17 @@ const ProfileDetail = () => {
               </Button>
             </div>
 
-            {/* 1. HERO BANNER */}
+              {/* Fresh Profile Banner */}
+              {isFreshProfile && (
+                <Alert className="mb-4 border-primary/20 bg-primary/5">
+                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <AlertDescription className="text-sm text-muted-foreground">
+                    First analysis in progress — metrics will appear shortly.
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              {/* 1. HERO BANNER */}
             <div className="mb-6">
               <HeroBanner
                 program={programForComponents}
