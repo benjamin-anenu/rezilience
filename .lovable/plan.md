@@ -1,142 +1,67 @@
 
 
-# Fix: Trigger Analysis at Profile Creation Time
+# Fix Blank Screen + Auto-Add Profile Owner to Team Tab
 
-## Problem
+## Part 1: Fix the Blank Screen (Tiptap Crash)
 
-The `claim-profile` edge function saves the profile and returns, but never kicks off the analysis pipeline. Users land on their dashboard seeing "Awaiting Analysis" for everything except GitHub (which was analyzed during the claim flow). They have to wait up to 30 minutes for the cron to run.
+The Team tab triggers a crash because tiptap v3's `StarterKit` now includes `Link` by default, and the code also adds `Link` separately -- causing a "Duplicate extension" error that crashes the entire page.
 
-## What's Already Available at Claim Time
+**File: `src/components/ui/rich-text-editor.tsx`**
 
-| Dimension | Data Available? | Can Run Immediately? |
-|---|---|---|
-| GitHub Activity (40%) | Yes -- analyzed in Step 3 and saved with the profile | Already done |
-| Dependency Health (25%) | `github_org_url` is saved | Yes |
-| Governance (20%) | Only if user configured a multisig address | Yes (conditional) |
-| TVL (15%) | Only for DeFi category | Yes (conditional) |
-| Bytecode (0% weight but displayed) | Only if `program_id` is set (on-chain) | Yes (conditional) |
+Add `link: false` to the StarterKit config to prevent the duplicate:
 
-## Solution
-
-After the profile is successfully inserted/updated in the `claim-profile` edge function, fire the relevant analysis functions as **fire-and-forget** background calls. This means:
-
-- The response to the user is still instant (profile created)
-- Analysis runs in parallel in the background
-- By the time the user lands on their dashboard (1-3 seconds later), most or all analyses will have completed
-- No timeout risk because each analysis is its own independent edge function call
-
-## Technical Changes
-
-### 1. Update `supabase/functions/claim-profile/index.ts`
-
-After the successful profile insert/update (after line 121), add fire-and-forget calls to the analysis functions using `fetch()` against the Supabase edge function URLs. This avoids awaiting them and delaying the response.
-
-```
-// After: const finalProfileId = ...
-
-// Fire-and-forget: trigger analysis pipeline
-const functionsUrl = `${supabaseUrl}/functions/v1`;
-const headers = {
-  'Authorization': `Bearer ${supabaseServiceKey}`,
-  'Content-Type': 'application/json',
-};
-
-const githubUrl = rest.github_org_url || profileData.github_org_url;
-
-// 1. Dependency Health (needs GitHub URL)
-if (githubUrl) {
-  fetch(`${functionsUrl}/analyze-dependencies`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      github_url: githubUrl,
-      profile_id: finalProfileId,
-    }),
-  }).catch(() => {});
-}
-
-// 2. Governance (needs multisig address)
-const govAddress = rest.multisig_address;
-if (govAddress) {
-  fetch(`${functionsUrl}/analyze-governance`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      governance_address: govAddress,
-      profile_id: finalProfileId,
-    }),
-  }).catch(() => {});
-}
-
-// 3. TVL (only for DeFi)
-const profileCategory = rest.category;
-if (profileCategory === 'defi') {
-  fetch(`${functionsUrl}/analyze-tvl`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      protocol_name: project_name,
-      profile_id: finalProfileId,
-      monthly_commits: rest.github_commits_30d || 30,
-    }),
-  }).catch(() => {});
-}
-
-// 4. Bytecode Verification (only for on-chain programs)
-const onChainProgramId = rest.program_id;
-if (onChainProgramId && onChainProgramId !== finalProfileId) {
-  fetch(`${functionsUrl}/verify-bytecode`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      program_id: onChainProgramId,
-      profile_id: finalProfileId,
-      github_url: githubUrl,
-    }),
-  }).catch(() => {});
-}
-
-// 5. Security Posture (if GitHub URL available)
-if (githubUrl) {
-  fetch(`${functionsUrl}/analyze-security-posture`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({
-      github_url: githubUrl,
-      profile_id: finalProfileId,
-    }),
-  }).catch(() => {});
-}
+```typescript
+StarterKit.configure({
+  heading: {
+    levels: [1, 2, 3],
+  },
+  link: false, // Prevent duplicate -- Link is configured separately below
+}),
 ```
 
-### 2. No frontend changes needed
+---
 
-The frontend already:
-- Shows "First analysis in progress" banner when timestamps are null
-- Shows "Awaiting Analysis" states on health cards
-- Uses react-query which will pick up fresh data on next poll/refetch
+## Part 2: Auto-Add Profile Owner as First Team Member
 
-The only difference is that data will populate within seconds instead of up to 30 minutes.
+The person who claimed the project should automatically appear as the first entry on the Team tab. This entry is not editable or deletable -- it's derived from the profile's own data.
 
-## What Users Will Experience After This Fix
+### How It Works
 
-1. User completes the claim flow and hits "Register"
-2. Profile is created instantly, user is redirected to their dashboard
-3. Dashboard briefly shows "First analysis in progress" banner (1-3 seconds)
-4. Dependency health, governance, TVL, and bytecode results appear automatically as they complete
-5. Off-chain projects correctly skip bytecode (showing "Not On-Chain")
-6. Non-DeFi projects correctly skip TVL
+**On the public Team tab (`TeamTabContent.tsx`):**
+- Accept new props: `ownerName` (x_username), `ownerImageUrl` (logo_url), and `isOwner` flag
+- Before rendering the team members grid, construct a synthetic "owner" team member object from the profile data:
+  - **Name**: The project's X username (e.g., `@rezilience_xyz`)
+  - **Image**: The project's logo
+  - **Role**: "Founder" (badge)
+  - **Job Title**: "Project Owner"
+  - **Visually distinct**: A subtle border or "Owner" crown badge to differentiate
+- Prepend this owner card before the manually-added team members
+- The owner card is always first (order: -1) and cannot be removed
 
-## Edge Cases Handled
+**On the owner's Team Management (`TeamManagement.tsx`):**
+- Show the owner's card at the top of the list with a "locked" visual (no edit/delete buttons)
+- A small label like "Auto-generated from your profile" beneath it
+- The "Add Member" functionality remains the same for additional team members
 
-- **No GitHub URL**: Dependency and security analyses are skipped (no-op)
-- **No multisig**: Governance analysis is skipped
-- **Not DeFi**: TVL analysis is skipped
-- **Off-chain (no program ID)**: Bytecode verification is skipped
-- **Analysis failure**: Each call has `.catch(() => {})` so failures are silent and non-blocking
-- **Duplicate analysis**: The 30-minute cron will still run but will just refresh already-populated data (no harm)
+**Data flow -- no database changes needed:**
+- The owner entry is constructed at render time from `profile.xUsername` and `profile.logoUrl`
+- It's NOT stored in the `team_members` JSON column -- it's synthesized in the component
+- This means it always stays in sync with the profile (if they change their logo, the team card updates automatically)
 
-## Files Modified
+### Files Modified
 
-1. `supabase/functions/claim-profile/index.ts` -- Add fire-and-forget analysis calls after profile creation
+1. **`src/components/ui/rich-text-editor.tsx`** -- Add `link: false` to StarterKit config (fixes crash)
+2. **`src/components/program/tabs/TeamTabContent.tsx`** -- Accept `ownerUsername` and `ownerLogoUrl` props; prepend a non-editable owner card to the team grid
+3. **`src/components/profile/tabs/TeamManagement.tsx`** -- Show the owner as a locked, non-editable first entry in the management list
+4. **`src/pages/ProfileDetail.tsx`** -- Pass `ownerUsername={profile.xUsername}` and `ownerLogoUrl={profile.logoUrl}` to both `TeamTabContent` and `TeamManagement`
+
+### What the Owner Card Looks Like
+
+Same card design as other team members but:
+- Role badge shows "Founder"
+- A small crown icon or "Owner" label overlay
+- Name shows the X username (since that's the identity they signed up with)
+- Image uses the project logo
+- No edit/delete buttons in management view
+- Subtle "Auto-generated from your profile" note in management view
 
