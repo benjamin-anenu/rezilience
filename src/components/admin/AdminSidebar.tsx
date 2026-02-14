@@ -10,6 +10,7 @@ import {
   LogOut,
   Shield,
   Gauge,
+  Radio,
 } from 'lucide-react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import logoImg from '@/assets/logo.png';
@@ -23,6 +24,7 @@ const navItems = [
   { to: '/admin/costs', icon: DollarSign, label: 'Costs' },
   { to: '/admin/registry', icon: Database, label: 'Registry' },
   { to: '/admin/recalibrate', icon: Gauge, label: 'Recalibrate' },
+  { to: '/admin/trends', icon: Radio, label: 'Trends' },
   { to: '/admin/reporter', icon: FileText, label: 'Grant Reporter' },
 ];
 

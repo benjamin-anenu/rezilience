@@ -206,10 +206,14 @@ export const LeaderboardRow = React.memo(function LeaderboardRow({
         {/* Project */}
         <TableCell className="max-w-[120px] px-2">
           <div className="flex items-center gap-1.5">
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-primary/10">
-              <span className="font-display text-[10px] font-bold text-primary">
-                {project.program_name.charAt(0)}
-              </span>
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-sm bg-primary/10 overflow-hidden">
+              {project.logo_url ? (
+                <img src={project.logo_url} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; (e.target as HTMLImageElement).nextElementSibling && ((e.target as HTMLImageElement).parentElement!.innerHTML = `<span class="font-display text-[10px] font-bold text-primary">${project.program_name.charAt(0)}</span>`); }} />
+              ) : (
+                <span className="font-display text-[10px] font-bold text-primary">
+                  {project.program_name.charAt(0)}
+                </span>
+              )}
             </div>
             <Tooltip>
               <TooltipTrigger asChild>

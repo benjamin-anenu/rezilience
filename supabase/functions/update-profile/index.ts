@@ -63,6 +63,7 @@ const EDITABLE_FIELDS = [
   "milestones",
   "team_members",
   "staking_pitch",
+  "logo_url",
 ];
 
 Deno.serve(async (req) => {

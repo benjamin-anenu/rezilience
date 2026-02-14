@@ -2,6 +2,8 @@ import { useState, useMemo, useEffect } from 'react';
 import { Layout } from '@/components/layout';
 import { useTrackEvent } from '@/components/layout/Layout';
 import { EcosystemStats, EcosystemHeatmap, EcosystemPulse, SearchBar, ProgramLeaderboard, BuildersInPublicFeed } from '@/components/explorer';
+import { TrendTicker } from '@/components/explorer/TrendTicker';
+import { TrendFeed } from '@/components/explorer/TrendFeed';
 import { useExplorerProjects } from '@/hooks/useExplorerProjects';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -30,6 +32,7 @@ const Explorer = () => {
   const [countryFilter, setCountryFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [activeView, setActiveView] = useState<ActiveView>('list');
+  const [showTrendFeed, setShowTrendFeed] = useState(false);
 
   const { data: projects, isLoading, error } = useExplorerProjects();
 
@@ -111,6 +114,18 @@ const Explorer = () => {
           <div className="mb-6">
             <EcosystemStats />
           </div>
+
+          {/* Trend Ticker */}
+          <div className="mb-4">
+            <TrendTicker onViewAll={() => setShowTrendFeed(!showTrendFeed)} />
+          </div>
+
+          {/* Expanded Trend Feed */}
+          {showTrendFeed && (
+            <div className="mb-6">
+              <TrendFeed onClose={() => setShowTrendFeed(false)} />
+            </div>
+          )}
 
           {/* View Toggle Row: BIP standalone left, data tabs right */}
           <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -95,6 +95,7 @@ const ClaimProfile = () => {
   const [category, setCategory] = useState<ProjectCategory | ''>('');
   const [country, setCountry] = useState('');
   const [websiteUrl, setWebsiteUrl] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
   const [programId, setProgramId] = useState('');
   const [programLoading, setProgramLoading] = useState(false);
   const [programVerified, setProgramVerified] = useState(false);
@@ -381,6 +382,7 @@ const ClaimProfile = () => {
         category: category || null,
         country: country || null,
         website_url: websiteUrl || null,
+        logo_url: logoUrl && !logoUrl.startsWith('blob:') ? logoUrl : null,
         program_id: programId || null,
         claimer_wallet: connected && publicKey ? publicKey.toBase58() : null,
         github_org_url: githubAnalysisResult.htmlUrl,
@@ -436,6 +438,25 @@ const ClaimProfile = () => {
       }
       
       if (error) throw error;
+      
+      // Insert ecosystem trend for the claim
+      try {
+        await supabase.functions.invoke('manage-trends', {
+          body: {
+            action: 'create',
+            admin_email: 'system',
+            trend: {
+              event_type: 'claim',
+              title: `${projectName} just joined the Rezilience Registry`,
+              profile_id: profileId,
+              created_by: 'system',
+            },
+          },
+        });
+      } catch (trendErr) {
+        // Non-critical, don't block the claim flow
+        console.warn('Failed to create trend:', trendErr);
+      }
       
       localStorage.removeItem('claimFormProgress');
       localStorage.removeItem('claimingProfile');
@@ -601,6 +622,8 @@ const ClaimProfile = () => {
                 setCountry={setCountry}
                 websiteUrl={websiteUrl}
                 setWebsiteUrl={setWebsiteUrl}
+                logoUrl={logoUrl}
+                setLogoUrl={setLogoUrl}
               />
 
               {/* Optional Identifiers */}

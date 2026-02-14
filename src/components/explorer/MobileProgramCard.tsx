@@ -150,10 +150,14 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory, veloc
 
       {/* Program Identity */}
       <div className="mb-4 flex items-center gap-3">
-        <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-primary/10 shrink-0">
-          <span className="font-display text-lg font-bold text-primary">
-            {project.program_name.charAt(0)}
-          </span>
+        <div className="flex h-12 w-12 items-center justify-center rounded-sm bg-primary/10 shrink-0 overflow-hidden">
+          {project.logo_url ? (
+            <img src={project.logo_url} alt="" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+          ) : (
+            <span className="font-display text-lg font-bold text-primary">
+              {project.program_name.charAt(0)}
+            </span>
+          )}
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
