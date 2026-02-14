@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Download, Calendar, FileText } from 'lucide-react';
@@ -6,9 +6,13 @@ import { StatCard } from '@/components/admin/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
   RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
 } from 'recharts';
+import logoImg from '@/assets/logo.png';
 
 const C = {
   teal: 'hsl(174, 100%, 38%)',
@@ -84,7 +88,6 @@ async function fetchReportData(startDate: string, endDate: string) {
     { metric: 'Visitors', current: uniqueSessions, previous: 0 },
   ];
 
-  // Radar chart data
   const radarData = [
     { dim: 'Registrations', value: Math.min(profiles.length * 10, 100) },
     { dim: 'Claims', value: Math.min(claimed * 20, 100) },
@@ -94,10 +97,17 @@ async function fetchReportData(startDate: string, endDate: string) {
     { dim: 'Scoring', value: Math.min((scoreEntries || 0) / 50, 100) },
   ];
 
+  // All profiles for the project table
+  const { data: allProfiles } = await supabase
+    .from('claimed_profiles_public')
+    .select('id, project_name, claim_status, resilience_score, created_at')
+    .order('resilience_score', { ascending: false });
+
   return {
     newRegistrations: profiles.length, claimedInPeriod: claimed, avgScore,
     scoreEntries: scoreEntries || 0, engagementEvents: analyticsEvents || 0,
     uniqueVisitors: uniqueSessions, comparisonData, radarData, profiles,
+    allProfiles: allProfiles || [],
   };
 }
 
@@ -107,6 +117,22 @@ export function AdminReporter() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString().substring(0, 10);
   const [startDate, setStartDate] = useState(thirtyDaysAgo);
   const [endDate, setEndDate] = useState(today);
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+
+  // Fetch AI-generated cover image on mount
+  useEffect(() => {
+    async function fetchCover() {
+      try {
+        const response = await supabase.functions.invoke('generate-report-cover');
+        if (response.data?.url) {
+          setCoverImageUrl(response.data.url);
+        }
+      } catch (e) {
+        console.error('Failed to fetch cover image:', e);
+      }
+    }
+    fetchCover();
+  }, []);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-report', startDate, endDate],
@@ -143,9 +169,39 @@ export function AdminReporter() {
     setTimeout(() => reportRef.current?.classList.remove('print-report'), 500);
   };
 
+  const getScoreColor = (score: number | null) => {
+    const s = score || 0;
+    if (s >= 70) return '#00C2B6';
+    if (s >= 40) return '#C24E00';
+    return '#8B949E';
+  };
+
   return (
     <div ref={reportRef} className="p-6 lg:p-8 space-y-5 admin-gradient-bg min-h-full">
-      {/* Print-only branded header */}
+
+      {/* ========== PRINT-ONLY: Cover Page ========== */}
+      <div className="print-cover-page">
+        <img src={logoImg} alt="Rezilience" className="print-cover-logo" />
+        {coverImageUrl && (
+          <img src={coverImageUrl} alt="Milestone Report" className="print-cover-image" />
+        )}
+        <div className="print-cover-accent" />
+        <h1 className="print-cover-title">Milestone Report</h1>
+        <p className="print-cover-subtitle">Solana Foundation Grant Program</p>
+        <p className="print-cover-period">{startDate} → {endDate}</p>
+        <p className="print-cover-date">Generated {new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+        <p className="print-cover-confidential">CONFIDENTIAL · REZILIENCE.FI</p>
+      </div>
+
+      {/* ========== PRINT-ONLY: Watermark ========== */}
+      <div className="print-watermark">
+        <img src={logoImg} alt="" />
+      </div>
+
+      {/* ========== PRINT-ONLY: Page number ========== */}
+      <div className="print-page-number" />
+
+      {/* Print-only branded header (page 2+) */}
       <div className="hidden print-header">
         <h1 style={{ fontFamily: 'Space Grotesk, sans-serif' }}>Rezilience — Milestone Report</h1>
         <p style={{ fontFamily: 'JetBrains Mono, monospace' }}>SOLANA FOUNDATION GRANT · {startDate} → {endDate} · Generated {new Date().toLocaleDateString()}</p>
@@ -170,7 +226,7 @@ export function AdminReporter() {
       ) : data ? (
         <>
           {/* KPI Strip */}
-          <div className="glass-card rounded-sm kpi-strip divide-x divide-border/20">
+          <div className="glass-card rounded-sm kpi-strip divide-x divide-border/20 print-section">
             <StatCard compact title="Registrations" value={data.newRegistrations} />
             <StatCard compact title="Claimed" value={data.claimedInPeriod} />
             <StatCard compact title="Avg Score" value={data.avgScore} />
@@ -180,8 +236,7 @@ export function AdminReporter() {
           </div>
 
           {/* Row: Comparison + Radar */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {/* Period Comparison */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 print-section">
             <div className="glass-chart p-5">
               <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Period vs Previous</h3>
               <div className="h-56">
@@ -198,7 +253,6 @@ export function AdminReporter() {
               </div>
             </div>
 
-            {/* Radar */}
             <div className="glass-chart p-5">
               <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Dimension Summary</h3>
               <div className="h-56">
@@ -214,7 +268,7 @@ export function AdminReporter() {
           </div>
 
           {/* Narrative */}
-          <div className="glass-chart p-5">
+          <div className="glass-chart p-5 print-section">
             <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Milestone Summary</h3>
             <p className="text-sm text-muted-foreground leading-relaxed">
               During <span className="text-primary font-semibold">{startDate}</span> to <span className="text-primary font-semibold">{endDate}</span>,
@@ -223,6 +277,52 @@ export function AdminReporter() {
               The scoring engine produced <span className="text-primary font-semibold">{data.scoreEntries.toLocaleString()}</span> snapshots across
               <span className="text-primary font-semibold"> {data.engagementEvents.toLocaleString()}</span> engagement events from
               <span className="text-primary font-semibold"> {data.uniqueVisitors.toLocaleString()}</span> unique visitors.
+            </p>
+          </div>
+
+          {/* ========== Registered Projects Table ========== */}
+          <div className="glass-chart p-5 print-section">
+            <h3 className="mb-3 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+              Registered Projects — Milestone Evidence
+            </h3>
+            <div className="rounded-sm border border-border/40 overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border/30">
+                    <TableHead className="text-[9px] font-mono uppercase tracking-wider w-12">#</TableHead>
+                    <TableHead className="text-[9px] font-mono uppercase tracking-wider">Project</TableHead>
+                    <TableHead className="text-[9px] font-mono uppercase tracking-wider">Status</TableHead>
+                    <TableHead className="text-[9px] font-mono uppercase tracking-wider text-right">Score</TableHead>
+                    <TableHead className="text-[9px] font-mono uppercase tracking-wider text-right">Registered</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.allProfiles.map((p, i) => (
+                    <TableRow key={p.id} className="border-border/20 print-table-row">
+                      <TableCell className="font-mono text-xs text-muted-foreground">{i + 1}</TableCell>
+                      <TableCell className="font-medium text-sm">{p.project_name}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[9px] font-mono uppercase tracking-wider ${
+                          p.claim_status === 'claimed'
+                            ? 'bg-primary/10 text-primary'
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {p.claim_status || 'unclaimed'}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-sm font-semibold" style={{ color: getScoreColor(p.resilience_score) }}>
+                        {p.resilience_score ?? '—'}
+                      </TableCell>
+                      <TableCell className="text-right font-mono text-[10px] text-muted-foreground">
+                        {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            <p className="text-[9px] text-muted-foreground font-mono mt-2">
+              {data.allProfiles.length} projects registered · Sorted by Rezilience Score (descending)
             </p>
           </div>
 

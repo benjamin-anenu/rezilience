@@ -305,14 +305,148 @@
   .print-report {
     background: #ffffff !important;
     color: #1a1a2e !important;
-    padding: 40px !important;
+    padding: 0 !important;
     font-family: 'Inter', sans-serif !important;
+    counter-reset: page-counter;
   }
 
+  /* ===== COVER PAGE ===== */
+  .print-report .print-cover-page {
+    display: flex !important;
+    visibility: visible !important;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 60px 80px;
+    background: linear-gradient(180deg, #ffffff 0%, #f0faf9 40%, #ffffff 100%) !important;
+    page-break-after: always;
+    break-after: page;
+    text-align: center;
+  }
+
+  .print-cover-logo {
+    width: 120px;
+    height: auto;
+    margin-bottom: 40px;
+  }
+
+  .print-cover-image {
+    width: 100%;
+    max-width: 580px;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 40px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+  }
+
+  .print-cover-accent {
+    width: 80px;
+    height: 3px;
+    background: #00C2B6;
+    margin: 0 auto 28px;
+  }
+
+  .print-cover-title {
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 36px !important;
+    font-weight: 700 !important;
+    color: #0F1216 !important;
+    letter-spacing: -0.5px;
+    margin: 0 0 8px 0;
+  }
+
+  .print-cover-subtitle {
+    font-family: 'Space Grotesk', sans-serif !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
+    color: #00897B !important;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 0 0 24px 0;
+  }
+
+  .print-cover-period {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 13px !important;
+    color: #666 !important;
+    margin: 0 0 6px 0;
+  }
+
+  .print-cover-date {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 11px !important;
+    color: #999 !important;
+    margin: 0 0 24px 0;
+  }
+
+  .print-cover-confidential {
+    font-family: 'JetBrains Mono', monospace !important;
+    font-size: 9px !important;
+    color: #bbb !important;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin: 0;
+  }
+
+  /* ===== WATERMARK ===== */
+  .print-report .print-watermark {
+    display: block !important;
+    visibility: visible !important;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotate(-30deg);
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .print-report .print-watermark img {
+    width: 300px;
+    height: auto;
+    opacity: 0.04;
+  }
+
+  /* ===== PAGE NUMBERS ===== */
+  .print-report .print-section {
+    counter-increment: page-counter;
+  }
+
+  .print-report .print-page-number {
+    display: block !important;
+    visibility: visible !important;
+    position: fixed;
+    bottom: 10mm;
+    right: 15mm;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 8px;
+    color: #ccc;
+  }
+
+  .print-report .print-page-number::after {
+    content: "Rezilience Milestone Report";
+  }
+
+  @page {
+    size: A4 landscape;
+    margin: 15mm;
+
+    @bottom-right {
+      content: "Page " counter(page);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 8px;
+      color: #999;
+    }
+  }
+
+  /* ===== CONTENT PAGES (2+) ===== */
   .print-report .print-header {
+    display: block !important;
     border-bottom: 2px solid #00C2B6;
     padding-bottom: 16px;
     margin-bottom: 24px;
+    padding-left: 40px;
+    padding-right: 40px;
   }
 
   .print-report .print-header h1 {
@@ -336,6 +470,8 @@
     -webkit-backdrop-filter: none !important;
     break-inside: avoid;
     page-break-inside: avoid;
+    margin-left: 40px;
+    margin-right: 40px;
   }
 
   .print-report h3 { color: #333 !important; }
@@ -353,6 +489,45 @@
     border-color: #ddd !important;
   }
 
+  /* ===== TABLE STYLES ===== */
+  .print-report table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+  }
+
+  .print-report thead tr {
+    background: #f0f4f8 !important;
+    border-bottom: 2px solid #00C2B6 !important;
+  }
+
+  .print-report thead th {
+    color: #333 !important;
+    font-size: 9px !important;
+    font-weight: 600 !important;
+    padding: 8px 12px !important;
+    text-align: left !important;
+  }
+
+  .print-report .print-table-row {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-report tbody tr:nth-child(even) {
+    background: #f8f9fa !important;
+  }
+
+  .print-report tbody tr:nth-child(odd) {
+    background: #ffffff !important;
+  }
+
+  .print-report tbody td {
+    color: #333 !important;
+    font-size: 11px !important;
+    padding: 6px 12px !important;
+    border-bottom: 1px solid #eee !important;
+  }
+
   /* Chart SVG contrast */
   .print-report .recharts-wrapper text { fill: #333 !important; }
   .print-report .recharts-cartesian-grid line { stroke: #ddd !important; }
@@ -364,12 +539,16 @@
     font-size: 9px;
     color: #999 !important;
     text-align: center;
+    margin-left: 40px;
+    margin-right: 40px;
   }
+}
 
-  @page {
-    size: A4 landscape;
-    margin: 15mm;
-  }
+/* Hide print-only elements on screen */
+.print-cover-page,
+.print-watermark,
+.print-page-number {
+  display: none;
 }
  
  /* Solana Wallet Adapter Styles Override */
