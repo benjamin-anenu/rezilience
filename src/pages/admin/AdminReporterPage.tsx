@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Download, Calendar, FileText } from 'lucide-react';
@@ -117,16 +117,22 @@ export function AdminReporter() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString().substring(0, 10);
   const [startDate, setStartDate] = useState(thirtyDaysAgo);
   const [endDate, setEndDate] = useState(today);
-  const { data: coverImageUrl } = useQuery({
-    queryKey: ['report-cover-image'],
-    queryFn: async () => {
-      const response = await supabase.functions.invoke('generate-report-cover');
-      return response.data?.url || null;
-    },
-    retry: 3,
-    retryDelay: 2000,
-    staleTime: Infinity,
-  });
+  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
+
+  // Fetch AI-generated cover image on mount
+  useEffect(() => {
+    async function fetchCover() {
+      try {
+        const response = await supabase.functions.invoke('generate-report-cover');
+        if (response.data?.url) {
+          setCoverImageUrl(response.data.url);
+        }
+      } catch (e) {
+        console.error('Failed to fetch cover image:', e);
+      }
+    }
+    fetchCover();
+  }, []);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-report', startDate, endDate],
