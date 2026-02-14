@@ -249,6 +249,9 @@ const ProgramDetail = () => {
                     stakingPitch={claimedProfile?.stakingPitch}
                     isVerified={isVerified}
                     claimStatus={claimStatus}
+                    ownerUsername={claimedProfile?.xUsername}
+                    ownerLogoUrl={claimedProfile?.logoUrl}
+                    ownerProjectName={claimedProfile?.projectName}
                   />
                 ),
                 community: (

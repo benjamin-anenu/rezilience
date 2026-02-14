@@ -41,6 +41,7 @@ export const RichTextEditor = ({
         heading: {
           levels: [1, 2, 3],
         },
+        link: false, // Prevent duplicate -- Link is configured separately below
       }),
       Link.configure({
         openOnClick: false,
