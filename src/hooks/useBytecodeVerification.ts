@@ -87,8 +87,23 @@ export function useBytecodeVerification() {
  */
 export function getBytecodeStatusInfo(
   status: string | undefined | null,
-  confidence?: string | null
+  confidence?: string | null,
+  hasProgramId?: boolean
 ) {
+  // Off-chain projects with no program ID
+  if (hasProgramId === false && (!status || status === 'unknown')) {
+    return {
+      label: 'N/A — Off-chain',
+      description: 'No on-chain program registered. This project is off-chain.',
+      value: 0,
+      isPositive: false,
+      isWarning: false,
+      isNA: true,
+      isUnverified: false,
+      isOffChain: true,
+      confidence: 'NOT_DEPLOYED' as BytecodeConfidence,
+    };
+  }
   const tier = confidence as BytecodeConfidence | undefined;
 
   switch (status) {
@@ -135,7 +150,7 @@ export function getBytecodeStatusInfo(
         label: isSuspicious ? '⚠ Suspicious' : 'Unverified',
         description: isSuspicious
           ? 'Hash mismatch detected between independent verification and registry'
-          : 'Program exists but not in verified builds registry',
+          : 'Program deployed but not yet in verified builds registry',
         value: isSuspicious ? 10 : 50,
         isPositive: false,
         isWarning: isSuspicious,

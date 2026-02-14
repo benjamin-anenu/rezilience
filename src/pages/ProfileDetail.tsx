@@ -17,6 +17,7 @@ import {
   TeamTabContent,
 } from '@/components/program';
 import { SettingsTab, BuildInPublicTab, TeamManagement } from '@/components/profile/tabs';
+import { DevelopmentTab } from '@/components/profile/tabs/DevelopmentTab';
 import { RoadmapManagement } from '@/components/profile/tabs/RoadmapManagement';
 import { PROJECT_CATEGORIES } from '@/types';
 import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
@@ -233,27 +234,11 @@ const ProfileDetail = () => {
                     />
                   ),
                   development: (
-                    <DevelopmentTabContent
-                      projectId={profile.id}
-                      githubUrl={profile.githubOrgUrl}
-                      analytics={profile.githubAnalytics}
-                      program={programForComponents}
-                      githubIsFork={profile.githubAnalytics?.github_is_fork}
-                      githubOAuthVerified={!!profile.githubUsername}
-                      dependencyHealthScore={profile.dependencyMetrics?.dependency_health_score}
-                      dependencyOutdatedCount={profile.dependencyMetrics?.dependency_outdated_count}
-                      dependencyCriticalCount={profile.dependencyMetrics?.dependency_critical_count}
-                      dependencyAnalyzedAt={profile.dependencyMetrics?.dependency_analyzed_at}
-                      governanceAddress={profile.governanceMetrics?.governance_address}
-                      governanceTx30d={profile.governanceMetrics?.governance_tx_30d}
-                      governanceLastActivity={profile.governanceMetrics?.governance_last_activity}
-                      governanceAnalyzedAt={profile.governanceMetrics?.governance_analyzed_at}
-                      tvlUsd={profile.tvlMetrics?.tvl_usd}
-                      tvlMarketShare={profile.tvlMetrics?.tvl_market_share}
-                      tvlRiskRatio={profile.tvlMetrics?.tvl_risk_ratio}
-                      tvlAnalyzedAt={profile.tvlMetrics?.tvl_analyzed_at}
-                      protocolName={profile.projectName}
-                      category={profile.category}
+                    <DevelopmentTab
+                      profile={profile}
+                      isOwner={true}
+                      profileId={profile.id}
+                      programId={profile.programId || undefined}
                     />
                   ),
                   team: (

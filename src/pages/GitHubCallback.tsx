@@ -89,6 +89,9 @@ const GitHubCallback = () => {
         setCurrentStep('Calculating Resilience Score...');
         await new Promise(resolve => setTimeout(resolve, 500));
 
+        // Determine if this is a profile re-verification (not initial claim)
+        const verifyProfileId = localStorage.getItem('verifyGithubProfileId');
+
         // FIX #3 & #8: Clean up ALL temp storage including form progress on success
         localStorage.removeItem('claimingProgramId');
         localStorage.removeItem('claimingProgramDbId');
@@ -96,19 +99,21 @@ const GitHubCallback = () => {
         localStorage.removeItem('claimingXUserId');
         localStorage.removeItem('claimingXUsername');
         localStorage.removeItem('claimingProfile');
-        localStorage.removeItem('claimFormProgress'); // FIX #3: Clear form progress on success
+        localStorage.removeItem('claimFormProgress');
         localStorage.removeItem('github_oauth_state');
+        localStorage.removeItem('verifyGithubProfileId');
         
         // Store verified profile ID for final navigation
-        localStorage.setItem('verifiedProfileId', data.profile?.id || '');
+        const targetProfileId = verifyProfileId || data.profile?.id || '';
+        localStorage.setItem('verifiedProfileId', targetProfileId);
 
         setProfileData(data.profile);
         setStatus('success');
         setCurrentStep('Verification complete!');
 
-        // Redirect directly to the profile page instead of back to onboarding
+        // Redirect to the correct destination
         setTimeout(() => {
-          navigate(`/profile/${data.profile?.id}`);
+          navigate(`/profile/${targetProfileId}`);
         }, 2000);
 
       } catch (err) {
@@ -116,6 +121,7 @@ const GitHubCallback = () => {
         // FIX #8: Clear temporary storage on error path as well
         localStorage.removeItem('github_oauth_state');
         localStorage.removeItem('claimingProfile');
+        localStorage.removeItem('verifyGithubProfileId');
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
         setStatus('error');
       }
