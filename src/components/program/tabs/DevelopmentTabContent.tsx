@@ -26,6 +26,7 @@ interface DevelopmentTabContentProps {
   bytecodeDeploySlot?: number | null;
   programId?: string | null;
   profileId?: string;
+  githubOAuthVerified?: boolean;
   // New multi-dimensional scoring props
   dependencyHealthScore?: number;
   dependencyOutdatedCount?: number;
@@ -62,6 +63,7 @@ export function DevelopmentTabContent({
   bytecodeDeploySlot,
   programId,
   profileId,
+  githubOAuthVerified = false,
   // Multi-dimensional props with defaults
   dependencyHealthScore = 0,
   dependencyOutdatedCount = 0,
@@ -88,8 +90,8 @@ export function DevelopmentTabContent({
 
   // Get GitHub originality status
   const getGithubOriginalityInfo = () => {
-    if (githubIsFork === undefined) {
-      return { subtitle: 'Awaiting Analysis', value: 0, isPositive: false, isWarning: false, isNA: true, isUnverified: true };
+    if (!githubOAuthVerified) {
+      return { subtitle: 'Awaiting Verification', value: 0, isPositive: false, isWarning: false, isNA: true, isUnverified: true };
     }
     if (githubIsFork) {
       return { subtitle: 'Forked Repository', value: 30, isPositive: false, isWarning: true };

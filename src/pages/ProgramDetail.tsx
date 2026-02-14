@@ -215,6 +215,7 @@ const ProgramDetail = () => {
                     analytics={claimedProfile?.githubAnalytics}
                     program={programForComponents}
                     githubIsFork={claimedProfile?.githubAnalytics?.github_is_fork}
+                    githubOAuthVerified={!!claimedProfile?.githubUsername}
                     bytecodeMatchStatus={claimedProfile?.bytecodeMatchStatus}
                     bytecodeVerifiedAt={claimedProfile?.bytecodeVerifiedAt}
                     bytecodeConfidence={claimedProfile?.bytecodeConfidence}

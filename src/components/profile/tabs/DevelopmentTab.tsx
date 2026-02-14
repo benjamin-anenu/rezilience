@@ -16,9 +16,11 @@ export function DevelopmentTab({ profile }: DevelopmentTabProps) {
   const githubIsFork = analytics?.github_is_fork;
 
   // Get GitHub originality status
+  const githubOAuthVerified = !!profile.githubUsername;
+
   const getGithubOriginalityInfo = () => {
-    if (githubIsFork === undefined) {
-      return { subtitle: 'Awaiting Analysis', value: 0, isPositive: false, isWarning: false, isUnverified: true };
+    if (!githubOAuthVerified) {
+      return { subtitle: 'Awaiting Verification', value: 0, isPositive: false, isWarning: false, isUnverified: true };
     }
     if (githubIsFork) {
       return { subtitle: 'Forked Repository', value: 30, isPositive: false, isWarning: true };

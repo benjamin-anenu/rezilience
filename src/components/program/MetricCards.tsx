@@ -9,13 +9,14 @@ interface MetricCardsProps {
   githubIsFork?: boolean;
   bytecodeMatchStatus?: string | null;
   bytecodeConfidence?: string | null;
+  githubOAuthVerified?: boolean;
 }
 
-export function MetricCards({ program, githubIsFork, bytecodeMatchStatus, bytecodeConfidence }: MetricCardsProps) {
+export function MetricCards({ program, githubIsFork, bytecodeMatchStatus, bytecodeConfidence, githubOAuthVerified = false }: MetricCardsProps) {
   // Get GitHub originality status and styling
   const getGithubOriginalityInfo = () => {
-    if (githubIsFork === undefined) {
-      return { subtitle: 'Awaiting Analysis', value: 0, isPositive: false, isWarning: false, isUnverified: true };
+    if (!githubOAuthVerified) {
+      return { subtitle: 'Awaiting Verification', value: 0, isPositive: false, isWarning: false, isUnverified: true };
     }
     if (githubIsFork) {
       return { subtitle: 'Forked Repository', value: 30, isPositive: false, isWarning: true };
