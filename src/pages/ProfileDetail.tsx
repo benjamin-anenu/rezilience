@@ -385,6 +385,9 @@ const ProfileDetail = () => {
                     teamMembers={profile.teamMembers}
                     stakingPitch={profile.stakingPitch}
                     isVerified={profile.verified}
+                    ownerUsername={profile.xUsername}
+                    ownerLogoUrl={profile.logoUrl}
+                    ownerProjectName={profile.projectName}
                   />
                 ),
                 community: (

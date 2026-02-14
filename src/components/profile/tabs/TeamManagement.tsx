@@ -264,6 +264,28 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Owner Card - Locked, non-editable */}
+          <div className="flex items-start gap-3 rounded-sm border border-primary/30 bg-primary/5 p-3">
+            <Avatar className="h-10 w-10 border border-primary/30">
+              <AvatarImage src={profile.logoUrl || undefined} alt={profile.xUsername || profile.projectName} />
+              <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                {getInitials(profile.xUsername || profile.projectName)}
+              </AvatarFallback>
+            </Avatar>
+            
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <span className="font-medium text-foreground">
+                  {profile.xUsername ? `@${profile.xUsername}` : profile.projectName}
+                </span>
+                <Badge variant="default" className="text-xs">Founder</Badge>
+                <Badge variant="outline" className="text-[10px] border-primary/30 text-primary">Owner</Badge>
+              </div>
+              <p className="text-sm text-muted-foreground">Project Owner</p>
+              <p className="mt-1 text-xs text-muted-foreground/60 italic">Auto-generated from your profile</p>
+            </div>
+          </div>
+
           {/* Add Member Form */}
           {isAddingMember && (
             <div className="rounded-sm border border-primary/30 bg-primary/5 p-4 space-y-4">

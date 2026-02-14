@@ -1,4 +1,4 @@
-import { Users2, BadgeCheck, Target, Quote } from 'lucide-react';
+import { Users2, BadgeCheck, Target, Quote, Crown } from 'lucide-react';
 import { UnclaimedBanner } from '../UnclaimedBanner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,9 @@ interface TeamTabContentProps {
   stakingPitch?: string;
   isVerified?: boolean;
   claimStatus?: string;
+  ownerUsername?: string | null;
+  ownerLogoUrl?: string | null;
+  ownerProjectName?: string | null;
 }
 
 const getRoleBadgeVariant = (role: string) => {
@@ -38,13 +41,57 @@ const getInitials = (name: string) => {
     .slice(0, 2);
 };
 
-export function TeamTabContent({ teamMembers, stakingPitch, isVerified, claimStatus }: TeamTabContentProps) {
+export function TeamTabContent({ teamMembers, stakingPitch, isVerified, claimStatus, ownerUsername, ownerLogoUrl, ownerProjectName }: TeamTabContentProps) {
   const hasTeamMembers = teamMembers && teamMembers.length > 0;
+  const hasOwner = !!(ownerUsername || ownerProjectName);
   const hasStakingPitch = stakingPitch && stakingPitch.trim().length > 0;
   const isUnclaimed = claimStatus === 'unclaimed';
 
+  // Build synthetic owner card
+  const ownerCard = hasOwner ? (
+    <Card className="group overflow-hidden border-primary/30 bg-card transition-all hover:border-primary/50 hover:shadow-md ring-1 ring-primary/20">
+      {/* Profile Image */}
+      <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
+        {ownerLogoUrl ? (
+          <img
+            src={ownerLogoUrl}
+            alt={ownerUsername || ownerProjectName || 'Owner'}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+            <span className="font-display text-3xl font-bold text-primary/60">
+              {getInitials(ownerUsername || ownerProjectName || 'OW')}
+            </span>
+          </div>
+        )}
+        
+        {/* Role Badge + Owner Crown */}
+        <div className="absolute bottom-2 left-2 flex items-center gap-1.5">
+          <Badge variant="default" className="font-display text-xs uppercase tracking-wider shadow-md">
+            Founder
+          </Badge>
+          <div className="flex items-center gap-1 rounded-full bg-background/90 px-1.5 py-0.5 shadow-md">
+            <Crown className="h-3 w-3 text-primary" />
+            <span className="text-[10px] font-semibold text-primary">Owner</span>
+          </div>
+        </div>
+      </div>
+      
+      {/* Info */}
+      <CardContent className="p-3 space-y-2">
+        <div>
+          <h3 className="font-display text-base font-semibold text-foreground">
+            {ownerUsername ? `@${ownerUsername}` : ownerProjectName}
+          </h3>
+        </div>
+        <p className="text-sm text-foreground/90 font-medium">Project Owner</p>
+      </CardContent>
+    </Card>
+  ) : null;
+
   // Empty state
-  if (!hasTeamMembers && !hasStakingPitch) {
+  if (!hasTeamMembers && !hasStakingPitch && !hasOwner) {
     if (isUnclaimed) {
       return (
         <div className="space-y-6">
@@ -94,7 +141,7 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified, claimSta
       )}
 
       {/* Right Column - Meet The Team (2/3 width on desktop, or full width if no staking pitch) */}
-      {hasTeamMembers && (
+      {(hasTeamMembers || hasOwner) && (
         <div className={hasStakingPitch ? "lg:col-span-2" : "lg:col-span-3"}>
           <div className="space-y-4">
             <div className="flex items-center gap-2">
@@ -108,6 +155,7 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified, claimSta
             </div>
             
             <div className="grid gap-4 grid-cols-2 lg:grid-cols-3">
+              {ownerCard}
               {teamMembers
                 .sort((a, b) => a.order - b.order)
                 .map((member) => (
@@ -184,7 +232,7 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified, claimSta
       )}
 
       {/* Handle case: only staking pitch, no team members */}
-      {hasStakingPitch && !hasTeamMembers && (
+      {hasStakingPitch && !hasTeamMembers && !hasOwner && (
         <div className="lg:col-span-2">
           <Card className="border-border bg-card">
             <CardContent className="flex flex-col items-center justify-center py-12 text-center">
