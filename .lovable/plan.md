@@ -1,106 +1,89 @@
 
+# Fix: Eliminate Misleading Default Scores on Fresh Profiles
 
-# Review: Phase-Based Roadmap + Draft Persistence — One Fix Needed
+## The Problem
 
-## Status: 1 Issue Found, Everything Else Intact
+When you register a new off-chain project and land on your dashboard for the first time, you see:
+- **Bytecode Originality: "Verified Original" at 100%** (wrong -- your app is off-chain)
+- **Dependency Health: 50** (fabricated -- no analysis has run yet)
+- **GitHub Originality: "Not Analyzed" at 50%** (misleading bar fill)
+- No indication that data is being fetched in the background
 
-### What's Working Correctly
+This happens because the code uses optimistic defaults instead of showing "Awaiting Analysis" states.
 
-1. **Type System** -- `Phase` and `PhaseMilestone` interfaces are properly defined. `ClaimedProfile.milestones` and `ClaimProfileFormData.milestones` both use `Phase[]`. The old `Milestone` type is preserved for backward compatibility.
+## Root Causes
 
-2. **Claim Flow (ClaimProfile.tsx)** -- Step 5 renders `RoadmapForm` with `phases={milestones}` and `setPhases={setMilestones}`. The `handleDirectSubmit` correctly serializes milestones as JSON for the edge function. All 3 cases at Step 5 (GitHub OAuth done, public repo analyzed, no analysis) are intact.
+1. **ProfileDetail.tsx line 149**: Hardcodes `originalityStatus: 'verified'` for all profiles, regardless of whether bytecode verification has actually run.
+2. **DevelopmentTabContent.tsx line 66**: Defaults `dependencyHealthScore = 50` when no data exists.
+3. **No "pending analysis" skeleton/loading state**: Fresh profiles with no data look identical to fully-analyzed ones.
 
-3. **Draft Persistence** -- All fields are saved to localStorage: `githubAnalysisResult`, `logoUrl`, `authorityData`, `authorityVerified`, `programVerified`, `githubVerified`, plus the original form fields and `milestones` (Phase[]). Restore logic on mount is complete. "Draft auto-saved" indicator is rendered.
+## Changes
 
-4. **RoadmapForm (Claim Step)** -- Add/remove phases, add/remove milestones within phases, collapsible UI, lock-all mechanism, optional target dates, required descriptions -- all correct.
+### 1. Fix `originalityStatus` in ProfileDetail.tsx
 
-5. **RoadmapManagement (Dashboard)** -- Full CRUD with dialogs for add phase, add milestone, mark complete, request variance, remove phase/milestone. Locked phases block edits. Variance badge shown. Completion timestamps captured.
-
-6. **Public Display (RoadmapTabContent)** -- Progress bar, phase-level progress, collapsible phases, milestone status icons (completed/overdue/upcoming), optional dates, descriptions, variance badges -- all rendering correctly.
-
-7. **AboutTab (Owner Dashboard)** -- Correctly shows `RoadmapManagement` for owners and a static "Verified Timeline" view for public visitors, both using the Phase structure.
-
-8. **Data Layer** -- `useClaimedProfiles` maps DB JSON to `Phase[]`. `useUpdateProfile` accepts `Phase[]`. The `claim-profile` edge function uses `...rest` spread so it accepts any JSON shape without type issues.
-
-9. **Barrel Exports** -- `RoadmapForm` is properly exported from `src/components/claim/index.ts`.
-
----
-
-### Issue: Stale Type in `update-profile` Edge Function
-
-**File:** `supabase/functions/update-profile/index.ts` (lines 31-39)
-
-The `UpdateProfileBody.updates.milestones` type still defines the OLD flat milestone shape:
-
-```text
-milestones?: Array<{
-  id: string;
-  title: string;
-  targetDate: string;      // <-- old shape
-  isLocked: boolean;       // <-- old shape
-  status: "upcoming" | "completed" | "overdue";
-  varianceRequested?: boolean;
-  completedAt?: string;
-  originalTargetDate?: string;
-}>
+Change line 149 from:
+```
+originalityStatus: 'verified' as const,
+```
+to a conditional that checks whether the profile has a real program ID (on-chain) or not:
+```
+originalityStatus: (profile.programId && profile.programId !== profile.id)
+  ? 'unverified' as const
+  : 'not-deployed' as const,
 ```
 
-This should be updated to the new Phase structure:
+This ensures:
+- Off-chain projects show "Not On-Chain" (correct)
+- On-chain projects without bytecode verification show "Unverified" (honest) until the verify-bytecode function runs
 
-```text
-milestones?: Array<{
-  id: string;
-  title: string;
-  isLocked: boolean;
-  varianceRequested?: boolean;
-  milestones: Array<{
-    id: string;
-    title: string;
-    description: string;
-    targetDate?: string;
-    status: "upcoming" | "completed" | "overdue";
-    completedAt?: string;
-  }>;
-  order: number;
-}>
+### 2. Fix default values in DevelopmentTabContent.tsx
+
+Change the destructured defaults from fabricated numbers to explicit "no data" signals:
+
+| Prop | Current Default | New Default |
+|---|---|---|
+| `dependencyHealthScore` | `50` | `0` |
+| `dependencyOutdatedCount` | `0` | `0` (keep) |
+| `dependencyCriticalCount` | `0` | `0` (keep) |
+| `governanceTx30d` | `0` | `0` (keep) |
+| `tvlUsd` | `0` | `0` (keep) |
+
+### 3. Add "Awaiting Analysis" states to health cards
+
+Update `DependencyHealthCard`, `GovernanceHealthCard`, and originality metrics to detect when no analysis has ever run (`analyzedAt` is null/undefined) and render a clear "Awaiting first analysis" message instead of showing default numbers.
+
+For `DependencyHealthCard`: When `analyzedAt` is falsy, show "Awaiting Analysis" with a muted skeleton-style card instead of a score bar at 50.
+
+For bytecode/GitHub originality in `DevelopmentTabContent`: When `bytecodeMatchStatus` is null AND `program.originalityStatus` is `'not-deployed'`, show "Not On-Chain" at value 0 (already handled by the fix in step 1). When it's `'unverified'`, show "Awaiting Verification" instead of "Unverified" with 60%.
+
+### 4. Add loading indicator on ProfileDetail for fresh profiles
+
+When the profile has just been created (no `github_analyzed_at`, no `dependency_analyzed_at`, etc.), show a subtle banner at the top:
+
+```
+"First analysis in progress -- metrics will appear shortly."
 ```
 
-**Impact:** Currently non-breaking because the edge function just passes the JSON through to the DB without runtime validation against this TypeScript type. However, the type mismatch is technically incorrect and could cause issues if validation logic is added later.
+This uses the existing `isRefreshing` state or checks for the absence of any `*_analyzed_at` timestamps.
 
-### Fix
+## Technical Details
 
-Update lines 31-39 in `supabase/functions/update-profile/index.ts` to match the Phase structure.
+### Files Modified
 
----
+1. **src/pages/ProfileDetail.tsx** -- Fix `originalityStatus` from hardcoded `'verified'` to conditional based on programId. Add "First analysis in progress" banner for fresh profiles.
 
-### Summary Checklist
+2. **src/components/program/tabs/DevelopmentTabContent.tsx** -- Change `dependencyHealthScore` default from `50` to `0`. Update bytecode fallback logic to use `'not-deployed'` label correctly.
 
-| Checkpoint | Status |
-|---|---|
-| Phase/PhaseMilestone types defined | OK |
-| ClaimedProfile.milestones uses Phase[] | OK |
-| ClaimProfileFormData.milestones uses Phase[] | OK |
-| RoadmapForm (claim) - add/remove phases | OK |
-| RoadmapForm - add/remove milestones in phases | OK |
-| RoadmapForm - optional target dates | OK |
-| RoadmapForm - required descriptions | OK |
-| RoadmapForm - lock all phases | OK |
-| RoadmapManagement (dashboard) - CRUD | OK |
-| RoadmapManagement - mark complete with timestamp | OK |
-| RoadmapManagement - request variance on locked phase | OK |
-| RoadmapManagement - locked phases block edits | OK |
-| RoadmapTabContent (public) - phase progress bars | OK |
-| RoadmapTabContent - milestone status icons | OK |
-| RoadmapTabContent - descriptions displayed | OK |
-| RoadmapTabContent - optional dates displayed | OK |
-| AboutTab - owner vs public view | OK |
-| Draft persistence - all fields saved | OK |
-| Draft persistence - all fields restored | OK |
-| Draft persistence - "Draft auto-saved" indicator | OK |
-| Draft cleared on successful submit | OK |
-| githubAnalysisResult persisted (no OAuth at Step 5) | OK |
-| claim-profile edge function accepts Phase[] | OK |
-| update-profile edge function type matches Phase[] | **NEEDS FIX** |
-| useClaimedProfiles maps milestones as Phase[] | OK |
-| useUpdateProfile accepts Phase[] | OK |
+3. **src/components/program/DependencyHealthCard.tsx** -- Add "Awaiting Analysis" state when `analyzedAt` is null, rendering a muted placeholder instead of a fake score.
 
+4. **src/components/program/GovernanceHealthCard.tsx** -- Same "Awaiting Analysis" treatment when `analyzedAt` is null.
+
+5. **src/components/program/MetricCards.tsx** -- Fix the fallback for `originalityStatus: 'verified'` to not show 100% when no actual bytecode data exists. The fix in ProfileDetail.tsx prevents this path from being hit incorrectly.
+
+### What This Fixes
+
+- Off-chain projects correctly show "Not On-Chain" for bytecode (value 0, grayed out)
+- On-chain projects without verification show "Awaiting Verification" instead of "Verified Original"
+- Dependency health shows "Awaiting Analysis" instead of a fake 50 score
+- Users see a clear "First analysis in progress" message on fresh profiles
+- No misleading data on first landing -- only honest states
