@@ -1,89 +1,142 @@
 
-# Fix: Eliminate Misleading Default Scores on Fresh Profiles
 
-## The Problem
+# Fix: Trigger Analysis at Profile Creation Time
 
-When you register a new off-chain project and land on your dashboard for the first time, you see:
-- **Bytecode Originality: "Verified Original" at 100%** (wrong -- your app is off-chain)
-- **Dependency Health: 50** (fabricated -- no analysis has run yet)
-- **GitHub Originality: "Not Analyzed" at 50%** (misleading bar fill)
-- No indication that data is being fetched in the background
+## Problem
 
-This happens because the code uses optimistic defaults instead of showing "Awaiting Analysis" states.
+The `claim-profile` edge function saves the profile and returns, but never kicks off the analysis pipeline. Users land on their dashboard seeing "Awaiting Analysis" for everything except GitHub (which was analyzed during the claim flow). They have to wait up to 30 minutes for the cron to run.
 
-## Root Causes
+## What's Already Available at Claim Time
 
-1. **ProfileDetail.tsx line 149**: Hardcodes `originalityStatus: 'verified'` for all profiles, regardless of whether bytecode verification has actually run.
-2. **DevelopmentTabContent.tsx line 66**: Defaults `dependencyHealthScore = 50` when no data exists.
-3. **No "pending analysis" skeleton/loading state**: Fresh profiles with no data look identical to fully-analyzed ones.
-
-## Changes
-
-### 1. Fix `originalityStatus` in ProfileDetail.tsx
-
-Change line 149 from:
-```
-originalityStatus: 'verified' as const,
-```
-to a conditional that checks whether the profile has a real program ID (on-chain) or not:
-```
-originalityStatus: (profile.programId && profile.programId !== profile.id)
-  ? 'unverified' as const
-  : 'not-deployed' as const,
-```
-
-This ensures:
-- Off-chain projects show "Not On-Chain" (correct)
-- On-chain projects without bytecode verification show "Unverified" (honest) until the verify-bytecode function runs
-
-### 2. Fix default values in DevelopmentTabContent.tsx
-
-Change the destructured defaults from fabricated numbers to explicit "no data" signals:
-
-| Prop | Current Default | New Default |
+| Dimension | Data Available? | Can Run Immediately? |
 |---|---|---|
-| `dependencyHealthScore` | `50` | `0` |
-| `dependencyOutdatedCount` | `0` | `0` (keep) |
-| `dependencyCriticalCount` | `0` | `0` (keep) |
-| `governanceTx30d` | `0` | `0` (keep) |
-| `tvlUsd` | `0` | `0` (keep) |
+| GitHub Activity (40%) | Yes -- analyzed in Step 3 and saved with the profile | Already done |
+| Dependency Health (25%) | `github_org_url` is saved | Yes |
+| Governance (20%) | Only if user configured a multisig address | Yes (conditional) |
+| TVL (15%) | Only for DeFi category | Yes (conditional) |
+| Bytecode (0% weight but displayed) | Only if `program_id` is set (on-chain) | Yes (conditional) |
 
-### 3. Add "Awaiting Analysis" states to health cards
+## Solution
 
-Update `DependencyHealthCard`, `GovernanceHealthCard`, and originality metrics to detect when no analysis has ever run (`analyzedAt` is null/undefined) and render a clear "Awaiting first analysis" message instead of showing default numbers.
+After the profile is successfully inserted/updated in the `claim-profile` edge function, fire the relevant analysis functions as **fire-and-forget** background calls. This means:
 
-For `DependencyHealthCard`: When `analyzedAt` is falsy, show "Awaiting Analysis" with a muted skeleton-style card instead of a score bar at 50.
+- The response to the user is still instant (profile created)
+- Analysis runs in parallel in the background
+- By the time the user lands on their dashboard (1-3 seconds later), most or all analyses will have completed
+- No timeout risk because each analysis is its own independent edge function call
 
-For bytecode/GitHub originality in `DevelopmentTabContent`: When `bytecodeMatchStatus` is null AND `program.originalityStatus` is `'not-deployed'`, show "Not On-Chain" at value 0 (already handled by the fix in step 1). When it's `'unverified'`, show "Awaiting Verification" instead of "Unverified" with 60%.
+## Technical Changes
 
-### 4. Add loading indicator on ProfileDetail for fresh profiles
+### 1. Update `supabase/functions/claim-profile/index.ts`
 
-When the profile has just been created (no `github_analyzed_at`, no `dependency_analyzed_at`, etc.), show a subtle banner at the top:
+After the successful profile insert/update (after line 121), add fire-and-forget calls to the analysis functions using `fetch()` against the Supabase edge function URLs. This avoids awaiting them and delaying the response.
 
 ```
-"First analysis in progress -- metrics will appear shortly."
+// After: const finalProfileId = ...
+
+// Fire-and-forget: trigger analysis pipeline
+const functionsUrl = `${supabaseUrl}/functions/v1`;
+const headers = {
+  'Authorization': `Bearer ${supabaseServiceKey}`,
+  'Content-Type': 'application/json',
+};
+
+const githubUrl = rest.github_org_url || profileData.github_org_url;
+
+// 1. Dependency Health (needs GitHub URL)
+if (githubUrl) {
+  fetch(`${functionsUrl}/analyze-dependencies`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      github_url: githubUrl,
+      profile_id: finalProfileId,
+    }),
+  }).catch(() => {});
+}
+
+// 2. Governance (needs multisig address)
+const govAddress = rest.multisig_address;
+if (govAddress) {
+  fetch(`${functionsUrl}/analyze-governance`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      governance_address: govAddress,
+      profile_id: finalProfileId,
+    }),
+  }).catch(() => {});
+}
+
+// 3. TVL (only for DeFi)
+const profileCategory = rest.category;
+if (profileCategory === 'defi') {
+  fetch(`${functionsUrl}/analyze-tvl`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      protocol_name: project_name,
+      profile_id: finalProfileId,
+      monthly_commits: rest.github_commits_30d || 30,
+    }),
+  }).catch(() => {});
+}
+
+// 4. Bytecode Verification (only for on-chain programs)
+const onChainProgramId = rest.program_id;
+if (onChainProgramId && onChainProgramId !== finalProfileId) {
+  fetch(`${functionsUrl}/verify-bytecode`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      program_id: onChainProgramId,
+      profile_id: finalProfileId,
+      github_url: githubUrl,
+    }),
+  }).catch(() => {});
+}
+
+// 5. Security Posture (if GitHub URL available)
+if (githubUrl) {
+  fetch(`${functionsUrl}/analyze-security-posture`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      github_url: githubUrl,
+      profile_id: finalProfileId,
+    }),
+  }).catch(() => {});
+}
 ```
 
-This uses the existing `isRefreshing` state or checks for the absence of any `*_analyzed_at` timestamps.
+### 2. No frontend changes needed
 
-## Technical Details
+The frontend already:
+- Shows "First analysis in progress" banner when timestamps are null
+- Shows "Awaiting Analysis" states on health cards
+- Uses react-query which will pick up fresh data on next poll/refetch
 
-### Files Modified
+The only difference is that data will populate within seconds instead of up to 30 minutes.
 
-1. **src/pages/ProfileDetail.tsx** -- Fix `originalityStatus` from hardcoded `'verified'` to conditional based on programId. Add "First analysis in progress" banner for fresh profiles.
+## What Users Will Experience After This Fix
 
-2. **src/components/program/tabs/DevelopmentTabContent.tsx** -- Change `dependencyHealthScore` default from `50` to `0`. Update bytecode fallback logic to use `'not-deployed'` label correctly.
+1. User completes the claim flow and hits "Register"
+2. Profile is created instantly, user is redirected to their dashboard
+3. Dashboard briefly shows "First analysis in progress" banner (1-3 seconds)
+4. Dependency health, governance, TVL, and bytecode results appear automatically as they complete
+5. Off-chain projects correctly skip bytecode (showing "Not On-Chain")
+6. Non-DeFi projects correctly skip TVL
 
-3. **src/components/program/DependencyHealthCard.tsx** -- Add "Awaiting Analysis" state when `analyzedAt` is null, rendering a muted placeholder instead of a fake score.
+## Edge Cases Handled
 
-4. **src/components/program/GovernanceHealthCard.tsx** -- Same "Awaiting Analysis" treatment when `analyzedAt` is null.
+- **No GitHub URL**: Dependency and security analyses are skipped (no-op)
+- **No multisig**: Governance analysis is skipped
+- **Not DeFi**: TVL analysis is skipped
+- **Off-chain (no program ID)**: Bytecode verification is skipped
+- **Analysis failure**: Each call has `.catch(() => {})` so failures are silent and non-blocking
+- **Duplicate analysis**: The 30-minute cron will still run but will just refresh already-populated data (no harm)
 
-5. **src/components/program/MetricCards.tsx** -- Fix the fallback for `originalityStatus: 'verified'` to not show 100% when no actual bytecode data exists. The fix in ProfileDetail.tsx prevents this path from being hit incorrectly.
+## Files Modified
 
-### What This Fixes
+1. `supabase/functions/claim-profile/index.ts` -- Add fire-and-forget analysis calls after profile creation
 
-- Off-chain projects correctly show "Not On-Chain" for bytecode (value 0, grayed out)
-- On-chain projects without verification show "Awaiting Verification" instead of "Verified Original"
-- Dependency health shows "Awaiting Analysis" instead of a fake 50 score
-- Users see a clear "First analysis in progress" message on fresh profiles
-- No misleading data on first landing -- only honest states
