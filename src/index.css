@@ -319,7 +319,9 @@
     justify-content: center;
     min-height: 100vh;
     padding: 60px 80px;
-    background: linear-gradient(180deg, #ffffff 0%, #f0faf9 40%, #ffffff 100%) !important;
+    background: #0F1216 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
     page-break-after: always;
     break-after: page;
     text-align: center;
@@ -351,7 +353,7 @@
     font-family: 'Space Grotesk', sans-serif !important;
     font-size: 36px !important;
     font-weight: 700 !important;
-    color: #0F1216 !important;
+    color: #FFFFFF !important;
     letter-spacing: -0.5px;
     margin: 0 0 8px 0;
   }
@@ -360,7 +362,7 @@
     font-family: 'Space Grotesk', sans-serif !important;
     font-size: 16px !important;
     font-weight: 500 !important;
-    color: #00897B !important;
+    color: #00C2B6 !important;
     letter-spacing: 2px;
     text-transform: uppercase;
     margin: 0 0 24px 0;
@@ -369,21 +371,21 @@
   .print-cover-period {
     font-family: 'JetBrains Mono', monospace !important;
     font-size: 13px !important;
-    color: #666 !important;
+    color: #CCCCCC !important;
     margin: 0 0 6px 0;
   }
 
   .print-cover-date {
     font-family: 'Inter', sans-serif !important;
     font-size: 11px !important;
-    color: #999 !important;
+    color: #AAAAAA !important;
     margin: 0 0 24px 0;
   }
 
   .print-cover-confidential {
     font-family: 'JetBrains Mono', monospace !important;
     font-size: 9px !important;
-    color: #bbb !important;
+    color: #888888 !important;
     letter-spacing: 3px;
     text-transform: uppercase;
     margin: 0;
