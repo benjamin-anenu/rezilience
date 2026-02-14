@@ -402,6 +402,8 @@ export type Database = {
           vulnerability_details: Json | null
           wallet_address: string | null
           website_url: string | null
+          x_avatar_url: string | null
+          x_display_name: string | null
           x_user_id: string | null
           x_username: string | null
         }
@@ -494,6 +496,8 @@ export type Database = {
           vulnerability_details?: Json | null
           wallet_address?: string | null
           website_url?: string | null
+          x_avatar_url?: string | null
+          x_display_name?: string | null
           x_user_id?: string | null
           x_username?: string | null
         }
@@ -586,6 +590,8 @@ export type Database = {
           vulnerability_details?: Json | null
           wallet_address?: string | null
           website_url?: string | null
+          x_avatar_url?: string | null
+          x_display_name?: string | null
           x_user_id?: string | null
           x_username?: string | null
         }
