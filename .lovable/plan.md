@@ -1,42 +1,65 @@
 
 
-## Fix: GitHub Originality Should Require OAuth Verification
+## GitHub Originality and Bytecode Originality: In-Page Verification Actions
 
-### Problem
-The GitHub Originality card shows a full green bar ("Original Repository" at 100%) even when the project owner has NOT connected via GitHub OAuth. This happens because the public URL analysis (during claim) already sets `github_is_fork: false`, and the current logic only checks whether that value is defined -- not whether the owner actually proved GitHub ownership.
+### What Changes
 
-### Root Cause
-- During the claim flow, submitting a public GitHub URL triggers `analyze-github-repo`, which writes `github_is_fork` to the database.
-- The originality check (`githubIsFork === undefined`) passes because the field is `false`, not `undefined`.
-- There is no check for GitHub OAuth status (`github_username` is only set after OAuth).
+**1. GitHub Originality -- "Verify GitHub" Button (In-Page OAuth)**
+- When the owner views their profile and GitHub is unverified (`github_username` is null), a "Verify GitHub" button appears on the GitHub Originality card.
+- Clicking it triggers the GitHub OAuth flow directly (same `buildGitHubOAuthUrl` used in the claim flow).
+- Before redirect, the current profile ID is stored in localStorage so the callback knows where to return.
+- The existing `GitHubCallback` page (`/github/callback`) will be updated to detect this "re-verification" scenario and redirect back to `/profile/:id` instead of `/claim-profile`.
+- On success, `github_username` is written to the database, the card refreshes to show the full teal bar.
+- **Blacklist integration**: The `github-oauth-callback` edge function already handles profile updates. If the callback fails (e.g., repo mismatch), the attempt is recorded. After 5 failures, the button is disabled and shows "Blocked" -- reusing the existing `useClaimBlacklist` hook with a new identifier (e.g., `github_verify_{profileId}`).
 
-### Solution
-Add a `githubOAuthVerified` flag (derived from whether `github_username` exists in the database) and pass it through to the originality metric. When OAuth has NOT been completed, GitHub Originality should show as "Awaiting Verification" in dark orange with no progress bar -- identical to the unverified bytecode state.
+**2. Bytecode Originality -- "Verify On-Chain" Button (Wallet Modal)**
+- When the owner views their profile and bytecode is unverified, a "Verify On-Chain" button appears on the Bytecode Originality card.
+- Clicking it opens the existing `AuthorityVerificationModal` -- the same wallet connect, authority check, and SIWS signing flow used during initial claim.
+- On success, the `verify-bytecode` edge function is called with the signed proof, writing `bytecode_match_status` and `bytecode_confidence` to the database.
+- The card then refreshes to show the verification result (progress bar + confidence tier).
+- **Blacklist integration**: The `AuthorityVerificationModal` already has blacklist checking built in (checks before authority verification, records failed attempts, blocks after 5 failures). This will work identically.
+- If there is no `programId` on the profile (off-chain project), the card shows "N/A -- Off-chain project" with no button.
 
-### Files to Update
+### Files to Change
 
 | File | Change |
 |------|--------|
-| `src/hooks/useClaimedProfiles.ts` | Already maps `githubUsername` -- no change needed |
-| `src/pages/ProgramDetail.tsx` | Pass `githubOAuthVerified={!!claimedProfile?.githubUsername}` to `DevelopmentTabContent` |
-| `src/pages/ProfileDetail.tsx` | Pass `githubOAuthVerified={!!profile.githubUsername}` to `DevelopmentTabContent` |
-| `src/components/program/tabs/DevelopmentTabContent.tsx` | Accept new `githubOAuthVerified` prop; update `getGithubOriginalityInfo()` to treat `!githubOAuthVerified` as unverified (dark orange, no bar) |
-| `src/components/profile/tabs/DevelopmentTab.tsx` | Same logic: check `profile.githubUsername` to determine verified state |
-| `src/components/program/MetricCards.tsx` | Accept `githubOAuthVerified` prop; apply same unverified logic |
+| `src/components/profile/tabs/DevelopmentTab.tsx` | Add "Verify GitHub" and "Verify On-Chain" buttons to owner cards; accept `isOwner`, `profileId`, `programId` props; import `AuthorityVerificationModal`, `buildGitHubOAuthUrl`, `generateOAuthState`, `useBytecodeVerification`, `useClaimBlacklist` |
+| `src/pages/ProfileDetail.tsx` | Pass `isOwner`, `profileId={profile.id}`, `programId={profile.programId}` to `DevelopmentTab` |
+| `src/pages/GitHubCallback.tsx` | Detect `localStorage.verifyGithubProfileId` and redirect to `/profile/:id` instead of `/claim-profile` on success; pass profile ID to the edge function |
+| `src/hooks/useBytecodeVerification.ts` | Update `unknown` default description to distinguish between "no program ID" and "has program ID but unverified" |
 
-### Logic Change (in `getGithubOriginalityInfo`)
+### Flow Details
 
+**GitHub OAuth Flow (from profile page):**
 ```text
-Before:
-  if githubIsFork === undefined -> "Awaiting Analysis" (unverified)
-  if githubIsFork === true      -> "Forked Repository" (warning)
-  if githubIsFork === false     -> "Original Repository" (full bar)
-
-After:
-  if !githubOAuthVerified       -> "Awaiting Verification" (dark orange, no bar)
-  if githubIsFork === true      -> "Forked Repository" (warning bar)
-  if githubIsFork === false     -> "Original Repository" (full bar)
+Owner clicks "Verify GitHub"
+  -> Store profileId in localStorage ('verifyGithubProfileId')
+  -> Store current profile data in localStorage ('claimingProfile')
+  -> Redirect to GitHub OAuth URL
+  -> GitHub redirects to /github/callback
+  -> GitHubCallback detects 'verifyGithubProfileId'
+  -> Calls github-oauth-callback edge function with profile data
+  -> On success: redirects to /profile/:id (not /claim-profile)
+  -> Profile reloads, github_username now set
+  -> GitHub Originality card shows full bar
 ```
 
-Only profiles where the owner has completed GitHub OAuth will show the green bar. All others get the dark orange "Pending" indicator.
+**Bytecode Verification Flow (from profile page):**
+```text
+Owner clicks "Verify On-Chain"
+  -> AuthorityVerificationModal opens
+  -> Connect wallet (Phantom/Solflare)
+  -> Blacklist check (reuses existing hook)
+  -> Verify wallet is program's upgrade authority (RPC call)
+  -> Sign structured SIWS message (no on-chain transaction)
+  -> On success: call verify-bytecode edge function
+  -> Modal closes, profile refreshes
+  -> Bytecode Originality card shows verification result
+```
 
+### Button Visibility Rules
+- Buttons only appear when `isOwner === true` AND the metric is `isUnverified`
+- Once verified, the button disappears and the progress bar replaces it
+- Bytecode button is hidden if no `programId` exists (shows "N/A" instead)
+- If blacklisted, the button shows as disabled with "Blocked" text
