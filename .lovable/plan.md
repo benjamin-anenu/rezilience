@@ -1,33 +1,67 @@
 
 
-# Remove Cover Image + Dark Background End-to-End
+# Replace Projects Table with Ecosystem Pulse Charts
 
 ## What Changes
 
-1. **Remove AI-generated image** -- delete the cover image markup, the `useEffect` that fetches it, and the `coverImageUrl` state
-2. **Cover page (page 1)** -- already dark (`#0F1216`), just remove the image element and its CSS class
-3. **Content pages (page 2+)** -- change from white (`#ffffff`) to dark (`#0F1216`) with light text so there is zero white space anywhere in the PDF
+Remove the long projects table from the report and replace it with the Ecosystem Pulse visualizations -- the same charts already live on the Explorer page. This gives the Solana Foundation a visual, data-rich view of ecosystem health instead of a scroll-heavy table.
+
+## Charts to Add (after the Milestone Summary narrative)
+
+1. **Aggregate Rezilience Trend** -- Area chart showing avg score over time
+2. **Ecosystem Heartbeat** -- The animated pulse ring with aggregate score (static version for print)
+3. **Development Activity Over Time** -- Bar chart with commits + contributors
+4. **Indexed TVL** -- Area chart with TVL trend + large headline number
+5. **Liveness Categories** -- Pie chart (Active / Evolving / Under Observation)
+6. **Supply Chain Health** -- Pie chart (Healthy / Warning / Critical / Unknown)
+7. **Top Languages** -- Horizontal bar breakdown
+
+## Technical Approach
+
+Rather than importing the `EcosystemPulse` component directly (it has interactive UI, disclaimers, loading states, and CSS animations that don't translate well to print), we will:
+
+- **Import `useEcosystemPulse` hook** directly into `AdminReporterPage.tsx` to fetch the same data
+- **Render the charts inline** using the same Recharts components already imported, styled to match the reporter's existing `glass-chart` aesthetic
+- **Add print-friendly heartbeat** -- a static circle with score number (no CSS animation in print)
 
 ## File Changes
 
 ### `src/pages/admin/AdminReporterPage.tsx`
-- **Delete** the `coverImageUrl` state (`useState`) and the entire `useEffect` block that calls `generate-report-cover`
-- **Delete** the `useEffect` import if no longer needed (but `useRef` still needs it -- keep the import)
-- **Remove** the `{coverImageUrl && <img .../>}` block from the cover page markup
-- Everything else stays: logo, accent line, title, subtitle, dates
 
-### `src/index.css` (print styles)
-- **`.print-report`**: Change background from `#ffffff` to `#0F1216`, text color from `#1a1a2e` to `#E0E0E0`
-- **`.print-cover-image`**: Delete the entire CSS rule (no longer needed)
-- **`.glass-card` / `.glass-chart`**: Change from `#f8f9fa` background to `#1A1E24` with `#2A2E34` border
-- **`.print-report h3`**: Change to `#FFFFFF`
-- **`.print-report p, span`**: Change to `#CCCCCC`
-- **`.print-report .text-primary`**: Change to `#00C2B6`
-- **`.kpi-strip`**: Dark background (`#1A1E24`) with dark border
-- **`.print-header h1`**: White text
-- **`.print-header p`**: Light grey text
-- **Table styles**: Dark header background (`#1A1E24`), alternating dark rows (`#161A1F` / `#1A1E24`), light text (`#DDD` / `#CCC`)
-- **`@page` margin area**: This stays as-is (browser controls the margin color)
+| Section | Action |
+|---------|--------|
+| Imports | Add `useEcosystemPulse` hook, add `AreaChart, Area, PieChart, Pie, Cell, Legend` from recharts |
+| Imports | Remove `Table, TableBody, TableCell, TableHead, TableHeader, TableRow` (no longer needed) |
+| Data fetch | Remove `allProfiles` query from `fetchReportData` (no longer needed for the table) |
+| Return value | Remove `allProfiles` from the return object |
+| `getScoreColor` function | Can be removed (was only used by the table) |
+| **Delete** | The entire "Registered Projects Table" section (~lines 264-308) |
+| **Add** | Ecosystem Pulse section with 7 chart panels in a grid layout, using data from `useEcosystemPulse()` |
 
-This ensures the entire PDF is dark-themed end-to-end with no white showing on any page.
+### New Section Layout (replaces the table)
+
+```text
++------------------------------------------+
+| ECOSYSTEM INTELLIGENCE                    |
++------------------------------------------+
+| [Rezilience Trend]  | [Heartbeat Pulse]  |
+| (area chart, 2col)  | + Quick Stats      |
++---------------------+--------------------+
+| [Dev Activity]      | [Indexed TVL]      |
+| (bar chart)         | (area chart)       |
++---------------------+--------------------+
+| [Liveness] | [Supply Chain] | [Languages]|
+| (pie)      | (pie)          | (bars)     |
++------------------------------------------+
+```
+
+Each chart will use the existing `glass-chart p-5 print-section` wrapper so the dark print theme applies automatically.
+
+### Helper Functions Added Inline
+
+- `formatTvl(value)` -- format large USD values (already exists in EcosystemPulse, will duplicate inline)
+- `formatDate(dateStr)` -- format snapshot dates
+- Liveness/dep-health color constants (same as EcosystemPulse)
+
+No other files need changes. The print CSS already handles `.glass-chart` and `.print-section` styling for the dark PDF theme.
 
