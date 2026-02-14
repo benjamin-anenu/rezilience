@@ -301,13 +301,15 @@
   /* Hide interactive controls */
   .no-print { display: none !important; }
 
-  /* Force light background for print */
+  /* Dark background for print — matches app theme */
   .print-report {
-    background: #ffffff !important;
-    color: #1a1a2e !important;
+    background: #0F1216 !important;
+    color: #E0E0E0 !important;
     padding: 0 !important;
     font-family: 'Inter', sans-serif !important;
     counter-reset: page-counter;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   /* ===== COVER PAGE ===== */
@@ -333,14 +335,6 @@
     margin-bottom: 40px;
   }
 
-  .print-cover-image {
-    width: 100%;
-    max-width: 580px;
-    height: auto;
-    border-radius: 8px;
-    margin-bottom: 40px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-  }
 
   .print-cover-accent {
     width: 80px;
@@ -452,20 +446,20 @@
   }
 
   .print-report .print-header h1 {
-    color: #0F1216 !important;
+    color: #FFFFFF !important;
     font-size: 22px !important;
     font-weight: 700 !important;
   }
 
   .print-report .print-header p {
-    color: #666 !important;
+    color: #AAAAAA !important;
     font-size: 10px !important;
   }
 
   .print-report .glass-card,
   .print-report .glass-chart {
-    background: #f8f9fa !important;
-    border: 1px solid #e0e0e0 !important;
+    background: #1A1E24 !important;
+    border: 1px solid #2A2E34 !important;
     border-radius: 6px !important;
     box-shadow: none !important;
     backdrop-filter: none !important;
@@ -476,19 +470,19 @@
     margin-right: 40px;
   }
 
-  .print-report h3 { color: #333 !important; }
-  .print-report p, .print-report span { color: #444 !important; }
-  .print-report .text-primary { color: #00897B !important; font-weight: 600 !important; }
+  .print-report h3 { color: #FFFFFF !important; }
+  .print-report p, .print-report span { color: #CCCCCC !important; }
+  .print-report .text-primary { color: #00C2B6 !important; font-weight: 600 !important; }
 
   .print-report .kpi-strip {
     display: flex !important;
-    border: 1px solid #e0e0e0 !important;
+    border: 1px solid #2A2E34 !important;
     border-radius: 6px !important;
-    background: #f0f4f8 !important;
+    background: #1A1E24 !important;
   }
 
   .print-report .kpi-strip > * {
-    border-color: #ddd !important;
+    border-color: #2A2E34 !important;
   }
 
   /* ===== TABLE STYLES ===== */
@@ -498,48 +492,43 @@
   }
 
   .print-report thead tr {
-    background: #f0f4f8 !important;
+    background: #1A1E24 !important;
     border-bottom: 2px solid #00C2B6 !important;
   }
 
   .print-report thead th {
-    color: #333 !important;
+    color: #CCCCCC !important;
     font-size: 9px !important;
     font-weight: 600 !important;
     padding: 8px 12px !important;
     text-align: left !important;
   }
 
-  .print-report .print-table-row {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
   .print-report tbody tr:nth-child(even) {
-    background: #f8f9fa !important;
+    background: #1A1E24 !important;
   }
 
   .print-report tbody tr:nth-child(odd) {
-    background: #ffffff !important;
+    background: #161A1F !important;
   }
 
   .print-report tbody td {
-    color: #333 !important;
+    color: #DDDDDD !important;
     font-size: 11px !important;
     padding: 6px 12px !important;
-    border-bottom: 1px solid #eee !important;
+    border-bottom: 1px solid #2A2E34 !important;
   }
 
   /* Chart SVG contrast */
-  .print-report .recharts-wrapper text { fill: #333 !important; }
-  .print-report .recharts-cartesian-grid line { stroke: #ddd !important; }
+  .print-report .recharts-wrapper text { fill: #CCCCCC !important; }
+  .print-report .recharts-cartesian-grid line { stroke: #2A2E34 !important; }
 
   .print-footer {
     margin-top: 32px;
     padding-top: 12px;
-    border-top: 1px solid #ccc;
+    border-top: 1px solid #2A2E34;
     font-size: 9px;
-    color: #999 !important;
+    color: #888888 !important;
     text-align: center;
     margin-left: 40px;
     margin-right: 40px;
