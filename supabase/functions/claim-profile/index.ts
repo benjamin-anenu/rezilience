@@ -120,6 +120,60 @@ Deno.serve(async (req) => {
 
     const finalProfileId = resultProfile?.id || unclaimed_profile_id || profile_id;
 
+    // Fire-and-forget: trigger analysis pipeline
+    const functionsUrl = `${supabaseUrl}/functions/v1`;
+    const authHeaders = {
+      'Authorization': `Bearer ${supabaseServiceKey}`,
+      'Content-Type': 'application/json',
+    };
+
+    const githubUrl = rest.github_org_url;
+
+    // 1. Dependency Health (needs GitHub URL)
+    if (githubUrl) {
+      fetch(`${functionsUrl}/analyze-dependencies`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ github_url: githubUrl, profile_id: finalProfileId }),
+      }).catch(() => {});
+    }
+
+    // 2. Governance (needs multisig address)
+    if (rest.multisig_address) {
+      fetch(`${functionsUrl}/analyze-governance`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ governance_address: rest.multisig_address, profile_id: finalProfileId }),
+      }).catch(() => {});
+    }
+
+    // 3. TVL (only for DeFi)
+    if (rest.category === 'defi') {
+      fetch(`${functionsUrl}/analyze-tvl`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ protocol_name: project_name, profile_id: finalProfileId, monthly_commits: rest.github_commits_30d || 30 }),
+      }).catch(() => {});
+    }
+
+    // 4. Bytecode Verification (only for on-chain programs)
+    if (rest.program_id && rest.program_id !== finalProfileId) {
+      fetch(`${functionsUrl}/verify-bytecode`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ program_id: rest.program_id, profile_id: finalProfileId, github_url: githubUrl }),
+      }).catch(() => {});
+    }
+
+    // 5. Security Posture (if GitHub URL available)
+    if (githubUrl) {
+      fetch(`${functionsUrl}/analyze-security-posture`, {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ github_url: githubUrl, profile_id: finalProfileId }),
+      }).catch(() => {});
+    }
+
     // Create ecosystem trend (fire-and-forget)
     try {
       await supabase.from("ecosystem_trends").insert({
