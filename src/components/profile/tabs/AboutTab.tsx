@@ -128,56 +128,59 @@ export function AboutTab({ profile, xUserId }: AboutTabProps) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {profile.milestones.map((milestone) => {
-                  const targetDate = new Date(milestone.targetDate);
-                  const isOverdue = targetDate < new Date() && milestone.status !== 'completed';
-
-                  return (
-                    <div
-                      key={milestone.id}
-                      className={`flex items-center justify-between rounded-sm border p-3 ${
-                        milestone.status === 'completed'
-                          ? 'border-primary/30 bg-primary/5'
-                          : isOverdue
-                          ? 'border-destructive/30 bg-destructive/5'
-                          : milestone.varianceRequested
-                          ? 'border-yellow-500/30 bg-yellow-500/5'
-                          : 'border-border bg-muted/30'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        {milestone.status === 'completed' ? (
-                          <CheckCircle className="h-5 w-5 text-primary" />
-                        ) : isOverdue ? (
-                          <AlertTriangle className="h-5 w-5 text-destructive" />
-                        ) : milestone.isLocked ? (
-                          <Lock className="h-5 w-5 text-muted-foreground" />
-                        ) : (
-                          <Calendar className="h-5 w-5 text-muted-foreground" />
-                        )}
-                        <span className="font-mono text-sm">{milestone.title}</span>
-                        {milestone.varianceRequested && (
-                          <Badge className="bg-yellow-500/20 text-yellow-500">
-                            TIMELINE VARIANCE
-                          </Badge>
-                        )}
-                        {isOverdue && (
-                          <Badge className="bg-destructive/20 text-destructive">
-                            OVERDUE
-                          </Badge>
+              <div className="space-y-4">
+                {profile.milestones.map((phase, index) => (
+                  <div key={phase.id} className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <span className="font-display text-sm font-semibold uppercase tracking-wide">
+                        Phase {index + 1}: {phase.title}
+                      </span>
+                      {phase.isLocked && <Lock className="h-3 w-3 text-muted-foreground" />}
+                      {phase.varianceRequested && (
+                        <Badge className="bg-yellow-500/20 text-yellow-500 text-[10px]">
+                          VARIANCE
+                        </Badge>
+                      )}
+                    </div>
+                    {phase.milestones.map((ms) => (
+                      <div
+                        key={ms.id}
+                        className={`flex items-center justify-between rounded-sm border p-3 ${
+                          ms.status === 'completed'
+                            ? 'border-primary/30 bg-primary/5'
+                            : ms.targetDate && new Date(ms.targetDate) < new Date()
+                            ? 'border-destructive/30 bg-destructive/5'
+                            : 'border-border bg-muted/30'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          {ms.status === 'completed' ? (
+                            <CheckCircle className="h-5 w-5 text-primary" />
+                          ) : ms.targetDate && new Date(ms.targetDate) < new Date() ? (
+                            <AlertTriangle className="h-5 w-5 text-destructive" />
+                          ) : (
+                            <Calendar className="h-5 w-5 text-muted-foreground" />
+                          )}
+                          <div>
+                            <span className="font-mono text-sm">{ms.title}</span>
+                            {ms.description && (
+                              <p className="text-xs text-muted-foreground mt-0.5">{ms.description}</p>
+                            )}
+                          </div>
+                        </div>
+                        {ms.targetDate && (
+                          <span className="font-mono text-xs text-muted-foreground">
+                            {new Date(ms.targetDate).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </span>
                         )}
                       </div>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {targetDate.toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </span>
-                    </div>
-                  );
-                })}
+                    ))}
+                  </div>
+                ))}
               </div>
             </CardContent>
           </Card>

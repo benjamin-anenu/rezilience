@@ -112,6 +112,25 @@ export interface Milestone {
   originalTargetDate?: string;
 }
 
+// Phase-based Roadmap Types (v2)
+export interface PhaseMilestone {
+  id: string;
+  title: string;
+  description: string;
+  targetDate?: string;
+  status: 'upcoming' | 'completed' | 'overdue';
+  completedAt?: string;
+}
+
+export interface Phase {
+  id: string;
+  title: string;
+  isLocked: boolean;
+  varianceRequested?: boolean;
+  milestones: PhaseMilestone[];
+  order: number;
+}
+
 export interface SocialLinks {
   xHandle?: string;
   discordUrl?: string;
@@ -289,8 +308,8 @@ export interface ClaimedProfile {
   // Media (Step 4)
   mediaAssets: MediaAsset[];
   
-  // Roadmap (Step 5)
-  milestones: Milestone[];
+  // Roadmap (Step 5) - Phase-based
+  milestones: Phase[];
   
   // Verification
   verified: boolean;
@@ -362,6 +381,6 @@ export interface ClaimProfileFormData {
   // Step 4: Media
   mediaAssets: MediaAsset[];
   
-  // Step 5: Roadmap
-  milestones: Milestone[];
+  // Step 5: Roadmap (Phase-based)
+  milestones: Phase[];
 }
