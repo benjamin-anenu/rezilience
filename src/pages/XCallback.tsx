@@ -86,6 +86,7 @@ const XCallback = () => {
           id: data.user.id,
           username: data.user.username,
           avatarUrl: data.user.avatarUrl,
+          name: data.user.name,
         };
         setUserFromCallback(xUser);
 

@@ -252,6 +252,8 @@ const ProgramDetail = () => {
                     ownerUsername={claimedProfile?.xUsername}
                     ownerLogoUrl={claimedProfile?.logoUrl}
                     ownerProjectName={claimedProfile?.projectName}
+                    ownerAvatarUrl={claimedProfile?.xAvatarUrl}
+                    ownerDisplayName={claimedProfile?.xDisplayName}
                   />
                 ),
                 community: (

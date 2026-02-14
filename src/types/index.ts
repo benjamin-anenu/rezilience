@@ -56,6 +56,7 @@ export interface XUser {
   id: string;
   username: string;
   avatarUrl: string;
+  name?: string;
 }
 
 // Claim Profile Types
@@ -335,6 +336,10 @@ export interface ClaimedProfile {
   // Team Section
   teamMembers?: TeamMember[];
   stakingPitch?: string;
+  
+  // X Profile Data
+  xAvatarUrl?: string;
+  xDisplayName?: string;
   
   // Authority Verification (SIWS)
   authorityWallet?: string;

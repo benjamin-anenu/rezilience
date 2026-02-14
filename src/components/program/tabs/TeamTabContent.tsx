@@ -12,6 +12,8 @@ interface TeamTabContentProps {
   ownerUsername?: string | null;
   ownerLogoUrl?: string | null;
   ownerProjectName?: string | null;
+  ownerAvatarUrl?: string | null;
+  ownerDisplayName?: string | null;
 }
 
 const getRoleBadgeVariant = (role: string) => {
@@ -41,7 +43,7 @@ const getInitials = (name: string) => {
     .slice(0, 2);
 };
 
-export function TeamTabContent({ teamMembers, stakingPitch, isVerified, claimStatus, ownerUsername, ownerLogoUrl, ownerProjectName }: TeamTabContentProps) {
+export function TeamTabContent({ teamMembers, stakingPitch, isVerified, claimStatus, ownerUsername, ownerLogoUrl, ownerProjectName, ownerAvatarUrl, ownerDisplayName }: TeamTabContentProps) {
   const hasTeamMembers = teamMembers && teamMembers.length > 0;
   const hasOwner = !!(ownerUsername || ownerProjectName);
   const hasStakingPitch = stakingPitch && stakingPitch.trim().length > 0;
@@ -52,16 +54,16 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified, claimSta
     <Card className="group overflow-hidden border-primary/30 bg-card transition-all hover:border-primary/50 hover:shadow-md ring-1 ring-primary/20">
       {/* Profile Image */}
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-muted">
-        {ownerLogoUrl ? (
+      {(ownerLogoUrl || ownerAvatarUrl) ? (
           <img
-            src={ownerLogoUrl}
-            alt={ownerUsername || ownerProjectName || 'Owner'}
+            src={ownerLogoUrl || ownerAvatarUrl || ''}
+            alt={ownerDisplayName || ownerUsername || ownerProjectName || 'Owner'}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
             <span className="font-display text-3xl font-bold text-primary/60">
-              {getInitials(ownerUsername || ownerProjectName || 'OW')}
+              {getInitials(ownerDisplayName || ownerUsername || ownerProjectName || 'OW')}
             </span>
           </div>
         )}
@@ -81,9 +83,12 @@ export function TeamTabContent({ teamMembers, stakingPitch, isVerified, claimSta
       {/* Info */}
       <CardContent className="p-3 space-y-2">
         <div>
-          <h3 className="font-display text-base font-semibold text-foreground">
-            {ownerUsername ? `@${ownerUsername}` : ownerProjectName}
+        <h3 className="font-display text-base font-semibold text-foreground">
+            {ownerDisplayName || (ownerUsername ? `@${ownerUsername}` : ownerProjectName)}
           </h3>
+          {ownerDisplayName && ownerUsername && (
+            <p className="text-xs text-muted-foreground">@{ownerUsername}</p>
+          )}
         </div>
         <p className="text-sm text-foreground/90 font-medium">Project Owner</p>
       </CardContent>
