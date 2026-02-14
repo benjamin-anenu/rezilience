@@ -62,3 +62,6 @@ verify_jwt = false
 
 [functions.algolia-reindex]
 verify_jwt = false
+
+[functions.generate-report-cover]
+verify_jwt = false
