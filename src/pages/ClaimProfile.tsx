@@ -283,8 +283,8 @@ const ClaimProfile = () => {
   };
 
   const handleGitHubConnect = () => {
-    // All user data is stored in the claimingProfile object below
-    // No separate localStorage entries needed for individual fields
+    // Clear any leftover re-verification state to prevent cross-contamination
+    localStorage.removeItem('verifyGithubProfileId');
 
     // Store form data for retrieval after OAuth callback
     const claimingProfile = {
