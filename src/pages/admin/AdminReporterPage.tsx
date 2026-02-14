@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, Download, Calendar, FileText } from 'lucide-react';
@@ -117,22 +117,6 @@ export function AdminReporter() {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 86400_000).toISOString().substring(0, 10);
   const [startDate, setStartDate] = useState(thirtyDaysAgo);
   const [endDate, setEndDate] = useState(today);
-  const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
-
-  // Fetch AI-generated cover image on mount
-  useEffect(() => {
-    async function fetchCover() {
-      try {
-        const response = await supabase.functions.invoke('generate-report-cover');
-        if (response.data?.url) {
-          setCoverImageUrl(response.data.url);
-        }
-      } catch (e) {
-        console.error('Failed to fetch cover image:', e);
-      }
-    }
-    fetchCover();
-  }, []);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['admin-report', startDate, endDate],
@@ -182,9 +166,6 @@ export function AdminReporter() {
       {/* ========== PRINT-ONLY: Cover Page ========== */}
       <div className="print-cover-page">
         <img src={logoImg} alt="Rezilience" className="print-cover-logo" />
-        {coverImageUrl && (
-          <img src={coverImageUrl} alt="Milestone Report" className="print-cover-image" />
-        )}
         <div className="print-cover-accent" />
         <h1 className="print-cover-title">Milestone Report</h1>
         <p className="print-cover-subtitle">Solana Foundation Grant Program</p>
