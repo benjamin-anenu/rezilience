@@ -8,6 +8,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   signInWithX: () => Promise<void>;
   signOut: () => void;
+  setUserFromCallback: (user: XUser) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,6 +99,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     window.location.href = `https://x.com/i/oauth2/authorize?${params.toString()}`;
   };
 
+  const setUserFromCallback = (newUser: XUser) => {
+    localStorage.setItem('x_user', JSON.stringify(newUser));
+    setUser(newUser);
+  };
+
   const signOut = () => {
     // Clear X auth data
     localStorage.removeItem('x_user');
@@ -127,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: !!user,
         signInWithX,
         signOut,
+        setUserFromCallback,
       }}
     >
       {children}

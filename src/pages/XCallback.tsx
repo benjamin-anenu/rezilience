@@ -5,6 +5,7 @@ import { Layout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 import type { XUser } from '@/types';
 
 interface XOAuthResult {
@@ -21,6 +22,7 @@ interface XOAuthResult {
 const XCallback = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { setUserFromCallback } = useAuth();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
@@ -79,13 +81,13 @@ const XCallback = () => {
           throw new Error(data?.error || 'X verification failed');
         }
 
-        // Store user in localStorage for session persistence
+        // Store user in localStorage AND update React state immediately
         const xUser: XUser = {
           id: data.user.id,
           username: data.user.username,
           avatarUrl: data.user.avatarUrl,
         };
-        localStorage.setItem('x_user', JSON.stringify(xUser));
+        setUserFromCallback(xUser);
 
         setUsername(data.user.username);
         setStatus('success');
