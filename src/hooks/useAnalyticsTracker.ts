@@ -70,23 +70,29 @@ export function useAnalyticsTracker() {
     trackEvent('page_view', location.pathname + location.search);
   }, [location.pathname, location.search, trackEvent]);
 
+  // Track session start on mount, session end on unload
+  useEffect(() => {
+    trackEvent('session_start', location.pathname, { ts: Date.now() });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Set up periodic flush + flush on unload
   useEffect(() => {
     timerRef.current = setInterval(flush, BATCH_INTERVAL);
 
     const handleUnload = () => {
-      if (bufferRef.current.length > 0) {
-        flush();
-      }
+      trackEvent('session_end', location.pathname, { ts: Date.now() });
+      flush();
     };
 
     window.addEventListener('beforeunload', handleUnload);
     return () => {
       clearInterval(timerRef.current);
       window.removeEventListener('beforeunload', handleUnload);
-      flush(); // Flush remaining on unmount
+      trackEvent('session_end', location.pathname, { ts: Date.now() });
+      flush();
     };
-  }, [flush]);
+  }, [flush, trackEvent, location.pathname]);
 
   return { trackEvent };
 }
