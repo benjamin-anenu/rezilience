@@ -104,7 +104,7 @@ function ScoreHistoryChart({ projectId }: { projectId: string }) {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                domain={[0, 20]}
+                domain={[0, 'auto']}
                 label={{
                   value: 'Velocity',
                   angle: -90,

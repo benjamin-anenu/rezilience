@@ -1303,6 +1303,7 @@ export type Database = {
           profile_id: string
         }[]
       }
+      snapshot_date_day: { Args: { ts: string }; Returns: string }
     }
     Enums: {
       liveness_status: "ACTIVE" | "STALE" | "DECAYING"
