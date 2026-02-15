@@ -1,41 +1,44 @@
-**Premium "Build In Public" Card Redesign**
 
-### Changes to `src/components/explorer/BuilderPostCard.tsx`
 
-#### 1. Card Shell — Black with Cyan Border
+## Redesign Card Header + Expandable Tweet
 
-- Background: `bg-[#0a0a0a]` (true black) instead of `bg-card/80`
-- Border: `border-primary/40` (cyan outline) with `hover:border-primary/70` glow on hover
-- Hover shadow: stronger cyan glow `hover:shadow-[0_0_25px_-5px_hsl(var(--primary)/0.25)]`
+### 1. Improved Header Layout
 
-#### 2. Smaller Tweet Embed
+**Current problem:** The project name, logo, category badge, and subscribe button are all crammed into one horizontal row, making it feel cluttered.
 
-- Reduce height from `h-[280px]` to `h-[200px]` — enough to show the tweet text preview without dominating the card
-- Apply CSS scaling (`transform: scale(0.85) origin-top-left`) on the inner tweet wrapper so the rendered tweet content shrinks proportionally and more of it is visible
-- Keep the fade-out gradient at the bottom
+**New layout — two rows in the header:**
 
-#### 3. Enhanced Footer with More Info
+```text
++---------------------------------------+
+|  [Logo 36px]  Project Name            |
+|               infrastructure | Subscribe |
++---------------------------------------+
+```
 
-- Show the post title prominently (not just a muted single line)
-- Display the relative timestamp as a visible element
-- Make the "View on X" link a small teal-accented pill button instead of plain text
-- Add a subtle cyan divider line at the top of the footer
+- **Row 1**: Larger logo (36px, `h-9 w-9`) + project name in bolder text (`text-base font-bold`)
+- **Row 2**: Category badge + Subscribe button, aligned below the name with slight left padding to clear the logo
+- More vertical breathing room (`py-3 px-4`) between header elements
 
-#### 4. Header Refinements
+### 2. Expandable Card (Click to Read Full Tweet)
 
-- Header background: `bg-[#0a0a0a]` matching the card body
-- Border bottom in cyan: `border-b border-primary/20`
-- Category badge with stronger teal styling
+Add a collapsed/expanded toggle so users can read the full tweet without leaving the page:
 
-### Visual Result
+- **Collapsed (default)**: Tweet area stays at `h-[200px]` with the fade-out gradient — same as now
+- **Expanded**: Remove the height constraint and fade gradient, letting the full tweet render. The cards below smoothly push down.
+- **Toggle trigger**: A small "Read more" / "Show less" button at the bottom of the tweet area
+- **Animation**: Use Radix `Collapsible` (already installed) or a CSS `max-height` transition for smooth expand/collapse. Since Radix Collapsible animates height changes natively, it provides the smooth push-down effect.
 
-- Compact, box-shaped cards with black fill and glowing cyan borders
-- Tweet preview is readable but contained — shows enough to decide whether to click through
-- Footer gives clear context (title, time, CTA) so you know what the post is about before visiting X
+### Technical Approach
+
+- Add `useState` for `expanded` toggle
+- Wrap the tweet area in a container that switches between `h-[200px] overflow-hidden` (collapsed) and `h-auto` (expanded)
+- Use `framer-motion`'s `AnimatePresence` + `motion.div` with `layout` for a smooth height animation (already installed), OR use CSS `transition-[max-height]` with a generous max-height value
+- The fade gradient only renders when collapsed
+- "Read more" button sits at the bottom border, styled as a subtle text link
 
 ### Files Changed
 
+| File | Change |
+|------|--------|
+| `src/components/explorer/BuilderPostCard.tsx` | Restructure header into two rows (logo+name / badge+subscribe), add expand/collapse state with smooth animation for the tweet embed area |
 
-| File                                          | Change                                                                                          |
-| --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `src/components/explorer/BuilderPostCard.tsx` | Full card restyling: black bg, cyan border, smaller tweet embed with CSS scale, enhanced footer |
