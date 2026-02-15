@@ -1,58 +1,76 @@
 
 
-# Fix Admin Engagement Daily Activity Chart
+# Fix About Tab Editing + STALE Status for Solo Builders
 
-## Problem
+## Problem 1: Can't Edit Website or Add Media
 
-The "Daily Activity Breakdown" AreaChart appears empty/flat despite having thousands of events. Three root causes:
+The owner's About tab shows the read-only `AboutTabContent`. The website URL editor is buried inside the Support tab (under Settings). The `MediaTab` component exists in the codebase but is **never rendered** anywhere in the owner's profile view -- so there's literally no way to add images or videos.
 
-1. **Session events not excluded from counts**: `session_start` and `session_end` events are processed but don't map to any chart `dataKey`, so they inflate the event total without contributing visible data. Meanwhile the actual displayable events (page_view: 3845, click: 62, feature_use: 1) are dwarfed in scale.
-2. **Only 2-3 data points**: AreaCharts need several points to form visible filled regions. With 2-3 days, the areas are razor-thin slivers.
-3. **Raw ISO date labels**: X-axis shows `2026-02-15` instead of `Feb 15`.
+### Fix
 
-## Solution
+Add the `MediaTab` and `SettingsTab` (website/socials editor) directly below the read-only `AboutTabContent` in the owner's About tab, so owners can manage their project's About page content in one place.
 
-### File: `src/pages/admin/AdminEngagementPage.tsx`
+**File: `src/pages/ProfileDetail.tsx`**
 
-**A. Format X-axis dates** -- Add a `tickFormatter` to the XAxis that converts `2026-02-15` to `Feb 15`:
-
+Change the owner's `about` tab from:
 ```tsx
-<XAxis
-  dataKey="date"
-  tickFormatter={(d) => {
-    const [, m, day] = d.split('-');
-    const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return `${months[parseInt(m) - 1]} ${parseInt(day)}`;
-  }}
-  ...
-/>
+about: (
+  <AboutTabContent ... />
+),
+```
+To:
+```tsx
+about: (
+  <div className="space-y-6">
+    <AboutTabContent ... />
+    {/* Owner editing controls */}
+    <SettingsTab profile={profile} xUserId={user!.id} />
+    <MediaTab profile={profile} xUserId={user!.id} />
+  </div>
+),
 ```
 
-**B. Switch from AreaChart to BarChart for low data-point counts** -- When there are fewer than 5 days of data, a stacked BarChart is far more readable than an AreaChart (bars have visible width even with 1 data point). The implementation will:
+Also add `MediaTab` to the imports.
 
-- Use a `ComposedChart` with stacked `Bar` components instead of `Area` when data length is small (under 7 days)
-- Keep the `AreaChart` for when there's enough data to form smooth curves (7+ days)
-- Or simply switch to stacked bars permanently since the Bloomberg aesthetic fits bars well
+---
 
-**C. Add the missing `searches` data key** -- The aggregation already collects `searches` but no `Area`/`Bar` renders it. Add a fourth series for searches using the existing `C.steel` color.
+## Problem 2: STALE Status Despite 299 Commits
 
-**D. Filter session events from aggregation** -- Skip `session_start` and `session_end` events in the daily aggregation loop so they don't inflate totals or confuse the data pipeline:
+The liveness check in `analyze-github-repo` edge function requires **3 or more contributors** to qualify as "ACTIVE":
 
-```tsx
-all.forEach(e => {
-  if (e.event_type === 'session_start' || e.event_type === 'session_end') return;
-  const day = e.created_at.substring(0, 10);
-  // ... rest of aggregation
-});
+```
+if (daysSinceLastActivity <= 14 && hasMeaningfulActivity && hasMinContributors)
 ```
 
-## Summary of Changes
+Your project has 1 contributor and 299 commits in 30 days. Because `hasMinContributors` (>=3) fails, it falls to the else branch and gets "STALE" (since last activity is within 45 days).
 
-| Change | Impact |
-|--------|--------|
-| Filter out session events from daily aggregation | Prevents invisible data from skewing Y-axis scale |
-| Format X-axis dates to `Feb 15` style | Cleaner, more readable labels |
-| Switch to stacked BarChart | Bars are visible even with 1-3 data points (areas need 5+ to look good) |
-| Add `searches` series | Shows all 4 tracked event types instead of 3 |
+This is too punitive for solo builders and early-stage projects.
 
-**1 file modified**: `src/pages/admin/AdminEngagementPage.tsx`
+### Fix
+
+Lower the minimum contributor threshold from 3 to 1. A solo builder with high commit activity should absolutely qualify as ACTIVE. The contributor diversity score (0-25 points) already penalizes solo projects in the score calculation -- there's no need to double-penalize via the status label.
+
+**File: `supabase/functions/analyze-github-repo/index.ts`**
+
+Change line 377:
+```typescript
+const hasMinContributors = contributorCount >= 3;
+```
+To:
+```typescript
+const hasMinContributors = contributorCount >= 1;
+```
+
+This means ACTIVE now requires: activity in last 14 days + 5 or more weighted events + at least 1 contributor. Solo builders with real commits will correctly show "ACTIVE".
+
+---
+
+## Summary
+
+| File | Change |
+|------|--------|
+| `src/pages/ProfileDetail.tsx` | Add `SettingsTab` and `MediaTab` to owner's About tab |
+| `supabase/functions/analyze-github-repo/index.ts` | Lower min contributors for ACTIVE status from 3 to 1 |
+
+After deploying, you'll need to hit the "Refresh" button on your profile to re-analyze and update the status from STALE to ACTIVE.
+
