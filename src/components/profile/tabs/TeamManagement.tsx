@@ -1,5 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useBlocker } from 'react-router-dom';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { Plus, Trash2, GripVertical, Users2, Target, Save, Upload, Link, AlertCircle, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,16 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useUpdateProfile } from '@/hooks/useUpdateProfile';
@@ -219,13 +208,6 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
     [teamMembers, profile.teamMembers, stakingPitch, profile.stakingPitch]
   );
 
-  // Mount guard - defer blocker activation to avoid intercepting tab-switch navigation
-  const [isMounted, setIsMounted] = useState(false);
-  useEffect(() => {
-    const timer = setTimeout(() => setIsMounted(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
-
   // Warn before browser close/refresh with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -238,14 +220,6 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasChanges]);
-
-  // Block in-app navigation when unsaved changes exist (stable callback)
-  const shouldBlock = useCallback(
-    ({ currentLocation, nextLocation }: { currentLocation: { pathname: string }; nextLocation: { pathname: string } }) =>
-      isMounted && hasChanges && currentLocation.pathname !== nextLocation.pathname,
-    [isMounted, hasChanges]
-  );
-  const blocker = useBlocker(shouldBlock);
 
   return (
     <div className="space-y-6">
@@ -583,25 +557,6 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
         </div>
       )}
 
-      {/* Navigation Blocker Dialog */}
-      <AlertDialog open={blocker.state === 'blocked'}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved team changes. Are you sure you want to leave? Your changes will be lost.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => blocker.reset?.()}>
-              Stay on Page
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => blocker.proceed?.()}>
-              Leave Without Saving
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }
