@@ -63,15 +63,17 @@ export function BuilderPostCard({ post, index, isSubscribed, onSubscribe }: Buil
         </div>
       </div>
 
-      {/* Tweet Embed */}
+      {/* Tweet Embed — fixed height for uniform grid */}
       {tweetId ? (
-        <div className="mx-3 my-3 overflow-hidden rounded-sm border border-border/30 bg-background/50">
+        <div className="relative mx-3 my-3 h-[280px] overflow-hidden rounded-sm border border-border/30 bg-background/50">
           <div className="[&_.react-tweet-theme]:!bg-transparent [&_article]:!border-0 [&_article]:!shadow-none" data-theme="dark">
             <Tweet id={tweetId} />
           </div>
+          {/* Fade-out gradient at bottom */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card/90 to-transparent" />
         </div>
       ) : (
-        <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">
+        <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
           <a href={post.tweetUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
             View post →
           </a>
