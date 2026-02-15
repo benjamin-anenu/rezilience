@@ -48,6 +48,8 @@ import {
   DecayFormula,
   ScoringMethodology,
   DimensionBreakdown,
+  RegistryCTABanner,
+  RegistryFloatingWidget,
 } from '@/components/readme';
 import { useHeroStats } from '@/hooks/useHeroStats';
 import { useRoadmapStats } from '@/hooks/useRoadmapStats';
@@ -121,6 +123,13 @@ export default function Readme() {
           </div>
         </div>
       </section>
+
+      {/* Inline CTA Banner */}
+      <div className="container mx-auto px-4 pt-12 lg:pt-16">
+        <div className="max-w-4xl mx-auto lg:ml-[calc(16rem+2rem)]">
+          <RegistryCTABanner />
+        </div>
+      </div>
 
       {/* Main Content with TOC */}
       <div className="container mx-auto px-4 py-12 lg:py-16">
@@ -1300,6 +1309,9 @@ export default function Readme() {
               </div>
             </section>
           </div>
+
+          {/* Floating Registry Widget */}
+          <RegistryFloatingWidget />
         </div>
       </div>
     </Layout>
