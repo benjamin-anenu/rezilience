@@ -28,6 +28,7 @@ import ProtocolDetail from "./pages/ProtocolDetail";
 import LibraryDocs from "./pages/LibraryDocs";
 import PitchDeck from "./pages/PitchDeck";
 import ResilienceGPT from "./pages/ResilienceGPT";
+import Terms from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 
 // Admin imports
@@ -79,6 +80,7 @@ const App = () => (
               <Route path="/library/:slug" element={<ProtocolDetail />} />
               <Route path="/pitch" element={<PitchDeck />} />
               <Route path="/gpt" element={<ResilienceGPT />} />
+              <Route path="/terms" element={<Terms />} />
 
               {/* Admin Portal */}
               <Route path="/admin/login" element={<AdminLogin />} />

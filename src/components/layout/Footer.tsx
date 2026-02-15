@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Github, Twitter, FileText, Shield, ChevronDown } from 'lucide-react';
+import { Github, Twitter, FileText, Shield, ChevronDown, Scale } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import logo from '@/assets/logo.png';
@@ -41,16 +41,22 @@ export function Footer() {
                <Github className="h-4 w-4" />
                <span>GitHub</span>
              </a>
-             <a
-              href="https://twitter.com/RezilienceSol"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+              <a
+               href="https://twitter.com/RezilienceSol"
+               target="_blank"
+               rel="noopener noreferrer"
+               className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
 
-               <Twitter className="h-4 w-4" />
-               <span>Twitter</span>
-             </a>
-           </div>
+                <Twitter className="h-4 w-4" />
+                <span>Twitter</span>
+              </a>
+              <Link
+               to="/terms"
+               className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+                <Scale className="h-4 w-4" />
+                <span>Terms & Privacy</span>
+              </Link>
+            </div>
          </div>
  
         {/* Data Provenance Section */}
