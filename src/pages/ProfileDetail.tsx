@@ -18,7 +18,7 @@ import {
   SupportTabContent,
   TeamTabContent,
 } from '@/components/program';
-import { SettingsTab, BuildInPublicTab, TeamManagement } from '@/components/profile/tabs';
+import { SettingsTab, BuildInPublicTab, TeamManagement, MediaTab } from '@/components/profile/tabs';
 import { RoadmapManagement } from '@/components/profile/tabs/RoadmapManagement';
 import { PROJECT_CATEGORIES } from '@/types';
 import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
@@ -263,15 +263,19 @@ const ProfileDetail = () => {
               <ProgramTabs>
                 {{
                   about: (
-                    <AboutTabContent
-                      description={profile.description}
-                      category={profile.category}
-                      country={(profile as { country?: string }).country}
-                      getCategoryLabel={getCategoryLabel}
-                      websiteUrl={profile.websiteUrl}
-                      mediaAssets={profile.mediaAssets}
-                      isVerified={profile.verified}
-                    />
+                    <div className="space-y-6">
+                      <AboutTabContent
+                        description={profile.description}
+                        category={profile.category}
+                        country={(profile as { country?: string }).country}
+                        getCategoryLabel={getCategoryLabel}
+                        websiteUrl={profile.websiteUrl}
+                        mediaAssets={profile.mediaAssets}
+                        isVerified={profile.verified}
+                      />
+                      <SettingsTab profile={profile} xUserId={user!.id} />
+                      <MediaTab profile={profile} xUserId={user!.id} />
+                    </div>
                   ),
                   development: (
                     <DevelopmentTabContent {...developmentTabProps} />
