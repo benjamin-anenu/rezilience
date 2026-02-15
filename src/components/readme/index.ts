@@ -12,3 +12,5 @@ export {
   DimensionBreakdown,
 } from './FormulaDisplay';
 export { ScoringMethodology } from './ScoringMethodology';
+export { RegistryCTABanner } from './RegistryCTABanner';
+export { RegistryFloatingWidget } from './RegistryFloatingWidget';
