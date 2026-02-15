@@ -40,7 +40,7 @@ export function ProgramLeaderboard({ projects }: ProgramLeaderboardProps) {
             <TableHead className="text-right px-2 w-14">SCORE</TableHead>
             <TableHead className="hidden xl:table-cell px-1 w-14 text-center">HEALTH</TableHead>
             <TableHead className="hidden xl:table-cell px-1 w-16">TREND</TableHead>
-            <TableHead className="hidden md:table-cell px-2 w-16">LIVE</TableHead>
+            <TableHead className="hidden md:table-cell px-2 w-16">LIVENESS</TableHead>
             <TableHead className="hidden xl:table-cell px-1 w-14">DECAY</TableHead>
             <TableHead className="hidden lg:table-cell px-2 w-16">ORIG</TableHead>
             <TableHead className="hidden lg:table-cell px-2 w-20">STATUS</TableHead>
