@@ -245,7 +245,7 @@ export function MobileProgramCard({ project, rank, movement, scoreHistory, veloc
           ) : (
             <Badge variant="outline" className="border-primary/50 bg-primary/10 text-primary text-xs">
               <CheckCircle className="mr-1 h-3 w-3" />
-              Owned
+              Main
             </Badge>
           )}
           {project.claimStatus === 'unclaimed' ? (
