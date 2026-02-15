@@ -25,8 +25,8 @@ export function BuildersInPublicFeed() {
           </div>
         </div>
         {/* Card skeletons */}
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {[...Array(6)].map((_, i) => (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {[...Array(8)].map((_, i) => (
             <div key={i} className="rounded-sm border border-border/50 bg-card/60 backdrop-blur-xl p-0 overflow-hidden">
               <div className="flex items-center gap-2.5 border-b border-border/50 px-4 py-3">
                 <Skeleton className="h-8 w-8 rounded-full" />
@@ -98,7 +98,7 @@ export function BuildersInPublicFeed() {
       </div>
 
       {/* Post Grid */}
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {posts.map((post, index) => (
           <BuilderPostCard
             key={post.postId}
