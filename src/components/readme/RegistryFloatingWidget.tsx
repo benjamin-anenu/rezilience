@@ -1,25 +1,11 @@
 import { Link } from 'react-router-dom';
 import { ShieldCheck, TrendingUp, Zap, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useEffect, useState } from 'react';
 
 export function RegistryFloatingWidget() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setVisible(window.scrollY > 600);
-    };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    handleScroll();
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  if (!visible) return null;
-
   return (
-    <div className="sticky top-24 hidden xl:block w-56 shrink-0">
-      <div className="rounded-sm border border-primary/20 bg-card/80 backdrop-blur-sm overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
+    <aside className="hidden xl:block sticky top-24 w-56 shrink-0 self-start">
+      <div className="rounded-sm border border-border bg-card/50 overflow-hidden">
         {/* Mini score preview */}
         <div className="border-b border-border bg-primary/5 px-4 py-3 text-center">
           <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">
@@ -49,7 +35,7 @@ export function RegistryFloatingWidget() {
           </p>
         </div>
       </div>
-    </div>
+    </aside>
   );
 }
 
