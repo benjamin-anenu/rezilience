@@ -32,9 +32,8 @@ export function BuilderPostCard({ post, index, isSubscribed, onSubscribe }: Buil
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <motion.div
-      layout
-      className="group overflow-hidden rounded-sm border border-primary/40 bg-[#0a0a0a] transition-colors duration-300 hover:border-primary/70 hover:shadow-[0_0_25px_-5px_hsl(var(--primary)/0.25)] animate-fade-in"
+    <div
+      className="group overflow-hidden rounded-sm border border-primary/40 bg-[#0a0a0a] transition-all duration-300 hover:border-primary/70 hover:shadow-[0_0_25px_-5px_hsl(var(--primary)/0.25)] animate-fade-in"
       style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
     >
       {/* Header — two rows */}
@@ -143,6 +142,6 @@ export function BuilderPostCard({ post, index, isSubscribed, onSubscribe }: Buil
           )}
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 }
