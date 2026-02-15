@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Loader2 } from 'lucide-react';
 import { StatCard } from '@/components/admin/StatCard';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts';
 
@@ -113,19 +113,14 @@ export function AdminAIUsage() {
         <div className="h-72">
           {data.costOverTime.length > 0 ? (
             <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={data.costOverTime}>
-                <defs>
-                  <linearGradient id="costCum" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={C.orange} stopOpacity={0.4} />
-                    <stop offset="100%" stopColor={C.orange} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
+              <BarChart data={data.costOverTime}>
                 <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
-                <XAxis dataKey="date" tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
+                <XAxis dataKey="date" tickFormatter={(d: string) => { const [, m, day] = d.split('-'); const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${months[parseInt(m) - 1]} ${parseInt(day)}`; }} tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
                 <Tooltip {...tip} formatter={(v: number) => `$${v}`} />
-                <Area type="monotone" dataKey="cumulative" stroke={C.orange} fill="url(#costCum)" strokeWidth={2.5} name="Cumulative $" />
-              </AreaChart>
+                <Bar dataKey="daily" fill={C.teal} radius={[3, 3, 0, 0]} name="Daily $" />
+                <Bar dataKey="cumulative" fill={C.orange} radius={[3, 3, 0, 0]} name="Cumulative $" />
+              </BarChart>
             </ResponsiveContainer>
           ) : (
             <div className="flex h-full items-center justify-center text-[11px] font-mono text-muted-foreground/50">NO AI USAGE DATA YET</div>
@@ -140,18 +135,14 @@ export function AdminAIUsage() {
           <div className="h-56">
             {data.tokenOverTime.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data.tokenOverTime}>
-                  <defs>
-                    <linearGradient id="tokIn" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.teal} stopOpacity={0.35} /><stop offset="100%" stopColor={C.teal} stopOpacity={0} /></linearGradient>
-                    <linearGradient id="tokOut" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={C.orange} stopOpacity={0.3} /><stop offset="100%" stopColor={C.orange} stopOpacity={0} /></linearGradient>
-                  </defs>
+                <BarChart data={data.tokenOverTime}>
                   <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
-                  <XAxis dataKey="date" tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
+                  <XAxis dataKey="date" tickFormatter={(d: string) => { const [, m, day] = d.split('-'); const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return `${months[parseInt(m) - 1]} ${parseInt(day)}`; }} tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
                   <Tooltip {...tip} />
-                  <Area type="monotone" dataKey="input" stackId="1" stroke={C.teal} fill="url(#tokIn)" strokeWidth={2} name="Input" />
-                  <Area type="monotone" dataKey="output" stackId="1" stroke={C.orange} fill="url(#tokOut)" strokeWidth={2} name="Output" />
-                </AreaChart>
+                  <Bar dataKey="input" stackId="1" fill={C.teal} name="Input" />
+                  <Bar dataKey="output" stackId="1" fill={C.orange} name="Output" radius={[3, 3, 0, 0]} />
+                </BarChart>
               </ResponsiveContainer>
             ) : (
               <div className="flex h-full items-center justify-center text-[11px] font-mono text-muted-foreground/50">NO TOKEN DATA</div>
