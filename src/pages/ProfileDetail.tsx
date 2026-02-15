@@ -41,8 +41,11 @@ const ProfileDetail = () => {
 
   const { data: profile, isLoading, error } = useClaimedProfile(id || '');
 
-  // Check if current user is the owner
-  const isOwner = user?.id && profile?.xUserId && user.id === profile.xUserId;
+  // Check if current user is the owner (fallback to username match)
+  const isOwner = user && profile && (
+    (user.id && profile.xUserId && user.id === profile.xUserId) ||
+    (user.username && profile.xUsername && user.username.toLowerCase() === profile.xUsername.toLowerCase())
+  );
 
   const handleRefresh = async () => {
     if (!profile?.githubOrgUrl || !profile?.id) {
@@ -52,52 +55,62 @@ const ProfileDetail = () => {
     
     setIsRefreshing(true);
     try {
-      // Call ALL 4 dimension analyses in parallel for full-spectrum refresh
+      // Wrap each dimension call with a 60-second timeout
+      const withTimeout = <T,>(promise: Promise<T>, label: string): Promise<T> => {
+        return Promise.race([
+          promise,
+          new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label} timed out after 60s`)), 60000))
+        ]);
+      };
+
       const [githubResult, depsResult, govResult, tvlResult] = await Promise.allSettled([
-        // 1. GitHub Activity (40%)
-        supabase.functions.invoke('analyze-github-repo', {
+        withTimeout(supabase.functions.invoke('analyze-github-repo', {
           body: { github_url: profile.githubOrgUrl, profile_id: profile.id },
-        }),
-        // 2. Dependency Health (25%)
-        supabase.functions.invoke('analyze-dependencies', {
+        }), 'GitHub'),
+        withTimeout(supabase.functions.invoke('analyze-dependencies', {
           body: { github_url: profile.githubOrgUrl, profile_id: profile.id },
-        }),
-        // 3. Governance (20%) - only if multisig configured
+        }), 'Dependencies'),
         profile.governanceMetrics?.governance_address
-          ? supabase.functions.invoke('analyze-governance', {
+          ? withTimeout(supabase.functions.invoke('analyze-governance', {
               body: { governance_address: profile.governanceMetrics.governance_address, profile_id: profile.id },
-            })
+            }), 'Governance')
           : Promise.resolve({ data: null }),
-        // 4. TVL (15%) - only for DeFi category
         profile.category === 'defi'
-          ? supabase.functions.invoke('analyze-tvl', {
+          ? withTimeout(supabase.functions.invoke('analyze-tvl', {
               body: { 
                 protocol_name: profile.projectName, 
                 profile_id: profile.id, 
                 monthly_commits: profile.githubAnalytics?.github_commits_30d || 30 
               },
-            })
+            }), 'TVL')
           : Promise.resolve({ data: null }),
       ]);
 
-      // Log any dimension failures for debugging
       const dimensionNames = ['GitHub', 'Dependencies', 'Governance', 'TVL'];
-      [githubResult, depsResult, govResult, tvlResult].forEach((result, i) => {
+      const results = [githubResult, depsResult, govResult, tvlResult];
+      const succeeded = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').map((r, i) => dimensionNames[i]);
+
+      results.forEach((result, i) => {
         if (result.status === 'rejected') {
-          console.warn(`${dimensionNames[i]} analysis failed:`, result.reason);
-        } else if (result.value && 'error' in result.value && result.value.error) {
-          console.warn(`${dimensionNames[i]} analysis error:`, result.value.error);
+          console.warn(`${dimensionNames[i]} failed:`, result.reason);
         }
       });
       
-      // Invalidate queries to show new data
       await queryClient.invalidateQueries({ queryKey: ['claimed-profile', profile.id] });
       await queryClient.invalidateQueries({ queryKey: ['claimed-profiles'] });
       
-      toast({ 
-        title: 'Full refresh complete', 
-        description: 'All 4 dimensions analyzed and integrated score recalculated.' 
-      });
+      if (failed.length > 0) {
+        toast({ 
+          title: `Refresh partially complete (${succeeded}/4)`, 
+          description: `${failed.join(', ')} timed out or failed. Other dimensions updated.` 
+        });
+      } else {
+        toast({ 
+          title: 'Full refresh complete', 
+          description: 'All 4 dimensions analyzed and integrated score recalculated.' 
+        });
+      }
     } catch (err) {
       console.error('Refresh exception:', err);
       toast({ title: 'Refresh failed', description: 'Please try again later', variant: 'destructive' });
