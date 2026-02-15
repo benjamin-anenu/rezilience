@@ -203,13 +203,6 @@ Deno.serve(async (req) => {
           resilience_score: resilienceScore,
         }).eq("id", project.id);
 
-        await supabase.from("score_history").insert({
-          project_id: project.id,
-          score: resilienceScore,
-          commit_velocity: commitVelocity,
-          days_last_commit: daysSinceCommit,
-        });
-
         updatedCount++;
         results.push({ project: project.program_name, status: "updated", score: resilienceScore, tokenSource });
       } catch (err) {

@@ -38,12 +38,21 @@ export function useScoreHistory(projectId: string, limit = 12) {
 export function useScoreHistoryChart(projectId: string) {
   const { data: history, ...rest } = useScoreHistory(projectId);
 
-  const chartData = (history || [])
+  // Deduplicate by date (keep latest per day)
+  const deduped = new Map<string, typeof history extends (infer T)[] ? T : never>();
+  for (const entry of history || []) {
+    const dayKey = new Date(entry.snapshot_date).toISOString().split('T')[0];
+    if (!deduped.has(dayKey)) {
+      deduped.set(dayKey, entry);
+    }
+  }
+
+  const chartData = Array.from(deduped.values())
     .reverse()
     .map(entry => {
       const date = new Date(entry.snapshot_date);
       return {
-        month: date.toLocaleDateString('en-US', { month: 'short' }),
+        month: date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
         score: entry.score,
         velocity: entry.commit_velocity || 0,
       };
