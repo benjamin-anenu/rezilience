@@ -1,44 +1,70 @@
 
 
-## Fix Score Discrepancies
+## Fix Score History Chart Accuracy
 
-### Fix 1: Ecosystem Pulse Average (27.1 vs 39)
+The chart currently has three accuracy problems that make it unreliable:
 
-**File:** `src/hooks/useEcosystemPulse.ts`, function `computeAggregates`
+### Problem 1: Duplicate snapshots (dozens per day)
 
-Change the average score calculation to exclude zero-scored profiles (matching the logic used by `useHeroStats` and `useEcosystemStats`):
+The refresh cycle runs every 30 minutes and inserts a new `score_history` row each time. With `limit(12)`, the chart shows 12 data points all from the same day labeled "Feb" -- making it useless for trend visualization.
 
+**Fix:** Use UPSERT with a unique constraint on `(claimed_profile_id, snapshot_date::date)` so only one snapshot per project per day exists. The `snapshot_date` in `refresh-all-profiles` already uses `today` (date-only string), but legacy rows from `fetch-github` use full timestamps. Additionally, deduplicate in the hook query.
+
+| Step | Detail |
+|------|--------|
+| Database migration | Add a unique index on `(claimed_profile_id, snapshot_date::date)` or change the insert to an upsert |
+| `refresh-all-profiles` | Change `.insert()` to `.upsert()` with `onConflict: 'claimed_profile_id,snapshot_date'` so re-runs on the same day update rather than duplicate |
+| `fetch-github` | Remove the `score_history` insert at line 206 (it still writes with the old GitHub-only score) |
+| `useScoreHistoryChart` | Deduplicate entries by date, keeping only the latest per day |
+
+### Problem 2: `fetch-github` still writes stale snapshots
+
+`supabase/functions/fetch-github/index.ts` line 206 still inserts into `score_history` with its own independently calculated score -- bypassing the unified scoring in `refresh-all-profiles`. This creates conflicting rows.
+
+**Fix:** Remove the `score_history` insert from `fetch-github`, matching what was already done for `analyze-github-repo`.
+
+### Problem 3: `commit_velocity` stores wrong data
+
+Line 363 in `refresh-all-profiles` writes `commit_velocity: scoreBreakdown.github` (the GitHub dimension score, 0-100) instead of the actual commit velocity (commits/day, typically 0-3). The chart Y-axis says "Velocity" with domain [0, 20] but gets values like 45 or 29.
+
+**Fix:** Store the actual `commit_velocity` value from the profile's `github_commits_30d / 30` calculation instead of the GitHub dimension score.
+
+### Problem 4: Chart X-axis labels are meaningless
+
+All 12 points show "Feb" because they're all from the same month. The chart should show dates (e.g., "Feb 10", "Feb 11") for daily granularity.
+
+**Fix:** Update the date format in `useScoreHistoryChart` to include the day: `{ month: 'short', day: 'numeric' }`.
+
+---
+
+### Technical changes
+
+**1. Database migration** -- Add unique constraint to prevent duplicate snapshots:
+```sql
+-- Remove duplicate rows first (keep the latest per profile per day)
+DELETE FROM score_history a USING score_history b
+WHERE a.id < b.id
+  AND a.claimed_profile_id = b.claimed_profile_id
+  AND a.snapshot_date::date = b.snapshot_date::date;
+
+-- Add unique index
+CREATE UNIQUE INDEX idx_score_history_profile_day
+  ON score_history (claimed_profile_id, (snapshot_date::date));
 ```
-// Current (buggy): divides by ALL profiles
-const avgScore = total > 0 
-  ? profiles.reduce((s, p) => s + (p.resilience_score || 0), 0) / total 
-  : 0;
 
-// Fixed: exclude unscored profiles
-const scoredProfiles = profiles.filter(p => (p.resilience_score || 0) > 0);
-const avgScore = scoredProfiles.length > 0
-  ? scoredProfiles.reduce((s, p) => s + (p.resilience_score || 0), 0) / scoredProfiles.length
-  : 0;
-```
+**2. `supabase/functions/refresh-all-profiles/index.ts`**
+- Change `.insert()` to `.upsert()` for score_history
+- Fix `commit_velocity` to use actual velocity: `(profile.github_commits_30d || 0) / 30`
 
-This brings all three displays (Hero, Explorer Stats, Ecosystem Pulse) into alignment at ~39.
+**3. `supabase/functions/fetch-github/index.ts`**
+- Remove the `score_history` insert block (lines ~204-210)
 
-### Fix 2: Score Chart vs Hero Score Divergence
+**4. `src/hooks/useScoreHistory.ts`**
+- Add client-side deduplication by date (keep latest per day)
+- Change month format to include day number: `{ month: 'short', day: 'numeric' }` so labels read "Feb 10", "Feb 11" etc.
 
-**Root cause:** The `refresh-all-profiles` edge function updates `resilience_score` on the live profile, but the `score_history` snapshot is written at a different point in the refresh cycle -- potentially before all dimension analyses (dependencies, governance, TVL) complete. This causes the snapshot score to diverge from the final computed score.
+**5. `src/components/program/AnalyticsCharts.tsx` and `UpgradeChart.tsx`**
+- Update Y-axis domain for velocity from `[0, 20]` to `[0, 'auto']` since actual velocity values are typically 0-3
 
-**Fix approach:** In the `refresh-all-profiles` edge function, ensure the `score_history` INSERT happens **after** the final `resilience_score` is written to `claimed_profiles`, and reads the score directly from the freshly-updated profile row rather than computing it independently.
-
-**File:** `supabase/functions/refresh-all-profiles/index.ts`
-
-The specific change: after the profile's `resilience_score` is updated, the snapshot should read `resilience_score` from the profile itself (single source of truth) rather than recalculating it. This guarantees the chart and the hero always show the same number for any given date.
-
-### Summary
-
-| Change | File | What |
-|--------|------|------|
-| Average calculation | `src/hooks/useEcosystemPulse.ts` | Exclude score=0 profiles from average |
-| Snapshot consistency | `supabase/functions/refresh-all-profiles/index.ts` | Write score_history from the final profile score, not a separate calculation |
-
-Two targeted fixes. No UI layout changes, no new dependencies.
+These fixes ensure the chart accurately reflects the unified scoring mechanism with one data point per day, correct velocity values, and readable date labels.
 
