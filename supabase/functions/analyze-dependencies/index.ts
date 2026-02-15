@@ -856,42 +856,48 @@ async function analyzePypiDependencies(
   let outdatedCount = 0;
   let criticalCount = 0;
   
-  // Limit to first 100 dependencies for large projects
-  const depEntries = Array.from(parsedDeps.entries()).slice(0, 100);
+  // Cap at 40 dependencies, prioritizing critical ones first
+  const allEntries = Array.from(parsedDeps.entries());
+  const criticalEntries = allEntries.filter(([name]) => CRITICAL_PYPI_DEPS.includes(name));
+  const nonCriticalEntries = allEntries.filter(([name]) => !CRITICAL_PYPI_DEPS.includes(name));
+  const depEntries = [...criticalEntries, ...nonCriticalEntries].slice(0, 40);
   
-  for (const [name, currentVersion] of depEntries) {
-    // Rate limit: 300ms between requests (PyPI is generous but be polite)
-    await new Promise((resolve) => setTimeout(resolve, 300));
+  // Process in batches of 5 for parallel lookups
+  for (let i = 0; i < depEntries.length; i += 5) {
+    const batch = depEntries.slice(i, i + 5);
+    const results = await Promise.allSettled(
+      batch.map(async ([name, currentVersion]) => {
+        const latestVersion = await getPypiLatestVersion(name);
+        const isCritical = CRITICAL_PYPI_DEPS.includes(name);
+        if (!latestVersion) return null;
+        
+        const monthsBehind = currentVersion === "latest" ? 0 : calculateVersionGap(currentVersion, latestVersion);
+        const isOutdated = monthsBehind > 0;
+        const downloads = await getPypiDownloads(name);
+        
+        return {
+          name,
+          currentVersion: currentVersion === "latest" ? latestVersion : currentVersion,
+          latestVersion,
+          monthsBehind,
+          isOutdated,
+          isCritical,
+          reverseDeps: downloads,
+        };
+      })
+    );
     
-    const latestVersion = await getPypiLatestVersion(name);
-    const isCritical = CRITICAL_PYPI_DEPS.includes(name);
-    
-    if (latestVersion) {
-      const monthsBehind = currentVersion === "latest" 
-        ? 0 
-        : calculateVersionGap(currentVersion, latestVersion);
-      const isOutdated = monthsBehind > 0;
-      
-      // Get download count as ecosystem impact proxy
-      const downloads = await getPypiDownloads(name);
-      
-      dependencies.push({
-        name,
-        currentVersion: currentVersion === "latest" ? latestVersion : currentVersion,
-        latestVersion,
-        monthsBehind,
-        isOutdated,
-        isCritical,
-        reverseDeps: downloads,
-      });
-      
-      if (isOutdated) {
-        outdatedCount++;
-        if (isCritical && monthsBehind >= 3) {
-          criticalCount++;
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value) {
+        dependencies.push(r.value);
+        if (r.value.isOutdated) {
+          outdatedCount++;
+          if (r.value.isCritical && r.value.monthsBehind >= 3) criticalCount++;
         }
       }
     }
+    // Small delay between batches
+    if (i + 5 < depEntries.length) await new Promise(r => setTimeout(r, 100));
   }
   
   // Calculate health score
@@ -944,37 +950,40 @@ async function analyzeNpmDependencies(
   let outdatedCount = 0;
   let criticalCount = 0;
   
-  for (const [name, currentVersion] of parsedDeps) {
-    // Rate limit: be gentle with npm registry (500ms between requests)
-    await new Promise((resolve) => setTimeout(resolve, 500));
+  // Cap at 40 deps, prioritizing critical ones
+  const allNpmEntries = Array.from(parsedDeps.entries());
+  const criticalNpm = allNpmEntries.filter(([name]) => CRITICAL_NPM_DEPS.includes(name));
+  const nonCriticalNpm = allNpmEntries.filter(([name]) => !CRITICAL_NPM_DEPS.includes(name));
+  const npmEntries = [...criticalNpm, ...nonCriticalNpm].slice(0, 40);
+  
+  // Process in batches of 5 for parallel lookups
+  for (let i = 0; i < npmEntries.length; i += 5) {
+    const batch = npmEntries.slice(i, i + 5);
+    const results = await Promise.allSettled(
+      batch.map(async ([name, currentVersion]) => {
+        const latestVersion = await getNpmLatestVersion(name);
+        const isCritical = CRITICAL_NPM_DEPS.includes(name);
+        if (!latestVersion) return null;
+        
+        const monthsBehind = calculateVersionGap(currentVersion, latestVersion);
+        const isOutdated = monthsBehind > 0;
+        const downloads = await getNpmDownloads(name);
+        
+        return { name, currentVersion, latestVersion, monthsBehind, isOutdated, isCritical, reverseDeps: downloads };
+      })
+    );
     
-    const latestVersion = await getNpmLatestVersion(name);
-    const isCritical = CRITICAL_NPM_DEPS.includes(name);
-    
-    if (latestVersion) {
-      const monthsBehind = calculateVersionGap(currentVersion, latestVersion);
-      const isOutdated = monthsBehind > 0;
-      
-      // Get download count as ecosystem impact proxy
-      const downloads = await getNpmDownloads(name);
-      
-      dependencies.push({
-        name,
-        currentVersion,
-        latestVersion,
-        monthsBehind,
-        isOutdated,
-        isCritical,
-        reverseDeps: downloads,
-      });
-      
-      if (isOutdated) {
-        outdatedCount++;
-        if (isCritical && monthsBehind >= 3) {
-          criticalCount++;
+    for (const r of results) {
+      if (r.status === 'fulfilled' && r.value) {
+        dependencies.push(r.value);
+        if (r.value.isOutdated) {
+          outdatedCount++;
+          if (r.value.isCritical && r.value.monthsBehind >= 3) criticalCount++;
         }
       }
     }
+    // Small delay between batches
+    if (i + 5 < npmEntries.length) await new Promise(r => setTimeout(r, 100));
   }
   
   // Calculate health score
@@ -1111,39 +1120,41 @@ Deno.serve(async (req) => {
     let outdatedCount = 0;
     let criticalCount = 0;
 
-    for (const [name, currentVersion] of parsedDeps) {
-      // Rate limit: 1 request/second to respect crates.io
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    // Cap at 40 deps, prioritizing critical ones
+    const allCrateEntries = Array.from(parsedDeps.entries());
+    const criticalCrates = allCrateEntries.filter(([name]) => CRITICAL_DEPS.includes(name));
+    const nonCriticalCrates = allCrateEntries.filter(([name]) => !CRITICAL_DEPS.includes(name));
+    const crateEntries = [...criticalCrates, ...nonCriticalCrates].slice(0, 40);
+    
+    // Process in batches of 5 for parallel lookups
+    for (let i = 0; i < crateEntries.length; i += 5) {
+      const batch = crateEntries.slice(i, i + 5);
+      const results = await Promise.allSettled(
+        batch.map(async ([name, currentVersion]) => {
+          const latestVersion = await getLatestCrateVersion(name);
+          const isCritical = CRITICAL_DEPS.includes(name);
+          if (!latestVersion) return null;
+          
+          const resolvedVersion = currentVersion === "workspace" ? latestVersion : currentVersion;
+          const monthsBehind = currentVersion === "workspace" ? 0 : calculateVersionGap(resolvedVersion, latestVersion);
+          const isOutdated = monthsBehind > 0;
+          const reverseDeps = await getCrateReverseDeps(name);
+          
+          return { name, currentVersion: resolvedVersion, latestVersion, monthsBehind, isOutdated, isCritical, reverseDeps };
+        })
+      );
       
-      const latestVersion = await getLatestCrateVersion(name);
-      const isCritical = CRITICAL_DEPS.includes(name);
-      
-      if (latestVersion) {
-        // If version is "workspace", use latest from crates.io as current (best effort)
-        const resolvedVersion = currentVersion === "workspace" ? latestVersion : currentVersion;
-        const monthsBehind = currentVersion === "workspace" ? 0 : calculateVersionGap(resolvedVersion, latestVersion);
-        const isOutdated = monthsBehind > 0;
-        
-        // Fetch reverse dependency count for ecosystem impact
-        const reverseDeps = await getCrateReverseDeps(name);
-        
-        dependencies.push({
-          name,
-          currentVersion: resolvedVersion,
-          latestVersion,
-          monthsBehind,
-          isOutdated,
-          isCritical,
-          reverseDeps,
-        });
-        
-        if (isOutdated) {
-          outdatedCount++;
-          if (isCritical && monthsBehind >= 3) {
-            criticalCount++;
+      for (const r of results) {
+        if (r.status === 'fulfilled' && r.value) {
+          dependencies.push(r.value);
+          if (r.value.isOutdated) {
+            outdatedCount++;
+            if (r.value.isCritical && r.value.monthsBehind >= 3) criticalCount++;
           }
         }
       }
+      // Respect crates.io rate limit: 200ms between batches
+      if (i + 5 < crateEntries.length) await new Promise(r => setTimeout(r, 200));
     }
 
     // Calculate health score
