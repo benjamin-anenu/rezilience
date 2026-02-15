@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { logServiceHealth } from "../_shared/service-health.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -53,7 +54,9 @@ Deno.serve(async (req) => {
     const scorecardUrl = `https://api.scorecard.dev/projects/github.com/${owner}/${repo}`;
     console.log(`Querying OpenSSF Scorecard: ${scorecardUrl}`);
 
+    const scStart = Date.now();
     const response = await fetch(scorecardUrl);
+    logServiceHealth("OpenSSF Scorecard", `/projects/github.com/${owner}/${repo}`, response.status, Date.now() - scStart, response.ok ? undefined : `HTTP ${response.status}`);
 
     if (!response.ok) {
       const errorText = await response.text();

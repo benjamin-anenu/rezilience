@@ -1,9 +1,7 @@
 /**
  * X (Twitter) OAuth 2.0 PKCE Callback Handler
- * 
- * Exchanges authorization code for access token and fetches user profile.
- * Uses OAuth 2.0 with PKCE flow as required by X for public clients.
  */
+import { logServiceHealth } from "../_shared/service-health.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -77,6 +75,7 @@ Deno.serve(async (req) => {
     // X requires Basic auth with client_id:client_secret for confidential clients
     const credentials = btoa(`${clientId}:${clientSecret}`);
 
+    const tokenStart = Date.now();
     const tokenResponse = await fetch('https://api.x.com/2/oauth2/token', {
       method: 'POST',
       headers: {
@@ -85,6 +84,7 @@ Deno.serve(async (req) => {
       },
       body: tokenParams.toString(),
     });
+    logServiceHealth("X (Twitter) API", "/2/oauth2/token", tokenResponse.status, Date.now() - tokenStart, tokenResponse.ok ? undefined : `HTTP ${tokenResponse.status}`);
 
     if (!tokenResponse.ok) {
       const errorText = await tokenResponse.text();
@@ -104,6 +104,7 @@ Deno.serve(async (req) => {
     // Step 2: Fetch user profile
     console.log('Fetching user profile...');
     
+    const userStart = Date.now();
     const userResponse = await fetch(
       'https://api.x.com/2/users/me?user.fields=profile_image_url',
       {
@@ -112,6 +113,7 @@ Deno.serve(async (req) => {
         },
       }
     );
+    logServiceHealth("X (Twitter) API", "/2/users/me", userResponse.status, Date.now() - userStart, userResponse.ok ? undefined : `HTTP ${userResponse.status}`);
 
     if (!userResponse.ok) {
       const errorText = await userResponse.text();

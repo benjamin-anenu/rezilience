@@ -5,10 +5,14 @@ import { ResponsiveContainer, AreaChart, Area } from 'recharts';
 
 const SERVICES = [
   { name: 'GitHub API', endpoint: 'api.github.com', dashboardUrl: 'https://github.com/settings/tokens', costEstimate: 'Free tier' },
-  { name: 'DeFiLlama', endpoint: 'api.llama.fi', dashboardUrl: 'https://defillama.com', costEstimate: 'Free' },
+  { name: 'DeFiLlama API', endpoint: 'api.llama.fi', dashboardUrl: 'https://defillama.com', costEstimate: 'Free' },
   { name: 'Solana RPC', endpoint: 'api.mainnet-beta.solana.com', dashboardUrl: '#', costEstimate: 'Variable' },
-  { name: 'Algolia Search', endpoint: 'algolia.com', dashboardUrl: 'https://dashboard.algolia.com', costEstimate: '$0-29/mo' },
-  { name: 'X (Twitter) OAuth', endpoint: 'api.x.com', dashboardUrl: 'https://developer.x.com', costEstimate: 'Free' },
+  { name: 'Lovable AI Gateway', endpoint: 'ai-gateway.lovable.dev', dashboardUrl: '#', costEstimate: 'Included' },
+  { name: 'OtterSec API', endpoint: 'osec.io', dashboardUrl: 'https://osec.io', costEstimate: 'Free' },
+  { name: 'OpenSSF Scorecard', endpoint: 'api.scorecard.dev', dashboardUrl: 'https://scorecard.dev', costEstimate: 'Free' },
+  { name: 'Crates.io API', endpoint: 'crates.io', dashboardUrl: 'https://crates.io', costEstimate: 'Free' },
+  { name: 'X (Twitter) API', endpoint: 'api.x.com', dashboardUrl: 'https://developer.x.com', costEstimate: 'Free' },
+  { name: 'Algolia Search', endpoint: 'algolia.net', dashboardUrl: 'https://dashboard.algolia.com', costEstimate: '$0-29/mo' },
   { name: 'Lovable Cloud', endpoint: 'supabase.co', dashboardUrl: '#', costEstimate: 'Included' },
 ];
 
