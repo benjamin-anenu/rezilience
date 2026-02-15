@@ -8,7 +8,7 @@ import { useExplorerProjects } from '@/hooks/useExplorerProjects';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Megaphone } from 'lucide-react';
+import { Megaphone, ArrowLeft, ArrowRight } from 'lucide-react';
 import {
   Pagination,
   PaginationContent,
@@ -139,8 +139,18 @@ const Explorer = () => {
               }}
               className="flex items-center gap-2"
             >
-              <Megaphone className="h-4 w-4" />
-              Builders In Public
+              {activeView === 'builders' ? (
+                <>
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Registry
+                </>
+              ) : (
+                <>
+                  <Megaphone className="h-4 w-4" />
+                  View Builders In Public
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
 
             <Tabs

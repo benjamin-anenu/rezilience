@@ -49,14 +49,24 @@ export function useBuildersFeed() {
         }
       }
 
-      // Sort newest first
+      // Sort by X post date (snowflake ID), newest first
+      const getSnowflakeTimestamp = (url: string): number => {
+        const match = url.match(/status\/(\d+)/);
+        if (!match) return 0;
+        try {
+          return Number(BigInt(match[1]) >> 22n) + 1288834974657;
+        } catch {
+          return 0;
+        }
+      };
+
       posts.sort((a, b) => {
-        const da = new Date(a.timestamp).getTime();
-        const db = new Date(b.timestamp).getTime();
-        if (isNaN(da) && isNaN(db)) return 0;
-        if (isNaN(da)) return 1;
-        if (isNaN(db)) return -1;
-        return db - da;
+        const tsA = getSnowflakeTimestamp(a.tweetUrl);
+        const tsB = getSnowflakeTimestamp(b.tweetUrl);
+        if (!tsA && !tsB) return 0;
+        if (!tsA) return 1;
+        if (!tsB) return -1;
+        return tsB - tsA;
       });
 
       return posts;
