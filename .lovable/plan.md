@@ -1,77 +1,67 @@
 
 
-# Terms of Service and Privacy Policy Page for Rezilience
+# Sync Profile Detail (My Registry) with Public Program Detail
 
-## Overview
-Create a branded, developer-friendly Terms of Service and Privacy Policy page at `/terms` that reinforces Rezilience's identity as open-source public good infrastructure for Solana. The document will be written in plain language with a transparent, builder-first tone -- not corporate legalese. A link to this page will be added to the footer on all pages.
+## Problem
+The owner's "My Registry" page (`/profile/:id`) is missing several features that exist on the public program detail page (`/program/:id`). The two views have drifted apart as new features were added to the public page.
 
-## What Gets Built
+## Gaps Identified
 
-### 1. New Page: `/terms` (`src/pages/Terms.tsx`)
-A single-page legal document with two major sections (Terms of Service + Privacy Policy), wrapped in the standard `<Layout>` component. Uses the existing brand system:
-- Space Grotesk uppercase section headers
-- JetBrains Mono for defined terms and data labels
-- Collapsible/Accordion sections for easy navigation
-- Table of Contents sidebar (sticky, matching README page pattern)
-- "Open Source Public Good" badge prominently displayed at the top
+### 1. Owner's Development Tab -- Missing Health Cards
+The owner view uses a custom `DevelopmentTab` component that lacks:
+- **Dependency Health Card** (outdated/critical crate counts)
+- **Governance Health Card** (DAO/multisig transaction monitoring)
+- **TVL Metrics Card** (economic impact for DeFi protocols)
+- **Vulnerability & Security Card** (OSV.dev + OpenSSF data)
+- Confidence badges, deploy slot info, and "last verified" timestamps on originality metrics
 
-### 2. Document Content Structure
+### 2. Visitor View Development Tab -- Missing Props
+The visitor (non-owner) view inside ProfileDetail passes far fewer props to `DevelopmentTabContent` than the public ProgramDetail page:
+- Missing: `bytecodeMatchStatus`, `bytecodeVerifiedAt`, `bytecodeConfidence`, `bytecodeDeploySlot`
+- Missing: `vulnerabilityCount`, `vulnerabilityDetails`, `vulnerabilityAnalyzedAt`
+- Missing: `openssfScore`, `openssfChecks`, `openssfAnalyzedAt`
+- Missing: `claimStatus` on Team, Community, and Roadmap tabs
 
-**TERMS OF SERVICE**
-- Preamble: "Rezilience is open-source public good infrastructure for the Solana ecosystem. This codebase is freely forkable under [MIT/Apache 2.0]. We do not sell data. We do not gate public information."
-- Acceptance of Terms
-- Nature of the Service (public registry, scoring methodology, transparency layer)
-- Open Source License & Forkability
-- User Accounts (X OAuth -- what we store, what we don't)
-- Wallet Connections (read-only, no custody, no private keys)
-- Registry Participation (voluntary claim process, data accuracy responsibility)
-- Intellectual Property (user-submitted content remains theirs)
-- Disclaimers (scores are informational, not financial advice)
-- Limitation of Liability
-- Governing Law
-- Changes to Terms
+### 3. Owner View -- Missing Support Tab
+The owner's "Support" tab currently renders the `SettingsTab` (edit website/socials). The public page shows a proper `SupportTabContent` with staking info and FAQ. The owner should see both: the public support content plus their settings controls.
 
-**PRIVACY POLICY**
-- Data We Collect (exhaustive, transparent list):
-  - **X (Twitter) Authentication**: User ID, username, display name, avatar URL (via OAuth -- no passwords stored)
-  - **Wallet Addresses**: Public keys only (read-only, never private keys)
-  - **GitHub Data**: Public repository metrics (stars, forks, contributors, commit history, languages, topics) -- all publicly available data
-  - **Project Registry Data**: Project name, description, category, country, website URL, logo, program ID, media assets, roadmap milestones, team members
-  - **On-Chain Data**: Program authority verification signatures, bytecode hashes, governance transaction counts, TVL metrics -- all from public blockchain data
-  - **Analytics**: Anonymous session IDs (UUID, no PII), page views, click events, device type, geo-location (country/city level via IP -- IP itself is not stored)
-  - **Build In Public**: Tweet URLs and embedded content (public tweets only)
-- Data We Do NOT Collect: passwords, private keys, email addresses, phone numbers, financial account information, browsing history outside the platform
-- How We Use Data: scoring, public transparency, ecosystem health monitoring
-- Data Sharing: We do not sell data. Period. All registry data is designed to be public.
-- Data Retention & Deletion: Users can delete their profile via Dashboard (existing `useDeleteProfile` hook)
-- Third-Party Services: GitHub API, X/Twitter API, Solana RPC (Helius), Algolia (search indexing)
-- Cookies & Local Storage: Session IDs, form progress persistence, auth tokens -- all functional, no advertising trackers
-- Open Data Philosophy: Registry data is public by design. Scores are published for ecosystem transparency.
-- Contact
+### 4. Missing Sticky CTA
+The profile page (both owner and visitor views) does not render the `StickyCTA` component that exists on the public program page.
 
-### 3. Footer Update (`src/components/layout/Footer.tsx`)
-Add a "Terms & Privacy" link in the footer links section, using a `Scale` (or `FileText`) icon, positioned alongside README, GitHub, and Twitter links.
+## Implementation Plan
 
-### 4. Route Registration (`src/App.tsx`)
-Add `<Route path="/terms" element={<Terms />} />` to the router.
+### File: `src/pages/ProfileDetail.tsx`
 
-## Technical Details
+**A. Add missing imports:**
+- Import `StickyCTA`, `SupportTabContent`, and `UnclaimedBanner` from `@/components/program`
 
-### File Changes
-1. **New**: `src/pages/Terms.tsx` -- Full legal page with branded layout, accordion sections, and sticky table of contents
-2. **Edit**: `src/components/layout/Footer.tsx` -- Add Terms & Privacy link to footer nav
-3. **Edit**: `src/App.tsx` -- Register `/terms` route
+**B. Owner View -- Replace custom DevelopmentTab with full DevelopmentTabContent:**
+- Switch from the stripped-down `DevelopmentTab` to `DevelopmentTabContent` (the same component the public page uses), passing all dimension props from the profile data
+- Keep the owner-specific verification actions by passing the existing verification props (bytecodeMatchStatus, bytecodeVerifiedAt, etc.)
 
-### Component Reuse
-- `Layout` wrapper (Navigation + Footer)
-- `Accordion` / `AccordionItem` for collapsible sections
-- `Badge` for "Open Source" and "Public Good" labels
-- `Separator` between major sections
-- Brand typography classes (`font-display`, `font-mono`, `font-body`)
+**C. Owner View -- Add health card props to Development tab:**
+- Pass all missing props: dependency metrics, governance metrics, TVL metrics, vulnerability data, and OpenSSF data
 
-### Design Approach
-- Matches the README page aesthetic (institutional, high-density, terminal-inspired)
-- "Last Updated" timestamp displayed prominently
-- Each section is linkable via anchor IDs for easy reference
-- Mobile-responsive with proper text scaling
+**D. Owner View -- Support tab combines public content + settings:**
+- Render `SupportTabContent` (staking info, FAQ) above the existing `SettingsTab` (edit socials/website)
+
+**E. Visitor View -- Pass all missing props:**
+- Add bytecode verification props (matchStatus, verifiedAt, confidence, deploySlot)
+- Add vulnerability props (count, details, analyzedAt)
+- Add OpenSSF props (score, checks, analyzedAt)
+- Add `claimStatus` to Team, Community, and Roadmap tabs
+- Replace the placeholder "Support options coming soon" with the actual `SupportTabContent`
+
+**F. Add StickyCTA to both views:**
+- Render `<StickyCTA>` at the bottom of the page layout for both owner and visitor views
+
+### File: `src/components/profile/tabs/DevelopmentTab.tsx`
+- No changes needed -- this file will no longer be used by ProfileDetail (replaced by DevelopmentTabContent). It can remain for potential future use or be removed in a cleanup pass.
+
+## Summary of Changes
+- **1 file edited**: `src/pages/ProfileDetail.tsx`
+- Owner Development tab upgraded from 3 sections to 7 sections (adds 4 health cards)
+- Visitor Development tab upgraded with 11 missing props
+- Support tab upgraded from placeholder to full staking/FAQ content
+- Sticky mobile CTA added to both views
 
