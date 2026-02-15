@@ -4,8 +4,8 @@ import { Loader2 } from 'lucide-react';
 import { StatCard } from '@/components/admin/StatCard';
 import { WorldMap } from '@/components/admin/WorldMap';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
 } from 'recharts';
 
 const C = {
@@ -83,6 +83,7 @@ async function fetchEngagementData() {
   // Daily activity
   const dailyMap: Record<string, { views: number; clicks: number; searches: number; features: number }> = {};
   all.forEach(e => {
+    if (e.event_type === 'session_start' || e.event_type === 'session_end') return;
     const day = e.created_at.substring(0, 10);
     if (!dailyMap[day]) dailyMap[day] = { views: 0, clicks: 0, searches: 0, features: 0 };
     if (e.event_type === 'page_view') dailyMap[day].views++;
@@ -190,35 +191,33 @@ export function AdminEngagement() {
         </h3>
         <div className="h-72">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data.dailyActivity}>
-              <defs>
-                <linearGradient id="viewsFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.teal} stopOpacity={0.4} />
-                  <stop offset="100%" stopColor={C.teal} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="clicksFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.orange} stopOpacity={0.3} />
-                  <stop offset="100%" stopColor={C.orange} stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="featuresFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor={C.violet} stopOpacity={0.3} />
-                  <stop offset="100%" stopColor={C.violet} stopOpacity={0} />
-                </linearGradient>
-              </defs>
+            <BarChart data={data.dailyActivity}>
               <CartesianGrid strokeDasharray="3 3" stroke={C.grid} vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
+              <XAxis
+                dataKey="date"
+                tickFormatter={(d: string) => {
+                  const [, m, day] = d.split('-');
+                  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                  return `${months[parseInt(m) - 1]} ${parseInt(day)}`;
+                }}
+                tick={{ fontSize: 9, fill: C.steel }}
+                axisLine={false}
+                tickLine={false}
+              />
               <YAxis tick={{ fontSize: 9, fill: C.steel }} axisLine={false} tickLine={false} />
               <Tooltip {...tip} />
-              <Area type="monotone" dataKey="views" stackId="1" stroke={C.teal} fill="url(#viewsFill)" strokeWidth={2} name="Page Views" />
-              <Area type="monotone" dataKey="clicks" stackId="1" stroke={C.orange} fill="url(#clicksFill)" strokeWidth={2} name="Clicks" />
-              <Area type="monotone" dataKey="features" stackId="1" stroke={C.violet} fill="url(#featuresFill)" strokeWidth={2} name="Features" />
-            </AreaChart>
+              <Bar dataKey="views" stackId="1" fill={C.teal} name="Page Views" radius={[0, 0, 0, 0]} />
+              <Bar dataKey="clicks" stackId="1" fill={C.orange} name="Clicks" />
+              <Bar dataKey="searches" stackId="1" fill={C.steel} name="Searches" />
+              <Bar dataKey="features" stackId="1" fill={C.violet} name="Features" radius={[2, 2, 0, 0]} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
         <div className="flex justify-center gap-6 mt-2">
           {[
             { label: 'Views', color: C.teal },
             { label: 'Clicks', color: C.orange },
+            { label: 'Searches', color: C.steel },
             { label: 'Features', color: C.violet },
           ].map(l => (
             <div key={l.label} className="flex items-center gap-1.5">
