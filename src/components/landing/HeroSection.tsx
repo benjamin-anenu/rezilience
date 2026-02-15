@@ -62,16 +62,22 @@ export function HeroSection() {
           <div className="flex flex-col justify-center">
             <div className="mb-4 inline-flex w-fit items-center gap-2 rounded-sm border border-primary/30 bg-primary/10 px-3 py-1">
               <Activity className="h-4 w-4 text-primary" />
-              <span className="font-mono text-xs text-primary">DECENTRALIZED ASSURANCE lAYER OF SOLANA</span>
+              <span className="font-mono text-xs text-primary">DECENTRALIZED ASSURANCE LAYER OF SOLANA</span>
             </div>
 
-            <h1 className="mb-6 font-display text-3xl font-bold uppercase leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
+            <h1 className="mb-4 font-display text-3xl font-bold uppercase leading-tight tracking-tight text-foreground sm:text-4xl md:text-5xl lg:text-6xl">
               REPUTATION CAN'T BE{' '}
               <span className="text-primary">FORKED.</span>
             </h1>
 
-            <p className="mb-8 max-w-xl text-base text-muted-foreground sm:text-lg">The Solana Ecosystem needs projects built for the long haul. Join the Resilience Registry to establish an undeniable, off-chain & on-chain reputation for maintaining your code. Secure your spot today in anticipation of public SOL staking driven by proven project health.
+            <p className="mb-6 font-display text-sm font-semibold uppercase tracking-widest text-muted-foreground sm:text-base">
+              SECURE THE ECOSYSTEM. GET{' '}
+              <span className="text-primary">REWARDED</span>{' '}
+              FOR LONGEVITY.
+            </p>
 
+            <p className="mb-8 max-w-xl text-base text-muted-foreground sm:text-lg">
+              Rezilience indexes every Solana project's dependencies, maps supply chain risk, and detects vulnerabilities before they cascade. We score real-time project health across 8 dimensions so broken crates never silently take down the ecosystem. Claim your spot in the Registry, build an on-chain reputation, and stake on proven resilience.
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
