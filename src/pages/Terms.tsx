@@ -435,19 +435,43 @@ export default function Terms() {
                     <div className="grid gap-2">
                       <div className="rounded-sm border border-border p-3 flex items-start gap-3">
                         <span className="font-mono text-xs text-primary shrink-0 mt-0.5">GITHUB API</span>
-                        <span>Fetching public repository metrics for scoring</span>
+                        <span>OAuth authentication, public repository metrics, contributor data, and commit history for resilience scoring</span>
                       </div>
                       <div className="rounded-sm border border-border p-3 flex items-start gap-3">
                         <span className="font-mono text-xs text-primary shrink-0 mt-0.5">X/TWITTER API</span>
-                        <span>OAuth authentication and public tweet embedding</span>
+                        <span>OAuth 2.0 PKCE authentication, profile metadata retrieval, and public tweet embedding for Build In Public feeds</span>
                       </div>
                       <div className="rounded-sm border border-border p-3 flex items-start gap-3">
                         <span className="font-mono text-xs text-primary shrink-0 mt-0.5">HELIUS RPC</span>
-                        <span>Solana blockchain data (bytecode verification, governance, TVL)</span>
+                        <span>Solana blockchain queries — program authority verification, bytecode hash comparison, governance transaction counts, and on-chain liveness detection</span>
+                      </div>
+                      <div className="rounded-sm border border-border p-3 flex items-start gap-3">
+                        <span className="font-mono text-xs text-primary shrink-0 mt-0.5">DEFILLAMA API</span>
+                        <span>Total Value Locked (TVL) metrics and market share data for DeFi protocol scoring</span>
+                      </div>
+                      <div className="rounded-sm border border-border p-3 flex items-start gap-3">
+                        <span className="font-mono text-xs text-primary shrink-0 mt-0.5">OSV.DEV</span>
+                        <span>Open Source Vulnerabilities database — scanning project dependencies for known security advisories (CVEs)</span>
+                      </div>
+                      <div className="rounded-sm border border-border p-3 flex items-start gap-3">
+                        <span className="font-mono text-xs text-primary shrink-0 mt-0.5">OPENSSF SCORECARD</span>
+                        <span>Automated security health checks for open-source repositories (branch protection, CI/CD, fuzzing, SAST)</span>
+                      </div>
+                      <div className="rounded-sm border border-border p-3 flex items-start gap-3">
+                        <span className="font-mono text-xs text-primary shrink-0 mt-0.5">CRATES.IO</span>
+                        <span>Rust dependency registry — version tracking, dependent counts, and outdated package detection</span>
                       </div>
                       <div className="rounded-sm border border-border p-3 flex items-start gap-3">
                         <span className="font-mono text-xs text-primary shrink-0 mt-0.5">ALGOLIA</span>
-                        <span>Search indexing for the Explorer and Library</span>
+                        <span>Full-text search indexing powering the Explorer project search and Library content discovery</span>
+                      </div>
+                      <div className="rounded-sm border border-border p-3 flex items-start gap-3">
+                        <span className="font-mono text-xs text-primary shrink-0 mt-0.5">LOVABLE AI GATEWAY</span>
+                        <span>AI-powered features including ResilienceGPT chat assistant and report cover generation — no user data is used for model training</span>
+                      </div>
+                      <div className="rounded-sm border border-border p-3 flex items-start gap-3">
+                        <span className="font-mono text-xs text-primary shrink-0 mt-0.5">LOVABLE CLOUD</span>
+                        <span>Backend infrastructure — database, authentication, edge functions, and file storage (powered by Supabase)</span>
                       </div>
                     </div>
                     <p>Each service operates under its own privacy policy. We encourage you to review them independently.</p>
