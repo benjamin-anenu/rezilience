@@ -30,27 +30,22 @@ export function BuilderPostCard({ post, index, isSubscribed, onSubscribe }: Buil
 
   return (
     <div
-      className="group overflow-hidden rounded-sm border border-primary/10 bg-card/80 backdrop-blur-xl transition-all duration-300 hover:border-primary/30 hover:shadow-[0_0_20px_-5px_hsl(var(--primary)/0.15)] card-lift animate-fade-in"
+      className="group overflow-hidden rounded-sm border border-primary/40 bg-[#0a0a0a] transition-all duration-300 hover:border-primary/70 hover:shadow-[0_0_25px_-5px_hsl(var(--primary)/0.25)] animate-fade-in"
       style={{ animationDelay: `${index * 80}ms`, animationFillMode: 'both' }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-2 border-b border-border/50 px-4 py-3">
+      <div className="flex items-center justify-between gap-2 border-b border-primary/20 bg-[#0a0a0a] px-4 py-2.5">
         <Link to={`/program/${post.profileId}`} className="flex min-w-0 items-center gap-2.5 hover:opacity-80">
           {post.logoUrl ? (
-            <img src={post.logoUrl} alt="" className="h-8 w-8 rounded-full object-cover ring-1 ring-border/50" />
+            <img src={post.logoUrl} alt="" className="h-7 w-7 rounded-full object-cover ring-1 ring-primary/30" />
           ) : (
-            <div className="h-8 w-8 rounded-full bg-muted ring-1 ring-border/50" />
+            <div className="h-7 w-7 rounded-full bg-primary/10 ring-1 ring-primary/30" />
           )}
-          <div className="min-w-0">
-            <span className="block truncate text-sm font-semibold text-foreground">{post.projectName}</span>
-            {relativeTime && (
-              <span className="text-[10px] text-muted-foreground">{relativeTime}</span>
-            )}
-          </div>
+          <span className="truncate text-sm font-semibold text-foreground">{post.projectName}</span>
         </Link>
         <div className="flex items-center gap-1.5">
           {post.category && (
-            <Badge variant="secondary" className="text-[10px] border-primary/20 bg-primary/5 text-primary">
+            <Badge variant="secondary" className="text-[10px] border-primary/30 bg-primary/10 text-primary font-mono uppercase tracking-wider">
               {post.category}
             </Badge>
           )}
@@ -63,39 +58,48 @@ export function BuilderPostCard({ post, index, isSubscribed, onSubscribe }: Buil
         </div>
       </div>
 
-      {/* Tweet Embed — fixed height for uniform grid */}
+      {/* Tweet Embed — scaled down for compact view */}
       {tweetId ? (
-        <div className="relative mx-3 my-3 h-[280px] overflow-hidden rounded-sm border border-border/30 bg-background/50">
-          <div className="[&_.react-tweet-theme]:!bg-transparent [&_article]:!border-0 [&_article]:!shadow-none" data-theme="dark">
+        <div className="relative h-[200px] overflow-hidden bg-[#0a0a0a]">
+          <div
+            className="origin-top-left [&_.react-tweet-theme]:!bg-transparent [&_article]:!border-0 [&_article]:!shadow-none"
+            style={{ transform: 'scale(0.82)', width: '121.95%' }}
+            data-theme="dark"
+          >
             <Tweet id={tweetId} />
           </div>
-          {/* Fade-out gradient at bottom */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-card/90 to-transparent" />
+          {/* Fade-out gradient */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-14 bg-gradient-to-t from-[#0a0a0a] to-transparent" />
         </div>
       ) : (
-        <div className="flex h-[280px] items-center justify-center text-sm text-muted-foreground">
-          <a href={post.tweetUrl} target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground transition-colors">
+        <div className="flex h-[200px] items-center justify-center bg-[#0a0a0a]">
+          <a href={post.tweetUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-primary underline hover:text-primary/80 transition-colors">
             View post →
           </a>
         </div>
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between border-t border-border/50 bg-muted/20 px-4 py-2">
-        <p className="line-clamp-1 text-[11px] text-muted-foreground">
-          {post.title || (relativeTime ? `Posted ${relativeTime}` : 'Builder update')}
+      <div className="border-t border-primary/20 bg-[#0a0a0a] px-4 py-2.5 space-y-1.5">
+        <p className="line-clamp-2 text-xs font-medium text-foreground/90">
+          {post.title || 'Builder update'}
         </p>
-        {post.tweetUrl && (
-          <a
-            href={post.tweetUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-primary transition-colors"
-          >
-            <ExternalLink className="h-3 w-3" />
-            <span>View on X</span>
-          </a>
-        )}
+        <div className="flex items-center justify-between">
+          {relativeTime && (
+            <span className="font-mono text-[10px] text-muted-foreground">{relativeTime}</span>
+          )}
+          {post.tweetUrl && (
+            <a
+              href={post.tweetUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/20"
+            >
+              <ExternalLink className="h-2.5 w-2.5" />
+              View on X
+            </a>
+          )}
+        </div>
       </div>
     </div>
   );
