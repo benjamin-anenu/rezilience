@@ -1,67 +1,25 @@
 
 
-## Premium "Build In Public" Feed Redesign
+## Fix Build In Public Grid — 4 Posts Per Row
 
-### Problems with Current UI
-- No section header or contextual intro — just raw tweet cards dumped in a grid
-- Cards are plain white `Card` components with minimal styling — no glass effects, no depth
-- No visual hierarchy — the header bar (logo + subscribe) feels like a simple list item
-- The grid has no breathing room and no staggered entry animations
-- Missing a "hero" banner or context block explaining what this feed is
-- No timestamp or recency indicator on posts
-- Skeleton loading is generic rectangles with no visual interest
+### Problem
+The grid maxes out at 3 columns (`lg:grid-cols-3`), making each card tall and narrow on wide screens.
 
-### Design Direction
-Institutional Bloomberg aesthetic with glass-morphism, staggered card animations, and a premium section header — consistent with the Titan Watch and Ecosystem Pulse tabs.
+### Fix
+Update the grid classes in `BuildersInPublicFeed.tsx` to support 4 columns on larger screens:
 
----
+**Current:** `grid gap-5 sm:grid-cols-2 lg:grid-cols-3`
+**New:** `grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4`
 
-### Changes
+This applies to two places in the file:
+1. The skeleton loading grid (line 28)
+2. The actual post grid (line 101)
 
-#### 1. New Section Header Banner (`BuildersInPublicFeed.tsx`)
-
-Add a premium glass header at the top of the feed with:
-- Megaphone icon with teal glow
-- "BUILD IN PUBLIC" title in Space Grotesk uppercase
-- Subtitle: "Real-time project updates from verified builders in the Rezilience Registry"
-- Post count badge (e.g., "4 UPDATES")
-- Styled with `glass-chart` class, matching Ecosystem Pulse
-
-#### 2. Redesigned Post Cards (`BuilderPostCard.tsx`)
-
-Transform the flat cards into premium glass panels:
-- **Glass effect**: `backdrop-blur-xl bg-card/80 border-primary/10` with hover glow (`hover:border-primary/30`)
-- **Header**: Larger logo (32px), bolder project name, category badge with teal tint, and a relative timestamp (e.g., "2d ago") using `date-fns`'s `formatDistanceToNow`
-- **Subscribe button**: Moved inline with a more subtle ghost style
-- **Tweet embed area**: Contained within a rounded inner panel with subtle border, preventing the raw tweet from visually bleeding
-- **Footer**: Enhanced with timestamp and "View on X" link
-- **Card-lift transition**: Add `.card-lift` hover effect for depth
-- **Staggered entry**: Each card gets `animate-fade-in` with increasing delay via inline style `animationDelay`
-
-#### 3. Enhanced Empty State (`BuildersInPublicFeed.tsx`)
-
-Upgrade from plain card to a glass panel with:
-- Animated megaphone icon with subtle pulse
-- Stronger CTA copy: "BE THE FIRST TO BUILD IN PUBLIC"
-- Teal-accent "Claim Your Project" button
-
-#### 4. Premium Loading Skeletons (`BuildersInPublicFeed.tsx`)
-
-Replace flat rectangles with glass-panel skeletons that mirror the final card layout:
-- Header skeleton (avatar circle + text lines)
-- Body skeleton (tweet area)
-- Footer skeleton (small line)
-
----
+Also bumps skeleton count from 6 to 8 to fill the 4-column layout during loading.
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/components/explorer/BuildersInPublicFeed.tsx` | Add section header banner, premium skeletons, enhanced empty state, staggered animations |
-| `src/components/explorer/BuilderPostCard.tsx` | Glass-morphism card, larger header, relative timestamps, card-lift hover, contained tweet embed |
-
-### No new dependencies
-- `date-fns` is already installed and used for `formatDistanceToNow`
-- All glass/animation classes already exist in the design system
+| `src/components/explorer/BuildersInPublicFeed.tsx` | Add `xl:grid-cols-4` to both grids, reduce gap to `gap-4`, update skeleton count to 8 |
 
