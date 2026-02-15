@@ -403,7 +403,10 @@ Deno.serve(async (req) => {
           const stale = agg.filter((p: any) => p.liveness_status === "STALE").length;
           const decaying = agg.filter((p: any) => p.liveness_status === "DECAYING").length;
           const healthy = agg.filter((p: any) => (p.resilience_score || 0) >= 70).length;
-          const avgScore = agg.reduce((s: number, p: any) => s + (p.resilience_score || 0), 0) / total;
+          const scoredProfiles = agg.filter((p: any) => (p.resilience_score || 0) > 0);
+          const avgScore = scoredProfiles.length > 0
+            ? scoredProfiles.reduce((s: number, p: any) => s + (p.resilience_score || 0), 0) / scoredProfiles.length
+            : 0;
           const totalCommits = agg.reduce((s: number, p: any) => s + (p.github_commits_30d || 0), 0);
           const totalContributors = agg.reduce((s: number, p: any) => s + (p.github_contributors || 0), 0);
           const totalTvl = agg.reduce((s: number, p: any) => s + (p.tvl_usd || 0), 0);
