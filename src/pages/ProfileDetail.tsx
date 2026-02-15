@@ -9,15 +9,16 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
   HeroBanner,
   QuickStats,
+  StickyCTA,
   ProgramTabs,
   AboutTabContent,
   DevelopmentTabContent,
   CommunityTabContent,
   RoadmapTabContent,
+  SupportTabContent,
   TeamTabContent,
 } from '@/components/program';
 import { SettingsTab, BuildInPublicTab, TeamManagement } from '@/components/profile/tabs';
-import { DevelopmentTab } from '@/components/profile/tabs/DevelopmentTab';
 import { RoadmapManagement } from '@/components/profile/tabs/RoadmapManagement';
 import { PROJECT_CATEGORIES } from '@/types';
 import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
@@ -157,11 +158,50 @@ const ProfileDetail = () => {
     rank: 0,
   };
 
+  const claimStatus = profile.claimStatus || 'claimed';
+  const displayProgramId = profile.programId || '';
+
   // Detect fresh profiles with no analysis data yet
   const isFreshProfile = !profile.githubAnalytics?.github_analyzed_at
     && !profile.dependencyMetrics?.dependency_analyzed_at
     && !profile.governanceMetrics?.governance_analyzed_at
     && !profile.tvlMetrics?.tvl_analyzed_at;
+
+  // Shared development tab props (used by both owner and visitor)
+  const developmentTabProps = {
+    projectId: profile.id,
+    githubUrl: profile.githubOrgUrl,
+    analytics: profile.githubAnalytics,
+    program: programForComponents,
+    githubIsFork: profile.githubAnalytics?.github_is_fork,
+    githubOAuthVerified: !!profile.githubUsername,
+    bytecodeMatchStatus: profile.bytecodeMatchStatus,
+    bytecodeVerifiedAt: profile.bytecodeVerifiedAt,
+    bytecodeConfidence: profile.bytecodeConfidence,
+    bytecodeDeploySlot: profile.bytecodeDeploySlot,
+    programId: displayProgramId || undefined,
+    profileId: profile.id,
+    dependencyHealthScore: profile.dependencyMetrics?.dependency_health_score,
+    dependencyOutdatedCount: profile.dependencyMetrics?.dependency_outdated_count,
+    dependencyCriticalCount: profile.dependencyMetrics?.dependency_critical_count,
+    dependencyAnalyzedAt: profile.dependencyMetrics?.dependency_analyzed_at,
+    governanceAddress: profile.governanceMetrics?.governance_address,
+    governanceTx30d: profile.governanceMetrics?.governance_tx_30d,
+    governanceLastActivity: profile.governanceMetrics?.governance_last_activity,
+    governanceAnalyzedAt: profile.governanceMetrics?.governance_analyzed_at,
+    tvlUsd: profile.tvlMetrics?.tvl_usd,
+    tvlMarketShare: profile.tvlMetrics?.tvl_market_share,
+    tvlRiskRatio: profile.tvlMetrics?.tvl_risk_ratio,
+    tvlAnalyzedAt: profile.tvlMetrics?.tvl_analyzed_at,
+    protocolName: profile.projectName,
+    category: profile.category,
+    vulnerabilityCount: profile.vulnerabilityCount,
+    vulnerabilityDetails: profile.vulnerabilityDetails as any,
+    vulnerabilityAnalyzedAt: profile.vulnerabilityAnalyzedAt,
+    openssfScore: profile.openssfScore,
+    openssfChecks: profile.openssfChecks,
+    openssfAnalyzedAt: profile.openssfAnalyzedAt,
+  };
 
   // ========== OWNER VIEW: Premium Dashboard with Management ==========
   if (isOwner) {
@@ -234,12 +274,7 @@ const ProfileDetail = () => {
                     />
                   ),
                   development: (
-                    <DevelopmentTab
-                      profile={profile}
-                      isOwner={true}
-                      profileId={profile.id}
-                      programId={profile.programId || undefined}
-                    />
+                    <DevelopmentTabContent {...developmentTabProps} />
                   ),
                   team: (
                     <TeamManagement profile={profile} xUserId={user!.id} />
@@ -261,6 +296,7 @@ const ProfileDetail = () => {
                         telegramUrl={profile.socials?.telegramUrl}
                         githubUrl={profile.githubOrgUrl}
                         isVerified={profile.verified}
+                        claimStatus={claimStatus}
                       />
                     </div>
                   ),
@@ -268,13 +304,23 @@ const ProfileDetail = () => {
                     <RoadmapManagement profile={profile} xUserId={user!.id} />
                   ),
                   support: (
-                    <SettingsTab profile={profile} xUserId={user!.id} />
+                    <div className="space-y-6">
+                      <SupportTabContent
+                        program={programForComponents}
+                        isVerified={profile.verified}
+                        claimStatus={claimStatus}
+                      />
+                      <SettingsTab profile={profile} xUserId={user!.id} />
+                    </div>
                   ),
                 }}
               </ProgramTabs>
             </div>
           </div>
         </div>
+
+        {/* Sticky CTA for mobile */}
+        <StickyCTA programId={displayProgramId} projectName={profile.projectName} />
       </Layout>
     );
   }
@@ -344,34 +390,14 @@ const ProfileDetail = () => {
                   />
                 ),
                 development: (
-                  <DevelopmentTabContent
-                    projectId={profile.id}
-                    githubUrl={profile.githubOrgUrl}
-                    analytics={profile.githubAnalytics}
-                    program={programForComponents}
-                    githubIsFork={profile.githubAnalytics?.github_is_fork}
-                    githubOAuthVerified={!!profile.githubUsername}
-                    dependencyHealthScore={profile.dependencyMetrics?.dependency_health_score}
-                    dependencyOutdatedCount={profile.dependencyMetrics?.dependency_outdated_count}
-                    dependencyCriticalCount={profile.dependencyMetrics?.dependency_critical_count}
-                    dependencyAnalyzedAt={profile.dependencyMetrics?.dependency_analyzed_at}
-                    governanceAddress={profile.governanceMetrics?.governance_address}
-                    governanceTx30d={profile.governanceMetrics?.governance_tx_30d}
-                    governanceLastActivity={profile.governanceMetrics?.governance_last_activity}
-                    governanceAnalyzedAt={profile.governanceMetrics?.governance_analyzed_at}
-                    tvlUsd={profile.tvlMetrics?.tvl_usd}
-                    tvlMarketShare={profile.tvlMetrics?.tvl_market_share}
-                    tvlRiskRatio={profile.tvlMetrics?.tvl_risk_ratio}
-                    tvlAnalyzedAt={profile.tvlMetrics?.tvl_analyzed_at}
-                    protocolName={profile.projectName}
-                    category={profile.category}
-                  />
+                  <DevelopmentTabContent {...developmentTabProps} />
                 ),
                 team: (
                   <TeamTabContent
                     teamMembers={profile.teamMembers}
                     stakingPitch={profile.stakingPitch}
                     isVerified={profile.verified}
+                    claimStatus={claimStatus}
                     ownerUsername={profile.xUsername}
                     ownerLogoUrl={profile.logoUrl}
                     ownerProjectName={profile.projectName}
@@ -391,29 +417,31 @@ const ProfileDetail = () => {
                     telegramUrl={profile.socials?.telegramUrl}
                     githubUrl={profile.githubOrgUrl}
                     isVerified={profile.verified}
+                    claimStatus={claimStatus}
                   />
                 ),
                 roadmap: (
                   <RoadmapTabContent
                     milestones={profile.milestones}
                     isVerified={profile.verified}
+                    claimStatus={claimStatus}
                   />
                 ),
                 support: (
-                  <div className="space-y-6">
-                    {/* Public support/staking info would go here */}
-                    <div className="rounded-sm border border-border bg-muted/30 p-6 text-center">
-                      <p className="text-muted-foreground">
-                        Support options coming soon.
-                      </p>
-                    </div>
-                  </div>
+                  <SupportTabContent
+                    program={programForComponents}
+                    isVerified={profile.verified}
+                    claimStatus={claimStatus}
+                  />
                 ),
               }}
             </ProgramTabs>
           </div>
         </div>
       </div>
+
+      {/* Sticky CTA for mobile */}
+      <StickyCTA programId={displayProgramId} projectName={profile.projectName} />
     </Layout>
   );
 };
