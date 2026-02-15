@@ -76,7 +76,7 @@ const getOriginalityBadge = (project: ExplorerProject) => {
   return (
     <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-primary/50 bg-primary/10 text-primary">
       <CheckCircle className="mr-0.5 h-2.5 w-2.5" />
-      Owned
+      Main
     </Badge>
   );
 };
