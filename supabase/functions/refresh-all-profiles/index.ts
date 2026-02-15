@@ -353,6 +353,22 @@ Deno.serve(async (req) => {
           console.error(`✗ Failed to update integrated score for ${profile.project_name}:`, updateError);
         }
 
+        // Write score_history from the final canonical score (single source of truth)
+        const today = new Date().toISOString().split("T")[0];
+        const { error: historyError } = await supabase
+          .from("score_history")
+          .insert({
+            claimed_profile_id: profile.id,
+            score: finalScore,
+            commit_velocity: scoreBreakdown.github,
+            days_last_commit: daysSinceLastCommit,
+            snapshot_date: today,
+            breakdown: scoreBreakdown,
+          });
+        if (historyError) {
+          console.error(`Score history insert failed for ${profile.project_name}:`, historyError);
+        }
+
         successCount++;
         results.push({ 
           profile: profile.project_name, 
