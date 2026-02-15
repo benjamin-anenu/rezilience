@@ -1,75 +1,67 @@
 
 
-## Expand Integration Monitoring — Track All Services
+## Premium "Build In Public" Feed Redesign
 
-### Current State
-The admin integrations page only lists **6 hardcoded services**, but the codebase actually uses **10 distinct external APIs**. Several are missing from the dashboard, and some that ARE listed don't have health logging wired up in their edge functions.
+### Problems with Current UI
+- No section header or contextual intro — just raw tweet cards dumped in a grid
+- Cards are plain white `Card` components with minimal styling — no glass effects, no depth
+- No visual hierarchy — the header bar (logo + subscribe) feels like a simple list item
+- The grid has no breathing room and no staggered entry animations
+- Missing a "hero" banner or context block explaining what this feed is
+- No timestamp or recency indicator on posts
+- Skeleton loading is generic rectangles with no visual interest
 
-### Discovery
+### Design Direction
+Institutional Bloomberg aesthetic with glass-morphism, staggered card animations, and a premium section header — consistent with the Titan Watch and Ecosystem Pulse tabs.
 
-Services currently **health-logged** (calling `logServiceHealth`):
-- GitHub API (in `analyze-github-repo`)
-- DeFiLlama API (in `analyze-tvl`)
-- Solana RPC (in `analyze-governance`, `verify-bytecode`)
-- Lovable AI Gateway (in `chat-gpt`)
-- OtterSec API (in `verify-bytecode`)
+---
 
-Services **used but NOT health-logged**:
-- OpenSSF Scorecard API (in `analyze-security-posture`)
-- Crates.io API (in `analyze-dependencies`)
-- X (Twitter) API (in `x-oauth-callback`)
-- Algolia Search API (in `algolia-reindex`)
+### Changes
 
-### Plan
+#### 1. New Section Header Banner (`BuildersInPublicFeed.tsx`)
 
-#### 1. Update the SERVICES array in `AdminIntegrationsPage.tsx`
+Add a premium glass header at the top of the feed with:
+- Megaphone icon with teal glow
+- "BUILD IN PUBLIC" title in Space Grotesk uppercase
+- Subtitle: "Real-time project updates from verified builders in the Rezilience Registry"
+- Post count badge (e.g., "4 UPDATES")
+- Styled with `glass-chart` class, matching Ecosystem Pulse
 
-Replace the 6-item hardcoded list with the full 10 services, matching the actual `service_name` strings used in `logServiceHealth` calls:
+#### 2. Redesigned Post Cards (`BuilderPostCard.tsx`)
 
-| Service | Endpoint | Dashboard URL | Cost |
-|---------|----------|---------------|------|
-| GitHub API | api.github.com | github.com/settings/tokens | Free tier |
-| DeFiLlama API | api.llama.fi | defillama.com | Free |
-| Solana RPC | api.mainnet-beta.solana.com | — | Variable |
-| Lovable AI Gateway | ai-gateway.lovable.dev | — | Included |
-| OtterSec API | osec.io | osec.io | Free |
-| OpenSSF Scorecard | api.scorecard.dev | scorecard.dev | Free |
-| Crates.io API | crates.io | crates.io | Free |
-| X (Twitter) API | api.x.com | developer.x.com | Free |
-| Algolia Search | algolia.net | dashboard.algolia.com | $0-29/mo |
-| Lovable Cloud | supabase.co | — | Included |
+Transform the flat cards into premium glass panels:
+- **Glass effect**: `backdrop-blur-xl bg-card/80 border-primary/10` with hover glow (`hover:border-primary/30`)
+- **Header**: Larger logo (32px), bolder project name, category badge with teal tint, and a relative timestamp (e.g., "2d ago") using `date-fns`'s `formatDistanceToNow`
+- **Subscribe button**: Moved inline with a more subtle ghost style
+- **Tweet embed area**: Contained within a rounded inner panel with subtle border, preventing the raw tweet from visually bleeding
+- **Footer**: Enhanced with timestamp and "View on X" link
+- **Card-lift transition**: Add `.card-lift` hover effect for depth
+- **Staggered entry**: Each card gets `animate-fade-in` with increasing delay via inline style `animationDelay`
 
-Also rename "DeFiLlama" to "DeFiLlama API" to match the actual logged name so the dashboard correctly correlates with the health data.
+#### 3. Enhanced Empty State (`BuildersInPublicFeed.tsx`)
 
-#### 2. Add health logging to the 4 untracked edge functions
+Upgrade from plain card to a glass panel with:
+- Animated megaphone icon with subtle pulse
+- Stronger CTA copy: "BE THE FIRST TO BUILD IN PUBLIC"
+- Teal-accent "Claim Your Project" button
 
-Wire `logServiceHealth` into the functions that currently call these APIs without tracking:
+#### 4. Premium Loading Skeletons (`BuildersInPublicFeed.tsx`)
 
-- **`analyze-security-posture/index.ts`** — log the OpenSSF Scorecard API call (~line 56)
-- **`analyze-dependencies/index.ts`** — log the Crates.io API call (~line 718)
-- **`x-oauth-callback/index.ts`** — log the X API token + user calls (~lines 80, 108)
-- **`algolia-reindex/index.ts`** — log the Algolia batch + settings calls (~lines 56, 70)
+Replace flat rectangles with glass-panel skeletons that mirror the final card layout:
+- Header skeleton (avatar circle + text lines)
+- Body skeleton (tweet area)
+- Footer skeleton (small line)
 
-Each follows the same pattern already used elsewhere:
-```text
-const start = Date.now();
-const response = await fetch(url, ...);
-logServiceHealth("Service Name", endpoint, response.status, Date.now() - start);
-```
-
-#### 3. Update header count
-
-The header currently shows `{data.length} SERVICES` — this is already dynamic, so it will automatically reflect 10 once the array is updated.
+---
 
 ### Files Changed
 
 | File | Change |
 |------|--------|
-| `src/pages/admin/AdminIntegrationsPage.tsx` | Expand SERVICES array from 6 to 10, fix naming |
-| `supabase/functions/analyze-security-posture/index.ts` | Add `logServiceHealth` for OpenSSF |
-| `supabase/functions/analyze-dependencies/index.ts` | Add `logServiceHealth` for Crates.io |
-| `supabase/functions/x-oauth-callback/index.ts` | Add `logServiceHealth` for X API |
-| `supabase/functions/algolia-reindex/index.ts` | Add `logServiceHealth` for Algolia |
+| `src/components/explorer/BuildersInPublicFeed.tsx` | Add section header banner, premium skeletons, enhanced empty state, staggered animations |
+| `src/components/explorer/BuilderPostCard.tsx` | Glass-morphism card, larger header, relative timestamps, card-lift hover, contained tweet embed |
 
-No database changes, no new dependencies. All edge functions already import or can import `logServiceHealth` from `_shared/service-health.ts`.
+### No new dependencies
+- `date-fns` is already installed and used for `formatDistanceToNow`
+- All glass/animation classes already exist in the design system
 
