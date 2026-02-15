@@ -75,7 +75,7 @@ export function BuilderPostCard({ post, index, isSubscribed, onSubscribe }: Buil
             className="overflow-hidden bg-[#0a0a0a]"
           >
             <div
-              className={`origin-top-left [&_.react-tweet-theme]:!bg-transparent [&_article]:!border-0 [&_article]:!shadow-none [&>div]:!mb-0 [&_article]:!mb-0 [&_.react-tweet-theme]:!p-0 transition-transform duration-300 ${
+              className={`origin-top-left [&_.react-tweet-theme]:!bg-transparent [&_article]:!border-0 [&_article]:!shadow-none [&>div]:!mb-0 [&_article]:!mb-0 [&_.react-tweet-theme]:!p-0 [&_video]:!max-h-[280px] [&_video]:!object-cover transition-transform duration-300 ${
                 expanded ? '' : ''
               }`}
               style={
