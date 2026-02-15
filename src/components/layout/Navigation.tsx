@@ -23,7 +23,7 @@ const navLinks = [
 
 export function Navigation() {
   const location = useLocation();
-  const { user, isAuthenticated, signOut } = useAuth();
+  const { user, isAuthenticated, signOut, signInWithX } = useAuth();
   const { trackEvent } = useAnalyticsTracker();
 
   const isActiveRoute = (href: string) => location.pathname === href;
@@ -111,12 +111,21 @@ export function Navigation() {
                 </Button>
               </>
             ) : (
-              <Button asChild className="font-display font-semibold uppercase tracking-wider">
-                <Link to="/claim-profile">
-                  <User className="mr-2 h-4 w-4" />
-                  JOIN THE REGISTRY
-                </Link>
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  onClick={signInWithX}
+                  className="font-display font-semibold uppercase tracking-wider bg-background border-primary text-foreground hover:bg-primary/10"
+                >
+                  SIGN IN
+                </Button>
+                <Button asChild className="font-display font-semibold uppercase tracking-wider">
+                  <Link to="/claim-profile">
+                    <User className="mr-2 h-4 w-4" />
+                    JOIN THE REGISTRY
+                  </Link>
+                </Button>
+              </>
             )}
           </div>
 
