@@ -1,76 +1,61 @@
 
+# Fix Slow Refresh + Missing About Tab Editing
 
-# Fix About Tab Editing + STALE Status for Solo Builders
+## Issue 1: Refresh Takes Forever (110+ seconds)
 
-## Problem 1: Can't Edit Website or Add Media
+**Root cause**: The `analyze-dependencies` edge function makes **sequential** API calls with built-in rate-limit delays:
+- npm: 500ms per dependency 
+- PyPI: 300ms per dependency (plus extra calls for download counts)
+- Crates.io: sequential fetches per crate
 
-The owner's About tab shows the read-only `AboutTabContent`. The website URL editor is buried inside the Support tab (under Settings). The `MediaTab` component exists in the codebase but is **never rendered** anywhere in the owner's profile view -- so there's literally no way to add images or videos.
+For a project with 50+ dependencies, this adds up to 30-110 seconds just in sleep delays. The recent log shows `analyze-dependencies` took **110 seconds** for a single run.
 
-### Fix
+**Fix**: Two changes to `supabase/functions/analyze-dependencies/index.ts`:
 
-Add the `MediaTab` and `SettingsTab` (website/socials editor) directly below the read-only `AboutTabContent` in the owner's About tab, so owners can manage their project's About page content in one place.
+1. **Batch version lookups in parallel** -- Instead of checking each dependency one-by-one with a sleep between, process them in batches of 5 concurrently. This cuts a 100-dep project from ~50 seconds to ~10 seconds.
 
-**File: `src/pages/ProfileDetail.tsx`**
+2. **Cap dependencies to 40** -- Most projects only have 10-30 meaningful dependencies. Limit to 40 (prioritizing critical deps first) to prevent runaway execution times.
 
-Change the owner's `about` tab from:
+3. **Reduce rate-limit delays** -- npm registry and crates.io can handle faster requests. Reduce npm delay from 500ms to 100ms, PyPI from 300ms to 100ms.
+
+**Also fix the frontend** in `src/pages/ProfileDetail.tsx`:
+
+4. **Add a 60-second timeout** to the refresh button -- If any dimension takes longer than 60 seconds, resolve it as a timeout rather than hanging indefinitely. Show a partial-success toast.
+
+5. **Show progress feedback** -- Update the refreshing banner to show which dimensions have completed.
+
+## Issue 2: Can't Find About Tab Editing
+
+**Root cause**: The code already has `SettingsTab` and `MediaTab` in the owner's About tab (from the last edit). However, the **owner detection** may be failing:
+
 ```tsx
-about: (
-  <AboutTabContent ... />
-),
+const isOwner = user?.id && profile?.xUserId && user.id === profile.xUserId;
 ```
-To:
+
+If `user.id` (from X/Twitter OAuth stored in localStorage) doesn't exactly match `profile.xUserId` (from the database), the owner view never renders -- the user sees the **visitor view** which has no editing controls.
+
+**Fix**: Add a visible debug indicator and ensure the owner check is robust:
+
+1. Add a small "Owner Mode" badge or log when the owner view is active, so it's clear which view is rendering.
+2. Also check if the owner view's About tab editing cards (SettingsTab, MediaTab) have clear headers so they're easy to find -- they already do ("Website URL", "Media Gallery"), so the issue is likely the owner detection itself.
+
+Since I can't verify the exact localStorage values, the safest fix is to add a **fallback ownership check** using `xUsername` in addition to `xUserId`:
+
 ```tsx
-about: (
-  <div className="space-y-6">
-    <AboutTabContent ... />
-    {/* Owner editing controls */}
-    <SettingsTab profile={profile} xUserId={user!.id} />
-    <MediaTab profile={profile} xUserId={user!.id} />
-  </div>
-),
+const isOwner = user && profile && (
+  (user.id && profile.xUserId && user.id === profile.xUserId) ||
+  (user.username && profile.xUsername && user.username.toLowerCase() === profile.xUsername.toLowerCase())
+);
 ```
 
-Also add `MediaTab` to the imports.
-
----
-
-## Problem 2: STALE Status Despite 299 Commits
-
-The liveness check in `analyze-github-repo` edge function requires **3 or more contributors** to qualify as "ACTIVE":
-
-```
-if (daysSinceLastActivity <= 14 && hasMeaningfulActivity && hasMinContributors)
-```
-
-Your project has 1 contributor and 299 commits in 30 days. Because `hasMinContributors` (>=3) fails, it falls to the else branch and gets "STALE" (since last activity is within 45 days).
-
-This is too punitive for solo builders and early-stage projects.
-
-### Fix
-
-Lower the minimum contributor threshold from 3 to 1. A solo builder with high commit activity should absolutely qualify as ACTIVE. The contributor diversity score (0-25 points) already penalizes solo projects in the score calculation -- there's no need to double-penalize via the status label.
-
-**File: `supabase/functions/analyze-github-repo/index.ts`**
-
-Change line 377:
-```typescript
-const hasMinContributors = contributorCount >= 3;
-```
-To:
-```typescript
-const hasMinContributors = contributorCount >= 1;
-```
-
-This means ACTIVE now requires: activity in last 14 days + 5 or more weighted events + at least 1 contributor. Solo builders with real commits will correctly show "ACTIVE".
-
----
-
-## Summary
+## Summary of Changes
 
 | File | Change |
 |------|--------|
-| `src/pages/ProfileDetail.tsx` | Add `SettingsTab` and `MediaTab` to owner's About tab |
-| `supabase/functions/analyze-github-repo/index.ts` | Lower min contributors for ACTIVE status from 3 to 1 |
+| `supabase/functions/analyze-dependencies/index.ts` | Batch parallel lookups (5 concurrent), cap at 40 deps, reduce delays |
+| `src/pages/ProfileDetail.tsx` | Add 60s timeout to refresh, add fallback owner check via username, show partial-success feedback |
 
-After deploying, you'll need to hit the "Refresh" button on your profile to re-analyze and update the status from STALE to ACTIVE.
-
+## Expected Impact
+- Refresh drops from ~110s to ~15-20s
+- Owner detection becomes more reliable with username fallback
+- Users see clear feedback during refresh instead of infinite spinner
