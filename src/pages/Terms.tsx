@@ -492,8 +492,8 @@ export default function Terms() {
                   <AccordionContent className="text-sm text-muted-foreground space-y-3">
                     <p>For questions about these Terms or our Privacy Policy, reach out through:</p>
                     <ul className="list-disc pl-5 space-y-1">
-                      <li>Twitter/X: <a href="https://twitter.com/RezilienceSol" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono">@RezilienceSol</a></li>
-                      <li>GitHub: <a href="https://github.com/rezilience-protocol" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono">rezilience-protocol</a></li>
+                      <li>Twitter/X: <a href="https://x.com/ben_anenu" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-mono">Rezilience (@ben_anenu)</a></li>
+                      <li>Email: <a href="mailto:Rezilience.sol@gmail.com" className="text-primary hover:underline font-mono">Rezilience.sol@gmail.com</a></li>
                     </ul>
                     <p>We respond to all inquiries. Because transparency isn't a feature — it's the foundation.</p>
                   </AccordionContent>
