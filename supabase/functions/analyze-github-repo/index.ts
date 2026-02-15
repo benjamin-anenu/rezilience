@@ -374,7 +374,7 @@ Deno.serve(async (req) => {
     // === DETERMINE LIVENESS STATUS ===
     // ACTIVE requires: activity in last 14 days, 5+ weighted events, AND 3+ contributors
     let livenessStatus: "ACTIVE" | "STALE" | "DECAYING";
-    const hasMinContributors = contributorCount >= 3;
+    const hasMinContributors = contributorCount >= 1;
     const hasMeaningfulActivity = adjustedActivity >= 5;
     
     if (daysSinceLastActivity <= 14 && hasMeaningfulActivity && hasMinContributors) {
