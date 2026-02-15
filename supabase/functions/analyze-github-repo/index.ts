@@ -467,32 +467,8 @@ Deno.serve(async (req) => {
           console.error("Error updating claimed_profiles:", updateError);
         }
 
-        // Insert score history snapshot for tracking over time
-        const { error: historyError } = await supabase
-          .from("score_history")
-          .insert({
-            claimed_profile_id: profile_id,
-            score: result.resilienceScore,
-            commit_velocity: result.commitVelocity,
-            days_last_commit: result.daysSinceLastCommit,
-            breakdown: {
-              activity: adjustedActivity,
-              contributors: contributorCount,
-              stars: result.stars,
-              releases: result.releasesLast30Days,
-              age: daysActive,
-              push_events: result.pushEvents30d,
-              pr_events: result.prEvents30d,
-              issue_events: result.issueEvents30d,
-              commits_30d: result.commitsLast30Days,
-            },
-          });
-
-        if (historyError) {
-          console.error("Error inserting score_history:", historyError);
-        } else {
-          console.log(`Score history snapshot saved for profile ${profile_id}`);
-        }
+        // Score history is now written by refresh-all-profiles after final unified score calculation
+        console.log(`GitHub analysis saved for profile ${profile_id} (score_history deferred to refresh cycle)`);
       }
     }
 

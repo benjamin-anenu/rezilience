@@ -37,7 +37,10 @@ function computeAggregates(profiles: any[]): EcosystemAggregates {
   const stale = profiles.filter(p => p.liveness_status === 'STALE').length;
   const decaying = profiles.filter(p => p.liveness_status === 'DECAYING').length;
   const healthy = profiles.filter(p => (p.resilience_score || 0) >= 70).length;
-  const avgScore = total > 0 ? profiles.reduce((s, p) => s + (p.resilience_score || 0), 0) / total : 0;
+  const scoredProfiles = profiles.filter(p => (p.resilience_score || 0) > 0);
+  const avgScore = scoredProfiles.length > 0
+    ? scoredProfiles.reduce((s, p) => s + (p.resilience_score || 0), 0) / scoredProfiles.length
+    : 0;
   const totalCommits = profiles.reduce((s, p) => s + (p.github_commits_30d || 0), 0);
   const totalContributors = profiles.reduce((s, p) => s + (p.github_contributors || 0), 0);
   const totalTvl = profiles.reduce((s, p) => s + (p.tvl_usd || 0), 0);
