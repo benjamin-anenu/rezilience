@@ -62,6 +62,15 @@ export function AdminIntegrations() {
     return <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />;
   };
 
+  const operationalCount = data.filter(s => s.status === 'operational').length;
+  const totalErrors = data.reduce((s, d) => s + d.errorsLast24h, 0);
+  const uptimePct = data.length > 0 ? Math.round((operationalCount / data.length) * 100) : 0;
+  const avgLatencyAll = (() => {
+    const withLatency = data.filter(s => s.avgLatency !== null);
+    if (withLatency.length === 0) return null;
+    return Math.round(withLatency.reduce((s, d) => s + (d.avgLatency || 0), 0) / withLatency.length);
+  })();
+
   return (
     <div className="p-6 lg:p-8 space-y-5 admin-gradient-bg min-h-full">
       <div className="flex items-center justify-between">
@@ -73,6 +82,34 @@ export function AdminIntegrations() {
           <Plug className="h-3.5 w-3.5 text-muted-foreground" />
           <span className="text-[10px] font-mono text-muted-foreground">{data.length} SERVICES</span>
         </div>
+      </div>
+
+      {/* Global Health Summary Bar */}
+      <div className="glass-chart p-4 flex items-center gap-6 flex-wrap">
+        <div className="flex items-center gap-2">
+          <span className={`block h-3 w-3 rounded-full ${uptimePct === 100 ? 'bg-primary' : uptimePct >= 80 ? 'bg-yellow-500' : 'bg-destructive'}`} />
+          <span className="font-display text-lg font-bold text-foreground">{uptimePct}%</span>
+          <span className="text-[10px] font-mono text-muted-foreground/60 uppercase">Uptime</span>
+        </div>
+        <div className="h-6 w-px bg-border" />
+        <div className="flex items-center gap-2">
+          <span className="font-display text-lg font-bold text-foreground">{operationalCount}/{data.length}</span>
+          <span className="text-[10px] font-mono text-muted-foreground/60 uppercase">Operational</span>
+        </div>
+        <div className="h-6 w-px bg-border" />
+        <div className="flex items-center gap-2">
+          <span className={`font-display text-lg font-bold ${totalErrors > 0 ? 'text-destructive' : 'text-foreground'}`}>{totalErrors}</span>
+          <span className="text-[10px] font-mono text-muted-foreground/60 uppercase">Errors (24h)</span>
+        </div>
+        {avgLatencyAll !== null && (
+          <>
+            <div className="h-6 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <span className="font-display text-lg font-bold text-foreground">{avgLatencyAll}ms</span>
+              <span className="text-[10px] font-mono text-muted-foreground/60 uppercase">Avg Latency</span>
+            </div>
+          </>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
