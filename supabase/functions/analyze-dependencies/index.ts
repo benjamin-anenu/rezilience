@@ -873,7 +873,6 @@ async function analyzePypiDependencies(
         
         const monthsBehind = currentVersion === "latest" ? 0 : calculateVersionGap(currentVersion, latestVersion);
         const isOutdated = monthsBehind > 0;
-        const downloads = await getPypiDownloads(name);
         
         return {
           name,
@@ -882,7 +881,7 @@ async function analyzePypiDependencies(
           monthsBehind,
           isOutdated,
           isCritical,
-          reverseDeps: downloads,
+          reverseDeps: 0,
         };
       })
     );
@@ -967,9 +966,8 @@ async function analyzeNpmDependencies(
         
         const monthsBehind = calculateVersionGap(currentVersion, latestVersion);
         const isOutdated = monthsBehind > 0;
-        const downloads = await getNpmDownloads(name);
         
-        return { name, currentVersion, latestVersion, monthsBehind, isOutdated, isCritical, reverseDeps: downloads };
+        return { name, currentVersion, latestVersion, monthsBehind, isOutdated, isCritical, reverseDeps: 0 };
       })
     );
     

@@ -41,11 +41,13 @@ const ProfileDetail = () => {
 
   const { data: profile, isLoading, error } = useClaimedProfile(id || '');
 
-  // Check if current user is the owner (fallback to username match)
-  const isOwner = user && profile && (
-    (user.id && profile.xUserId && user.id === profile.xUserId) ||
-    (user.username && profile.xUsername && user.username.toLowerCase() === profile.xUsername.toLowerCase())
-  );
+  // Strict ownership check: only x_user_id match (username is mutable and exploitable)
+  const isOwner = !!(user && profile && user.id && profile.xUserId && user.id === profile.xUserId);
+
+  // Debug log for owner detection issues
+  if (user && profile && !isOwner) {
+    console.log('[OwnerCheck] Not owner.', { userId: user.id, profileXUserId: profile.xUserId, username: user.username, profileXUsername: profile.xUsername });
+  }
 
   const handleRefresh = async () => {
     if (!profile?.githubOrgUrl || !profile?.id) {
@@ -88,8 +90,20 @@ const ProfileDetail = () => {
 
       const dimensionNames = ['GitHub', 'Dependencies', 'Governance', 'TVL'];
       const results = [githubResult, depsResult, govResult, tvlResult];
-      const succeeded = results.filter(r => r.status === 'fulfilled').length;
-      const failed = results.filter(r => r.status === 'rejected').map((r, i) => dimensionNames[i]);
+      
+      // Check for silent failures: HTTP 200 but success: false in response body
+      const failed: string[] = [];
+      let succeeded = 0;
+      results.forEach((r, i) => {
+        if (r.status === 'rejected') {
+          failed.push(dimensionNames[i]);
+        } else if (r.value?.data?.success === false) {
+          console.warn(`${dimensionNames[i]} returned success:false:`, r.value.data.error);
+          failed.push(dimensionNames[i]);
+        } else {
+          succeeded++;
+        }
+      });
 
       results.forEach((result, i) => {
         if (result.status === 'rejected') {
@@ -334,14 +348,11 @@ const ProfileDetail = () => {
                     <RoadmapManagement profile={profile} xUserId={user!.id} />
                   ),
                   support: (
-                    <div className="space-y-6">
-                      <SupportTabContent
-                        program={programForComponents}
-                        isVerified={profile.verified}
-                        claimStatus={claimStatus}
-                      />
-                      <SettingsTab profile={profile} xUserId={user!.id} />
-                    </div>
+                    <SupportTabContent
+                      program={programForComponents}
+                      isVerified={profile.verified}
+                      claimStatus={claimStatus}
+                    />
                   ),
                 }}
               </ProgramTabs>
