@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { useBlocker } from 'react-router-dom';
 import { Plus, Trash2, GripVertical, Users2, Target, Save, Upload, Link, AlertCircle, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -213,9 +213,18 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
     }
   };
 
-  const hasChanges = 
+  const hasChanges = useMemo(() =>
     JSON.stringify(teamMembers) !== JSON.stringify(profile.teamMembers || []) ||
-    stakingPitch !== (profile.stakingPitch || '');
+    stakingPitch !== (profile.stakingPitch || ''),
+    [teamMembers, profile.teamMembers, stakingPitch, profile.stakingPitch]
+  );
+
+  // Mount guard - defer blocker activation to avoid intercepting tab-switch navigation
+  const [isMounted, setIsMounted] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setIsMounted(true), 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Warn before browser close/refresh with unsaved changes
   useEffect(() => {
@@ -230,11 +239,13 @@ export function TeamManagement({ profile, xUserId }: TeamManagementProps) {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasChanges]);
 
-  // Block in-app navigation when unsaved changes exist
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      hasChanges && currentLocation.pathname !== nextLocation.pathname
+  // Block in-app navigation when unsaved changes exist (stable callback)
+  const shouldBlock = useCallback(
+    ({ currentLocation, nextLocation }: { currentLocation: { pathname: string }; nextLocation: { pathname: string } }) =>
+      isMounted && hasChanges && currentLocation.pathname !== nextLocation.pathname,
+    [isMounted, hasChanges]
   );
+  const blocker = useBlocker(shouldBlock);
 
   return (
     <div className="space-y-6">

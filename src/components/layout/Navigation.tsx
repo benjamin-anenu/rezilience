@@ -240,17 +240,28 @@ export function Navigation() {
                     </Button>
                   </DrawerClose>
                 ) : (
-                  <DrawerClose asChild>
-                    <Button 
-                      asChild 
-                      className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider touch-feedback"
-                    >
-                      <Link to="/claim-profile">
-                        <User className="mr-2 h-4 w-4" />
-                        JOIN THE REGISTRY
-                      </Link>
-                    </Button>
-                  </DrawerClose>
+                  <>
+                    <DrawerClose asChild>
+                      <Button
+                        variant="outline"
+                        onClick={signInWithX}
+                        className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider bg-background border-primary text-foreground hover:bg-primary/10 touch-feedback"
+                      >
+                        SIGN IN
+                      </Button>
+                    </DrawerClose>
+                    <DrawerClose asChild>
+                      <Button 
+                        asChild 
+                        className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider touch-feedback"
+                      >
+                        <Link to="/claim-profile">
+                          <User className="mr-2 h-4 w-4" />
+                          JOIN THE REGISTRY
+                        </Link>
+                      </Button>
+                    </DrawerClose>
+                  </>
                 )}
               </div>
             </DrawerContent>
