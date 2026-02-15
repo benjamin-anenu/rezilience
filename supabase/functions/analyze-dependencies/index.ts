@@ -715,12 +715,14 @@ function parseCargoToml(content: string, workspaceDeps?: Map<string, string>): M
  */
 async function getLatestCrateVersion(crateName: string): Promise<string | null> {
   try {
+    const start = Date.now();
     const response = await fetch(`https://crates.io/api/v1/crates/${crateName}`, {
       headers: {
         "User-Agent": "Rezilience-Registry (contact@rezilience.fi)",
         Accept: "application/json",
       },
     });
+    logServiceHealth("Crates.io API", `/api/v1/crates/${crateName}`, response.status, Date.now() - start, response.ok ? undefined : `HTTP ${response.status}`);
     
     if (!response.ok) {
       console.warn(`Crate ${crateName} not found on crates.io`);

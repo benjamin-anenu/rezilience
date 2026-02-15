@@ -1,3 +1,5 @@
+import { logServiceHealth } from "../_shared/service-health.ts";
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -53,6 +55,7 @@ Deno.serve(async (req) => {
       },
     }));
 
+    const batchStart = Date.now();
     const batchResponse = await fetch(indexUrl, {
       method: 'POST',
       headers: {
@@ -62,12 +65,14 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({ requests }),
     });
+    logServiceHealth("Algolia Search", "/1/indexes/protocols/batch", batchResponse.status, Date.now() - batchStart, batchResponse.ok ? undefined : `HTTP ${batchResponse.status}`);
 
     const batchResult = await batchResponse.json();
 
     // Configure index settings
     const settingsUrl = `https://${ALGOLIA_APP_ID}.algolia.net/1/indexes/protocols/settings`;
-    await fetch(settingsUrl, {
+    const settingsStart = Date.now();
+    const settingsResponse = await fetch(settingsUrl, {
       method: 'PUT',
       headers: {
         'X-Algolia-Application-Id': ALGOLIA_APP_ID,
@@ -80,6 +85,7 @@ Deno.serve(async (req) => {
         customRanking: ['desc(tier)', 'asc(name)'],
       }),
     });
+    logServiceHealth("Algolia Search", "/1/indexes/protocols/settings", settingsResponse.status, Date.now() - settingsStart, settingsResponse.ok ? undefined : `HTTP ${settingsResponse.status}`);
 
     return new Response(
       JSON.stringify({ success: true, indexed: protocols.length, result: batchResult }),
