@@ -1,26 +1,15 @@
 
 
-## Two Changes: Config Fix + "Owned" to "Main" Rename
+## Rename "LIVE" Column to "LIVENESS" and "Live" Badge to "Active"
 
-### 1. Add `verify-github-ownership` to config.toml (SHIP-BLOCKER)
+Two single-line text changes:
 
-The new edge function will return 401 without this entry. Add to `supabase/config.toml`:
+| File | Line | From | To |
+|------|------|------|----|
+| `src/components/explorer/ProgramLeaderboard.tsx` | 43 | `LIVE` | `LIVENESS` |
+| `src/components/explorer/LeaderboardRow.tsx` | 50 | `Live` | `Active` |
 
-```toml
-[functions.verify-github-ownership]
-verify_jwt = false
-```
+The mobile view (`MobileProgramCard.tsx`) already uses "Active" for the ACTIVE status -- no change needed there.
 
-### 2. Rename "Owned" to "Main" in Explorer Table
+No logic, layout, or styling changes. Just two label updates for consistency.
 
-Currently the originality column shows **"Owned"** vs **"Forked"**. Change "Owned" to "Main" so the pair reads **"Main" / "Forked"** -- clearer terminology that mirrors how Git repositories are described.
-
-**Files to update:**
-
-| File | Location | Change |
-|------|----------|--------|
-| `supabase/config.toml` | End of file | Add `[functions.verify-github-ownership]` block |
-| `src/components/explorer/LeaderboardRow.tsx` | Line 79 inside `getOriginalityBadge` | Change `Owned` text to `Main` |
-| `src/components/explorer/MobileProgramCard.tsx` | Line 249 inside the bottom stats row | Change `Owned` text to `Main` |
-
-Three small, surgical edits. No logic changes, no new dependencies.
