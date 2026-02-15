@@ -75,8 +75,14 @@ export function BuilderPostCard({ post, index, isSubscribed, onSubscribe }: Buil
             className="overflow-hidden bg-[#0a0a0a]"
           >
             <div
-              className="origin-top-left [&_.react-tweet-theme]:!bg-transparent [&_article]:!border-0 [&_article]:!shadow-none [&>div]:!mb-0 [&_article]:!mb-0"
-              style={{ transform: 'scale(0.82)', width: '121.95%' }}
+              className={`origin-top-left [&_.react-tweet-theme]:!bg-transparent [&_article]:!border-0 [&_article]:!shadow-none [&>div]:!mb-0 [&_article]:!mb-0 [&_.react-tweet-theme]:!p-0 transition-transform duration-300 ${
+                expanded ? '' : ''
+              }`}
+              style={
+                expanded
+                  ? { transform: 'scale(1)', width: '100%' }
+                  : { transform: 'scale(0.82)', width: '121.95%' }
+              }
               data-theme="dark"
             >
               <Tweet id={tweetId} />
