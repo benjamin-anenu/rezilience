@@ -1,44 +1,21 @@
 
+## Fix: Remove Black Empty Space Below Video in Tweet Embeds
 
-## Redesign Card Header + Expandable Tweet
+### Problem
+The `max-h-[280px]` constraint only limits the `<video>` element's visible area, but the video's parent wrapper inside the `react-tweet` component retains its original height. This creates a large black empty area below the video thumbnail.
 
-### 1. Improved Header Layout
+### Solution
+Target the video's parent container elements as well, not just the `<video>` tag. Add CSS overrides to constrain the entire media wrapper:
 
-**Current problem:** The project name, logo, category badge, and subscribe button are all crammed into one horizontal row, making it feel cluttered.
+### File: `src/components/explorer/BuilderPostCard.tsx`
 
-**New layout — two rows in the header:**
+Update the CSS selector string on line 77 to add:
+- `[&_[data-video-wrapper]]:!max-h-[280px]` -- target react-tweet's video wrapper
+- `[&_div[style*="padding-bottom"]]:!p-0 [&_div[style*="padding-bottom"]]:!h-[280px]` -- override the aspect-ratio padding-bottom trick used by tweet embeds for video containers
+- `[&_[data-testid="videoPlayer"]]:!max-h-[280px]` -- target the video player container
+- More broadly: `[&_div:has(>video)]:!max-h-[280px] [&_div:has(>video)]:!overflow-hidden` -- constrain any div that directly contains a video element
 
-```text
-+---------------------------------------+
-|  [Logo 36px]  Project Name            |
-|               infrastructure | Subscribe |
-+---------------------------------------+
-```
+This ensures the entire video container block (not just the video tag) respects the height limit, eliminating the black dead space.
 
-- **Row 1**: Larger logo (36px, `h-9 w-9`) + project name in bolder text (`text-base font-bold`)
-- **Row 2**: Category badge + Subscribe button, aligned below the name with slight left padding to clear the logo
-- More vertical breathing room (`py-3 px-4`) between header elements
-
-### 2. Expandable Card (Click to Read Full Tweet)
-
-Add a collapsed/expanded toggle so users can read the full tweet without leaving the page:
-
-- **Collapsed (default)**: Tweet area stays at `h-[200px]` with the fade-out gradient — same as now
-- **Expanded**: Remove the height constraint and fade gradient, letting the full tweet render. The cards below smoothly push down.
-- **Toggle trigger**: A small "Read more" / "Show less" button at the bottom of the tweet area
-- **Animation**: Use Radix `Collapsible` (already installed) or a CSS `max-height` transition for smooth expand/collapse. Since Radix Collapsible animates height changes natively, it provides the smooth push-down effect.
-
-### Technical Approach
-
-- Add `useState` for `expanded` toggle
-- Wrap the tweet area in a container that switches between `h-[200px] overflow-hidden` (collapsed) and `h-auto` (expanded)
-- Use `framer-motion`'s `AnimatePresence` + `motion.div` with `layout` for a smooth height animation (already installed), OR use CSS `transition-[max-height]` with a generous max-height value
-- The fade gradient only renders when collapsed
-- "Read more" button sits at the bottom border, styled as a subtle text link
-
-### Files Changed
-
-| File | Change |
-|------|--------|
-| `src/components/explorer/BuilderPostCard.tsx` | Restructure header into two rows (logo+name / badge+subscribe), add expand/collapse state with smooth animation for the tweet embed area |
-
+### Technical Detail
+The `react-tweet` component uses a padding-bottom aspect-ratio hack for its media containers. We need to override both the video element and its wrapping divs to collapse the empty space.
