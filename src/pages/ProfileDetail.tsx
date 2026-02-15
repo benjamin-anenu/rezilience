@@ -277,7 +277,20 @@ const ProfileDetail = () => {
                     <DevelopmentTabContent {...developmentTabProps} />
                   ),
                   team: (
-                    <TeamManagement profile={profile} xUserId={user!.id} />
+                    <div className="space-y-6">
+                      <TeamTabContent
+                        teamMembers={profile.teamMembers}
+                        stakingPitch={profile.stakingPitch}
+                        isVerified={profile.verified}
+                        claimStatus={claimStatus}
+                        ownerUsername={profile.xUsername}
+                        ownerLogoUrl={profile.logoUrl}
+                        ownerProjectName={profile.projectName}
+                        ownerAvatarUrl={profile.xAvatarUrl}
+                        ownerDisplayName={profile.xDisplayName}
+                      />
+                      <TeamManagement profile={profile} xUserId={user!.id} />
+                    </div>
                   ),
                   community: (
                     <div className="space-y-6">
