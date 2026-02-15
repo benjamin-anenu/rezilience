@@ -20,15 +20,25 @@ const getTweetId = (url: string): string | null => {
   return match ? match[1] : null;
 };
 
-const formatRelativeTime = (timestamp: string): string | null => {
-  const date = new Date(timestamp);
-  if (isNaN(date.getTime())) return null;
+/** Extract creation date from Twitter snowflake ID */
+const getTweetDate = (tweetId: string): Date | null => {
+  try {
+    const id = BigInt(tweetId);
+    const timestamp = Number(id >> 22n) + 1288834974657;
+    return new Date(timestamp);
+  } catch {
+    return null;
+  }
+};
+
+const formatRelativeTime = (date: Date): string => {
   return formatDistanceToNow(date, { addSuffix: true });
 };
 
 export function BuilderPostCard({ post, index, isSubscribed, onSubscribe }: BuilderPostCardProps) {
   const tweetId = getTweetId(post.tweetUrl);
-  const relativeTime = formatRelativeTime(post.timestamp);
+  const tweetDate = tweetId ? getTweetDate(tweetId) : null;
+  const relativeTime = tweetDate ? formatRelativeTime(tweetDate) : null;
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -127,26 +137,23 @@ export function BuilderPostCard({ post, index, isSubscribed, onSubscribe }: Buil
       )}
 
       {/* Footer */}
-      <div className="border-t border-primary/20 bg-[#0a0a0a] px-4 py-2.5 space-y-1.5">
-        <p className="line-clamp-2 text-xs font-medium text-foreground/90">
-          {post.title || 'Builder update'}
-        </p>
-        <div className="flex items-center justify-between">
-          {relativeTime && (
-            <span className="font-mono text-[10px] text-muted-foreground">{relativeTime}</span>
-          )}
-          {post.tweetUrl && (
-            <a
-              href={post.tweetUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/20"
-            >
-              <ExternalLink className="h-2.5 w-2.5" />
-              View on X
-            </a>
-          )}
-        </div>
+      <div className="border-t border-primary/20 bg-[#0a0a0a] px-4 py-2.5 flex items-center justify-between">
+        {relativeTime ? (
+          <span className="font-mono text-[10px] text-muted-foreground">{relativeTime}</span>
+        ) : (
+          <span />
+        )}
+        {post.tweetUrl && (
+          <a
+            href={post.tweetUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[10px] font-medium text-primary transition-colors hover:bg-primary/20"
+          >
+            <ExternalLink className="h-2.5 w-2.5" />
+            View on X
+          </a>
+        )}
       </div>
     </div>
   );
