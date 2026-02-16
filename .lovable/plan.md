@@ -1,34 +1,42 @@
 
-# Solana Branding: Footer Badge + Bigger Map Icons
+# Safely Update Dependencies to Improve Health Score
 
-## 1. Footer -- Add "Powered by Solana" Badge
+## Current State
+- Dependency health score: **31/100**
+- 32 outdated packages, 2 marked critical
+- Most outdated packages are minor/patch version bumps (low risk)
 
-In `src/components/layout/Footer.tsx`, add a subtle "Powered by Solana" badge between the copyright line and the Data Provenance section (or inline with the copyright). It will feature:
+## Strategy: Safe Batch Update
 
-- An inline SVG of the Solana logo (the gradient "S" mark, same path used on the map)
-- Text: "Powered by Solana" in `font-code text-[10px] uppercase tracking-widest text-muted-foreground`
-- Wrapped in an anchor tag linking to `https://solana.com` (opens in new tab)
-- Styled as a subtle pill with `border border-border/30 rounded-full px-3 py-1` to keep it understated and premium
+Update dependencies in two tiers based on risk level.
 
-The copyright line will also be updated from "Built for Solana" to include the badge visually, keeping the text clean.
+### Tier 1 — Safe Updates (low/no breaking risk)
+These are minor or patch version bumps that should be fully backward-compatible:
 
-## 2. Map Markers -- Increase Solana Logo Size
+**Radix UI packages (20+ packages, all 1 minor version behind):**
+- `@radix-ui/react-avatar`, `@radix-ui/react-checkbox`, `@radix-ui/react-collapsible`, `@radix-ui/react-context-menu`, `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`, `@radix-ui/react-hover-card`, `@radix-ui/react-label`, `@radix-ui/react-menubar`, `@radix-ui/react-navigation-menu`, `@radix-ui/react-popover`, `@radix-ui/react-progress`, `@radix-ui/react-radio-group`, `@radix-ui/react-aspect-ratio`, `@radix-ui/react-select`, `@radix-ui/react-separator`, `@radix-ui/react-slider`, `@radix-ui/react-slot`, `@radix-ui/react-switch`, `@radix-ui/react-tabs`, `@radix-ui/react-toast`, `@radix-ui/react-toggle`, `@radix-ui/react-toggle-group`, `@radix-ui/react-tooltip`, `@radix-ui/react-accordion`, `@radix-ui/react-alert-dialog`, `@radix-ui/react-scroll-area`
 
-In `src/components/landing/EcosystemMapSection.tsx`, increase the marker sizes:
+**Other safe updates:**
+- `@supabase/supabase-js` (patch bump)
+- `@tanstack/react-query` (patch bump within v5)
+- `@hookform/resolvers` (if compatible with current react-hook-form)
+- `react-hook-form` (patch bump)
+- `sonner`, `date-fns`, `zod`, `lucide-react`, `framer-motion`, `clsx`, `tailwind-merge`
 
-- `getPulseRadius()` values increased ~60%: `2.5 -> 4`, `3.5 -> 5.5`, `4.5 -> 7`, `6 -> 9`
-- `logoSize` multiplier increased from `r * 1.6` to `r * 2.2` so the Solana "S" icon is more prominent
-- Pulse ring outer radius adjusted proportionally
+### Tier 2 — Risky Updates (skip for now)
+- **React 18 to 19**: Major version. Many ecosystem libraries still catching up. Upgrading would require auditing compatibility of every dependency. Not recommended at this time.
+- **TypeScript 5.8 to 5.9**: Moderate risk, may introduce stricter type checks that surface new errors.
+
+### Expected Outcome
+Updating Tier 1 packages should bring the health score from **31 to approximately 75-85**, clearing most of the "outdated" flags while keeping the app stable.
+
+### Steps
+1. Update all Radix UI packages to latest
+2. Update other safe packages (TanStack Query, Supabase JS, hook-form resolvers, etc.)
+3. Verify the app builds and renders correctly
+4. Re-trigger dependency analysis to update the score
 
 ## Technical Details
-
-### Files to edit:
-- `src/components/layout/Footer.tsx` -- add Solana badge near copyright
-- `src/components/landing/EcosystemMapSection.tsx` -- increase `getPulseRadius` return values and `logoSize` multiplier
-
-### Solana logo SVG path (reused from map):
-```
-M3.5 18.5L8 14h16l-4.5 4.5H3.5zm0-6.5L8 8h16l-4.5 4H3.5zm0-6.5L8 1.5h16L19.5 6H3.5z
-```
-
-With a linear gradient from `#9945FF` through `#14F195` to `#00C2FF`.
+- All updates will be done via the dependency installer
+- No code changes expected since these are minor/patch bumps
+- The dependency analysis edge function will need to be re-triggered after updates to refresh the score in the database
