@@ -112,7 +112,7 @@ const ProgramDetail = () => {
   
   // Build display data from either project or claimed profile
   const displayName = project?.program_name || claimedProfile?.projectName || 'Unknown Project';
-  const displayProgramId = project?.program_id || claimedProfile?.programId || id || '';
+  const displayProgramId = project?.program_id || claimedProfile?.programId || '';
   const displayScore = project?.resilience_score || claimedProfile?.score || 0;
   const displayDescription = claimedProfile?.description || project?.description;
   const displayWebsiteUrl = claimedProfile?.websiteUrl || project?.website_url;
