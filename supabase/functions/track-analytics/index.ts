@@ -72,8 +72,9 @@ Deno.serve(async (req) => {
 
     if (error) {
       console.error('Insert error:', error.message);
-      return new Response(JSON.stringify({ ok: false, error: error.message }), {
-        status: 500,
+      // Rate limit or constraint errors should not return 500 — analytics is non-critical
+      return new Response(JSON.stringify({ ok: false, error: error.message, dropped: enriched.length }), {
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
