@@ -149,7 +149,7 @@ export function EcosystemMapSection() {
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base leading-relaxed">
             Real-time distribution of Solana protocols monitored by the Rezilience Assurance Layer — 
-            live on-chain signals from every continent.
+            live off & on-chain signals from every continent.
           </p>
         </motion.div>
 
