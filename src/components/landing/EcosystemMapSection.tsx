@@ -1,12 +1,11 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe, ArrowRight, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Globe, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
   ComposableMap,
   Geographies,
   Geography,
-  ZoomableGroup,
 } from 'react-simple-maps';
 import { useRegistryGeoData, CountryStats } from '@/hooks/useRegistryGeoData';
 import { Button } from '@/components/ui/button';
@@ -53,30 +52,10 @@ function getFillColor(stats: CountryStats | undefined, isHovered: boolean): stri
 export function EcosystemMapSection() {
   const { countryStats, summary, isLoading } = useRegistryGeoData();
   const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; stats: CountryStats } | null>(null);
-  const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>({
-    coordinates: [0, 20],
-    zoom: 1,
-  });
-
-  const handleZoomIn = useCallback(() => {
-    setPosition(p => ({ ...p, zoom: Math.min(p.zoom * 1.5, 8) }));
-  }, []);
-
-  const handleZoomOut = useCallback(() => {
-    setPosition(p => ({ ...p, zoom: Math.max(p.zoom / 1.5, 1) }));
-  }, []);
-
-  const handleReset = useCallback(() => {
-    setPosition({ coordinates: [0, 20], zoom: 1 });
-  }, []);
-
-  const handleMoveEnd = useCallback((pos: { coordinates: [number, number]; zoom: number }) => {
-    setPosition(pos);
-  }, []);
 
   return (
     <section className="relative py-20 md:py-28 overflow-hidden bg-background">
-      <div className="container mx-auto px-4 max-w-6xl">
+      <div className="container mx-auto px-4">
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -127,42 +106,15 @@ export function EcosystemMapSection() {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="relative w-full rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm overflow-hidden"
+          className="relative w-full overflow-hidden"
         >
-          {/* Zoom Controls */}
-          <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5">
-            {[
-              { icon: ZoomIn, action: handleZoomIn, label: 'Zoom in' },
-              { icon: ZoomOut, action: handleZoomOut, label: 'Zoom out' },
-              { icon: RotateCcw, action: handleReset, label: 'Reset' },
-            ].map(({ icon: Icon, action, label }) => (
-              <motion.button
-                key={label}
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={action}
-                className="w-8 h-8 rounded-md bg-card/80 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
-                aria-label={label}
-              >
-                <Icon className="w-4 h-4" />
-              </motion.button>
-            ))}
-          </div>
-
           <ComposableMap
-            projection="geoMercator"
-            projectionConfig={{ scale: 147, center: [0, 20] }}
-            width={800}
-            height={450}
+            projection="geoEqualEarth"
+            projectionConfig={{ scale: 160, center: [0, 10] }}
+            width={900}
+            height={440}
             style={{ width: '100%', height: 'auto' }}
           >
-            <ZoomableGroup
-              center={position.coordinates}
-              zoom={position.zoom}
-              onMoveEnd={handleMoveEnd}
-              minZoom={1}
-              maxZoom={8}
-            >
               <Geographies geography={GEO_URL}>
                 {({ geographies }) =>
                   geographies.map((geo) => {
@@ -214,7 +166,6 @@ export function EcosystemMapSection() {
                   })
                 }
               </Geographies>
-            </ZoomableGroup>
           </ComposableMap>
 
           {/* Tooltip */}
