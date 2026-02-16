@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Globe, ArrowRight, Activity } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   ComposableMap,
   Geographies,
@@ -12,6 +12,13 @@ import { useRegistryGeoData, CountryStats } from '@/hooks/useRegistryGeoData';
 import { Button } from '@/components/ui/button';
 
 const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
+
+// ISO alpha-2 → DB country code (special cases)
+const ISO_TO_DB_CODE: Record<string, string> = { GB: 'uk' };
+
+function isoToDbCode(alpha2: string): string {
+  return ISO_TO_DB_CODE[alpha2] || alpha2.toLowerCase();
+}
 
 // ISO 3166-1 numeric → alpha-2 mapping
 const NUMERIC_TO_ALPHA2: Record<string, string> = {
@@ -65,6 +72,9 @@ const COUNTRY_CENTROIDS: Record<string, [number, number]> = {
   LU: [6, 50], MT: [14, 36], CY: [33, 35],
 };
 
+// Solana "S" logo path (simplified official mark)
+const SOLANA_LOGO_PATH = 'M3.5 18.5L8 14h16l-4.5 4.5H3.5zm0-6.5L8 8h16l-4.5 4H3.5zm0-6.5L8 1.5h16L19.5 6H3.5z';
+
 function getFillColor(stats: CountryStats | undefined, isHovered: boolean): string {
   if (!stats) return isHovered ? 'hsl(216, 20%, 13%)' : 'hsl(216, 20%, 9%)';
   const count = stats.projectCount;
@@ -83,6 +93,7 @@ function getPulseRadius(count: number): number {
 }
 
 export function EcosystemMapSection() {
+  const navigate = useNavigate();
   const { countryStats, summary, isLoading } = useRegistryGeoData();
   const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; stats: CountryStats } | null>(null);
 
@@ -96,6 +107,11 @@ export function EcosystemMapSection() {
     });
     return result;
   }, [countryStats]);
+
+  const handleCountryClick = (alpha2: string) => {
+    const dbCode = isoToDbCode(alpha2);
+    navigate(`/explorer?country=${dbCode}`);
+  };
 
   const statItems = [
     { value: summary.totalCountries, label: 'Countries' },
@@ -125,14 +141,14 @@ export function EcosystemMapSection() {
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-primary/20 bg-primary/5 mb-5">
             <Activity className="w-3.5 h-3.5 text-primary pulse-subtle" />
             <span className="text-[11px] font-medium tracking-[0.15em] text-primary uppercase font-code">
-              Live Registry
+              Solana Assurance Layer
             </span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold text-foreground mb-4 font-display tracking-tight">
-            Building Across the Globe
+            Solana Builders Across the Globe
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto text-sm md:text-base leading-relaxed">
-            Real-time distribution of protocols monitored by the Rezilience Registry — 
+            Real-time distribution of Solana protocols monitored by the Rezilience Assurance Layer — 
             live on-chain signals from every continent.
           </p>
         </motion.div>
@@ -187,12 +203,17 @@ export function EcosystemMapSection() {
             height={440}
             style={{ width: '100%', height: 'auto', display: 'block' }}
           >
-            {/* Defs for pulse animation */}
+            {/* Defs for pulse animation and Solana gradient */}
             <defs>
               <radialGradient id="pulseGlow">
                 <stop offset="0%" stopColor="hsl(174, 100%, 45%)" stopOpacity="0.8" />
                 <stop offset="100%" stopColor="hsl(174, 100%, 38%)" stopOpacity="0" />
               </radialGradient>
+              <linearGradient id="solanaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#9945FF" />
+                <stop offset="50%" stopColor="#14F195" />
+                <stop offset="100%" stopColor="#00C2FF" />
+              </linearGradient>
             </defs>
 
             <Geographies geography={GEO_URL}>
@@ -218,6 +239,9 @@ export function EcosystemMapSection() {
                           cursor: stats ? 'pointer' : 'default',
                         },
                         pressed: { outline: 'none' },
+                      }}
+                      onClick={() => {
+                        if (stats && alpha2) handleCountryClick(alpha2);
                       }}
                       onMouseEnter={(e) => {
                         if (!stats) return;
@@ -249,11 +273,17 @@ export function EcosystemMapSection() {
               }
             </Geographies>
 
-            {/* Pulsing markers on active countries */}
+            {/* Solana-branded pulsing markers on active countries */}
             {markers.map(({ code, coordinates, stats }) => {
               const r = getPulseRadius(stats.projectCount);
+              const logoSize = r * 1.6;
               return (
-                <Marker key={code} coordinates={coordinates}>
+                <Marker
+                  key={code}
+                  coordinates={coordinates}
+                  onClick={() => handleCountryClick(code)}
+                  style={{ cursor: 'pointer' }}
+                >
                   {/* Outer pulse ring */}
                   <circle
                     r={r * 2.5}
@@ -275,14 +305,14 @@ export function EcosystemMapSection() {
                       repeatCount="indefinite"
                     />
                   </circle>
-                  {/* Inner solid dot */}
-                  <circle
-                    r={r}
-                    fill="hsl(174, 100%, 45%)"
-                    stroke="hsl(174, 100%, 60%)"
-                    strokeWidth={0.5}
-                    opacity={0.9}
-                  />
+                  {/* Solana logo mark */}
+                  <g transform={`translate(${-logoSize / 2}, ${-logoSize / 2}) scale(${logoSize / 24})`}>
+                    <path
+                      d={SOLANA_LOGO_PATH}
+                      fill="url(#solanaGrad)"
+                      opacity={0.95}
+                    />
+                  </g>
                 </Marker>
               );
             })}
@@ -318,6 +348,9 @@ export function EcosystemMapSection() {
                     {tooltip.stats.topCategories.slice(0, 3).join(' · ')}
                   </p>
                 )}
+                <p className="mt-2 text-primary/70 text-[9px] font-code tracking-wider uppercase">
+                  Click to explore →
+                </p>
               </motion.div>
             )}
           </AnimatePresence>
@@ -350,14 +383,13 @@ export function EcosystemMapSection() {
           transition={{ delay: 0.6, duration: 0.5 }}
           className="text-center mt-10"
         >
-          <Link to="/explorer">
-            <Button
-              variant="outline"
-              className="gap-2 border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all duration-300 font-display text-sm"
-            >
-              Explore the Registry <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
+          <Button
+            variant="outline"
+            className="gap-2 border-primary/30 hover:border-primary/60 hover:bg-primary/5 transition-all duration-300 font-display text-sm"
+            onClick={() => navigate('/explorer')}
+          >
+            Explore Solana Registry <ArrowRight className="w-4 h-4" />
+          </Button>
         </motion.div>
       </div>
     </section>
