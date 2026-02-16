@@ -1,86 +1,54 @@
 
 
-## Investigation Results: Scoring System Disconnections
+## Fix: GitHub Score Undervalues Solo Builders with High Activity
 
-### Bug 1 (CRITICAL): Dependency Score Shows "+0" in Breakdown Tooltip
+### Problem
+The GitHub dimension score (0-100) caps around 35 for solo developers with no releases/stars, even with maximum commit activity. This makes the score misleading for early-stage projects where a single builder is highly active.
 
-**Root Cause: Field name mismatch between backend and frontend**
+### Root Cause
+The scoring allocates only 30/100 points to activity. The remaining 70 points require:
+- Multiple contributors (25 pts) -- solo dev gets only 5
+- Releases (20 pts) -- no tagged releases = 0
+- Stars (15 pts) -- new project = 0
+- Project age (10 pts) -- young project = 0-5
 
-The backend (`refresh-all-profiles`) writes the score breakdown to the database with the key `dependencies` (plural):
-```
-scoreBreakdown = { github: 38, dependencies: 25, ... }
-```
+### Proposed Fix: Rebalance the GitHub Scoring Formula
 
-But the frontend `ScoreBreakdownTooltip` component and the `ScoreBreakdown` TypeScript interface expect the key `dependency` (singular):
-```
-interface ScoreBreakdown {
-  github: number;
-  dependency: number;   // <-- SINGULAR
-  ...
-}
-```
+Shift weight toward **activity quality** and add a **solo builder bonus** so that high-velocity solo work is rewarded fairly, while still incentivizing healthy project practices.
 
-When the component reads `scores.dependency`, it gets `undefined` (because the DB has `scores.dependencies`), which falls back to `0`. So even though your dependency health is 64/100, the tooltip shows `+0`.
+**New point allocation:**
 
-**Fix:**
-- In `ScoreBreakdownTooltip.tsx`: read from both `breakdown.dependencies` and `breakdown.dependency` for backward compatibility
-- In `src/types/index.ts`: update `ScoreBreakdown` interface to use `dependencies` (matching DB)
-- In `src/types/database.ts`: update `DBScoreHistory.breakdown` to also use `dependencies`
+| Dimension | Old Max | New Max | Change |
+|-----------|---------|---------|--------|
+| Weighted Activity | 30 | **40** | +10 (reward sustained effort) |
+| Contributor Diversity | 25 | **20** | -5 (less penalty for solo) |
+| Releases | 20 | **15** | -5 (still rewarded but less punishing) |
+| Stars/Popularity | 15 | **10** | -5 (vanity metric, less weight) |
+| Project Age | 10 | **10** | unchanged |
+| Commit Consistency Bonus | 0 | **5** | NEW: bonus for committing on 20+ of last 30 days |
 
----
-
-### Bug 2: Two Incompatible Score History Breakdown Formats
-
-The `score_history` table contains TWO different breakdown schemas depending on which code path wrote the record:
-
-**Format A** (from `refresh-all-profiles` -- integrated scoring):
-```json
-{ "github": 38, "dependencies": 25, "governance": null, "tvl": null, "baseScore": 33, "continuityDecay": 0, "weights": {...} }
-```
-
-**Format B** (from `analyze-github-repo` -- GitHub-only scoring):
-```json
-{ "stars": 216, "commits_30d": 0, "contributors": 10, "activity": 0, "age": 1122, ... }
-```
-
-Most records are Format B (the old GitHub-only breakdown). The chart currently only displays `score` and `commit_velocity`, so this doesn't break the chart visually, but it means the breakdown data in `score_history` is inconsistent and unreliable for any future tooltip or detail view.
-
-**Fix:** Ensure `analyze-github-repo` does NOT write its own score_history entries (only `refresh-all-profiles` should, as the single source of truth for the integrated score).
-
----
-
-### Bug 3: `analyze-github-repo` Writes a Separate `resilience_score` That Gets Overwritten
-
-The `analyze-github-repo` function computes its own `resilienceScore` (GitHub-only, 0-100) and writes it directly to `claimed_profiles.resilience_score`. Then `refresh-all-profiles` reads that value as `githubScore` and uses it as the GitHub dimension input to the weighted formula.
-
-This creates a race condition: if `analyze-github-repo` runs independently (e.g., from the claim pipeline), it overwrites `resilience_score` with a GitHub-only number. The next refresh cycle then reads that as the GitHub dimension, computes the integrated score, and overwrites it again. Between refreshes, the displayed score could be the raw GitHub score rather than the integrated one.
-
-**Fix:** `analyze-github-repo` should write to a dedicated column (e.g., `github_resilience_score`) or the refresh pipeline should re-derive the GitHub dimension score from raw metrics rather than trusting `resilience_score`.
-
----
-
-### Bug 4: Score History Chart Shows Stale/Confusing Data
-
-The chart only has data for days when `refresh-all-profiles` ran. With a 1-day unique constraint, you see at most one point per day. If the cron hasn't run recently, the chart appears frozen. The "Last synced" indicator helps, but there's no visual indication that data points may be days apart.
-
-Additionally, `commit_velocity` in the chart is the raw value (commits per day, e.g., 0.93) while the Y-axis label says "Velocity" with no scale context. Values like 0.03 and 0.93 compress the bar chart making it nearly invisible for low-activity projects.
-
----
-
-### Summary of Fixes
-
-| Issue | Component | Fix |
-|-------|-----------|-----|
-| Dependency shows +0 | `ScoreBreakdownTooltip.tsx`, `types/index.ts` | Change `dependency` to `dependencies` (with fallback) |
-| Inconsistent history breakdowns | `analyze-github-repo/index.ts` | Stop writing score_history from GitHub-only analysis |
-| Race condition on resilience_score | `analyze-github-repo/index.ts` | Don't overwrite `resilience_score` directly; let `refresh-all-profiles` be canonical |
-| Chart velocity scale | `AnalyticsCharts.tsx` | Improve Y-axis domain and labeling for small values |
+Additionally, adjust contributor thresholds so solo devs with high activity get 8 points instead of 5.
 
 ### Technical Changes
 
-1. **`src/types/index.ts`** -- Change `ScoreBreakdown.dependency` to `dependencies`
-2. **`src/types/database.ts`** -- Update `DBScoreHistory.breakdown` to use `dependencies` key
-3. **`src/components/program/ScoreBreakdownTooltip.tsx`** -- Read `breakdown.dependencies` (with fallback to `breakdown.dependency`)
-4. **`supabase/functions/analyze-github-repo/index.ts`** -- Remove direct writes to `resilience_score` and `score_history`; only write GitHub-specific columns
-5. **`src/components/program/AnalyticsCharts.tsx`** -- Fix velocity axis to handle small fractional values (auto domain with minimum visible bar height)
+1. **`supabase/functions/analyze-github-repo/index.ts`**
+   - Rebalance point allocations as described above
+   - Add commit consistency bonus (5 pts) for projects with commits on 20+ of last 30 days
+   - Adjust contributor tier: 1 active contributor with high activity = 8 pts (up from 5)
+   - Add more granular activity tiers for the 0-40 range
+
+2. **`supabase/functions/refresh-all-profiles/index.ts`**
+   - No changes needed -- it already reads the GitHub score from analyze-github-repo correctly
+
+3. **No frontend changes needed** -- the tooltip already displays whatever score the backend produces
+
+### Expected Impact
+With 299 push events, 1 contributor, 0 releases, 0 stars, young project:
+- **Before**: 30 + 5 + 0 + 0 + 0 = **35**/100
+- **After**: 40 + 8 + 0 + 0 + 5 (consistency) + 5 (age ~1mo) = **~58**/100
+
+This better reflects the reality that a solo builder shipping 550 commits in 30 days is demonstrably resilient.
+
+### Important Note on "+26"
+The "+26" display next to Dependency Health is correct behavior -- it shows the **weighted contribution** (64 x 0.40 = 25.6, rounded to 26), not the raw score. The raw 64/100 is shown on the progress bar. No fix needed here, but we could add a small "(64/100)" label next to the contribution for clarity if desired.
 
