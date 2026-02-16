@@ -433,7 +433,7 @@ export function AdminReporter() {
 
           {/* Print-only footer */}
           <div className="hidden print-footer">
-            Rezilience · Solana Ecosystem Resilience Intelligence · rezilience.lovable.app · Confidential
+            Rezilience · Solana Ecosystem Resilience Intelligence · rezilience.co · Confidential
           </div>
         </>
       ) : null}

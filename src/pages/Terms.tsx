@@ -172,7 +172,7 @@ export default function Terms() {
                     <SubHeader id="acceptance">1. Acceptance of Terms</SubHeader>
                   </AccordionTrigger>
                   <AccordionContent className="text-sm text-muted-foreground space-y-3">
-                    <p>By accessing or using the Rezilience platform (<Def>rezilience.lovable.app</Def>), you agree to be bound by these Terms. If you do not agree, please do not use the platform. You may still fork the codebase and run your own instance — that's the beauty of open source.</p>
+                    <p>By accessing or using the Rezilience platform (<Def><p>By accessing or using the Rezilience platform (<Def>rezilience.co</Def>), you agree to be bound by these Terms. If you do not agree, please do not use the platform. You may still fork the codebase and run your own instance — that's the beauty of open source.</p></Def>), you agree to be bound by these Terms. If you do not agree, please do not use the platform. You may still fork the codebase and run your own instance — that's the beauty of open source.</p>
                     <p>These terms apply to all visitors, users, and builders who access the platform, whether authenticated or browsing publicly.</p>
                   </AccordionContent>
                 </AccordionItem>
