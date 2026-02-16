@@ -1,42 +1,86 @@
 
-# Safely Update Dependencies to Improve Health Score
 
-## Current State
-- Dependency health score: **31/100**
-- 32 outdated packages, 2 marked critical
-- Most outdated packages are minor/patch version bumps (low risk)
+## Investigation Results: Scoring System Disconnections
 
-## Strategy: Safe Batch Update
+### Bug 1 (CRITICAL): Dependency Score Shows "+0" in Breakdown Tooltip
 
-Update dependencies in two tiers based on risk level.
+**Root Cause: Field name mismatch between backend and frontend**
 
-### Tier 1 — Safe Updates (low/no breaking risk)
-These are minor or patch version bumps that should be fully backward-compatible:
+The backend (`refresh-all-profiles`) writes the score breakdown to the database with the key `dependencies` (plural):
+```
+scoreBreakdown = { github: 38, dependencies: 25, ... }
+```
 
-**Radix UI packages (20+ packages, all 1 minor version behind):**
-- `@radix-ui/react-avatar`, `@radix-ui/react-checkbox`, `@radix-ui/react-collapsible`, `@radix-ui/react-context-menu`, `@radix-ui/react-dialog`, `@radix-ui/react-dropdown-menu`, `@radix-ui/react-hover-card`, `@radix-ui/react-label`, `@radix-ui/react-menubar`, `@radix-ui/react-navigation-menu`, `@radix-ui/react-popover`, `@radix-ui/react-progress`, `@radix-ui/react-radio-group`, `@radix-ui/react-aspect-ratio`, `@radix-ui/react-select`, `@radix-ui/react-separator`, `@radix-ui/react-slider`, `@radix-ui/react-slot`, `@radix-ui/react-switch`, `@radix-ui/react-tabs`, `@radix-ui/react-toast`, `@radix-ui/react-toggle`, `@radix-ui/react-toggle-group`, `@radix-ui/react-tooltip`, `@radix-ui/react-accordion`, `@radix-ui/react-alert-dialog`, `@radix-ui/react-scroll-area`
+But the frontend `ScoreBreakdownTooltip` component and the `ScoreBreakdown` TypeScript interface expect the key `dependency` (singular):
+```
+interface ScoreBreakdown {
+  github: number;
+  dependency: number;   // <-- SINGULAR
+  ...
+}
+```
 
-**Other safe updates:**
-- `@supabase/supabase-js` (patch bump)
-- `@tanstack/react-query` (patch bump within v5)
-- `@hookform/resolvers` (if compatible with current react-hook-form)
-- `react-hook-form` (patch bump)
-- `sonner`, `date-fns`, `zod`, `lucide-react`, `framer-motion`, `clsx`, `tailwind-merge`
+When the component reads `scores.dependency`, it gets `undefined` (because the DB has `scores.dependencies`), which falls back to `0`. So even though your dependency health is 64/100, the tooltip shows `+0`.
 
-### Tier 2 — Risky Updates (skip for now)
-- **React 18 to 19**: Major version. Many ecosystem libraries still catching up. Upgrading would require auditing compatibility of every dependency. Not recommended at this time.
-- **TypeScript 5.8 to 5.9**: Moderate risk, may introduce stricter type checks that surface new errors.
+**Fix:**
+- In `ScoreBreakdownTooltip.tsx`: read from both `breakdown.dependencies` and `breakdown.dependency` for backward compatibility
+- In `src/types/index.ts`: update `ScoreBreakdown` interface to use `dependencies` (matching DB)
+- In `src/types/database.ts`: update `DBScoreHistory.breakdown` to also use `dependencies`
 
-### Expected Outcome
-Updating Tier 1 packages should bring the health score from **31 to approximately 75-85**, clearing most of the "outdated" flags while keeping the app stable.
+---
 
-### Steps
-1. Update all Radix UI packages to latest
-2. Update other safe packages (TanStack Query, Supabase JS, hook-form resolvers, etc.)
-3. Verify the app builds and renders correctly
-4. Re-trigger dependency analysis to update the score
+### Bug 2: Two Incompatible Score History Breakdown Formats
 
-## Technical Details
-- All updates will be done via the dependency installer
-- No code changes expected since these are minor/patch bumps
-- The dependency analysis edge function will need to be re-triggered after updates to refresh the score in the database
+The `score_history` table contains TWO different breakdown schemas depending on which code path wrote the record:
+
+**Format A** (from `refresh-all-profiles` -- integrated scoring):
+```json
+{ "github": 38, "dependencies": 25, "governance": null, "tvl": null, "baseScore": 33, "continuityDecay": 0, "weights": {...} }
+```
+
+**Format B** (from `analyze-github-repo` -- GitHub-only scoring):
+```json
+{ "stars": 216, "commits_30d": 0, "contributors": 10, "activity": 0, "age": 1122, ... }
+```
+
+Most records are Format B (the old GitHub-only breakdown). The chart currently only displays `score` and `commit_velocity`, so this doesn't break the chart visually, but it means the breakdown data in `score_history` is inconsistent and unreliable for any future tooltip or detail view.
+
+**Fix:** Ensure `analyze-github-repo` does NOT write its own score_history entries (only `refresh-all-profiles` should, as the single source of truth for the integrated score).
+
+---
+
+### Bug 3: `analyze-github-repo` Writes a Separate `resilience_score` That Gets Overwritten
+
+The `analyze-github-repo` function computes its own `resilienceScore` (GitHub-only, 0-100) and writes it directly to `claimed_profiles.resilience_score`. Then `refresh-all-profiles` reads that value as `githubScore` and uses it as the GitHub dimension input to the weighted formula.
+
+This creates a race condition: if `analyze-github-repo` runs independently (e.g., from the claim pipeline), it overwrites `resilience_score` with a GitHub-only number. The next refresh cycle then reads that as the GitHub dimension, computes the integrated score, and overwrites it again. Between refreshes, the displayed score could be the raw GitHub score rather than the integrated one.
+
+**Fix:** `analyze-github-repo` should write to a dedicated column (e.g., `github_resilience_score`) or the refresh pipeline should re-derive the GitHub dimension score from raw metrics rather than trusting `resilience_score`.
+
+---
+
+### Bug 4: Score History Chart Shows Stale/Confusing Data
+
+The chart only has data for days when `refresh-all-profiles` ran. With a 1-day unique constraint, you see at most one point per day. If the cron hasn't run recently, the chart appears frozen. The "Last synced" indicator helps, but there's no visual indication that data points may be days apart.
+
+Additionally, `commit_velocity` in the chart is the raw value (commits per day, e.g., 0.93) while the Y-axis label says "Velocity" with no scale context. Values like 0.03 and 0.93 compress the bar chart making it nearly invisible for low-activity projects.
+
+---
+
+### Summary of Fixes
+
+| Issue | Component | Fix |
+|-------|-----------|-----|
+| Dependency shows +0 | `ScoreBreakdownTooltip.tsx`, `types/index.ts` | Change `dependency` to `dependencies` (with fallback) |
+| Inconsistent history breakdowns | `analyze-github-repo/index.ts` | Stop writing score_history from GitHub-only analysis |
+| Race condition on resilience_score | `analyze-github-repo/index.ts` | Don't overwrite `resilience_score` directly; let `refresh-all-profiles` be canonical |
+| Chart velocity scale | `AnalyticsCharts.tsx` | Improve Y-axis domain and labeling for small values |
+
+### Technical Changes
+
+1. **`src/types/index.ts`** -- Change `ScoreBreakdown.dependency` to `dependencies`
+2. **`src/types/database.ts`** -- Update `DBScoreHistory.breakdown` to use `dependencies` key
+3. **`src/components/program/ScoreBreakdownTooltip.tsx`** -- Read `breakdown.dependencies` (with fallback to `breakdown.dependency`)
+4. **`supabase/functions/analyze-github-repo/index.ts`** -- Remove direct writes to `resilience_score` and `score_history`; only write GitHub-specific columns
+5. **`src/components/program/AnalyticsCharts.tsx`** -- Fix velocity axis to handle small fractional values (auto domain with minimum visible bar height)
+
