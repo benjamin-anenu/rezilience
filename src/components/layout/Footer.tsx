@@ -92,10 +92,28 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 border-t border-border pt-8 text-center">
-          <p className="text-xs text-muted-foreground">© 2025 Rezilience Protocol. Built for Solana.
-
-          </p>
+        <div className="mt-8 border-t border-border pt-8 flex flex-col items-center gap-3">
+          <a
+            href="https://solana.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 border border-border/30 rounded-full px-3 py-1 transition-colors hover:border-primary/30 hover:bg-primary/5"
+          >
+            <svg width="14" height="14" viewBox="0 0 28 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="solanaFooterGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#9945FF" />
+                  <stop offset="50%" stopColor="#14F195" />
+                  <stop offset="100%" stopColor="#00C2FF" />
+                </linearGradient>
+              </defs>
+              <path d="M3.5 18.5L8 14h16l-4.5 4.5H3.5zm0-6.5L8 8h16l-4.5 4H3.5zm0-6.5L8 1.5h16L19.5 6H3.5z" fill="url(#solanaFooterGrad)" />
+            </svg>
+            <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Powered by Solana
+            </span>
+          </a>
+          <p className="text-xs text-muted-foreground">© 2025 Rezilience Protocol.</p>
         </div>
       </div>
     </footer>);

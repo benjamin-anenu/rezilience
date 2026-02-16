@@ -86,10 +86,10 @@ function getFillColor(stats: CountryStats | undefined, isHovered: boolean): stri
 }
 
 function getPulseRadius(count: number): number {
-  if (count >= 15) return 6;
-  if (count >= 5) return 4.5;
-  if (count >= 3) return 3.5;
-  return 2.5;
+  if (count >= 15) return 9;
+  if (count >= 5) return 7;
+  if (count >= 3) return 5.5;
+  return 4;
 }
 
 export function EcosystemMapSection() {
@@ -276,7 +276,7 @@ export function EcosystemMapSection() {
             {/* Solana-branded pulsing markers on active countries */}
             {markers.map(({ code, coordinates, stats }) => {
               const r = getPulseRadius(stats.projectCount);
-              const logoSize = r * 1.6;
+              const logoSize = r * 2.2;
               return (
                 <Marker
                   key={code}
