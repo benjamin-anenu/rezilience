@@ -330,19 +330,18 @@ Deno.serve(async (req) => {
     const weightedActivity = (
       (cappedPushEvents * 1.0) +
       (cappedPrEvents * 2.5) +
-      (cappedIssueEvents * 0.5) +
-      (releasesLast30Days * 10.0)
+      (cappedIssueEvents * 0.5)
     );
     
     const adjustedActivity = weightedActivity * originalityMultiplier;
     
-    // More granular tiers for 0-40 range
-    if (adjustedActivity > 200) resilienceScore += 40;
-    else if (adjustedActivity > 100) resilienceScore += 35;
-    else if (adjustedActivity > 60) resilienceScore += 30;
-    else if (adjustedActivity > 30) resilienceScore += 22;
-    else if (adjustedActivity > 10) resilienceScore += 15;
-    else if (adjustedActivity > 0) resilienceScore += 5;
+    // More granular tiers for 0-45 range
+    if (adjustedActivity > 200) resilienceScore += 45;
+    else if (adjustedActivity > 100) resilienceScore += 38;
+    else if (adjustedActivity > 60) resilienceScore += 32;
+    else if (adjustedActivity > 30) resilienceScore += 24;
+    else if (adjustedActivity > 10) resilienceScore += 16;
+    else if (adjustedActivity > 0) resilienceScore += 6;
 
     // === CONTRIBUTOR DIVERSITY (0-20 points) ===
     // Solo devs with high activity get 8 pts instead of 5
@@ -355,17 +354,6 @@ Deno.serve(async (req) => {
     else if (isSoloHighActivity) resilienceScore += 8;
     else if (contributorCount > 0) resilienceScore += 5;
 
-    // === RELEASES (0-15 points) ===
-    if (releasesLast30Days > 3) resilienceScore += 15;
-    else if (releasesLast30Days > 1) resilienceScore += 11;
-    else if (releasesLast30Days > 0) resilienceScore += 7;
-
-    // === POPULARITY/STARS (0-10 points) ===
-    if (repoData.stargazers_count > 10000) resilienceScore += 10;
-    else if (repoData.stargazers_count > 1000) resilienceScore += 8;
-    else if (repoData.stargazers_count > 100) resilienceScore += 5;
-    else if (repoData.stargazers_count > 10) resilienceScore += 3;
-
     // === PROJECT AGE (0-10 points) ===
     const createdAt = new Date(repoData.created_at);
     const daysActive = Math.floor((now.getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24));
@@ -374,12 +362,28 @@ Deno.serve(async (req) => {
     else if (daysActive > 90) resilienceScore += 5;
     else if (daysActive > 30) resilienceScore += 3;
 
-    // === COMMIT CONSISTENCY BONUS (0-5 points) ===
-    // Reward projects that commit on 20+ of the last 30 days
-    // Use commits count as proxy: 20+ commits in 30 days suggests consistent daily work
+    // === COMMIT CONSISTENCY (0-10 points) ===
+    // Rewards sustained daily work rather than burst commits
     const estimatedActiveDays = Math.min(commitsLast30Days, 30);
-    if (estimatedActiveDays >= 20) resilienceScore += 5;
-    else if (estimatedActiveDays >= 10) resilienceScore += 3;
+    if (estimatedActiveDays >= 25) resilienceScore += 10;
+    else if (estimatedActiveDays >= 20) resilienceScore += 8;
+    else if (estimatedActiveDays >= 15) resilienceScore += 6;
+    else if (estimatedActiveDays >= 10) resilienceScore += 4;
+    else if (estimatedActiveDays >= 5) resilienceScore += 2;
+
+    // === PR VELOCITY BONUS (0-8 points) ===
+    // Rewards code review culture and merge throughput
+    if (prEvents30d >= 15) resilienceScore += 8;
+    else if (prEvents30d >= 8) resilienceScore += 6;
+    else if (prEvents30d >= 3) resilienceScore += 4;
+    else if (prEvents30d >= 1) resilienceScore += 2;
+
+    // === ISSUE RESPONSIVENESS (0-7 points) ===
+    // Rewards projects that engage with bug reports and feedback
+    if (issueEvents30d >= 20) resilienceScore += 7;
+    else if (issueEvents30d >= 10) resilienceScore += 5;
+    else if (issueEvents30d >= 5) resilienceScore += 3;
+    else if (issueEvents30d >= 1) resilienceScore += 1;
 
     // === DETERMINE LIVENESS STATUS ===
     // ACTIVE requires: activity in last 14 days, 5+ weighted events, AND 3+ contributors
