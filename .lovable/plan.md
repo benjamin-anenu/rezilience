@@ -1,54 +1,73 @@
 
 
-## Fix: GitHub Score Undervalues Solo Builders with High Activity
+## Remove Stars and Releases from GitHub Scoring Formula
 
-### Problem
-The GitHub dimension score (0-100) caps around 35 for solo developers with no releases/stars, even with maximum commit activity. This makes the score misleading for early-stage projects where a single builder is highly active.
+### What Changes
 
-### Root Cause
-The scoring allocates only 30/100 points to activity. The remaining 70 points require:
-- Multiple contributors (25 pts) -- solo dev gets only 5
-- Releases (20 pts) -- no tagged releases = 0
-- Stars (15 pts) -- new project = 0
-- Project age (10 pts) -- young project = 0-5
+Stars and Releases are removed entirely as scoring dimensions. Their 25 points are redistributed to three activity-quality metrics that directly measure builder resilience.
 
-### Proposed Fix: Rebalance the GitHub Scoring Formula
+### New Point Allocation
 
-Shift weight toward **activity quality** and add a **solo builder bonus** so that high-velocity solo work is rewarded fairly, while still incentivizing healthy project practices.
+| Dimension | Old Max | New Max | Rationale |
+|-----------|---------|---------|-----------|
+| Weighted Activity (pushes, PRs, issues) | 40 | **45** | Core signal of builder effort |
+| Contributor Diversity | 20 | **20** | Unchanged |
+| ~~Releases~~ | ~~15~~ | **0** | Removed -- penalizes continuous deployers |
+| ~~Stars/Popularity~~ | ~~10~~ | **0** | Removed -- vanity metric, easily gamed |
+| Project Age | 10 | **10** | Unchanged |
+| Commit Consistency | 5 | **10** | Doubled -- rewards daily shipping discipline |
+| PR Velocity Bonus (NEW) | 0 | **8** | Rewards code review culture and merge throughput |
+| Issue Responsiveness (NEW) | 0 | **7** | Rewards projects that engage with bug reports and feedback |
+| **Total** | **100** | **100** | |
 
-**New point allocation:**
+### New Dimensions Explained
 
-| Dimension | Old Max | New Max | Change |
-|-----------|---------|---------|--------|
-| Weighted Activity | 30 | **40** | +10 (reward sustained effort) |
-| Contributor Diversity | 25 | **20** | -5 (less penalty for solo) |
-| Releases | 20 | **15** | -5 (still rewarded but less punishing) |
-| Stars/Popularity | 15 | **10** | -5 (vanity metric, less weight) |
-| Project Age | 10 | **10** | unchanged |
-| Commit Consistency Bonus | 0 | **5** | NEW: bonus for committing on 20+ of last 30 days |
+**PR Velocity Bonus (0-8 pts):** Measures pull request activity in the last 30 days. PRs indicate code review, collaboration readiness, and structured development -- even for solo builders who use PRs for self-review.
+- 15+ PRs: 8 pts
+- 8+ PRs: 6 pts
+- 3+ PRs: 4 pts
+- 1+ PRs: 2 pts
 
-Additionally, adjust contributor thresholds so solo devs with high activity get 8 points instead of 5.
+**Issue Responsiveness (0-7 pts):** Measures issue and issue-comment activity in the last 30 days. Projects that engage with issues demonstrate accountability and community responsiveness.
+- 20+ issue events: 7 pts
+- 10+ issue events: 5 pts
+- 5+ issue events: 3 pts
+- 1+ issue events: 1 pt
+
+**Commit Consistency (expanded 0-10 pts):** Rewards sustained daily work rather than burst commits.
+- 25+ active days: 10 pts
+- 20+ active days: 8 pts
+- 15+ active days: 6 pts
+- 10+ active days: 4 pts
+- 5+ active days: 2 pts
+
+### Weighted Activity Adjustment
+
+Remove `releasesLast30Days * 10.0` from the weighted activity formula since releases are no longer a scoring input. The formula becomes:
+```
+weightedActivity = (pushEvents * 1.0) + (prEvents * 2.5) + (issueEvents * 0.5)
+```
+
+Activity tiers expanded to 0-45 range with adjusted thresholds.
 
 ### Technical Changes
 
-1. **`supabase/functions/analyze-github-repo/index.ts`**
-   - Rebalance point allocations as described above
-   - Add commit consistency bonus (5 pts) for projects with commits on 20+ of last 30 days
-   - Adjust contributor tier: 1 active contributor with high activity = 8 pts (up from 5)
-   - Add more granular activity tiers for the 0-40 range
+**`supabase/functions/analyze-github-repo/index.ts`:**
+- Remove the Releases scoring block (lines 358-361)
+- Remove the Stars/Popularity scoring block (lines 363-367)
+- Remove `releasesLast30Days * 10.0` from weighted activity calculation
+- Expand Weighted Activity tiers from 0-40 to 0-45
+- Expand Commit Consistency from 0-5 to 0-10 with more granular tiers
+- Add PR Velocity Bonus block (0-8 pts) using existing `prEvents30d`
+- Add Issue Responsiveness block (0-7 pts) using existing `issueEvents30d`
 
-2. **`supabase/functions/refresh-all-profiles/index.ts`**
-   - No changes needed -- it already reads the GitHub score from analyze-github-repo correctly
-
-3. **No frontend changes needed** -- the tooltip already displays whatever score the backend produces
+No frontend changes needed. No database changes needed. Stars/forks/releases data continues to be collected and displayed in the UI -- they just no longer influence the score.
 
 ### Expected Impact
-With 299 push events, 1 contributor, 0 releases, 0 stars, young project:
-- **Before**: 30 + 5 + 0 + 0 + 0 = **35**/100
-- **After**: 40 + 8 + 0 + 0 + 5 (consistency) + 5 (age ~1mo) = **~58**/100
 
-This better reflects the reality that a solo builder shipping 550 commits in 30 days is demonstrably resilient.
+For your profile (solo builder, ~300 push events, ~0 PRs, ~0 issues, daily commits):
+- **Before**: 40 (activity) + 8 (solo bonus) + 0 (releases) + 0 (stars) + 5 (age) + 5 (consistency) = **58**/100
+- **After**: 45 (activity) + 8 (solo bonus) + 5 (age) + 10 (consistency) + 0 (PRs) + 0 (issues) = **68**/100
 
-### Important Note on "+26"
-The "+26" display next to Dependency Health is correct behavior -- it shows the **weighted contribution** (64 x 0.40 = 25.6, rounded to 26), not the raw score. The raw 64/100 is shown on the progress bar. No fix needed here, but we could add a small "(64/100)" label next to the contribution for clarity if desired.
+The score rises because you're no longer penalized for missing vanity metrics. It also creates a clear path to 80+: start using PRs and engaging with issues.
 
