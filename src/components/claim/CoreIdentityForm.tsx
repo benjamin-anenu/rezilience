@@ -118,7 +118,7 @@ export const CoreIdentityForm = ({
 
             <div className="space-y-2">
               <Label htmlFor="country" className="font-display text-xs uppercase tracking-wider">
-                Country / Region
+                Country / Region *
               </Label>
               <Select value={country} onValueChange={setCountry}>
                 <SelectTrigger className="font-mono">
