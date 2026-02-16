@@ -1,46 +1,34 @@
 
+# Solana Branding: Footer Badge + Bigger Map Icons
 
-# Click-to-Filter Map + Solana Branding
+## 1. Footer -- Add "Powered by Solana" Badge
 
-## Overview
+In `src/components/layout/Footer.tsx`, add a subtle "Powered by Solana" badge between the copyright line and the Data Provenance section (or inline with the copyright). It will feature:
 
-Two changes to the Ecosystem Map section:
-1. Clicking a country with data navigates to `/explorer` with that country pre-selected in the filter
-2. Replace the generic pulsing dots with inline Solana logo SVGs, and update the section copy to reference Solana
+- An inline SVG of the Solana logo (the gradient "S" mark, same path used on the map)
+- Text: "Powered by Solana" in `font-code text-[10px] uppercase tracking-widest text-muted-foreground`
+- Wrapped in an anchor tag linking to `https://solana.com` (opens in new tab)
+- Styled as a subtle pill with `border border-border/30 rounded-full px-3 py-1` to keep it understated and premium
 
-## Changes to `src/components/landing/EcosystemMapSection.tsx`
+The copyright line will also be updated from "Built for Solana" to include the badge visually, keeping the text clean.
 
-### 1. Click-to-Navigate
+## 2. Map Markers -- Increase Solana Logo Size
 
-- Import `useNavigate` from `react-router-dom`
-- Add an `onClick` handler to each `Geography` element: if the country has data (`stats` exists), navigate to `/explorer?country=XX` where `XX` is the lowercase DB country code
-- Create a reverse mapping `ISO_TO_DB_CODE` (e.g., `GB` -> `uk`, everything else just `.toLowerCase()`) to translate the map's alpha-2 codes back to the DB filter values used by Explorer
-- Also add `onClick` to each `Marker` so clicking the pulsing dot navigates too
-- Tooltip hint: add "Click to explore" text at the bottom of the tooltip
+In `src/components/landing/EcosystemMapSection.tsx`, increase the marker sizes:
 
-### 2. Solana Logo Markers
+- `getPulseRadius()` values increased ~60%: `2.5 -> 4`, `3.5 -> 5.5`, `4.5 -> 7`, `6 -> 9`
+- `logoSize` multiplier increased from `r * 1.6` to `r * 2.2` so the Solana "S" icon is more prominent
+- Pulse ring outer radius adjusted proportionally
 
-- Replace the inner `<circle>` in each Marker with a small inline SVG of the Solana logo (the simple "S" gradient mark)
-- Keep the outer pulsing ring animation as-is for the glow effect
-- The Solana logo will be rendered as an `<image>` or inline `<path>` element inside the SVG `<Marker>`, sized proportionally to `getPulseRadius()`
+## Technical Details
 
-### 3. Solana-Branded Copy
+### Files to edit:
+- `src/components/layout/Footer.tsx` -- add Solana badge near copyright
+- `src/components/landing/EcosystemMapSection.tsx` -- increase `getPulseRadius` return values and `logoSize` multiplier
 
-- Update the pill badge from "Live Registry" to "Solana Assurance Layer"
-- Update the heading to: "Solana Builders Across the Globe"
-- Update the subtitle to: "Real-time distribution of Solana protocols monitored by the Rezilience Assurance Layer -- live on-chain signals from every continent."
-- Update CTA button text to: "Explore Solana Registry"
+### Solana logo SVG path (reused from map):
+```
+M3.5 18.5L8 14h16l-4.5 4.5H3.5zm0-6.5L8 8h16l-4.5 4H3.5zm0-6.5L8 1.5h16L19.5 6H3.5z
+```
 
-## Changes to `src/pages/Explorer.tsx`
-
-### 4. Read Country from URL
-
-- On mount, read `country` from `URLSearchParams` (via `useSearchParams` or `useLocation`)
-- If a valid country code is present, set `countryFilter` to that value
-- This makes the map click flow work end-to-end: click US on map -> navigate to `/explorer?country=us` -> Explorer auto-filters to US projects
-
-## Technical Notes
-
-- The `COUNTRIES` array in `lib/countries.ts` uses lowercase values (`us`, `uk`, `sg`, etc.) which match the DB `country` column
-- The map uses uppercase ISO alpha-2 (`US`, `GB`, `SG`), so the reverse mapping is: `GB` -> `uk` (special case), everything else -> `code.toLowerCase()`
-- The Solana logo will be an inline SVG path (the official gradient "S" mark) rather than an external image, ensuring it renders crisply at small sizes within the map markers
+With a linear gradient from `#9945FF` through `#14F195` to `#00C2FF`.
