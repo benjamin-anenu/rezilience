@@ -10,6 +10,9 @@ import {
   ExternalLink,
   TrendingUp,
   GitCommit,
+  GitPullRequest,
+  MessageSquare,
+  Upload,
   Code,
   ChevronDown,
 } from 'lucide-react';
@@ -40,6 +43,9 @@ interface GitHubAnalytics {
   resilience_score?: number;
   liveness_status?: string;
   github_languages?: Record<string, number>;
+  github_push_events_30d?: number;
+  github_pr_events_30d?: number;
+  github_issue_events_30d?: number;
 }
 
 interface GitHubAnalyticsCardProps {
@@ -248,6 +254,89 @@ export const GitHubAnalyticsCard = ({ profileId, analytics, onRefresh }: GitHubA
             );
           })()}
         </div>
+
+        {/* Scoring Signals: PR Velocity & Issue Responsiveness */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-sm border border-border bg-muted/30 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <GitPullRequest className="h-4 w-4 text-blue-500" />
+                <span className="font-display text-xs uppercase tracking-wider text-muted-foreground">
+                  PR Velocity
+                </span>
+              </div>
+              <span className="font-mono text-xs text-muted-foreground">
+                {(analytics.github_pr_events_30d || 0) >= 5 ? '8' : '0'}/8 pts
+              </span>
+            </div>
+            <div className="font-mono text-xl font-bold">
+              {formatNumber(analytics.github_pr_events_30d)}
+            </div>
+            <div className="text-[10px] text-muted-foreground">PRs in 30 days</div>
+          </div>
+          <div className="rounded-sm border border-border bg-muted/30 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <MessageSquare className="h-4 w-4 text-amber-500" />
+                <span className="font-display text-xs uppercase tracking-wider text-muted-foreground">
+                  Issue Activity
+                </span>
+              </div>
+              <span className="font-mono text-xs text-muted-foreground">
+                {(analytics.github_issue_events_30d || 0) >= 3 ? '7' : '0'}/7 pts
+              </span>
+            </div>
+            <div className="font-mono text-xl font-bold">
+              {formatNumber(analytics.github_issue_events_30d)}
+            </div>
+            <div className="text-[10px] text-muted-foreground">Issue events in 30 days</div>
+          </div>
+        </div>
+
+        {/* Activity Signals Breakdown */}
+        {(analytics.github_push_events_30d !== undefined || 
+          analytics.github_pr_events_30d !== undefined || 
+          analytics.github_issue_events_30d !== undefined) && (() => {
+          const pushEvents = analytics.github_push_events_30d || 0;
+          const prEvents = analytics.github_pr_events_30d || 0;
+          const issueEvents = analytics.github_issue_events_30d || 0;
+          const commits = analytics.github_commits_30d || 0;
+          const maxActivity = Math.max(pushEvents, prEvents, issueEvents, commits, 1);
+
+          const signals = [
+            { icon: Upload, label: 'Push Events', value: pushEvents, color: 'bg-primary' },
+            { icon: GitPullRequest, label: 'Pull Requests', value: prEvents, color: 'bg-blue-500' },
+            { icon: MessageSquare, label: 'Issue Activity', value: issueEvents, color: 'bg-amber-500' },
+            { icon: Activity, label: 'Commits (main)', value: commits, color: 'bg-green-500' },
+          ];
+
+          return (
+            <div className="space-y-2">
+              <span className="font-display text-xs uppercase tracking-wider text-muted-foreground">
+                Activity Signals (30d)
+              </span>
+              <div className="rounded-sm border border-border bg-muted/30 p-3 space-y-3">
+                {signals.map((signal) => (
+                  <div key={signal.label} className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <signal.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground">{signal.label}</span>
+                      </div>
+                      <span className="font-mono text-xs font-medium">{signal.value}</span>
+                    </div>
+                    <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                      <div 
+                        className={`h-full transition-all ${signal.color}`}
+                        style={{ width: `${(signal.value / maxActivity) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Commit Velocity */}
         <div className="space-y-2">
