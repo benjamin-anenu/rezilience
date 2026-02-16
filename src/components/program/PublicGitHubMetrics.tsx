@@ -130,6 +130,18 @@ export function PublicGitHubMetrics({ analytics, githubUrl }: PublicGitHubMetric
       label: 'Releases (30d)',
       iconColor: 'text-purple-400',
     },
+    {
+      icon: GitPullRequest,
+      value: formatNumber(analytics?.github_pr_events_30d),
+      label: 'PRs (30d)',
+      iconColor: 'text-blue-400',
+    },
+    {
+      icon: MessageSquare,
+      value: formatNumber(analytics?.github_issue_events_30d),
+      label: 'Issues (30d)',
+      iconColor: 'text-amber-500',
+    },
   ];
 
   const hasData = analytics && (
