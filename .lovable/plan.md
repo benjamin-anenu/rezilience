@@ -1,75 +1,66 @@
 
 
-# Populate Country Fields from GitHub Org/User Locations
+# Make Country Required in Claim Flow + TLD-Based Country Enrichment
 
-## Problem
-190 out of 231 profiles have no `country` field set. Additionally, the 41 that do have it use inconsistent formats (e.g., "USA" vs "us", "India" vs "in").
+## Part 1: Make Country Required in Claim Profile Flow
 
-## Approach
+Currently, the "Next" button on Step 2 (Core Identity) only checks for `projectName` and `category`. Country is optional. We need to make it required so every new profile has a country set.
 
-Create a new edge function `enrich-countries` that:
-
-1. Fetches all profiles missing a `country` value (or with non-standardized values)
-2. Extracts the GitHub org/user from each `github_org_url` (e.g., `https://github.com/helium/helium-program-library` -> org `helium`)
-3. Calls the GitHub API `GET /orgs/{org}` or `GET /users/{user}` to read the `location` field
-4. Maps the free-text location to one of the standardized country codes from `src/lib/countries.ts` using keyword matching (e.g., "San Francisco, CA" -> `us`, "Berlin" -> `de`, "Singapore" -> `sg`)
-5. Updates the `country` field in `claimed_profiles` with the standardized code
-6. Also normalizes the 41 existing entries to use codes instead of full names ("USA" -> "us", "India" -> "in", etc.)
-
-## New File: `supabase/functions/enrich-countries/index.ts`
-
-The function will:
-
-- Use the existing `GITHUB_TOKEN` secret for API calls
-- Use `SUPABASE_SERVICE_ROLE_KEY` for DB writes
-- Process all profiles in a single invocation (190 is well within limits)
-- Return a summary of how many were updated, skipped, or had no location data
-
-**Location-to-country mapping logic:**
-
-```text
-Location string             -> Country code
-"San Francisco, CA"         -> us
-"Berlin, Germany"           -> de
-"Singapore"                 -> sg
-"London, UK"                -> uk
-"Dubai, UAE"                -> ae
-"Tokyo, Japan"              -> jp
-(unknown/unmappable)        -> null (skip, don't override)
-```
-
-The mapping will check for country names, city names, state abbreviations, and country codes in the location string.
-
-## Fix: Normalize Existing Country Values
-
-The function will also fix the 41 existing entries that use full names:
-
-| Current DB value | Normalized to |
-|-----------------|---------------|
-| USA | us |
-| United Kingdom | uk |
-| India | in |
-| Germany | de |
-| France | fr |
-| Poland | pl |
-| Portugal | pt |
-| South Korea | kr |
-| Hong Kong | hk |
-| Brazil | br |
-| Canada | ca |
-| Ireland | other |
-| Israel | other |
-| Indonesia | other |
-| Vietnam | other |
-| ng | ng (already a code, but should be "other" since ng isn't in the COUNTRIES list) |
-
-Wait -- `ng` IS in the COUNTRIES list (Nigeria). So `ng` stays as `ng`.
-
-## Summary
+### Changes
 
 | File | Change |
 |------|--------|
-| `supabase/functions/enrich-countries/index.ts` | New edge function: fetches GitHub org locations, maps to country codes, updates DB |
+| `src/pages/ClaimProfile.tsx` (line 461) | Add `country` to the `canProceedFromStep2` validation: `projectName.trim() && category && country` |
+| `src/components/claim/CoreIdentityForm.tsx` | Move the Country/Region field from the optional "grid" layout into the required section, add a `*` indicator, and match the REQUIRED badge styling |
 
-After deployment, the function can be invoked once to backfill all 190 missing countries and normalize the 41 existing ones. No frontend changes needed since the Explorer already reads the `country` field.
+---
+
+## Part 2: TLD-Based Country Enrichment for Remaining 174 Profiles
+
+174 profiles still have no country. Most have no GitHub location set, but many have `website_url` values with country-specific TLDs we can use as a signal.
+
+### Approach
+
+Update `supabase/functions/enrich-countries/index.ts` to add a **second pass** that targets profiles where `country IS NULL` and `website_url IS NOT NULL`. It will:
+
+1. Extract the TLD from each `website_url` (e.g., `https://example.de` -> `de`)
+2. Map country-code TLDs to the standardized codes using a lookup table:
+
+```text
+TLD   -> Code
+.de   -> de
+.uk / .co.uk -> uk
+.sg   -> sg
+.jp   -> jp
+.kr   -> kr
+.in   -> in
+.br   -> br
+.ng   -> ng
+.fr   -> fr
+.nl   -> nl
+.pt   -> pt
+.es   -> es
+.it   -> it
+.pl   -> pl
+.ch   -> ch
+.au / .com.au -> au
+.ca   -> ca
+.ae   -> ae
+.hk   -> hk
+```
+
+3. Generic TLDs (`.com`, `.io`, `.xyz`, `.app`, `.fi`, `.dev`, `.org`, `.net`) are skipped -- they don't indicate a country.
+4. The function will support a `mode` parameter: `mode: "tld"` runs only the TLD pass, `mode: "github"` runs only the GitHub pass (current behavior), and default runs both sequentially.
+
+### Files
+
+| File | Change |
+|------|--------|
+| `supabase/functions/enrich-countries/index.ts` | Add TLD extraction logic and a second enrichment pass for website URLs |
+| `src/pages/ClaimProfile.tsx` | Update `canProceedFromStep2` validation |
+| `src/components/claim/CoreIdentityForm.tsx` | Mark Country as required in the UI |
+
+### Expected Impact
+
+Based on the data, most of the 174 profiles use generic TLDs (`.io`, `.com`, `.xyz`), so TLD analysis will likely fill in only a small number (perhaps 5-15). The remaining profiles will need manual assignment or will be filled in when project owners claim their profiles (now that country is required).
 
