@@ -3,7 +3,9 @@ import { Progress } from '@/components/ui/progress';
 
 interface ScoreBreakdown {
   github: number;
-  dependency: number;
+  dependencies: number;
+  /** @deprecated Use `dependencies` instead */
+  dependency?: number;
   governance: number | null;
   tvl: number | null;
   continuityDecay?: number;
@@ -28,11 +30,16 @@ export function ScoreBreakdownTooltip({
   totalScore,
   children,
 }: ScoreBreakdownTooltipProps) {
-  const scores = breakdown || {
+  const raw = breakdown || {
     github: totalScore,
-    dependency: 50,
+    dependencies: 50,
     governance: null,
     tvl: null,
+  };
+  // Normalize: support both `dependencies` (new) and `dependency` (legacy)
+  const scores = {
+    ...raw,
+    dependencies: (raw as any).dependencies ?? (raw as any).dependency ?? 0,
   };
 
   // Use stored weights or fall back to defaults
@@ -49,7 +56,7 @@ export function ScoreBreakdownTooltip({
 
   const contributions = {
     github: Math.round((scores.github || 0) * weights.github),
-    dependency: Math.round((scores.dependency || 0) * weights.dependencies),
+    dependencies: Math.round((scores.dependencies || 0) * weights.dependencies),
     governance: showGov ? Math.round((scores.governance || 0) * weights.governance) : 0,
     tvl: showTvl ? Math.round((scores.tvl || 0) * weights.tvl) : 0,
   };
@@ -90,10 +97,10 @@ export function ScoreBreakdownTooltip({
             {/* Dependencies */}
             <DimensionRow
               label={`Dependency Health (${pct(weights.dependencies)})`}
-              score={scores.dependency || 0}
-              contribution={contributions.dependency}
+              score={scores.dependencies || 0}
+              contribution={contributions.dependencies}
               getScoreColor={getScoreColor}
-              progressClass={scores.dependency != null && scores.dependency < 50 ? '[&>div]:bg-amber-500' : ''}
+              progressClass={scores.dependencies != null && scores.dependencies < 50 ? '[&>div]:bg-amber-500' : ''}
             />
 
             {/* Governance — only if applicable */}

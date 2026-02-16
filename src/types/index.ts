@@ -227,7 +227,7 @@ export interface TVLMetrics {
 
 export interface ScoreBreakdown {
   github: number;
-  dependency: number;
+  dependencies: number;
   governance: number;
   tvl: number;
 }
