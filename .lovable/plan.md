@@ -1,73 +1,38 @@
 
 
-## Remove Stars and Releases from GitHub Scoring Formula
+## Fix Stale Score + Add New Scoring Signals to Dashboard
 
-### What Changes
+### Problem 1: Score Stuck at 47/100
 
-Stars and Releases are removed entirely as scoring dimensions. Their 25 points are redistributed to three activity-quality metrics that directly measure builder resilience.
+The `analyze-github-repo` function correctly computes 63 with the new formula, but it only writes raw GitHub metrics (commits, PRs, issues, etc.) to the database. The `resilience_score` column is exclusively written by the `refresh-all-profiles` pipeline, which was never re-triggered after the formula change.
 
-### New Point Allocation
+**Fix:** Trigger the `refresh-all-profiles` function for your profile with `dimensions=github,dependencies` to force a full recalculation using the new GitHub scoring formula.
 
-| Dimension | Old Max | New Max | Rationale |
-|-----------|---------|---------|-----------|
-| Weighted Activity (pushes, PRs, issues) | 40 | **45** | Core signal of builder effort |
-| Contributor Diversity | 20 | **20** | Unchanged |
-| ~~Releases~~ | ~~15~~ | **0** | Removed -- penalizes continuous deployers |
-| ~~Stars/Popularity~~ | ~~10~~ | **0** | Removed -- vanity metric, easily gamed |
-| Project Age | 10 | **10** | Unchanged |
-| Commit Consistency | 5 | **10** | Doubled -- rewards daily shipping discipline |
-| PR Velocity Bonus (NEW) | 0 | **8** | Rewards code review culture and merge throughput |
-| Issue Responsiveness (NEW) | 0 | **7** | Rewards projects that engage with bug reports and feedback |
-| **Total** | **100** | **100** | |
+### Problem 2: Dashboard Missing New Scoring Signals
 
-### New Dimensions Explained
+The `GitHubAnalyticsCard` (owner dashboard) and `PublicGitHubMetrics` (public profile) currently show Stars, Forks, Contributors, Commits, Releases, and Commit Velocity -- but do not surface **PR Velocity** or **Issue Responsiveness**, which are now key scoring dimensions worth 15 combined points.
 
-**PR Velocity Bonus (0-8 pts):** Measures pull request activity in the last 30 days. PRs indicate code review, collaboration readiness, and structured development -- even for solo builders who use PRs for self-review.
-- 15+ PRs: 8 pts
-- 8+ PRs: 6 pts
-- 3+ PRs: 4 pts
-- 1+ PRs: 2 pts
-
-**Issue Responsiveness (0-7 pts):** Measures issue and issue-comment activity in the last 30 days. Projects that engage with issues demonstrate accountability and community responsiveness.
-- 20+ issue events: 7 pts
-- 10+ issue events: 5 pts
-- 5+ issue events: 3 pts
-- 1+ issue events: 1 pt
-
-**Commit Consistency (expanded 0-10 pts):** Rewards sustained daily work rather than burst commits.
-- 25+ active days: 10 pts
-- 20+ active days: 8 pts
-- 15+ active days: 6 pts
-- 10+ active days: 4 pts
-- 5+ active days: 2 pts
-
-### Weighted Activity Adjustment
-
-Remove `releasesLast30Days * 10.0` from the weighted activity formula since releases are no longer a scoring input. The formula becomes:
-```
-weightedActivity = (pushEvents * 1.0) + (prEvents * 2.5) + (issueEvents * 0.5)
-```
-
-Activity tiers expanded to 0-45 range with adjusted thresholds.
+**Fix:** Add two new metric tiles to both components showing PR and Issue activity with visual indicators of their scoring tier.
 
 ### Technical Changes
 
-**`supabase/functions/analyze-github-repo/index.ts`:**
-- Remove the Releases scoring block (lines 358-361)
-- Remove the Stars/Popularity scoring block (lines 363-367)
-- Remove `releasesLast30Days * 10.0` from weighted activity calculation
-- Expand Weighted Activity tiers from 0-40 to 0-45
-- Expand Commit Consistency from 0-5 to 0-10 with more granular tiers
-- Add PR Velocity Bonus block (0-8 pts) using existing `prEvents30d`
-- Add Issue Responsiveness block (0-7 pts) using existing `issueEvents30d`
+**1. Trigger score recalculation**
+- Call `refresh-all-profiles` with `profile_id` and `dimensions: ["github"]` to force the integrated score to recompute using the updated GitHub formula.
 
-No frontend changes needed. No database changes needed. Stars/forks/releases data continues to be collected and displayed in the UI -- they just no longer influence the score.
+**2. `src/components/dashboard/GitHubAnalyticsCard.tsx`**
+- Add `github_push_events_30d`, `github_pr_events_30d`, and `github_issue_events_30d` to the interface
+- Add two new metric tiles after the existing grid:
+  - **PR Velocity**: Shows PR count with scoring tier label (e.g., "8/8 pts" or "0/8 pts")
+  - **Issue Responsiveness**: Shows issue event count with scoring tier label
+- Add an "Activity Signals" breakdown section (similar to PublicGitHubMetrics) showing push, PR, issue, and commit bars
 
-### Expected Impact
+**3. `src/components/program/PublicGitHubMetrics.tsx`**
+- Add two new tiles to the secondary metrics row:
+  - **PRs (30d)** with GitPullRequest icon
+  - **Issues (30d)** with MessageSquare icon
+- These are already imported and the data fields already exist in the analytics object -- just need to be displayed as metric tiles
 
-For your profile (solo builder, ~300 push events, ~0 PRs, ~0 issues, daily commits):
-- **Before**: 40 (activity) + 8 (solo bonus) + 0 (releases) + 0 (stars) + 5 (age) + 5 (consistency) = **58**/100
-- **After**: 45 (activity) + 8 (solo bonus) + 5 (age) + 10 (consistency) + 0 (PRs) + 0 (issues) = **68**/100
-
-The score rises because you're no longer penalized for missing vanity metrics. It also creates a clear path to 80+: start using PRs and engaging with issues.
-
+### Expected Outcome
+- Score updates from 47 to ~63 (or slightly different based on dependency score and decay)
+- Builders see exactly which scoring signals they're missing (PR Velocity: 0/8, Issue Responsiveness: 0/7)
+- Clear path to improvement becomes visible in the dashboard
