@@ -314,55 +314,57 @@ Deno.serve(async (req) => {
     });
 
     // Calculate Resilience Score using WEIGHTED ANTI-GAMING approach
+    // Rebalanced to better reward solo builders with high activity
     let resilienceScore = 0;
 
     // === ANTI-GAMING: Fork Penalty ===
-    // Forks get a 0.3 multiplier (70% penalty) on their base score
     const originalityMultiplier = repoData.fork ? 0.3 : 1.0;
 
-    // === WEIGHTED ACTIVITY SCORE (0-30 points) ===
-    // PRs are weighted 2.5x (require review), Issues 0.5x (easy to spam), Releases 10x (high-signal)
-    // Daily cap: max 10 events per day count toward score (prevents commit farming)
-    const cappedPushEvents = Math.min(pushEvents30d, 10 * 30); // Max 10/day for 30 days
-    const cappedPrEvents = Math.min(prEvents30d, 5 * 30); // Max 5/day
-    const cappedIssueEvents = Math.min(issueEvents30d, 10 * 30); // Max 10/day
+    // === WEIGHTED ACTIVITY SCORE (0-40 points) ===
+    // PRs weighted 2.5x, Issues 0.5x, Releases 10x
+    // Daily cap prevents commit farming
+    const cappedPushEvents = Math.min(pushEvents30d, 10 * 30);
+    const cappedPrEvents = Math.min(prEvents30d, 5 * 30);
+    const cappedIssueEvents = Math.min(issueEvents30d, 10 * 30);
     
     const weightedActivity = (
-      (cappedPushEvents * 1.0) +           // Base weight for pushes
-      (cappedPrEvents * 2.5) +             // PRs require review - high signal
-      (cappedIssueEvents * 0.5) +          // Issues - lower weight, easy to spam
-      (releasesLast30Days * 10.0)          // Releases are high-signal
+      (cappedPushEvents * 1.0) +
+      (cappedPrEvents * 2.5) +
+      (cappedIssueEvents * 0.5) +
+      (releasesLast30Days * 10.0)
     );
     
-    // Apply originality multiplier to activity score
     const adjustedActivity = weightedActivity * originalityMultiplier;
     
-    if (adjustedActivity > 100) resilienceScore += 30;
-    else if (adjustedActivity > 60) resilienceScore += 25;
-    else if (adjustedActivity > 30) resilienceScore += 20;
-    else if (adjustedActivity > 10) resilienceScore += 12;
+    // More granular tiers for 0-40 range
+    if (adjustedActivity > 200) resilienceScore += 40;
+    else if (adjustedActivity > 100) resilienceScore += 35;
+    else if (adjustedActivity > 60) resilienceScore += 30;
+    else if (adjustedActivity > 30) resilienceScore += 22;
+    else if (adjustedActivity > 10) resilienceScore += 15;
     else if (adjustedActivity > 0) resilienceScore += 5;
 
-    // === CONTRIBUTOR DIVERSITY (0-25 points) ===
-    // Require minimum 3 unique contributors for full "ACTIVE" status consideration
+    // === CONTRIBUTOR DIVERSITY (0-20 points) ===
+    // Solo devs with high activity get 8 pts instead of 5
     const contributorCount = contributors.length;
-    if (contributorCount > 20) resilienceScore += 25;
-    else if (contributorCount > 10) resilienceScore += 20;
-    else if (contributorCount >= 5) resilienceScore += 15;
+    const isSoloHighActivity = contributorCount === 1 && adjustedActivity > 30;
+    if (contributorCount > 20) resilienceScore += 20;
+    else if (contributorCount > 10) resilienceScore += 17;
+    else if (contributorCount >= 5) resilienceScore += 13;
     else if (contributorCount >= 3) resilienceScore += 10;
+    else if (isSoloHighActivity) resilienceScore += 8;
     else if (contributorCount > 0) resilienceScore += 5;
 
-    // === RELEASES (0-20 points) ===
-    // Releases with semantic versioning are high-signal
-    if (releasesLast30Days > 3) resilienceScore += 20;
-    else if (releasesLast30Days > 1) resilienceScore += 15;
-    else if (releasesLast30Days > 0) resilienceScore += 10;
+    // === RELEASES (0-15 points) ===
+    if (releasesLast30Days > 3) resilienceScore += 15;
+    else if (releasesLast30Days > 1) resilienceScore += 11;
+    else if (releasesLast30Days > 0) resilienceScore += 7;
 
-    // === POPULARITY/STARS (0-15 points) ===
-    if (repoData.stargazers_count > 10000) resilienceScore += 15;
-    else if (repoData.stargazers_count > 1000) resilienceScore += 12;
-    else if (repoData.stargazers_count > 100) resilienceScore += 8;
-    else if (repoData.stargazers_count > 10) resilienceScore += 4;
+    // === POPULARITY/STARS (0-10 points) ===
+    if (repoData.stargazers_count > 10000) resilienceScore += 10;
+    else if (repoData.stargazers_count > 1000) resilienceScore += 8;
+    else if (repoData.stargazers_count > 100) resilienceScore += 5;
+    else if (repoData.stargazers_count > 10) resilienceScore += 3;
 
     // === PROJECT AGE (0-10 points) ===
     const createdAt = new Date(repoData.created_at);
@@ -370,6 +372,14 @@ Deno.serve(async (req) => {
     if (daysActive > 365) resilienceScore += 10;
     else if (daysActive > 180) resilienceScore += 8;
     else if (daysActive > 90) resilienceScore += 5;
+    else if (daysActive > 30) resilienceScore += 3;
+
+    // === COMMIT CONSISTENCY BONUS (0-5 points) ===
+    // Reward projects that commit on 20+ of the last 30 days
+    // Use commits count as proxy: 20+ commits in 30 days suggests consistent daily work
+    const estimatedActiveDays = Math.min(commitsLast30Days, 30);
+    if (estimatedActiveDays >= 20) resilienceScore += 5;
+    else if (estimatedActiveDays >= 10) resilienceScore += 3;
 
     // === DETERMINE LIVENESS STATUS ===
     // ACTIVE requires: activity in last 14 days, 5+ weighted events, AND 3+ contributors
