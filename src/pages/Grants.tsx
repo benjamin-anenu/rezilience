@@ -238,7 +238,7 @@ export default function Grants() {
           <p className="text-xs text-muted-foreground">
             Know a grant program we're missing?{' '}
             <a
-              href="https://x.com/RezilienceSol"
+              href="https://x.com/ben_anenu"
               target="_blank"
               rel="noopener noreferrer"
               className="font-semibold text-primary transition-colors hover:text-primary/80"
