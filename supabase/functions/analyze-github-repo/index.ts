@@ -451,8 +451,8 @@ Deno.serve(async (req) => {
             github_is_fork: result.isFork,
             github_homepage: result.homepage,
             github_analyzed_at: new Date().toISOString(),
-            resilience_score: result.resilienceScore,
-            liveness_status: result.livenessStatus,
+            // resilience_score is written only by refresh-all-profiles (canonical integrated score)
+            // liveness_status is written only by refresh-all-profiles
             // Multi-signal activity fields
             github_push_events_30d: result.pushEvents30d,
             github_pr_events_30d: result.prEvents30d,

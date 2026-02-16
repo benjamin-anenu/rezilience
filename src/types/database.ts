@@ -40,10 +40,14 @@ export interface DBScoreHistory {
   commit_velocity: number | null;
   days_last_commit: number | null;
   breakdown: {
-    originality: number;
-    impact: number;
-    decay: number;
-    stake: number;
+    github?: number;
+    dependencies?: number;
+    governance?: number | null;
+    tvl?: number | null;
+    baseScore?: number;
+    continuityDecay?: number;
+    weights?: Record<string, number>;
+    applicableDimensions?: string[];
   } | null;
 }
 

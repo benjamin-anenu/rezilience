@@ -104,9 +104,10 @@ function ScoreHistoryChart({ projectId }: { projectId: string }) {
                 axisLine={false}
                 tickLine={false}
                 tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 12 }}
-                domain={[0, 'auto']}
+                domain={[0, (dataMax: number) => Math.max(dataMax * 1.2, 1)]}
+                tickFormatter={(v: number) => v < 1 ? v.toFixed(1) : String(Math.round(v))}
                 label={{
-                  value: 'Velocity',
+                  value: 'Commits/day',
                   angle: -90,
                   position: 'insideLeft',
                   fill: 'hsl(var(--muted-foreground))',
