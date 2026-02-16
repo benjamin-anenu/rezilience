@@ -80,3 +80,6 @@ verify_jwt = false
 
 [functions.verify-github-ownership]
 verify_jwt = false
+
+[functions.enrich-countries]
+verify_jwt = false
