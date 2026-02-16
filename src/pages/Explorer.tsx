@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Layout } from '@/components/layout';
 import { useTrackEvent } from '@/components/layout/Layout';
 import { EcosystemStats, EcosystemHeatmap, EcosystemPulse, SearchBar, ProgramLeaderboard, BuildersInPublicFeed } from '@/components/explorer';
@@ -24,6 +25,7 @@ type ActiveView = 'list' | 'heatmap' | 'pulse' | 'builders';
 const ITEMS_PER_PAGE = 60;
 
 const Explorer = () => {
+  const [searchParams] = useSearchParams();
   const trackEvent = useTrackEvent();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -33,8 +35,13 @@ const Explorer = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [activeView, setActiveView] = useState<ActiveView>('list');
   const [showTrendFeed, setShowTrendFeed] = useState(false);
-
   const { data: projects, isLoading, error } = useExplorerProjects();
+
+  // Read country from URL params (e.g. from map click)
+  useEffect(() => {
+    const country = searchParams.get('country');
+    if (country) setCountryFilter(country);
+  }, [searchParams]);
 
   const filteredPrograms = useMemo(() => {
     if (!projects) return [];
