@@ -1,64 +1,78 @@
 import { useState, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe, ArrowRight } from 'lucide-react';
+import { Globe, ArrowRight, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import {
+  ComposableMap,
+  Geographies,
+  Geography,
+  ZoomableGroup,
+} from 'react-simple-maps';
 import { useRegistryGeoData, CountryStats } from '@/hooks/useRegistryGeoData';
-import { WORLD_COUNTRIES } from '@/components/admin/world-map-paths';
 import { Button } from '@/components/ui/button';
 
-const VIEW_BOX = '0 0 800 420';
+const GEO_URL = 'https://cdn.jsdelivr.net/npm/world-atlas@2/countries-110m.json';
 
-function getFillColor(stats: CountryStats | undefined): string {
-  if (!stats) return 'hsl(214, 18%, 14%)';
+// ISO 3166-1 numeric → alpha-2 mapping for countries we care about
+const NUMERIC_TO_ALPHA2: Record<string, string> = {
+  '004': 'AF','008': 'AL','012': 'DZ','020': 'AD','024': 'AO','028': 'AG','032': 'AR','036': 'AU',
+  '040': 'AT','031': 'AZ','044': 'BS','048': 'BH','050': 'BD','051': 'AM','052': 'BB','056': 'BE',
+  '060': 'BM','064': 'BT','068': 'BO','070': 'BA','072': 'BW','076': 'BR','084': 'BZ','090': 'SB',
+  '096': 'BN','100': 'BG','104': 'MM','108': 'BI','116': 'KH','120': 'CM','124': 'CA','132': 'CV',
+  '140': 'CF','144': 'LK','148': 'TD','152': 'CL','156': 'CN','170': 'CO','174': 'KM','178': 'CG',
+  '180': 'CD','188': 'CR','191': 'HR','192': 'CU','196': 'CY','203': 'CZ','208': 'DK','262': 'DJ',
+  '212': 'DM','214': 'DO','218': 'EC','818': 'EG','222': 'SV','226': 'GQ','232': 'ER','233': 'EE',
+  '231': 'ET','242': 'FJ','246': 'FI','250': 'FR','266': 'GA','270': 'GM','268': 'GE','276': 'DE',
+  '288': 'GH','300': 'GR','308': 'GD','320': 'GT','324': 'GN','328': 'GY','332': 'HT','340': 'HN',
+  '344': 'HK','348': 'HU','352': 'IS','356': 'IN','360': 'ID','364': 'IR','368': 'IQ','372': 'IE',
+  '376': 'IL','380': 'IT','388': 'JM','392': 'JP','400': 'JO','398': 'KZ','404': 'KE','408': 'KP',
+  '410': 'KR','414': 'KW','417': 'KG','418': 'LA','428': 'LV','422': 'LB','426': 'LS','430': 'LR',
+  '434': 'LY','438': 'LI','440': 'LT','442': 'LU','450': 'MG','454': 'MW','458': 'MY','462': 'MV',
+  '466': 'ML','470': 'MT','478': 'MR','480': 'MU','484': 'MX','498': 'MD','496': 'MN','499': 'ME',
+  '504': 'MA','508': 'MZ','516': 'NA','524': 'NP','528': 'NL','540': 'NC','554': 'NZ','558': 'NI',
+  '562': 'NE','566': 'NG','578': 'NO','512': 'OM','586': 'PK','591': 'PA','598': 'PG','600': 'PY',
+  '604': 'PE','608': 'PH','616': 'PL','620': 'PT','634': 'QA','642': 'RO','643': 'RU','646': 'RW',
+  '662': 'LC','670': 'VC','682': 'SA','686': 'SN','688': 'RS','694': 'SL','702': 'SG','703': 'SK',
+  '705': 'SI','706': 'SO','710': 'ZA','724': 'ES','736': 'SD','740': 'SR','748': 'SZ','752': 'SE',
+  '756': 'CH','760': 'SY','158': 'TW','762': 'TJ','834': 'TZ','764': 'TH','768': 'TG','780': 'TT',
+  '788': 'TN','792': 'TR','795': 'TM','800': 'UG','804': 'UA','784': 'AE','826': 'GB','840': 'US',
+  '858': 'UY','860': 'UZ','862': 'VE','704': 'VN','887': 'YE','894': 'ZM','716': 'ZW',
+  '-99': 'XK', // Kosovo
+};
+
+function getFillColor(stats: CountryStats | undefined, isHovered: boolean): string {
+  if (!stats) return isHovered ? 'hsl(214, 18%, 20%)' : 'hsl(214, 18%, 14%)';
   const count = stats.projectCount;
+  if (isHovered) return 'hsl(173, 85%, 45%)';
   if (count >= 15) return 'hsl(173, 80%, 40%)';
   if (count >= 5) return 'hsl(173, 70%, 35%)';
   if (count >= 3) return 'hsl(173, 60%, 30%)';
   return 'hsl(173, 50%, 25%)';
 }
 
-function getGlowOpacity(count: number): number {
-  if (count >= 15) return 1;
-  if (count >= 5) return 0.8;
-  return 0.6;
-}
-
-const COUNTRY_NAMES: Record<string, string> = {};
-WORLD_COUNTRIES.forEach((c) => { COUNTRY_NAMES[c.id] = c.name; });
-
 export function EcosystemMapSection() {
   const { countryStats, summary, isLoading } = useRegistryGeoData();
-  const [tooltip, setTooltip] = useState<{ x: number; y: number; code: string; stats: CountryStats } | null>(null);
+  const [tooltip, setTooltip] = useState<{ x: number; y: number; name: string; stats: CountryStats } | null>(null);
+  const [position, setPosition] = useState<{ coordinates: [number, number]; zoom: number }>({
+    coordinates: [0, 20],
+    zoom: 1,
+  });
 
-  const countriesWithData = useMemo(() => {
-    const set = new Set<string>();
-    countryStats.forEach((_, code) => set.add(code));
-    return set;
-  }, [countryStats]);
+  const handleZoomIn = useCallback(() => {
+    setPosition(p => ({ ...p, zoom: Math.min(p.zoom * 1.5, 8) }));
+  }, []);
 
-  const handleMouseEnter = useCallback((e: React.MouseEvent<SVGPathElement>, code: string) => {
-    const stats = countryStats.get(code);
-    if (!stats) return;
-    const svg = (e.target as SVGPathElement).closest('svg');
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    setTooltip({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top - 10,
-      code,
-      stats,
-    });
-  }, [countryStats]);
+  const handleZoomOut = useCallback(() => {
+    setPosition(p => ({ ...p, zoom: Math.max(p.zoom / 1.5, 1) }));
+  }, []);
 
-  const handleMouseMove = useCallback((e: React.MouseEvent<SVGPathElement>) => {
-    if (!tooltip) return;
-    const svg = (e.target as SVGPathElement).closest('svg');
-    if (!svg) return;
-    const rect = svg.getBoundingClientRect();
-    setTooltip(prev => prev ? { ...prev, x: e.clientX - rect.left, y: e.clientY - rect.top - 10 } : null);
-  }, [tooltip]);
+  const handleReset = useCallback(() => {
+    setPosition({ coordinates: [0, 20], zoom: 1 });
+  }, []);
 
-  const handleMouseLeave = useCallback(() => setTooltip(null), []);
+  const handleMoveEnd = useCallback((pos: { coordinates: [number, number]; zoom: number }) => {
+    setPosition(pos);
+  }, []);
 
   return (
     <section className="relative py-20 md:py-28 overflow-hidden bg-background">
@@ -113,43 +127,95 @@ export function EcosystemMapSection() {
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
           transition={{ duration: 0.8, delay: 0.3 }}
-          className="relative w-full rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm p-4 md:p-6"
+          className="relative w-full rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm overflow-hidden"
         >
-          <svg viewBox={VIEW_BOX} className="w-full h-auto" xmlns="http://www.w3.org/2000/svg">
-            {/* Countries */}
-            {WORLD_COUNTRIES.map((country) => {
-              const stats = countryStats.get(country.id);
-              return (
-                <path
-                  key={country.id}
-                  d={country.d}
-                  fill={getFillColor(stats)}
-                  stroke="hsl(var(--border))"
-                  strokeWidth={0.3}
-                  className="transition-colors duration-200"
-                  style={{ cursor: stats ? 'pointer' : 'default' }}
-                  onMouseEnter={(e) => handleMouseEnter(e, country.id)}
-                  onMouseMove={handleMouseMove}
-                  onMouseLeave={handleMouseLeave}
-                />
-              );
-            })}
+          {/* Zoom Controls */}
+          <div className="absolute top-3 right-3 z-10 flex flex-col gap-1.5">
+            {[
+              { icon: ZoomIn, action: handleZoomIn, label: 'Zoom in' },
+              { icon: ZoomOut, action: handleZoomOut, label: 'Zoom out' },
+              { icon: RotateCcw, action: handleReset, label: 'Reset' },
+            ].map(({ icon: Icon, action, label }) => (
+              <motion.button
+                key={label}
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={action}
+                className="w-8 h-8 rounded-md bg-card/80 border border-border/50 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+                aria-label={label}
+              >
+                <Icon className="w-4 h-4" />
+              </motion.button>
+            ))}
+          </div>
 
-            {/* Pulsing dots */}
-            {WORLD_COUNTRIES.filter((c) => countriesWithData.has(c.id)).map((country) => {
-              const stats = countryStats.get(country.id)!;
-              const opacity = getGlowOpacity(stats.projectCount);
-              return (
-                <g key={`dot-${country.id}`}>
-                  <circle cx={country.cx} cy={country.cy} r={3} fill="hsl(173, 80%, 40%)" opacity={opacity}>
-                    <animate attributeName="r" values="2;5;2" dur="3s" repeatCount="indefinite" />
-                    <animate attributeName="opacity" values={`${opacity};${opacity * 0.3};${opacity}`} dur="3s" repeatCount="indefinite" />
-                  </circle>
-                  <circle cx={country.cx} cy={country.cy} r={1.5} fill="hsl(173, 80%, 60%)" />
-                </g>
-              );
-            })}
-          </svg>
+          <ComposableMap
+            projection="geoMercator"
+            projectionConfig={{ scale: 147, center: [0, 20] }}
+            width={800}
+            height={450}
+            style={{ width: '100%', height: 'auto' }}
+          >
+            <ZoomableGroup
+              center={position.coordinates}
+              zoom={position.zoom}
+              onMoveEnd={handleMoveEnd}
+              minZoom={1}
+              maxZoom={8}
+            >
+              <Geographies geography={GEO_URL}>
+                {({ geographies }) =>
+                  geographies.map((geo) => {
+                    const numericCode = geo.id;
+                    const alpha2 = NUMERIC_TO_ALPHA2[numericCode];
+                    const stats = alpha2 ? countryStats.get(alpha2) : undefined;
+                    const countryName = geo.properties?.name ?? numericCode;
+
+                    return (
+                      <Geography
+                        key={geo.rsmKey}
+                        geography={geo}
+                        fill={getFillColor(stats, false)}
+                        stroke="hsl(var(--border))"
+                        strokeWidth={0.4}
+                        style={{
+                          default: { outline: 'none', transition: 'fill 0.2s' },
+                          hover: {
+                            fill: getFillColor(stats, true),
+                            outline: 'none',
+                            cursor: stats ? 'pointer' : 'default',
+                          },
+                          pressed: { outline: 'none' },
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!stats) return;
+                          const rect = (e.target as SVGElement).closest('svg')?.getBoundingClientRect();
+                          if (!rect) return;
+                          setTooltip({
+                            x: e.clientX - rect.left,
+                            y: e.clientY - rect.top - 10,
+                            name: countryName,
+                            stats,
+                          });
+                        }}
+                        onMouseMove={(e) => {
+                          if (!tooltip) return;
+                          const rect = (e.target as SVGElement).closest('svg')?.getBoundingClientRect();
+                          if (!rect) return;
+                          setTooltip(prev => prev ? {
+                            ...prev,
+                            x: e.clientX - rect.left,
+                            y: e.clientY - rect.top - 10,
+                          } : null);
+                        }}
+                        onMouseLeave={() => setTooltip(null)}
+                      />
+                    );
+                  })
+                }
+              </Geographies>
+            </ZoomableGroup>
+          </ComposableMap>
 
           {/* Tooltip */}
           <AnimatePresence>
@@ -162,7 +228,7 @@ export function EcosystemMapSection() {
                 className="absolute pointer-events-none z-20 px-3 py-2 rounded-lg border border-border bg-popover text-popover-foreground shadow-lg text-xs"
                 style={{ left: tooltip.x, top: tooltip.y, transform: 'translate(-50%, -100%)' }}
               >
-                <p className="font-semibold text-sm mb-1">{COUNTRY_NAMES[tooltip.code] ?? tooltip.code}</p>
+                <p className="font-semibold text-sm mb-1">{tooltip.name}</p>
                 <p className="text-muted-foreground">{tooltip.stats.projectCount} project{tooltip.stats.projectCount !== 1 ? 's' : ''}</p>
                 <div className="flex gap-3 mt-1">
                   <span className="text-green-400">● {tooltip.stats.activeCount} Active</span>
