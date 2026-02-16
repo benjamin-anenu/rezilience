@@ -217,6 +217,42 @@ function extractGithubHandle(url: string): string | null {
   return match ? match[1] : null;
 }
 
+// ── TLD → country-code mapping ───────────────────────────────────────
+const TLD_MAP: Record<string, string> = {
+  de: "de", uk: "uk", sg: "sg", jp: "jp", kr: "kr", in: "in",
+  br: "br", ng: "ng", fr: "fr", nl: "nl", pt: "pt", es: "es",
+  it: "it", pl: "pl", ch: "ch", au: "au", ca: "ca", ae: "ae", hk: "hk",
+};
+
+const GENERIC_TLDS = new Set([
+  "com","io","xyz","app","dev","org","net","fi","gg","co","me","so",
+  "ai","fund","capital","finance","exchange","network","foundation","zone",
+  "world","global","space","tech","pro","land","art","club","community",
+]);
+
+function extractCountryFromTld(url: string): string | null {
+  try {
+    const hostname = new URL(url).hostname;
+    const parts = hostname.split(".");
+    if (parts.length < 2) return null;
+
+    const tld = parts[parts.length - 1];
+    // Handle two-part ccTLDs like .co.uk, .com.au
+    if (parts.length >= 3) {
+      const secondLevel = parts[parts.length - 2];
+      const ccTld = parts[parts.length - 1];
+      if ((secondLevel === "co" || secondLevel === "com" || secondLevel === "org") && TLD_MAP[ccTld]) {
+        return TLD_MAP[ccTld];
+      }
+    }
+
+    if (GENERIC_TLDS.has(tld)) return null;
+    return TLD_MAP[tld] || null;
+  } catch {
+    return null;
+  }
+}
+
 // ── Main handler ─────────────────────────────────────────────────────
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -229,97 +265,96 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Parse optional batch params
     let batchOffset = 0;
     let batchLimit = 50;
+    let mode = "both"; // "github" | "tld" | "both"
     try {
       const body = await req.json();
       if (body.offset) batchOffset = Number(body.offset);
       if (body.limit) batchLimit = Number(body.limit);
+      if (body.mode) mode = body.mode;
     } catch { /* no body is fine */ }
 
-    // Fetch profiles that need enrichment (no country, have github_org_url)
-    const { data: profiles, error: fetchErr } = await supabase
-      .from("claimed_profiles")
-      .select("id, project_name, country, github_org_url")
-      .is("country", null)
-      .not("github_org_url", "is", null)
-      .order("project_name")
-      .range(batchOffset, batchOffset + batchLimit - 1);
-
-    if (fetchErr) throw fetchErr;
-
     const results = {
-      total: profiles.length,
-      batch: { offset: batchOffset, limit: batchLimit },
-      normalized: 0,
-      enriched: 0,
-      skipped_no_github: 0,
-      skipped_no_location: 0,
-      skipped_unmappable: 0,
-      already_correct: 0,
-      errors: 0,
-      details: [] as { name: string; action: string; from: string | null; to: string | null; location?: string }[],
+      mode,
+      github: { total: 0, enriched: 0, skipped_no_github: 0, skipped_no_location: 0, skipped_unmappable: 0, errors: 0, details: [] as any[] },
+      tld: { total: 0, enriched: 0, skipped_generic: 0, skipped_no_url: 0, errors: 0, details: [] as any[] },
     };
 
-    for (const p of profiles) {
-      const currentCountry = p.country?.trim() || null;
-
-      // All profiles in this batch have null country and non-null github_org_url
-      // so go straight to GitHub enrichment
-
-      const handle = extractGithubHandle(p.github_org_url);
-      if (!handle) {
-        results.skipped_no_github++;
-        continue;
-      }
-
-      // Try org first, fall back to user
-      let location: string | null = null;
-      for (const endpoint of [`https://api.github.com/orgs/${handle}`, `https://api.github.com/users/${handle}`]) {
-        try {
-          const headers: Record<string, string> = { "Accept": "application/vnd.github.v3+json", "User-Agent": "rezilience-enricher" };
-          if (githubToken) headers["Authorization"] = `Bearer ${githubToken}`;
-
-          const res = await fetch(endpoint, { headers });
-          if (res.ok) {
-            const data = await res.json();
-            if (data.location) {
-              location = data.location;
-              break;
-            }
-          }
-        } catch {
-          // Try next endpoint
-        }
-      }
-
-      if (!location) {
-        results.skipped_no_location++;
-        continue;
-      }
-
-      const code = mapLocationToCode(location);
-      if (!code) {
-        results.skipped_unmappable++;
-        results.details.push({ name: p.project_name, action: "unmappable", from: null, to: null, location });
-        continue;
-      }
-
-      const { error: upErr } = await supabase
+    // ── GitHub pass ──────────────────────────────────────────────────
+    if (mode === "github" || mode === "both") {
+      const { data: profiles, error: fetchErr } = await supabase
         .from("claimed_profiles")
-        .update({ country: code })
-        .eq("id", p.id);
+        .select("id, project_name, country, github_org_url")
+        .is("country", null)
+        .not("github_org_url", "is", null)
+        .order("project_name")
+        .range(batchOffset, batchOffset + batchLimit - 1);
 
-      if (!upErr) {
-        results.enriched++;
-        results.details.push({ name: p.project_name, action: "enriched", from: null, to: code, location });
-      } else {
-        results.errors++;
+      if (fetchErr) throw fetchErr;
+      results.github.total = profiles?.length || 0;
+
+      for (const p of (profiles || [])) {
+        const handle = extractGithubHandle(p.github_org_url);
+        if (!handle) { results.github.skipped_no_github++; continue; }
+
+        let location: string | null = null;
+        for (const endpoint of [`https://api.github.com/orgs/${handle}`, `https://api.github.com/users/${handle}`]) {
+          try {
+            const headers: Record<string, string> = { "Accept": "application/vnd.github.v3+json", "User-Agent": "rezilience-enricher" };
+            if (githubToken) headers["Authorization"] = `Bearer ${githubToken}`;
+            const res = await fetch(endpoint, { headers });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.location) { location = data.location; break; }
+            } else { await res.text(); }
+          } catch { /* next */ }
+        }
+
+        if (!location) { results.github.skipped_no_location++; continue; }
+
+        const code = mapLocationToCode(location);
+        if (!code) {
+          results.github.skipped_unmappable++;
+          results.github.details.push({ name: p.project_name, action: "unmappable", location });
+          continue;
+        }
+
+        const { error: upErr } = await supabase.from("claimed_profiles").update({ country: code }).eq("id", p.id);
+        if (!upErr) {
+          results.github.enriched++;
+          results.github.details.push({ name: p.project_name, action: "enriched", to: code, location });
+        } else { results.github.errors++; }
+
+        await new Promise((r) => setTimeout(r, 50));
       }
+    }
 
-      // Small delay to respect GitHub rate limits
-      await new Promise((r) => setTimeout(r, 50));
+    // ── TLD pass ─────────────────────────────────────────────────────
+    if (mode === "tld" || mode === "both") {
+      const { data: profiles, error: fetchErr } = await supabase
+        .from("claimed_profiles")
+        .select("id, project_name, website_url")
+        .is("country", null)
+        .not("website_url", "is", null)
+        .order("project_name")
+        .range(batchOffset, batchOffset + batchLimit - 1);
+
+      if (fetchErr) throw fetchErr;
+      results.tld.total = profiles?.length || 0;
+
+      for (const p of (profiles || [])) {
+        if (!p.website_url) { results.tld.skipped_no_url++; continue; }
+
+        const code = extractCountryFromTld(p.website_url);
+        if (!code) { results.tld.skipped_generic++; continue; }
+
+        const { error: upErr } = await supabase.from("claimed_profiles").update({ country: code }).eq("id", p.id);
+        if (!upErr) {
+          results.tld.enriched++;
+          results.tld.details.push({ name: p.project_name, to: code, url: p.website_url });
+        } else { results.tld.errors++; }
+      }
     }
 
     return new Response(JSON.stringify({ ok: true, ...results }), {

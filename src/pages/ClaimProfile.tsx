@@ -458,7 +458,7 @@ const ClaimProfile = () => {
     }
   };
 
-  const canProceedFromStep2 = projectName.trim() && category;
+  const canProceedFromStep2 = projectName.trim() && category && country;
   const canProceedFromStep3 = githubOrgUrl.trim() || !!githubAnalysisResult;
 
   const handleNext = () => {
