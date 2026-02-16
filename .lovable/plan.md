@@ -1,66 +1,65 @@
 
 
-# Make Country Required in Claim Flow + TLD-Based Country Enrichment
+# Interactive Ecosystem Map on Landing Page
 
-## Part 1: Make Country Required in Claim Profile Flow
+## Overview
 
-Currently, the "Next" button on Step 2 (Core Identity) only checks for `projectName` and `category`. Country is optional. We need to make it required so every new profile has a country set.
+Add an interactive world map between the Hero Section and The Gap Section on the landing page. It will visualize the geographic distribution of projects in the Rezilience Registry, pulling live data from `claimed_profiles_public`. This reuses the existing SVG world map infrastructure already built for the admin dashboard -- no new npm dependencies needed.
 
-### Changes
+## Data Flow
 
-| File | Change |
-|------|--------|
-| `src/pages/ClaimProfile.tsx` (line 461) | Add `country` to the `canProceedFromStep2` validation: `projectName.trim() && category && country` |
-| `src/components/claim/CoreIdentityForm.tsx` | Move the Country/Region field from the optional "grid" layout into the required section, add a `*` indicator, and match the REQUIRED badge styling |
+The map will query `claimed_profiles_public` to aggregate projects by `country` code, then display:
+- Country fill color intensity based on number of projects
+- Animated glow dots at country centroids
+- Tooltips showing project count, top categories, and liveness breakdown per country
+- Summary stats bar (total countries, total projects, most active region)
 
----
+## New Files
 
-## Part 2: TLD-Based Country Enrichment for Remaining 174 Profiles
+### 1. `src/hooks/useRegistryGeoData.ts`
+Custom hook that:
+- Fetches all projects from `claimed_profiles_public` (reuses the existing query pattern from `useExplorerProjects`)
+- Aggregates by `country` field into a `Map<string, CountryStats>` where `CountryStats` includes: `projectCount`, `activeCount`, `staleCount`, `decayingCount`, `topCategories`, `avgScore`
+- Maps lowercase DB codes (`us`) to uppercase ISO codes (`US`) for the SVG map lookup
+- Returns: `{ data, isLoading, countryStats, summary }`
 
-174 profiles still have no country. Most have no GitHub location set, but many have `website_url` values with country-specific TLDs we can use as a signal.
+### 2. `src/components/landing/EcosystemMapSection.tsx`
+The landing page section component containing:
+- Section header: "BUILDING ACROSS THE GLOBE" with subtitle
+- Summary stats row (countries represented, total registered projects, most active region)
+- The interactive SVG map (reusing `WORLD_COUNTRIES` paths from `world-map-paths.ts`)
+- Color legend explaining the gradient
+- A "View Full Registry" CTA button linking to `/explorer`
 
-### Approach
+**Map behavior:**
+- Countries with projects get a teal fill, intensity proportional to project count
+- Animated pulsing dots at centroids for countries with data (reusing the pattern from `WorldMap.tsx`)
+- Hover tooltip shows: country name, project count, top categories, liveness breakdown (Active/Stale/Decaying)
+- Countries without data remain dark (`hsl(214, 18%, 14%)`)
+- Responsive: scales to container width
 
-Update `supabase/functions/enrich-countries/index.ts` to add a **second pass** that targets profiles where `country IS NULL` and `website_url IS NOT NULL`. It will:
+## Modified Files
 
-1. Extract the TLD from each `website_url` (e.g., `https://example.de` -> `de`)
-2. Map country-code TLDs to the standardized codes using a lookup table:
+### 3. `src/components/landing/index.ts`
+Add export for `EcosystemMapSection`.
 
-```text
-TLD   -> Code
-.de   -> de
-.uk / .co.uk -> uk
-.sg   -> sg
-.jp   -> jp
-.kr   -> kr
-.in   -> in
-.br   -> br
-.ng   -> ng
-.fr   -> fr
-.nl   -> nl
-.pt   -> pt
-.es   -> es
-.it   -> it
-.pl   -> pl
-.ch   -> ch
-.au / .com.au -> au
-.ca   -> ca
-.ae   -> ae
-.hk   -> hk
-```
+### 4. `src/pages/Index.tsx`
+Insert `<EcosystemMapSection />` between `<HeroSection />` and `<TheGapSection />`.
 
-3. Generic TLDs (`.com`, `.io`, `.xyz`, `.app`, `.fi`, `.dev`, `.org`, `.net`) are skipped -- they don't indicate a country.
-4. The function will support a `mode` parameter: `mode: "tld"` runs only the TLD pass, `mode: "github"` runs only the GitHub pass (current behavior), and default runs both sequentially.
+## Technical Details
 
-### Files
+- The existing `WORLD_COUNTRIES` array in `world-map-paths.ts` provides ~180 SVG country paths with ISO alpha-2 IDs and centroid coordinates -- we reuse this directly
+- Country code translation: DB stores `us` -> map expects `US` (simple `.toUpperCase()`)
+- Special case: DB code `uk` maps to ISO `GB` (the map paths use `GB` for United Kingdom)
+- The `other` country code in the DB (used for countries not in the COUNTRIES list) will be excluded from the map since it has no geographic position
+- Framer Motion will be used for section entrance animations and tooltip transitions
+- The map viewBox matches the admin version (`0 0 800 420`) for consistency
 
-| File | Change |
-|------|--------|
-| `supabase/functions/enrich-countries/index.ts` | Add TLD extraction logic and a second enrichment pass for website URLs |
-| `src/pages/ClaimProfile.tsx` | Update `canProceedFromStep2` validation |
-| `src/components/claim/CoreIdentityForm.tsx` | Mark Country as required in the UI |
+## Current Data Snapshot
 
-### Expected Impact
-
-Based on the data, most of the 174 profiles use generic TLDs (`.io`, `.com`, `.xyz`), so TLD analysis will likely fill in only a small number (perhaps 5-15). The remaining profiles will need manual assignment or will be filled in when project owners claim their profiles (now that country is required).
+Based on current DB data, the map will show ~17 countries with data:
+- US: 22 projects (heaviest)
+- India: 5, Poland: 3, UK/HK/KR/PT/DE/SG/FR: 2 each
+- NG/CA/CH/BR/NL: 1 each
+- "other": 8 (excluded from map)
 
