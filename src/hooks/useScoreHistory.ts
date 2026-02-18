@@ -63,9 +63,31 @@ export function useScoreHistoryChart(projectId: string) {
     ? history[0].snapshot_date 
     : null;
 
+  // Calculate score delta between latest and previous snapshot
+  const sortedByDate = [...(history || [])].sort(
+    (a, b) => new Date(b.snapshot_date).getTime() - new Date(a.snapshot_date).getTime()
+  );
+  const latestScore = sortedByDate[0]?.score ?? null;
+  const previousScore = sortedByDate[1]?.score ?? null;
+  const scoreDelta = latestScore !== null && previousScore !== null
+    ? {
+        value: Math.round(latestScore - previousScore),
+        direction: latestScore > previousScore ? 'up' as const : latestScore < previousScore ? 'down' as const : 'stable' as const,
+      }
+    : null;
+
+  // Calculate average velocity
+  const avgVelocity = chartData.length > 0
+    ? Math.round((chartData.reduce((sum, d) => sum + d.velocity, 0) / chartData.length) * 100) / 100
+    : 0;
+
   return {
     data: chartData,
     lastSyncedAt,
+    currentScore: latestScore,
+    scoreDelta,
+    avgVelocity,
+    dataPoints: chartData.length,
     ...rest,
   };
 }
