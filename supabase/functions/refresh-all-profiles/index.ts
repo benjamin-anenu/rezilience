@@ -356,18 +356,28 @@ Deno.serve(async (req) => {
         // Write score_history from the final canonical score (single source of truth)
         const today = new Date().toISOString().split("T")[0];
         const actualVelocity = Math.round(((profile.github_commits_30d || 0) / 30) * 100) / 100;
+        // Delete existing snapshot for today (if any), then insert fresh
+        const todayStart = `${today}T00:00:00Z`;
+        const todayEnd = `${today}T23:59:59Z`;
+        await supabase
+          .from("score_history")
+          .delete()
+          .eq("claimed_profile_id", profile.id)
+          .gte("snapshot_date", todayStart)
+          .lte("snapshot_date", todayEnd);
+
         const { error: historyError } = await supabase
           .from("score_history")
-          .upsert({
+          .insert({
             claimed_profile_id: profile.id,
             score: finalScore,
             commit_velocity: actualVelocity,
             days_last_commit: daysSinceLastCommit,
-            snapshot_date: today,
+            snapshot_date: new Date().toISOString(),
             breakdown: scoreBreakdown,
-          }, { onConflict: "claimed_profile_id,snapshot_date", ignoreDuplicates: false });
+          });
         if (historyError) {
-          console.error(`Score history upsert failed for ${profile.project_name}:`, historyError);
+          console.error(`Score history insert failed for ${profile.project_name}:`, historyError);
         }
 
         successCount++;

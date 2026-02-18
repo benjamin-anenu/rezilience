@@ -955,6 +955,7 @@ export type Database = {
           project_id: string | null
           score: number
           snapshot_date: string
+          snapshot_day: string | null
         }
         Insert: {
           breakdown?: Json | null
@@ -965,6 +966,7 @@ export type Database = {
           project_id?: string | null
           score: number
           snapshot_date?: string
+          snapshot_day?: string | null
         }
         Update: {
           breakdown?: Json | null
@@ -975,6 +977,7 @@ export type Database = {
           project_id?: string | null
           score?: number
           snapshot_date?: string
+          snapshot_day?: string | null
         }
         Relationships: [
           {
