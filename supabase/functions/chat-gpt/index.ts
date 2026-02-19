@@ -305,7 +305,7 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-3-flash-preview",
+            model: "google/gemini-2.5-flash",
             messages: toolLoopMessages,
             tools: TOOLS,
             stream: false,
@@ -400,7 +400,7 @@ serve(async (req) => {
       const estimatedOutputTokens = Math.ceil(text.length / 4);
       logAIUsage({
         conversation_id: conversation_id || undefined,
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         input_tokens: estimatedInputTokens,
         output_tokens: estimatedOutputTokens,
         tool_calls: collectedToolCalls,
@@ -429,7 +429,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: "google/gemini-3-flash-preview",
+          model: "google/gemini-2.5-flash",
           messages: toolLoopMessages,
           stream: true,
         }),
@@ -449,7 +449,7 @@ serve(async (req) => {
     const estimatedInputTokens = Math.ceil(JSON.stringify(toolLoopMessages).length / 4);
     logAIUsage({
       conversation_id: conversation_id || undefined,
-      model: "google/gemini-3-flash-preview",
+      model: "google/gemini-2.5-flash",
       input_tokens: estimatedInputTokens,
       output_tokens: 500, // Estimate for streamed responses
       tool_calls: collectedToolCalls,
