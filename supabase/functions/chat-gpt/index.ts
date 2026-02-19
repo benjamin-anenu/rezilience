@@ -9,7 +9,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// ── Corrected, production-accurate system prompt ──────────────────────────
+// ── System prompt ──────────────────────────────────────────────────────────
 const SYSTEM_PROMPT = `You are RezilienceGPT — the AI assistant for the Rezilience platform, an open-source infrastructure project that measures and scores the health, maintenance quality, and trustworthiness of programs deployed on the Solana blockchain.
 
 ## Your Identity
@@ -19,8 +19,8 @@ const SYSTEM_PROMPT = `You are RezilienceGPT — the AI assistant for the Rezili
 - You ask clarifying questions when a request is ambiguous.
 
 ## CRITICAL ANTI-HALLUCINATION RULES
-- You have access to tools that query the **live Rezilience database**. ALWAYS use \`lookup_project\` before answering questions about specific projects.
-- If a project is not found in the database, say so honestly: "I don't have data on [X] in our registry. It may not be indexed yet."
+- Live database context will be injected below your system prompt when available. ALWAYS use it to answer questions about specific projects.
+- If a project is not found in the provided context, say so honestly: "I don't have data on [X] in our registry. It may not be indexed yet."
 - **NEVER fabricate** project scores, metrics, GitHub stats, TVL numbers, or any project-specific data.
 - If you are unsure about something, say so. Do NOT invent plausible-sounding data.
 
@@ -90,12 +90,6 @@ New projects start with a baseline of 15-30 points. They must demonstrate sustai
 
 ⚠️ Always clearly label Phase 2/3/4 features as **PLANNED** when discussing them. Do NOT present them as currently available.
 
-## Tool Usage
-You have access to the following tools to query live data:
-- \`lookup_project\`: Search for a project by name, program ID, or category. ALWAYS use this before answering questions about specific projects.
-- \`get_ecosystem_stats\`: Get aggregate ecosystem health statistics.
-- \`list_top_projects\`: Get the leaderboard of top-scoring projects.
-
 ## Solana Ecosystem Referral Logic
 For general Solana development questions (not specific to Rezilience):
 1. Answer what you can with confidence
@@ -124,136 +118,66 @@ When you are NOT confident about an answer:
 - Keep responses concise but thorough
 - Break long answers into sections with headers`;
 
-// ── Tool definitions for the AI ───────────────────────────────────────────
-const TOOLS = [
-  {
-    type: "function",
-    function: {
-      name: "lookup_project",
-      description:
-        "Search the Rezilience registry for a project by name, program ID, or category. Returns up to 5 matching profiles with their scores, GitHub stats, TVL, governance data, and more. ALWAYS call this before answering questions about specific projects.",
-      parameters: {
-        type: "object",
-        properties: {
-          query: {
-            type: "string",
-            description: "Project name, program ID, or category to search for",
-          },
-        },
-        required: ["query"],
-        additionalProperties: false,
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "get_ecosystem_stats",
-      description:
-        "Get the latest aggregate ecosystem health statistics including total projects, average resilience score, total TVL, commits, contributors, and health distribution.",
-      parameters: {
-        type: "object",
-        properties: {},
-        required: [],
-        additionalProperties: false,
-      },
-    },
-  },
-  {
-    type: "function",
-    function: {
-      name: "list_top_projects",
-      description:
-        "Get the leaderboard of top-scoring projects ordered by integrated resilience score. Optionally filter by category.",
-      parameters: {
-        type: "object",
-        properties: {
-          limit: {
-            type: "number",
-            description: "Number of projects to return (default 10, max 25)",
-          },
-          category: {
-            type: "string",
-            description: "Optional category filter (e.g. 'DeFi', 'Infrastructure', 'NFT')",
-          },
-        },
-        required: [],
-        additionalProperties: false,
-      },
-    },
-  },
-];
-
-// ── Database query executor ───────────────────────────────────────────────
-async function executeToolCall(
-  name: string,
-  args: Record<string, unknown>,
+// ── Context pre-fetcher (RAG approach — replaces tool calling) ────────────
+async function fetchContextForMessage(
+  userMessage: string,
   supabase: ReturnType<typeof createClient>
 ): Promise<string> {
+  const contextParts: string[] = [];
+
+  const isEcosystemQuery = /ecosystem|overall|stats|total|average|health|summary/i.test(userMessage);
+  const isLeaderboardQuery = /top|best|highest|leaderboard|ranking|rank/i.test(userMessage);
+
+  // Always fetch ecosystem stats as baseline
   try {
-    switch (name) {
-      case "lookup_project": {
-        const query = String(args.query || "");
-        // Search by project_name (ilike) or program_id (exact)
-        const { data, error } = await supabase
-          .from("claimed_profiles")
-          .select(
-            "project_name, integrated_score, score_breakdown, github_stars, github_forks, github_contributors, github_commit_velocity, github_commits_30d, dependency_health_score, dependency_outdated_count, dependency_critical_count, tvl_usd, tvl_risk_ratio, governance_tx_30d, liveness_status, category, website_url, verified, claim_status, authority_type, x_username, program_id, description, github_org_url, multisig_address, squads_version"
-          )
-          .or(
-            `project_name.ilike.%${query}%,program_id.ilike.%${query}%,category.ilike.%${query}%`
-          )
-          .order("integrated_score", { ascending: false })
-          .limit(5);
-
-        if (error) return JSON.stringify({ error: error.message });
-        if (!data || data.length === 0)
-          return JSON.stringify({
-            results: [],
-            message: `No projects found matching "${query}" in the Rezilience registry.`,
-          });
-        return JSON.stringify({ results: data });
-      }
-
-      case "get_ecosystem_stats": {
-        const { data, error } = await supabase
-          .from("ecosystem_snapshots")
-          .select("*")
-          .order("snapshot_date", { ascending: false })
-          .limit(1)
-          .single();
-
-        if (error) return JSON.stringify({ error: error.message });
-        return JSON.stringify(data);
-      }
-
-      case "list_top_projects": {
-        const limit = Math.min(Number(args.limit) || 10, 25);
-        const category = args.category ? String(args.category) : null;
-
-        let q = supabase
-          .from("claimed_profiles")
-          .select(
-            "project_name, integrated_score, liveness_status, category, github_stars, github_commit_velocity, tvl_usd, governance_tx_30d, dependency_health_score, verified, claim_status"
-          )
-          .order("integrated_score", { ascending: false })
-          .limit(limit);
-
-        if (category) {
-          q = q.ilike("category", `%${category}%`);
-        }
-
-        const { data, error } = await q;
-        if (error) return JSON.stringify({ error: error.message });
-        return JSON.stringify({ results: data });
-      }
-
-      default:
-        return JSON.stringify({ error: `Unknown tool: ${name}` });
+    const { data: snap } = await supabase
+      .from("ecosystem_snapshots")
+      .select("*")
+      .order("snapshot_date", { ascending: false })
+      .limit(1)
+      .single();
+    if (snap) {
+      contextParts.push(`## Live Ecosystem Stats\n${JSON.stringify(snap, null, 2)}`);
     }
-  } catch (e) {
-    return JSON.stringify({ error: e instanceof Error ? e.message : "Tool execution failed" });
+  } catch { /* silent */ }
+
+  // Fetch top projects for leaderboard/ecosystem queries
+  if (isLeaderboardQuery || isEcosystemQuery) {
+    try {
+      const { data: top } = await supabase
+        .from("claimed_profiles")
+        .select("project_name, integrated_score, liveness_status, category, github_stars, github_commit_velocity, tvl_usd, governance_tx_30d, dependency_health_score, verified, claim_status")
+        .order("integrated_score", { ascending: false })
+        .limit(10);
+      if (top && top.length > 0) {
+        contextParts.push(`## Top Projects by Score\n${JSON.stringify(top, null, 2)}`);
+      }
+    } catch { /* silent */ }
   }
+
+  // Search for specific projects mentioned in the message
+  const stopWords = new Set(["what", "how", "when", "where", "which", "tell", "show", "give", "about", "does", "with", "that", "this", "from", "have", "score", "project", "program", "solana", "their", "your", "rezilience", "the", "and", "for", "are", "its"]);
+  const tokens = (userMessage.match(/\b[A-Za-z][A-Za-z0-9\-_]{2,}\b/g) || [])
+    .filter(t => !stopWords.has(t.toLowerCase()))
+    .slice(0, 4);
+
+  for (const term of tokens) {
+    try {
+      const { data: results } = await supabase
+        .from("claimed_profiles")
+        .select("project_name, integrated_score, score_breakdown, github_stars, github_forks, github_contributors, github_commit_velocity, github_commits_30d, dependency_health_score, dependency_outdated_count, dependency_critical_count, tvl_usd, tvl_risk_ratio, governance_tx_30d, liveness_status, category, website_url, verified, claim_status, authority_type, x_username, program_id, description, github_org_url, multisig_address, squads_version")
+        .or(`project_name.ilike.%${term}%,program_id.ilike.%${term}%,category.ilike.%${term}%`)
+        .order("integrated_score", { ascending: false })
+        .limit(5);
+      if (results && results.length > 0) {
+        contextParts.push(`## Projects matching "${term}"\n${JSON.stringify(results, null, 2)}`);
+        break;
+      }
+    } catch { /* silent */ }
+  }
+
+  if (contextParts.length === 0) return "";
+  return `\n\n---\n# LIVE DATABASE CONTEXT (use this data to answer accurately — do not fabricate any data not present here)\n${contextParts.join("\n\n")}`;
 }
 
 // ── Main handler ──────────────────────────────────────────────────────────
@@ -282,21 +206,26 @@ serve(async (req) => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+    const requestStartTime = Date.now();
 
+    // Fetch live context based on the user's latest message
+    const lastUserMsg = [...messages].reverse().find((m: { role: string; content: string }) => m.role === "user");
+    const liveContext = lastUserMsg
+      ? await fetchContextForMessage(lastUserMsg.content, supabase)
+      : "";
+
+    // Build messages with context injected into system prompt
     const aiMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
+      { role: "system", content: SYSTEM_PROMPT + liveContext },
       ...messages,
     ];
 
-    // ── Step 1: Non-streaming call with tools ─────────────────────────────
-    let toolLoopMessages = [...aiMessages];
-    let maxToolRounds = 3;
-    const collectedToolCalls: string[] = [];
-    const requestStartTime = Date.now();
+    // Single streaming call — try primary model then fallback
+    const MODELS = ["google/gemini-2.5-flash", "openai/gpt-5-mini"];
+    let streamResponse: Response | null = null;
 
-    for (let round = 0; round < maxToolRounds; round++) {
-      const gatewayStart = Date.now();
-      const toolResponse = await fetch(
+    for (const model of MODELS) {
+      const resp = await fetch(
         "https://ai.gateway.lovable.dev/v1/chat/completions",
         {
           method: "POST",
@@ -305,157 +234,52 @@ serve(async (req) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "google/gemini-2.5-flash",
-            messages: toolLoopMessages,
-            tools: TOOLS,
-            stream: false,
+            model,
+            messages: aiMessages,
+            stream: true,
           }),
         }
       );
-      const gatewayLatency = Date.now() - gatewayStart;
-      logServiceHealth("Lovable AI Gateway", "/v1/chat/completions", toolResponse.status, gatewayLatency, toolResponse.ok ? undefined : `HTTP ${toolResponse.status}`);
-
-      if (!toolResponse.ok) {
-        if (toolResponse.status === 429) {
-          return new Response(
-            JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
-            { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        if (toolResponse.status === 402) {
-          return new Response(
-            JSON.stringify({ error: "AI credits exhausted. Please try again later." }),
-            { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-          );
-        }
-        const t = await toolResponse.text();
-        console.error("AI gateway error:", toolResponse.status, t);
-        return new Response(
-          JSON.stringify({ error: "AI service temporarily unavailable" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const toolData = await toolResponse.json();
-      const choice = toolData.choices?.[0];
-
-      if (!choice) {
-        return new Response(
-          JSON.stringify({ error: "No response from AI" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // If no tool calls, we have the final answer — stream it
-      if (
-        choice.finish_reason !== "tool_calls" ||
-        !choice.message?.tool_calls?.length
-      ) {
-        // The AI responded directly without tools — stream this final answer
+      console.log(`Model ${model} response status: ${resp.status}`);
+      if (resp.ok) {
+        streamResponse = resp;
         break;
       }
-
-      // Execute each tool call
-      toolLoopMessages.push(choice.message);
-
-      for (const tc of choice.message.tool_calls) {
-        const fnName = tc.function.name;
-        let fnArgs: Record<string, unknown> = {};
-        try {
-          fnArgs = JSON.parse(tc.function.arguments || "{}");
-        } catch {
-          fnArgs = {};
-        }
-
-        console.log(`Tool call: ${fnName}(${JSON.stringify(fnArgs)})`);
-        collectedToolCalls.push(fnName);
-        const result = await executeToolCall(fnName, fnArgs, supabase);
-
-        toolLoopMessages.push({
-          role: "tool",
-          tool_call_id: tc.id,
-          content: result,
-        });
+      const errBody = await resp.text();
+      console.error(`Model ${model} failed: ${resp.status} ${errBody}`);
+      if (resp.status === 429) {
+        return new Response(
+          JSON.stringify({ error: "Rate limit exceeded. Please try again in a moment." }),
+          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (resp.status === 402) {
+        return new Response(
+          JSON.stringify({ error: "AI credits exhausted. Please add credits to your workspace." }),
+          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
       }
     }
 
-    // ── Step 2: Check if AI already answered in the tool loop ──────────
-    // If the last message from the AI has text content (not tool calls),
-    // stream that text directly instead of making a duplicate API call.
-    const lastMsg = toolLoopMessages[toolLoopMessages.length - 1];
-    const alreadyAnswered =
-      lastMsg &&
-      typeof lastMsg === "object" &&
-      "role" in lastMsg &&
-      lastMsg.role === "assistant" &&
-      "content" in lastMsg &&
-      typeof lastMsg.content === "string" &&
-      lastMsg.content.length > 0 &&
-      !("tool_calls" in lastMsg && lastMsg.tool_calls?.length);
-
-    if (alreadyAnswered) {
-      const text = lastMsg.content as string;
-      // Estimate tokens: ~4 chars per token
-      const estimatedInputTokens = Math.ceil(JSON.stringify(toolLoopMessages).length / 4);
-      const estimatedOutputTokens = Math.ceil(text.length / 4);
-      logAIUsage({
-        conversation_id: conversation_id || undefined,
-        model: "google/gemini-2.5-flash",
-        input_tokens: estimatedInputTokens,
-        output_tokens: estimatedOutputTokens,
-        tool_calls: collectedToolCalls,
-        latency_ms: Date.now() - requestStartTime,
-        status_code: 200,
-      });
-
-      const ssePayload = `data: ${JSON.stringify({
-        choices: [{ delta: { content: text }, finish_reason: null }],
-      })}\n\ndata: ${JSON.stringify({
-        choices: [{ delta: {}, finish_reason: "stop" }],
-      })}\n\ndata: [DONE]\n\n`;
-
-      return new Response(ssePayload, {
-        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
-      });
-    }
-
-    // Otherwise, make the final streaming call with tool results in context
-    const streamResponse = await fetch(
-      "https://ai.gateway.lovable.dev/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: toolLoopMessages,
-          stream: true,
-        }),
-      }
-    );
-
-    if (!streamResponse.ok) {
-      const t = await streamResponse.text();
-      console.error("AI stream error:", streamResponse.status, t);
+    if (!streamResponse) {
       return new Response(
-        JSON.stringify({ error: "AI service temporarily unavailable" }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: "AI service temporarily unavailable. Please try again shortly." }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Log AI usage for streamed response (estimate tokens from input)
-    const estimatedInputTokens = Math.ceil(JSON.stringify(toolLoopMessages).length / 4);
+    // Fire-and-forget usage logging
+    const estimatedInputTokens = Math.ceil(JSON.stringify(aiMessages).length / 4);
     logAIUsage({
       conversation_id: conversation_id || undefined,
       model: "google/gemini-2.5-flash",
       input_tokens: estimatedInputTokens,
-      output_tokens: 500, // Estimate for streamed responses
-      tool_calls: collectedToolCalls,
+      output_tokens: 500,
+      tool_calls: [],
       latency_ms: Date.now() - requestStartTime,
       status_code: 200,
     });
+    logServiceHealth("Lovable AI Gateway", "/v1/chat/completions", 200, Date.now() - requestStartTime);
 
     return new Response(streamResponse.body, {
       headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
