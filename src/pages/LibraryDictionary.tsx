@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { Layout } from '@/components/layout/Layout';
 import { dictionary, dictionaryCategories, searchDictionary, getDictionaryByCategory } from '@/data/dictionary';
 import { DictionaryEntryCard } from '@/components/library/DictionaryEntry';
@@ -7,11 +7,15 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import type { DictionaryCategory } from '@/data/dictionary';
 
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
 export default function LibraryDictionary() {
   const [searchParams] = useSearchParams();
   const [query, setQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<DictionaryCategory | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [activeLetter, setActiveLetter] = useState<string | null>(null);
+  const letterRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Auto-expand from ?term= query param
   useEffect(() => {
@@ -31,9 +35,29 @@ export default function LibraryDictionary() {
     return [...dictionary].sort((a, b) => a.term.localeCompare(b.term));
   }, [query, selectedCategory]);
 
+  // Group entries by first letter
+  const letterGroups = useMemo(() => {
+    const groups: Record<string, typeof entries> = {};
+    entries.forEach((e) => {
+      const letter = e.term[0].toUpperCase();
+      if (!groups[letter]) groups[letter] = [];
+      groups[letter].push(e);
+    });
+    return groups;
+  }, [entries]);
+
+  const availableLetters = useMemo(() => new Set(Object.keys(letterGroups)), [letterGroups]);
+
+  const scrollToLetter = (letter: string) => {
+    setActiveLetter(letter);
+    letterRefs.current[letter]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
+  const sortedLetters = Object.keys(letterGroups).sort();
+
   return (
     <Layout>
-      <section className="container mx-auto px-4 py-16 lg:px-8 max-w-3xl">
+      <section className="container mx-auto px-4 py-16 lg:px-8 max-w-4xl">
         {/* Header */}
         <div className="mb-10">
           <Link to="/library" className="mb-4 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-primary">
@@ -49,7 +73,7 @@ export default function LibraryDictionary() {
           <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={query}
-            onChange={(e) => { setQuery(e.target.value); setSelectedCategory(null); }}
+            onChange={(e) => { setQuery(e.target.value); setSelectedCategory(null); setActiveLetter(null); }}
             placeholder="Search terms..."
             className="w-full rounded-sm border border-border/50 bg-background py-3 pl-11 pr-4 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary transition-colors"
           />
@@ -58,7 +82,7 @@ export default function LibraryDictionary() {
         {/* Category pills */}
         <div className="mb-8 flex flex-wrap gap-2">
           <button
-            onClick={() => { setSelectedCategory(null); setQuery(''); }}
+            onClick={() => { setSelectedCategory(null); setQuery(''); setActiveLetter(null); }}
             className={cn(
               'rounded-sm border px-3 py-1.5 font-mono text-xs transition-all duration-200',
               !selectedCategory
@@ -73,7 +97,7 @@ export default function LibraryDictionary() {
             return (
               <button
                 key={cat}
-                onClick={() => { setSelectedCategory(cat); setQuery(''); }}
+                onClick={() => { setSelectedCategory(cat); setQuery(''); setActiveLetter(null); }}
                 className={cn(
                   'rounded-sm border px-3 py-1.5 font-mono text-xs transition-all duration-200',
                   selectedCategory === cat
@@ -94,23 +118,60 @@ export default function LibraryDictionary() {
           </span>
         </div>
 
-        {/* Timeline Entries */}
-        {entries.length === 0 ? (
-          <div className="rounded-sm border border-border/40 bg-background px-6 py-12 text-center text-sm text-muted-foreground">
-            No terms found for "{query}"
+        <div className="flex gap-6">
+          {/* A-Z quick-jump sidebar */}
+          <nav className="hidden md:flex flex-col items-center gap-0.5 sticky top-24 self-start shrink-0">
+            {ALPHABET.map((letter) => {
+              const available = availableLetters.has(letter);
+              return (
+                <button
+                  key={letter}
+                  onClick={() => available && scrollToLetter(letter)}
+                  disabled={!available}
+                  className={cn(
+                    'w-7 h-6 flex items-center justify-center font-mono text-[10px] font-bold rounded-sm transition-all duration-200',
+                    available
+                      ? activeLetter === letter
+                        ? 'bg-primary text-primary-foreground shadow-[0_0_8px_rgba(0,194,182,0.3)]'
+                        : 'text-muted-foreground hover:text-primary hover:bg-primary/10 cursor-pointer'
+                      : 'text-muted-foreground/20 cursor-default'
+                  )}
+                >
+                  {letter}
+                </button>
+              );
+            })}
+          </nav>
+
+          {/* Entries grouped by letter */}
+          <div className="flex-1 min-w-0">
+            {entries.length === 0 ? (
+              <div className="rounded-sm border border-border/40 bg-background px-6 py-12 text-center text-sm text-muted-foreground">
+                No terms found for "{query}"
+              </div>
+            ) : (
+              <div className="relative space-y-6">
+                {sortedLetters.map((letter) => (
+                  <div key={letter} ref={(el) => { letterRefs.current[letter] = el; }}>
+                    <div className="sticky top-20 z-10 mb-2">
+                      <span className="inline-block rounded-sm border border-primary/30 bg-background px-2.5 py-0.5 font-mono text-xs font-bold text-primary shadow-sm">
+                        {letter}
+                      </span>
+                    </div>
+                    {letterGroups[letter].map((entry) => (
+                      <DictionaryEntryCard
+                        key={entry.id}
+                        entry={entry}
+                        isExpanded={expandedId === entry.id}
+                        onToggle={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-        ) : (
-          <div className="relative">
-            {entries.map((entry) => (
-              <DictionaryEntryCard
-                key={entry.id}
-                entry={entry}
-                isExpanded={expandedId === entry.id}
-                onToggle={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-              />
-            ))}
-          </div>
-        )}
+        </div>
       </section>
     </Layout>
   );
