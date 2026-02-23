@@ -1,103 +1,130 @@
 
 
-## Fix Score History Pipeline + Redesign Analytics Chart
+## Add 70+ Solana Engineering Terms to Dictionary
 
-### Problem 1: Score History Not Capturing (Critical Bug)
+### What's Already Covered (skip these)
+The dictionary already has solid entries for: PDAs, Seeds, Bump Seeds, CPI, Lamports, SOL, Rent, Account, Space, Discriminator, Instruction, Transaction, Blockhash, Versioned Transactions, ALTs, Compute Units, Priority Fees, Signer, Keypair, SPL Token, Token-2022, Mint, ATA, AMM, LP, TVL, Slippage, MEV, IDL, Anchor, NFT, cNFT, State Compression, Merkle Tree, RPC, Multisig, Governance, DAO, Program Authority, Stake, Devnet, Mainnet, WebSocket, Transfer Hook, Realms, Slot, Epoch, Validator, Impermanent Loss.
 
-The `refresh-all-profiles` edge function is failing to write score history snapshots with this error:
+### Search Field
+The dictionary page already has a working search bar. No changes needed here -- it already filters by term name, abbreviation, definition, and category.
 
-```
-"there is no unique or exclusion constraint matching the ON CONFLICT specification"
-```
+### New Terms to Add (~70 entries)
 
-**Root cause:** The upsert uses `onConflict: "claimed_profile_id,snapshot_date"` but the actual unique index is a **function-based index**: `UNIQUE (claimed_profile_id, snapshot_date_day(snapshot_date))`. The Supabase JS client cannot target function-based indexes with `onConflict` -- it only works with raw column names.
+Grouped by category:
 
-This means **no new score history snapshots have been recorded** since this index was created. The 2 existing rows (Feb 14 and Feb 15) were inserted before the index was added.
+**Accounts (8 new)**
+- Account Ownership Rules
+- Account Data Layout Design
+- Zero-Copy Accounts
+- Account Realloc Patterns
+- Writable vs Readonly Accounts
+- Account Locking and Parallel Execution
+- Upgradeable Buffer Accounts
+- Durable Nonce Accounts
 
-**Fix:** Replace the upsert with a delete-then-insert pattern:
-1. DELETE any existing row for today's date for this profile
-2. INSERT the new snapshot
+**Transactions (10 new)**
+- Transaction Size Limits (1232 bytes)
+- Atomic Transaction Guarantees
+- Transaction Simulation vs Execution
+- Preflight Checks
+- Partial Signing Transactions
+- Offline Transaction Signing
+- Transaction Landing Optimization
+- Transaction Confirmation UX Design
+- Failed Transaction Debugging Workflow
+- Instruction Replay Safety
 
-This sidesteps the function-based index limitation entirely.
+**Consensus (8 new)**
+- Proof of History (PoH)
+- Leader Schedule and Block Production
+- Turbine Block Propagation
+- Gulf Stream Transaction Forwarding
+- QUIC Networking in Solana
+- Replay Stage and Fork Choice
+- Commitment Levels
+- Forks and Rollback Handling
 
-### Problem 2: Analytics Chart Redesign
+**Infrastructure (7 new)**
+- Concurrent Merkle Trees
+- Indexer Architecture
+- Event Indexing from Logs
+- RPC Rate Limiting Strategies
+- RPC Consistency Guarantees
+- Devnet vs Mainnet Behavioral Differences
+- Sysvars
 
-The current chart is a dual-axis ComposedChart (bars for velocity + line for score) crammed into a tab. With only 2 stale data points, it looks broken.
+**Development (14 new)**
+- System Program Responsibilities
+- Upgradeable Program Loader Internals
+- Borsh Serialization
+- Anchor Account Validation Pipeline
+- Anchor Constraint Macros
+- Anchor Events vs Logs
+- Program Logs and Debugging Strategy
+- LiteSVM vs Local Validator Testing
+- Test Validator Architecture
+- BPF Execution Model
+- LLVM to SBF Compilation Pipeline
+- Program Deployment Lifecycle
+- Compute Profiling Techniques
+- Program Size Optimization
 
-**Proposed new design -- a clean "Score Trend" card:**
-- Replace the ComposedChart with a single-axis AreaChart showing score over time (gradient fill under the line)
-- Add a prominent current score badge at the top-left (e.g., "63/100") with a delta indicator (up/down/stable arrow + point change)
-- Show commit velocity as a subtle secondary stat below the chart rather than a competing axis
-- Keep the "Last synced" indicator but move it inline with the card header
-- Use a smooth monotone curve with a gradient fill from primary color to transparent
+**Security (12 new)**
+- Reentrancy in Solana
+- Upgradeable Program Security Risks
+- Replay Attack Prevention
+- Signature Verification Flow
+- Ed25519 Program Usage
+- Secp256k1 Verification Program
+- Compute Exhaustion Attacks
+- Account Inflation Attacks
+- Rent Draining Vectors
+- CPI Depth Limits
+- Stack Frame Limits
+- Heap Allocation Constraints
 
-### Technical Changes
+**Tokens (3 new)**
+- Mint Authority vs Freeze Authority
+- Delegation Mechanics
+- Metaplex Metadata Accounts
 
-**1. Database migration -- add simple unique constraint**
+**NFTs (2 new)**
+- Candy Machine Architecture
+- On-Chain Randomness Limitations
 
-```sql
--- Drop the function-based index that JS client can't target
-DROP INDEX IF EXISTS idx_score_history_profile_day;
+**DeFi (4 new)**
+- Oracle Design Patterns (Pyth/Switchboard)
+- Escrow Design Patterns
+- Jito Bundles and Block Engines
+- Wallet Adapter Lifecycle
 
--- Add a date column for clean deduplication
-ALTER TABLE score_history ADD COLUMN IF NOT EXISTS snapshot_day date 
-  GENERATED ALWAYS AS ((snapshot_date AT TIME ZONE 'UTC')::date) STORED;
+**Governance (1 new)**
+- Time-Locked Accounts / Vesting Contracts
 
--- Create unique constraint on the generated column (JS client can target this)
-CREATE UNIQUE INDEX idx_score_history_profile_day 
-  ON score_history (claimed_profile_id, snapshot_day) 
-  WHERE claimed_profile_id IS NOT NULL;
-```
+**Runtime (mapped to existing categories)**
+- Sealevel Runtime Scheduling (Infrastructure)
+- Optimistic Concurrency Model (Consensus)
+- Deterministic Execution Constraints (Development)
+- Serialization Cost vs Compute Tradeoffs (Development)
+- Idempotent Instruction Design (Development)
+- State Machine Modeling On-Chain (Development)
+- Optimistic UI vs Finalized State (Development)
+- State Migration Strategies (Development)
+- Backward-Compatible Account Upgrades (Development)
+- Deterministic Randomness Strategies (Security)
+- Priority Fee Auctions (Transactions)
+- MEV on Solana / Jito (already partially covered by MEV entry)
 
-**2. `supabase/functions/refresh-all-profiles/index.ts`**
+### Technical Implementation
 
-Replace the upsert block (lines 359-368) with a delete-then-insert approach:
+**File: `src/data/dictionary.ts`**
+- Add ~70 new `DictionaryEntry` objects to the `dictionary` array
+- Each entry includes: id, term, abbreviation (where applicable), category, definition, whenToUse, example (code snippet), relatedTerms
+- Cross-reference related terms between new and existing entries
+- All entries use existing categories (no new categories needed)
 
-```typescript
-// Delete existing snapshot for today (if any)
-const todayStart = `${today}T00:00:00Z`;
-const todayEnd = `${today}T23:59:59Z`;
-await supabase
-  .from("score_history")
-  .delete()
-  .eq("claimed_profile_id", profile.id)
-  .gte("snapshot_date", todayStart)
-  .lte("snapshot_date", todayEnd);
+### No other files need changes
+- The dictionary page (`LibraryDictionary.tsx`) already has search, category filtering, and the timeline UI
+- The `DictionaryEntryCard` component already handles expansion, code blocks, and "Ask GPT"
+- The `searchDictionary` function already searches across term, abbreviation, definition, and category
 
-// Insert fresh snapshot
-const { error: historyError } = await supabase
-  .from("score_history")
-  .insert({
-    claimed_profile_id: profile.id,
-    score: finalScore,
-    commit_velocity: actualVelocity,
-    days_last_commit: daysSinceLastCommit,
-    snapshot_date: new Date().toISOString(),
-    breakdown: scoreBreakdown,
-  });
-```
-
-**3. `src/components/program/AnalyticsCharts.tsx` -- Redesigned ScoreHistoryChart**
-
-Replace the ComposedChart with:
-- A header row showing: current score (large text), delta badge (e.g. "+16"), and synced timestamp
-- A clean AreaChart with gradient fill (single Y-axis, 0-100 range for score)
-- A small stat row below: "Avg velocity: X.XX commits/day" and "Data points: N"
-- Use `linearGradient` defs for the area fill (primary color fading to transparent)
-
-**4. `src/components/program/UpgradeChart.tsx` -- Same redesign**
-
-Mirror the same AreaChart design for consistency across both the public profile and dashboard views.
-
-**5. `src/hooks/useScoreHistory.ts` -- Add delta calculation**
-
-Add a `scoreDelta` field to the chart hook return:
-- Compare latest score to previous score
-- Return `{ value: number, direction: 'up' | 'down' | 'stable' }`
-
-### Expected Outcome
-
-- Score history snapshots resume recording on every refresh cycle (every 30 minutes)
-- The chart shows a clean area gradient with the score trend line
-- Current score and change delta are prominently displayed
-- Stale data is immediately obvious from the "Last synced" indicator
