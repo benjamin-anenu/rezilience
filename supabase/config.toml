@@ -83,3 +83,6 @@ verify_jwt = false
 
 [functions.enrich-countries]
 verify_jwt = false
+
+[functions.fetch-realms-governance]
+verify_jwt = false
