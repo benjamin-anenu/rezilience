@@ -9,8 +9,6 @@ const corsHeaders = {
 
 /**
  * Query the OpenSSF Scorecard API for a GitHub repo's security posture.
- * Returns a 0-10 score covering branch protection, code review, CI/CD,
- * signed releases, vulnerability disclosure, and more.
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -34,7 +32,6 @@ Deno.serve(async (req) => {
     // Extract owner/repo from GitHub URL
     const match = github_url.match(/github\.com\/([^/]+)\/([^/]+)/);
     if (!match) {
-      // Try org-level URL: github.com/org -> we can't query scorecard for orgs
       const orgMatch = github_url.match(/github\.com\/([^/]+)\/?$/);
       if (orgMatch) {
         console.log(`Skipping org-level URL for OpenSSF: ${github_url}`);
@@ -48,7 +45,6 @@ Deno.serve(async (req) => {
 
     const owner = match[1];
     let repo = match[2];
-    // Strip .git suffix if present
     repo = repo.replace(/\.git$/, "");
 
     const scorecardUrl = `https://api.scorecard.dev/projects/github.com/${owner}/${repo}`;
@@ -56,13 +52,16 @@ Deno.serve(async (req) => {
 
     const scStart = Date.now();
     const response = await fetch(scorecardUrl);
-    logServiceHealth("OpenSSF Scorecard", `/projects/github.com/${owner}/${repo}`, response.status, Date.now() - scStart, response.ok ? undefined : `HTTP ${response.status}`);
+    const latency = Date.now() - scStart;
 
     if (!response.ok) {
       const errorText = await response.text();
+
       if (response.status === 404) {
-        console.log(`OpenSSF Scorecard not available for ${owner}/${repo}`);
-        // Not all repos are indexed — this is normal
+        // 404 = repo not indexed — this is expected, NOT a service failure
+        logServiceHealth("OpenSSF Scorecard", `/projects/github.com/${owner}/${repo}`, 200, latency, undefined);
+        console.log(`OpenSSF Scorecard not available for ${owner}/${repo} (not indexed)`);
+
         await supabase
           .from("claimed_profiles")
           .update({
@@ -77,20 +76,24 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
+      // Actual errors (5xx etc.) — log as real failures
+      logServiceHealth("OpenSSF Scorecard", `/projects/github.com/${owner}/${repo}`, response.status, latency, `HTTP ${response.status}`);
       throw new Error(`OpenSSF API error [${response.status}]: ${errorText}`);
     }
+
+    // Success
+    logServiceHealth("OpenSSF Scorecard", `/projects/github.com/${owner}/${repo}`, response.status, latency);
 
     const data = await response.json();
     const score = data.score ?? null;
     
-    // Extract individual check results
     const checks = (data.checks || []).map((check: any) => ({
       name: check.name,
       score: check.score,
       reason: check.reason,
     }));
 
-    // Update the profile
     const { error: updateError } = await supabase
       .from("claimed_profiles")
       .update({
