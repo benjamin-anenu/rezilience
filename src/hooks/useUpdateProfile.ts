@@ -38,6 +38,7 @@ interface UpdateProfileParams {
     team_members?: TeamMemberUpdate[];
     staking_pitch?: string;
     logo_url?: string;
+    realms_dao_address?: string;
   };
 }
 

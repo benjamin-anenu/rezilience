@@ -29,6 +29,7 @@ import LibraryDocs from "./pages/LibraryDocs";
 import PitchDeck from "./pages/PitchDeck";
 import ResilienceGPT from "./pages/ResilienceGPT";
 import Terms from "./pages/Terms";
+import HackathonDemo from "./pages/HackathonDemo";
 import NotFound from "./pages/NotFound";
 
 // Admin imports
@@ -81,6 +82,7 @@ const App = () => (
               <Route path="/pitch" element={<PitchDeck />} />
               <Route path="/gpt" element={<ResilienceGPT />} />
               <Route path="/terms" element={<Terms />} />
+              <Route path="/demo" element={<HackathonDemo />} />
 
               {/* Admin Portal */}
               <Route path="/admin/login" element={<AdminLogin />} />

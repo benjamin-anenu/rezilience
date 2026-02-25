@@ -8,6 +8,7 @@ import { AnalyticsCharts } from '../AnalyticsCharts';
 import { RecentEvents } from '../RecentEvents';
 import { DependencyHealthCard } from '../DependencyHealthCard';
 import { GovernanceHealthCard } from '../GovernanceHealthCard';
+import { DAOAccountabilityCard } from '../DAOAccountabilityCard';
 import { TVLMetricsCard } from '../TVLMetricsCard';
 import { VulnerabilityCard } from '../VulnerabilityCard';
 import { useBytecodeVerification, getBytecodeStatusInfo } from '@/hooks/useBytecodeVerification';
@@ -49,6 +50,13 @@ interface DevelopmentTabContentProps {
   openssfScore?: number | null;
   openssfChecks?: Record<string, unknown> | null;
   openssfAnalyzedAt?: string | null;
+  // Realms DAO Accountability
+  realmsDaoAddress?: string | null;
+  realmsProposalsTotal?: number;
+  realmsProposalsCompleted?: number;
+  realmsProposalsActive?: number;
+  realmsDeliveryRate?: number | null;
+  realmsAnalyzedAt?: string | null;
 }
 
 export function DevelopmentTabContent({
@@ -85,6 +93,13 @@ export function DevelopmentTabContent({
   openssfScore,
   openssfChecks,
   openssfAnalyzedAt,
+  // Realms DAO
+  realmsDaoAddress,
+  realmsProposalsTotal = 0,
+  realmsProposalsCompleted = 0,
+  realmsProposalsActive = 0,
+  realmsDeliveryRate,
+  realmsAnalyzedAt,
 }: DevelopmentTabContentProps) {
   const { verifyBytecode, isVerifying } = useBytecodeVerification();
 
@@ -282,6 +297,14 @@ export function DevelopmentTabContent({
           transactions30d={governanceTx30d}
           lastActivity={governanceLastActivity}
           analyzedAt={governanceAnalyzedAt}
+        />
+        <DAOAccountabilityCard
+          realmsDaoAddress={realmsDaoAddress}
+          proposalsTotal={realmsProposalsTotal}
+          proposalsCompleted={realmsProposalsCompleted}
+          proposalsActive={realmsProposalsActive}
+          deliveryRate={realmsDeliveryRate}
+          analyzedAt={realmsAnalyzedAt}
         />
         {(category === 'defi' || tvlUsd > 0) && (
           <TVLMetricsCard
