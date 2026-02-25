@@ -17,6 +17,7 @@ const tocItems: TOCItem[] = [
   { id: 'github-score', label: 'GitHub Activity (40%)', level: 2 },
   { id: 'dependency-score', label: 'Dependency Health (25%)', level: 2 },
   { id: 'governance-score', label: 'Governance (20%)', level: 2 },
+  { id: 'realms-accountability', label: 'DAO Accountability', level: 2 },
   { id: 'tvl-score', label: 'TVL/Economic (15%)', level: 2 },
   { id: 'decay', label: 'Decay Rate', level: 2 },
   { id: 'indicators', label: 'Visual Indicators', level: 1 },

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Globe, MessageCircle, Send, Loader2, Check, ImageIcon } from 'lucide-react';
+import { Globe, MessageCircle, Send, Loader2, Check, ImageIcon, Heart } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
   const [discordUrl, setDiscordUrl] = useState(profile.socials.discordUrl || '');
   const [telegramUrl, setTelegramUrl] = useState(profile.socials.telegramUrl || '');
   const [logoUrl, setLogoUrl] = useState(profile.logoUrl || '');
+  const [realmsDaoAddress, setRealmsDaoAddress] = useState((profile as any).realmsDaoAddress || '');
   const [hasChanges, setHasChanges] = useState(false);
 
   const updateProfile = useUpdateProfile();
@@ -28,9 +29,10 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
       websiteUrl !== (profile.websiteUrl || '') ||
       discordUrl !== (profile.socials.discordUrl || '') ||
       telegramUrl !== (profile.socials.telegramUrl || '') ||
-      logoUrl !== (profile.logoUrl || '');
+      logoUrl !== (profile.logoUrl || '') ||
+      realmsDaoAddress !== ((profile as any).realmsDaoAddress || '');
     setHasChanges(changed);
-  }, [websiteUrl, discordUrl, telegramUrl, logoUrl, profile]);
+  }, [websiteUrl, discordUrl, telegramUrl, logoUrl, realmsDaoAddress, profile]);
 
   const handleSave = () => {
     updateProfile.mutate({
@@ -41,6 +43,7 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
         discord_url: discordUrl || undefined,
         telegram_url: telegramUrl || undefined,
         logo_url: logoUrl || undefined,
+        realms_dao_address: realmsDaoAddress || undefined,
       },
     });
   };
@@ -58,7 +61,8 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
   const isWebsiteValid = validateUrl(websiteUrl);
   const isDiscordValid = validateUrl(discordUrl);
   const isTelegramValid = validateUrl(telegramUrl);
-  const canSave = hasChanges && isWebsiteValid && isDiscordValid && isTelegramValid;
+  const isRealmsValid = !realmsDaoAddress || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(realmsDaoAddress);
+  const canSave = hasChanges && isWebsiteValid && isDiscordValid && isTelegramValid && isRealmsValid;
 
   return (
     <div className="space-y-6">
@@ -157,6 +161,34 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
             />
             {!isTelegramValid && (
               <p className="text-xs text-destructive">Please enter a valid URL</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Realms DAO Address */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 font-display text-lg uppercase tracking-tight">
+            <Heart className="h-5 w-5 text-chart-4" />
+            Realms DAO Address
+          </CardTitle>
+          <CardDescription>
+            Link your Realms governance DAO to track proposal delivery rates.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-2">
+            <Label htmlFor="realmsDao">DAO Address</Label>
+            <Input
+              id="realmsDao"
+              placeholder="e.g. GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw"
+              value={realmsDaoAddress}
+              onChange={(e) => setRealmsDaoAddress(e.target.value)}
+              className={`font-mono ${!isRealmsValid ? 'border-destructive' : ''}`}
+            />
+            {!isRealmsValid && (
+              <p className="text-xs text-destructive">Invalid Solana address format</p>
             )}
           </div>
         </CardContent>

@@ -303,7 +303,7 @@ export function HowItWorksSlide() {
     num: '03',
     icon: Lock,
     title: 'COMMIT',
-    desc: 'Economic commitment through staked assurance bonds. Public milestone tracking with Commitment Locks and timeline variance alerts.'
+    desc: 'Economic commitment through staked assurance bonds. DAO Accountability tracks Realms governance proposals against actual delivery — exposing which funded projects ship and which stall.'
   }, {
     num: '04',
     icon: AlertTriangle,
@@ -386,6 +386,10 @@ export function PossibilitiesSlide() {
     icon: BookOpen,
     title: 'Grants Directory',
     desc: 'Curated funding resource for builders — a public good with no gatekeeping.'
+  }, {
+    icon: Heart,
+    title: 'DAO Accountability',
+    desc: 'Track whether governance-funded projects actually deliver. Realms proposal execution mapped to Rezilience scores.'
   }, {
     icon: Zap,
     title: 'Score Oracle',
@@ -522,7 +526,7 @@ export function RoadmapSlide() {
     timeline: 'Months 3–5',
     budget: '$15,000',
     status: 'PLANNED',
-    items: ['Staking bonds & yield mechanics', 'Commitment Locks', 'Bond marketplace', 'Staking contract security review'],
+    items: ['Staking bonds & yield mechanics', 'Commitment Locks', 'Realms DAO Accountability Layer', 'Proposal-to-Delivery Rate tracking', 'Bond marketplace'],
     color: 'border-muted-foreground/30'
   }, {
     phase: '3',

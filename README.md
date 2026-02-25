@@ -130,6 +130,7 @@ supabase/
 | `record-claim-attempt` | Records claim attempts for rate limiting |
 | `refresh-all-profiles` | Batch refresh of all profile metrics |
 | `refresh-governance-hourly` | Scheduled governance data refresh |
+| `fetch-realms-governance` | Reads spl-governance proposals from Realms DAOs and tracks delivery rates |
 | `refresh-tvl-realtime` | High-frequency TVL refresh for DeFi profiles |
 | `seed-registry-profiles` | Seeds the registry with known Solana programs |
 | `update-profile` | Updates claimed profile data |
@@ -205,6 +206,7 @@ High-level planned milestones:
 
 - **Score Oracle** — On-chain Anchor program to publish `(program_id, score, timestamp)` for protocol-level composability
 - **Economic Commitment Layer** — Staking and assurance bonds with yield tied to Resilience Score thresholds
+- **DAO Accountability Layer** — Realms governance proposal tracking with delivery rate scoring and milestone mapping
 - **AEGIS Supply Chain Intelligence** — Real-time CVE propagation and risk mapping across the ecosystem dependency graph
 - **Multi-chain Expansion** — Extend scoring and indexing beyond Solana
 

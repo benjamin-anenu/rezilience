@@ -97,8 +97,55 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── PASS 2: Realms DAO Accountability ──
+    const { data: realmsProfiles, error: realmsError } = await supabase
+      .from("claimed_profiles")
+      .select("id, project_name, realms_dao_address")
+      .not("realms_dao_address", "is", null);
+
+    let realmsSuccess = 0;
+    let realmsErrors = 0;
+
+    if (!realmsError && realmsProfiles && realmsProfiles.length > 0) {
+      console.log(`[Governance Hourly] Found ${realmsProfiles.length} profiles with Realms DAO addresses`);
+
+      const realmsUrl = `${supabaseUrl}/functions/v1/fetch-realms-governance`;
+
+      for (const rp of realmsProfiles) {
+        try {
+          console.log(`[Governance Hourly] Realms analysis: ${rp.project_name}`);
+
+          const response = await fetch(realmsUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${supabaseKey}`,
+            },
+            body: JSON.stringify({
+              realm_address: rp.realms_dao_address,
+              profile_id: rp.id,
+            }),
+          });
+
+          if (response.ok) {
+            realmsSuccess++;
+            const data = await response.json();
+            console.log(`✓ Realms updated: ${rp.project_name} (${data?.delivery_rate ?? 'N/A'}% delivery)`);
+          } else {
+            realmsErrors++;
+            console.error(`✗ Realms failed: ${rp.project_name} - ${await response.text()}`);
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, 1500));
+        } catch (err) {
+          realmsErrors++;
+          console.error(`✗ Realms exception for ${rp.project_name}:`, err);
+        }
+      }
+    }
+
     const summary = {
-      message: `Governance hourly refresh complete: ${successCount} updated, ${errorCount} errors`,
+      message: `Governance hourly refresh complete: ${successCount} updated, ${errorCount} errors | Realms: ${realmsSuccess} updated, ${realmsErrors} errors`,
       total: profiles.length,
       success: successCount,
       errors: errorCount,

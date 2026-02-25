@@ -27,6 +27,8 @@ interface CoreIdentityFormProps {
   setWebsiteUrl: (value: string) => void;
   logoUrl?: string;
   setLogoUrl?: (value: string) => void;
+  realmsDaoAddress?: string;
+  setRealmsDaoAddress?: (value: string) => void;
 }
 
 export const CoreIdentityForm = ({
@@ -42,7 +44,12 @@ export const CoreIdentityForm = ({
   setWebsiteUrl,
   logoUrl,
   setLogoUrl,
+  realmsDaoAddress,
+  setRealmsDaoAddress,
 }: CoreIdentityFormProps) => {
+
+  const isRealmsRelevant = category === 'dao' || category === 'defi';
+  const isValidSolanaAddress = (addr: string) => !addr || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
 
   return (
     <div className="space-y-6">
@@ -165,6 +172,28 @@ export const CoreIdentityForm = ({
           </div>
 
           <WebsitePreview url={websiteUrl} />
+
+          {/* Realms DAO Address — shown for DAO/DeFi categories */}
+          {isRealmsRelevant && setRealmsDaoAddress && (
+            <div className="space-y-2">
+              <Label htmlFor="realmsDaoAddress" className="font-display text-xs uppercase tracking-wider">
+                Realms DAO Address
+              </Label>
+              <Input
+                id="realmsDaoAddress"
+                placeholder="e.g. GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw"
+                value={realmsDaoAddress || ''}
+                onChange={(e) => setRealmsDaoAddress(e.target.value)}
+                className={`font-mono ${realmsDaoAddress && !isValidSolanaAddress(realmsDaoAddress) ? 'border-destructive' : ''}`}
+              />
+              {realmsDaoAddress && !isValidSolanaAddress(realmsDaoAddress) && (
+                <p className="text-xs text-destructive">Invalid Solana address format</p>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Link your Realms governance to track proposal delivery rates.
+              </p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

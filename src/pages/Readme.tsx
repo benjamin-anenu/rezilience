@@ -342,6 +342,45 @@ export default function Readme() {
                   </Card>
                 </div>
 
+                <div id="realms-accountability" className="scroll-mt-24 mb-8">
+                  <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground mb-4">
+                    DAO Accountability (Realms Integration)
+                  </h3>
+                  <Card className="card-premium">
+                    <CardContent className="pt-6">
+                      <p className="text-muted-foreground mb-4">
+                        Rezilience reads governance proposals from <strong className="text-foreground">Realms-powered DAOs</strong> (spl-governance)
+                        and tracks whether funded proposals are actually executed — creating a <strong className="text-primary">Delivery Rate</strong> metric.
+                      </p>
+                      <div className="space-y-3 mb-4">
+                        <MetricRow label="Delivery Rate" weight="%" description="(Completed + Executing) / (Total - Draft - Cancelled)" />
+                        <MetricRow label="Rate ≥ 70%" weight="+10" description="Governance sub-score bonus" />
+                        <MetricRow label="Rate 40-70%" weight="±0" description="No modifier applied" />
+                        <MetricRow label="Rate < 40%" weight="-15" description="Governance sub-score penalty" />
+                      </div>
+                      <div className="rounded-sm bg-muted/30 p-4 border border-border mb-4">
+                        <p className="font-mono text-xs text-primary mb-2">PROPOSAL STATES:</p>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-muted-foreground">
+                          <span>0 = Draft</span>
+                          <span>1 = SigningOff</span>
+                          <span>2 = Voting</span>
+                          <span>3 = Succeeded</span>
+                          <span>4 = Executing</span>
+                          <span>5 = Completed</span>
+                          <span>6 = Cancelled</span>
+                          <span>7 = Defeated</span>
+                        </div>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Projects without a Realms DAO address are unaffected. Data refreshes hourly via the governance cron.
+                        <a href="https://app.realms.today" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline ml-1">
+                          Learn more about Realms →
+                        </a>
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+
                 <div id="tvl-score" className="scroll-mt-24">
                   <h3 className="font-display text-lg font-bold uppercase tracking-wider text-foreground mb-4">
                     TVL/Economic (15%)
