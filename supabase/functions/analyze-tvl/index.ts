@@ -7,6 +7,86 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/**
+ * Static mapping from DB project_name → DeFiLlama protocol slug.
+ * Case-insensitive lookup is done via toLowerCase().
+ */
+const DEFILLAMA_SLUG_MAP: Record<string, string> = {
+  "marinade finance": "marinade",
+  "marinade": "marinade",
+  "kamino finance (klend)": "kamino",
+  "kamino lending": "kamino",
+  "kamino lend (klend)": "kamino",
+  "kamino": "kamino",
+  "jupiter aggregator v6": "jupiter",
+  "jupiter": "jupiter",
+  "jupiter dca": "jupiter-dca",
+  "jupiter perpetuals": "jupiter-perps",
+  "jupiter perps": "jupiter-perps",
+  "jupiter limit order v2": "jupiter-limit-order",
+  "raydium clmm": "raydium",
+  "raydium": "raydium",
+  "drift protocol v2": "drift",
+  "drift protocol": "drift",
+  "drift": "drift",
+  "drift keeper bots v2": "drift",
+  "marginfi v2": "marginfi",
+  "marginfi lending": "marginfi",
+  "marginfi": "marginfi",
+  "mango v4": "mango-markets",
+  "mango markets": "mango-markets",
+  "meteora dlmm": "meteora",
+  "meteora": "meteora",
+  "lifinity v2": "lifinity",
+  "lifinity": "lifinity",
+  "blazestake": "blazestake",
+  "jito stake pool": "jito",
+  "jito spl stake pool": "jito",
+  "jito": "jito",
+  "hubble protocol": "hubble-protocol",
+  "phoenix v1": "phoenix",
+  "phoenix": "phoenix",
+  "invariant": "invariant",
+  "dual finance": "dual-finance",
+  "save (formerly solend)": "solend",
+  "solend": "solend",
+  "sanctum": "sanctum",
+  "sanctum spl stake pool": "sanctum",
+  "sanctum token ratio": "sanctum",
+  "hxro dexterity": "hxro",
+  "hxro": "hxro",
+  "credix": "credix-finance",
+  "flash trade": "flash-trade",
+  "jet protocol v2": "jet-protocol",
+  "jet protocol": "jet-protocol",
+  "access protocol": "access-protocol",
+  "openbook dex v2": "openbook",
+  "openbook": "openbook",
+  "orca": "orca",
+  "tulip protocol": "tulip-protocol",
+  "port finance": "port-finance",
+  "francium": "francium",
+  "apricot finance": "apricot",
+  "larix": "larix",
+  "saber": "saber",
+  "mercurial finance": "mercurial-finance",
+  "atrix": "atrix",
+  "serum": "serum",
+  "tensor": "tensor",
+  "parcl": "parcl",
+  "lulo": "lulo",
+};
+
+/**
+ * Resolve a project name to a DeFiLlama slug.
+ * First checks the static map, then falls back to naive slugification.
+ */
+function resolveDefillamaSlug(name: string): string {
+  const mapped = DEFILLAMA_SLUG_MAP[name.toLowerCase().trim()];
+  if (mapped) return mapped;
+  return normalizeProtocolName(name);
+}
+
 interface TVLAnalysisResult {
   protocolName: string;
   tvlUsd: number;
@@ -45,8 +125,7 @@ async function getSolanaTotalTVL(): Promise<number> {
 }
 
 /**
- * Normalize protocol name for DeFiLlama lookup
- * DeFiLlama uses slugified names
+ * Normalize protocol name for DeFiLlama lookup (fallback)
  */
 function normalizeProtocolName(name: string): string {
   return name
@@ -58,24 +137,17 @@ function normalizeProtocolName(name: string): string {
 
 /**
  * Calculate TVL-to-commit risk ratio
- * High TVL with low commits = ZOMBIE TITAN (high risk)
  */
 function calculateRiskRatio(tvl: number, monthlyCommits: number): { ratio: number; level: string } {
   if (tvl === 0) return { ratio: 0, level: "HEALTHY" };
   
-  const commits = Math.max(monthlyCommits, 1); // Avoid division by zero
+  const commits = Math.max(monthlyCommits, 1);
   const ratio = tvl / commits;
   
-  // Risk thresholds based on $TVL per commit
-  if (ratio > 50_000_000) {
-    return { ratio, level: "ZOMBIE_TITAN" }; // >$50M per commit = RED FLAG
-  } else if (ratio > 10_000_000) {
-    return { ratio, level: "HIGH_RISK" }; // >$10M per commit
-  } else if (ratio > 1_000_000) {
-    return { ratio, level: "MODERATE" }; // >$1M per commit
-  }
-  
-  return { ratio, level: "HEALTHY" }; // <$1M per commit
+  if (ratio > 50_000_000) return { ratio, level: "ZOMBIE_TITAN" };
+  if (ratio > 10_000_000) return { ratio, level: "HIGH_RISK" };
+  if (ratio > 1_000_000) return { ratio, level: "MODERATE" };
+  return { ratio, level: "HEALTHY" };
 }
 
 Deno.serve(async (req) => {
@@ -95,20 +167,28 @@ Deno.serve(async (req) => {
 
     console.log(`💰 Analyzing TVL for protocol: ${protocol_name}`);
 
-    const normalizedName = normalizeProtocolName(protocol_name);
+    const slug = resolveDefillamaSlug(protocol_name);
+    console.log(`📎 Resolved slug: "${protocol_name}" → "${slug}"`);
     
     // Fetch protocol data from DeFiLlama
     const start = Date.now();
-    const response = await fetch(`https://api.llama.fi/protocol/${normalizedName}`, {
+    const response = await fetch(`https://api.llama.fi/protocol/${slug}`, {
       headers: {
         Accept: "application/json",
         "User-Agent": "Rezilience-Registry",
       },
     });
-    logServiceHealth("DeFiLlama API", `/protocol/${normalizedName}`, response.status, Date.now() - start);
+    const latency = Date.now() - start;
+
+    // Only log as error for actual failures (5xx, network), NOT 404s
+    if (response.status === 404) {
+      logServiceHealth("DeFiLlama API", `/protocol/${slug}`, 200, latency, undefined);
+    } else {
+      logServiceHealth("DeFiLlama API", `/protocol/${slug}`, response.status, latency, response.ok ? undefined : `HTTP ${response.status}`);
+    }
 
     if (!response.ok) {
-      console.log(`Protocol ${protocol_name} not found on DeFiLlama`);
+      console.log(`Protocol ${protocol_name} (slug: ${slug}) not found on DeFiLlama`);
       
       const result: TVLAnalysisResult = {
         protocolName: protocol_name,
@@ -122,7 +202,6 @@ Deno.serve(async (req) => {
         found: false,
       };
       
-      // Update profile if provided
       if (profile_id) {
         await updateProfile(profile_id, result);
       }
@@ -135,12 +214,8 @@ Deno.serve(async (req) => {
 
     const data = await response.json();
     
-    // Get Solana-specific TVL if available
-    // currentChainTvls contains current TVL per chain
-    // data.tvl is historical array, not current value
     const tvlSolana = data.currentChainTvls?.Solana || 0;
     
-    // Get current total TVL from chainTvls summary or calculate from currentChainTvls
     let currentTvl = 0;
     if (data.currentChainTvls) {
       currentTvl = Object.values(data.currentChainTvls).reduce((sum: number, val: any) => sum + (typeof val === 'number' ? val : 0), 0);
@@ -149,11 +224,9 @@ Deno.serve(async (req) => {
     const tvlUsd = tvlSolana || currentTvl || 0;
     const chains = data.chains || [];
 
-    // Get total Solana TVL for market share
     const solanaTotalTVL = await getSolanaTotalTVL();
     const marketShare = solanaTotalTVL > 0 ? (tvlSolana / solanaTotalTVL) * 100 : 0;
 
-    // Calculate risk ratio
     const commits = monthly_commits || 1;
     const { ratio, level } = calculateRiskRatio(tvlSolana || tvlUsd, commits);
 
@@ -171,7 +244,6 @@ Deno.serve(async (req) => {
 
     console.log(`✅ TVL analysis complete: $${(tvlUsd / 1e6).toFixed(2)}M TVL, ${marketShare.toFixed(2)}% market share, Risk: ${level}`);
 
-    // Update profile if provided
     if (profile_id) {
       await updateProfile(profile_id, result);
     }
@@ -189,9 +261,6 @@ Deno.serve(async (req) => {
   }
 });
 
-/**
- * Update claimed_profiles with TVL analysis results
- */
 async function updateProfile(profileId: string, result: TVLAnalysisResult): Promise<void> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");

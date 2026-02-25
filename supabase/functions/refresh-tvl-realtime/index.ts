@@ -9,9 +9,6 @@ const corsHeaders = {
 /**
  * High-frequency cron job (every 5 minutes) to refresh TVL metrics
  * for all DeFi protocols.
- * 
- * TVL fluctuates rapidly in DeFi, so near-real-time tracking is critical
- * for accurate risk ratio calculations.
  */
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -25,7 +22,6 @@ Deno.serve(async (req) => {
 
     console.log("[TVL Realtime] Starting TVL refresh cycle...");
 
-    // Fetch all DeFi category profiles
     const { data: profiles, error: fetchError } = await supabase
       .from("claimed_profiles")
       .select("id, project_name, category, github_commits_30d, tvl_usd")
@@ -55,7 +51,7 @@ Deno.serve(async (req) => {
       try {
         console.log(`[TVL Realtime] Fetching TVL for: ${profile.project_name}`);
 
-        const response = await fetch(analyzeTvlUrl, {
+        const response = await fetchWithRetry(analyzeTvlUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -84,8 +80,8 @@ Deno.serve(async (req) => {
           console.log(`✓ TVL updated: ${profile.project_name} ($${(data?.tvl_usd || 0).toLocaleString()})`);
         }
 
-        // Minimal delay - DeFiLlama API is rate-limit friendly
-        await new Promise((resolve) => setTimeout(resolve, 200));
+        // 1.5s delay to avoid DeFiLlama rate limits (was 200ms)
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       } catch (err) {
         errorCount++;
         results.push({ profile: profile.project_name, status: `exception: ${err}` });
@@ -115,3 +111,16 @@ Deno.serve(async (req) => {
     );
   }
 });
+
+/**
+ * Fetch with 403 retry — if rate-limited, wait 3s and retry once.
+ */
+async function fetchWithRetry(url: string, init: RequestInit): Promise<Response> {
+  const response = await fetch(url, init);
+  if (response.status === 403) {
+    console.log("[TVL Realtime] Got 403 rate-limit, waiting 3s and retrying...");
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+    return fetch(url, init);
+  }
+  return response;
+}
