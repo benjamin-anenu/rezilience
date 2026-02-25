@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     // Fetch profile
     const { data: profile, error: profileErr } = await supabase
       .from("claimed_profiles")
-      .select("*")
+      .select("*, realms_dao_address, realms_delivery_rate")
       .eq("id", profile_id)
       .single();
 
@@ -68,7 +68,15 @@ Deno.serve(async (req) => {
     }
 
     const depScore = profile.dependency_health_score ?? 50;
-    const govScore = profile.governance_tx_30d ? Math.min(profile.governance_tx_30d * 5, 80) : 0;
+    let govScore = profile.governance_tx_30d ? Math.min(profile.governance_tx_30d * 5, 80) : 0;
+
+    // Realms DAO Accountability modifier
+    let realmsModifier = 0;
+    if (profile.realms_dao_address && profile.realms_delivery_rate !== null && profile.realms_delivery_rate !== undefined) {
+      if (profile.realms_delivery_rate >= 70) realmsModifier = 10;
+      else if (profile.realms_delivery_rate < 40) realmsModifier = -15;
+      govScore = Math.max(0, Math.min(100, govScore + realmsModifier));
+    }
     const tvlScore = profile.tvl_usd ? Math.min(Math.log10(profile.tvl_usd + 1) * 15, 80) : 0;
 
     // Back-calculate needed GitHub score
@@ -86,6 +94,7 @@ Deno.serve(async (req) => {
       governance: Math.round(govScore),
       tvl: Math.round(tvlScore),
       weights: { github: wGithub, deps: wDeps, gov: wGov, tvl: wTvl },
+      realms_modifier: realmsModifier,
       continuity_decay: 1.0,
       final: target_score,
       recalibrated: true,
