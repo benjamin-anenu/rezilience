@@ -1,127 +1,100 @@
 
 
-# Demo Page Rebuild: Full DAO Accountability Lifecycle
+# Plan: Add "Builder Delivers" Section + Honest Hackathon Assessment
 
-## What's Missing
+## Part 1: New Section -- "Builder Delivers"
 
-The current demo jumps from "Join the Registry" directly to "Commitment Lock (scoring formula)." It skips the actual human lifecycle:
+### Placement
+Between `DAOVoteReleaseSection` and `CommitmentLockSection` (Section 8 of 12).
 
-1. How builders define milestones on their Realm
-2. How the community funds the DAO treasury (donate SOL, get governance tokens)
-3. How token holders vote on milestone proposals
-4. How multisig/DAO releases funds to the builder per milestone
-5. How Rezilience closes the loop by tracking delivery
+### File: `src/components/demo/BuilderDeliversSection.tsx` (NEW)
 
-## New Story Arc (10 Sections)
+**Header:** "Builder Delivers. Rezilience Verifies."
+**Subheader:** "Every claim of progress is cross-referenced against real signals -- code, chain, and community."
 
+**Layout:** A grid of 5 evidence-type cards showing how Rezilience verifies delivery:
+
+| Evidence Type | Icon | Description |
+|---|---|---|
+| GitHub Commits | GitCommit | "Rezilience scans commit velocity, PR merges, and contributor activity in real time. No commits = no progress." |
+| On-Chain Activity | Activity | "Program deployments, upgrade authority changes, and transaction volume are tracked directly from the Solana network." |
+| Demo Videos | Video | "Builders submit video walkthroughs of shipped features. The community can verify with their own eyes." |
+| Build-in-Public Updates | FileText | "Milestone updates, dev logs, and progress reports are published on the project's Rezilience profile for public record." |
+| Dependency Health | Shield | "Rezilience monitors the project's dependency tree for vulnerabilities, outdated packages, and supply chain risks." |
+
+Below the cards: a visual "Evidence Flow" showing:
 ```text
-HERO -> PROBLEM -> JOIN REGISTRY -> CREATE YOUR REALM -> LOCK MILESTONES ->
-COMMUNITY FUNDING -> DAO VOTE & RELEASE -> BUILDER DELIVERS -> COMMITMENT LOCK (SCORING) ->
-LIVE ANALYSIS -> CTA
+Builder Claims Milestone --> Rezilience Cross-Checks (GitHub + Chain + Media) --> Delivery Rate Updated --> DAO Informed
 ```
 
-### Sections to ADD (4 new sections between Registry and Commitment Lock):
+Bottom caption: "Rezilience doesn't take your word for it. It verifies against the data."
 
-**Section 4: "Set Up Your Realm" (NEW)**
-- Explains that builders need a Realm on the Realms platform
-- Shows 3 simple steps: Create Realm on realms.today -> Configure governance rules -> Link address in Rezilience claim flow
-- Clarifies: "Already have a Realm? Just paste the address."
-- Visual: 3 step cards with Realms logo reference
+### File: `src/components/demo/index.ts` (UPDATE)
+Add `export { BuilderDeliversSection } from './BuilderDeliversSection';`
 
-**Section 5: "Lock Your Milestones" (NEW)**
-- Builder creates proposals on their Realm defining each milestone/deliverable
-- Each proposal = a phase (e.g., "Phase 1: MVP", "Phase 2: Audit", "Phase 3: Mainnet")
-- Visual: A vertical timeline showing 4 example milestones with SOL amounts attached
-- Caption: "Each milestone becomes a trackable, on-chain commitment"
+### File: `src/pages/HackathonDemo.tsx` (UPDATE)
+Insert `<BuilderDeliversSection />` between `<DAOVoteReleaseSection />` and `<CommitmentLockSection />`.
 
-**Section 6: "Community Backs the Build" (NEW)**
-- The public donates SOL to the DAO treasury
-- In return, supporters receive governance tokens proportional to their contribution
-- Largest token holders have the most voting weight
-- Visual: A funding flow diagram showing SOL flowing in, governance tokens flowing out, and a "Top Supporters" mini-leaderboard
-- Caption: "Your community doesn't just fund you — they hold you accountable"
+---
 
-**Section 7: "DAO Votes to Release Funds" (NEW)**
-- When a builder completes a milestone, they submit evidence (GitHub commits, demo, etc.)
-- Token holders vote on whether the milestone was delivered
-- If approved, the multisig/DAO treasury releases the allocated SOL to the builder
-- Builder can then proceed to the next phase
-- Visual: A flow showing Milestone Complete -> Proposal Vote -> Multisig Signs -> SOL Released -> Next Phase
-- If rejected, funds stay locked and the builder must re-deliver
-- Caption: "No delivery, no release. The DAO decides."
+## Part 2: Brutal Honest Assessment
 
-### Existing sections REORDERED:
+### Will this wow Realms judges or get an honorable mention?
 
-- **Section 8**: Commitment Lock (scoring) -- EXISTING, moved down, now contextually makes sense after the lifecycle
-- **Section 9**: Mock Dashboard -- EXISTING, kept as-is
-- **Section 10**: Live Analysis -- EXISTING, kept as-is
-- **Section 11**: CTA -- EXISTING, kept as-is
+**Short answer: Not yet. Here's why, and what to do about it.**
 
-## Files Changed
+### What you HAVE (strong foundation)
+- A clear narrative: DAO funding accountability is a real, unsolved problem
+- A working scoring engine that reads real Realms on-chain data
+- A polished demo page that tells the story visually
+- Edge functions that actually fetch and parse governance proposals
+- Integration with the Rezilience scoring formula (the +10/-15 modifier)
 
-| File | Action |
-|------|--------|
-| `src/components/demo/RealmSetupSection.tsx` | NEW -- "Set Up Your Realm" section |
-| `src/components/demo/MilestoneLockSection.tsx` | NEW -- "Lock Your Milestones" timeline |
-| `src/components/demo/CommunityFundingSection.tsx` | NEW -- Community SOL funding flow |
-| `src/components/demo/DAOVoteReleaseSection.tsx` | NEW -- Vote, multisig sign, fund release |
-| `src/components/demo/index.ts` | UPDATE -- export new sections |
-| `src/pages/HackathonDemo.tsx` | UPDATE -- add new sections in correct order |
+### What's MISSING for hackathon judges
 
-## Section Details
+**1. No working on-chain program (critical)**
+Hackathon judges -- especially for Solana/Realms -- expect a deployed Solana program or at least a proof-of-concept smart contract. Right now, Rezilience is a **read-only indexer** that fetches data from Realms. That's useful, but it's not a "Realms integration" in the way judges expect. You're reading their data, not extending their protocol.
 
-### RealmSetupSection
-- Header: "Set Up Your Realm"
-- Subheader: "Every accountable project starts with a governance home"
-- 3 cards in a row:
-  1. "Create a Realm" -- Go to realms.today and create your DAO governance space (icon: Building)
-  2. "Configure Rules" -- Set voting thresholds, council members, and treasury parameters (icon: Settings)
-  3. "Link to Rezilience" -- Paste your Realm address during the claim flow to connect accountability (icon: Link)
-- Bottom note: "Already have a Realm? Skip straight to linking it in your Rezilience profile."
+**What would change this:** A minimal on-chain program (Anchor) that:
+- Registers a project's Realm address on-chain (not just in a database)
+- Emits events when delivery rates change
+- Even a simple PDA that maps `program_id -> realm_address -> delivery_score`
 
-### MilestoneLockSection
-- Header: "Lock Your Milestones"
-- Subheader: "Define what you'll deliver -- each milestone becomes an on-chain commitment"
-- Visual: Vertical timeline with 4 phases:
-  - Phase 1: MVP Launch -- 500 SOL
-  - Phase 2: Security Audit -- 300 SOL
-  - Phase 3: Mainnet Deploy -- 400 SOL
-  - Phase 4: Growth & Maintenance -- 300 SOL
-- Each phase shows: title, SOL allocation, status badge (Locked/Pending/Released)
-- Total at bottom: "1,500 SOL total commitment"
-- Caption: "Milestones are created as governance proposals on your Realm -- publicly visible, on-chain, immutable."
+This would make it a **real Solana project** rather than a web app that reads public data.
 
-### CommunityFundingSection
-- Header: "The Community Backs the Build"
-- Subheader: "Supporters donate SOL to your DAO treasury and earn governance power"
-- 3 column layout:
-  - Left: "Fund" card -- SOL flows into treasury, shows example amounts
-  - Center: Arrow flow showing SOL -> Governance Tokens
-  - Right: "Vote" card -- Top token holders become voters
-- Mini leaderboard showing 3 mock supporters with SOL amounts and voting weight percentages
-- Caption: "Your backers aren't just donors -- they're your accountability board"
+**2. The demo is a website, not a product demo**
+Judges want to see: "I click this button, something happens on-chain, and I can verify it." Your demo page is a storytelling scroll -- beautiful, but it's a pitch deck, not a product demo. The Live Analysis section is the closest thing to interactive, but it just reads existing data.
 
-### DAOVoteReleaseSection
-- Header: "DAO Votes. Funds Release."
-- Subheader: "When you deliver a milestone, your community decides if you've earned the next tranche"
-- Horizontal flow (5 connected steps):
-  1. Builder ships milestone (icon: Rocket)
-  2. Submits delivery evidence (icon: FileCheck)
-  3. Token holders vote (icon: Vote)
-  4. Multisig signs release (icon: KeyRound)
-  5. SOL released to builder (icon: Coins)
-- Below: Two outcome cards side by side:
-  - APPROVED (green): "Funds released. Builder proceeds to next phase."
-  - REJECTED (red): "Funds stay locked. Builder must re-deliver or renegotiate."
-- Caption: "No delivery, no release. This is trustless accountability."
+**What would change this:** A 60-second video showing:
+- A real project claiming their profile
+- Linking a real Realm address
+- The system fetching real governance data
+- The score updating in real time
+- Someone can verify it on-chain
 
-## Design Patterns
-- All new sections use the existing `StorySection` wrapper for consistent animation
-- Bloomberg terminal aesthetic maintained (font-mono data, font-display headers, teal accents)
-- Framer Motion staggered animations for cards and timeline items
-- Mobile responsive: horizontal flows stack vertically on small screens
-- No new dependencies needed
+**3. The "Community Funding" and "DAO Vote" sections describe Realms features, not YOUR features**
+These sections explain how Realms works (funding, voting, multisig). Judges already know this. They want to know what YOU built on top of it. The sections that matter most are: Registry Pipeline, Commitment Lock (scoring modifier), and Live Analysis.
 
-## No Backend Changes
-This is purely UI storytelling. No new edge functions or database changes.
+**What would change this:** Reframe those sections as "Here's what happens on Realms" (brief) vs "Here's what Rezilience adds on top" (detailed). The value-add is the accountability layer, not the funding mechanism.
+
+### Realistic hackathon positioning
+
+| Tier | What it takes | Where you are |
+|---|---|---|
+| Winner | Deployed on-chain program + working product + novel Realms integration | Not here |
+| Honorable mention | Strong concept + partial working implementation + clear value to Realms ecosystem | Close, but need the on-chain piece or a killer demo video |
+| "Cool project" | Good idea + polished presentation + reads on-chain data | **You are here** |
+
+### What to do in the remaining time (prioritized)
+
+1. **Record a 2-minute demo video** showing the REAL flow: claim a project, link a Realm, see the score update. This is higher impact than more UI sections.
+
+2. **Deploy a minimal Anchor program** (even just a PDA registry) that maps project IDs to Realm addresses on devnet. This transforms you from "web app" to "Solana project."
+
+3. **Cut the sections that explain Realms itself** and double down on what Rezilience uniquely does: the scoring formula, the delivery rate tracking, the accountability loop.
+
+4. **Add a "Try It" button** that lets judges paste any Realm address and see the accountability analysis in real time. You already have this in Live Analysis -- make it the HERO of the demo, not section 10 of 12.
+
+### Bottom line
+The storytelling is polished. The concept is strong. But hackathon judges grade on **"did you build something that works on-chain"** more than **"did you make a beautiful explainer page."** The gap between where you are and an honorable mention is primarily the on-chain component and a compelling live demo video.
 
