@@ -5,6 +5,7 @@ export { RealmSetupSection } from './RealmSetupSection';
 export { MilestoneLockSection } from './MilestoneLockSection';
 export { CommunityFundingSection } from './CommunityFundingSection';
 export { DAOVoteReleaseSection } from './DAOVoteReleaseSection';
+export { BuilderDeliversSection } from './BuilderDeliversSection';
 export { CommitmentLockSection } from './CommitmentLockSection';
 export { MockDashboardSection } from './MockDashboardSection';
 export { LiveAnalysisSection } from './LiveAnalysisSection';

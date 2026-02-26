@@ -7,6 +7,7 @@ import {
   MilestoneLockSection,
   CommunityFundingSection,
   DAOVoteReleaseSection,
+  BuilderDeliversSection,
   CommitmentLockSection,
   MockDashboardSection,
   LiveAnalysisSection,
@@ -24,6 +25,7 @@ export default function HackathonDemo() {
         <MilestoneLockSection />
         <CommunityFundingSection />
         <DAOVoteReleaseSection />
+        <BuilderDeliversSection />
         <CommitmentLockSection />
         <MockDashboardSection />
         <LiveAnalysisSection />
