@@ -1,63 +1,91 @@
 
 
-# Remaining Work: Realms Delivery Rate Scoring Modifier
+# Hackathon Demo Page Rebuild -- Storytelling Flow
 
-## Status Check
+## Concept
 
-All 10 parts of the plan are implemented EXCEPT **Part 6: Scoring Integration** in `admin-recalibrate`. Here is the status:
+Replace the current `/demo` page with an immersive, scrollable storytelling experience that walks judges through the **full DAO Accountability lifecycle** in ~90 seconds. Each section reveals the next step of the story with real data and visual clarity.
 
-| Part | Status |
+## Story Arc (7 Sections)
+
+```text
+HERO --> THE PROBLEM --> JOIN THE REGISTRY --> COMMITMENT LOCK --> REALMS ACCOUNTABILITY --> LIVE ANALYSIS --> CTA
+```
+
+### Section 1: Hero
+- Title: "Rezilience x Realms -- DAO Accountability Layer"
+- Subtitle: "DAOs fund projects. Rezilience tracks if they deliver."
+- Animated badge: "SOLANA GRAVEYARD HACKATHON"
+- Single scroll-down indicator
+
+### Section 2: The Problem (Why This Matters)
+- Three pain-point cards with icons:
+  - "DAOs approve funding but nobody tracks execution"
+  - "Abandoned projects keep governance tokens but deliver nothing"
+  - "The public has no way to verify if funded milestones were completed"
+- Brief stat: "X proposals approved across Solana DAOs -- how many shipped?"
+
+### Section 3: Join the Registry (Animated Flow)
+A horizontal pipeline showing 5 steps with connecting arrows:
+1. **Sign in with X** -- Builder authenticates identity
+2. **Submit Project Identity** -- Name, program ID, GitHub, DAO address
+3. **Verify Authority** -- SIWS wallet proof or Squads multisig
+4. **GitHub Analysis** -- Automated code health scoring
+5. **Live on Registry** -- Project appears in explorer with Rezilience score
+
+Each step has an icon, title, and one-line description. The "Submit Project Identity" step highlights the **Realms DAO Address** field as a callout box, showing this is where the DAO link gets established.
+
+### Section 4: The Commitment Lock
+Visual showing how the Rezilience score is calculated with the Realms modifier:
+- Formula display: `R = (GitHub x 40%) + (Deps x 25%) + (Gov x 20%) + (TVL x 15%)`
+- Callout card showing the Realms modifier rules:
+  - Delivery Rate >= 70%: +10 governance bonus (green)
+  - Delivery Rate 40-70%: no modifier (amber)
+  - Delivery Rate < 40%: -15 penalty (red)
+- "This is the Commitment Lock. Your DAO's execution record directly impacts your Rezilience Score."
+
+### Section 5: DAO Accountability Dashboard
+A mock dashboard card (using real component patterns) showing:
+- A sample project card with:
+  - Project name, score, liveness badge
+  - DAOAccountabilityCard embedded (showing delivery rate, proposal counts)
+  - Score breakdown showing the `realms_modifier` field
+- Caption: "Every project page shows real-time governance accountability"
+
+### Section 6: Live Analysis (Interactive -- kept from current page)
+- The existing live DAO analysis input + example DAO buttons
+- Results display with delivery rate, proposal breakdown, score impact
+- State breakdown grid
+- "Try it yourself" prompt
+
+### Section 7: CTA
+- "This Is What Accountability Looks Like"
+- Three buttons: Explore Registry, Read Methodology, Claim Your Project
+
+## Technical Details
+
+### Files Changed
+
+| File | Action |
 |------|--------|
-| 1. Database columns | Done |
-| 2. `fetch-realms-governance` edge function | Done |
-| 3. Governance refresh (Realms pass) | Done |
-| 4. DAOAccountabilityCard + tab integration | Done |
-| 5. Claim flow + Settings field | Done |
-| 6. Scoring integration (delivery rate modifier) | **Not done** |
-| 7. README.md updates | Done |
-| 8. Readme UI page section | Done |
-| 9. Pitch deck slide updates | Done |
-| 10. Hackathon Demo page + /demo route | Done |
+| `src/pages/HackathonDemo.tsx` | Full rewrite -- storytelling layout with 7 sections |
 
-## What Needs to Change
+### Design Patterns
+- Uses existing `Layout` wrapper, `Card`, `Badge`, `Progress`, `Button` components
+- Bloomberg terminal aesthetic: dark background, teal accents, `font-display` uppercase headers, `font-mono` data
+- Framer Motion for section entrance animations (fade-in on scroll via `whileInView`)
+- Each section is full-viewport-height or near it, separated by `border-b border-border`
+- Mobile responsive: pipeline steps stack vertically on small screens
 
-**File:** `supabase/functions/admin-recalibrate/index.ts`
+### Key UI Components Within the Page
+- **StorySection**: Reusable wrapper with `whileInView` animation, consistent padding
+- **PipelineStep**: Numbered step with icon, title, description, connecting arrow
+- **ScoringModifierCard**: Shows the three delivery rate tiers with color coding
+- **MockProjectCard**: Simulated project profile card with embedded DAOAccountabilityCard
+- **LiveAnalysis**: Kept from current implementation -- the interactive DAO address input and results
 
-Add the Realms delivery rate modifier to the governance score calculation (around line 71):
+### No New Dependencies
+All animations use existing `framer-motion`. All UI uses existing shadcn components.
 
-1. After calculating `govScore` from `governance_tx_30d`, check if the profile has `realms_delivery_rate`
-2. Apply modifier:
-   - Delivery rate >= 70%: `govScore += 10`
-   - Delivery rate 40-70%: no change
-   - Delivery rate < 40%: `govScore -= 15` (clamped to 0 minimum)
-3. Cap `govScore` at 100 maximum
-4. Include `realms_modifier` in the `scoreBreakdown` object for transparency
-
-This is a ~10-line addition. No structural changes needed.
-
-## Technical Detail
-
-Current governance score line (line 71):
-```typescript
-const govScore = profile.governance_tx_30d ? Math.min(profile.governance_tx_30d * 5, 80) : 0;
-```
-
-Will become:
-```typescript
-let govScore = profile.governance_tx_30d ? Math.min(profile.governance_tx_30d * 5, 80) : 0;
-
-// Realms DAO Accountability modifier
-let realmsModifier = 0;
-if (profile.realms_dao_address && profile.realms_delivery_rate !== null && profile.realms_delivery_rate !== undefined) {
-  if (profile.realms_delivery_rate >= 70) realmsModifier = 10;
-  else if (profile.realms_delivery_rate < 40) realmsModifier = -15;
-  govScore = Math.max(0, Math.min(100, govScore + realmsModifier));
-}
-```
-
-The `select` query on line 31 also needs `realms_dao_address, realms_delivery_rate` added to the column list.
-
-The `scoreBreakdown` object gets a `realms_modifier` field added.
-
-No breaking changes -- projects without Realms data get `realmsModifier = 0`.
-
+### No Backend Changes
+The existing `fetch-realms-governance` edge function is reused as-is for the live analysis section.
