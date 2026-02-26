@@ -1,6 +1,10 @@
 export { HeroSection } from './HeroSection';
 export { ProblemSection } from './ProblemSection';
 export { RegistryPipelineSection } from './RegistryPipelineSection';
+export { RealmSetupSection } from './RealmSetupSection';
+export { MilestoneLockSection } from './MilestoneLockSection';
+export { CommunityFundingSection } from './CommunityFundingSection';
+export { DAOVoteReleaseSection } from './DAOVoteReleaseSection';
 export { CommitmentLockSection } from './CommitmentLockSection';
 export { MockDashboardSection } from './MockDashboardSection';
 export { LiveAnalysisSection } from './LiveAnalysisSection';
