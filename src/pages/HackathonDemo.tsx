@@ -3,6 +3,10 @@ import {
   HeroSection,
   ProblemSection,
   RegistryPipelineSection,
+  RealmSetupSection,
+  MilestoneLockSection,
+  CommunityFundingSection,
+  DAOVoteReleaseSection,
   CommitmentLockSection,
   MockDashboardSection,
   LiveAnalysisSection,
@@ -16,6 +20,10 @@ export default function HackathonDemo() {
         <HeroSection />
         <ProblemSection />
         <RegistryPipelineSection />
+        <RealmSetupSection />
+        <MilestoneLockSection />
+        <CommunityFundingSection />
+        <DAOVoteReleaseSection />
         <CommitmentLockSection />
         <MockDashboardSection />
         <LiveAnalysisSection />
