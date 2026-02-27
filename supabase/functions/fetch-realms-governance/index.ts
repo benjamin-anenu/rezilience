@@ -4,7 +4,7 @@ import { logServiceHealth } from "../_shared/service-health.ts";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 // spl-governance program ID
@@ -99,10 +99,16 @@ Deno.serve(async (req) => {
 
     console.log(`[Realms] Found ${governanceAccounts.length} governance accounts`);
 
+    // Cap at 5 governance accounts to prevent cascading slow RPC calls
+    const cappedAccounts = governanceAccounts.slice(0, 5);
+    if (governanceAccounts.length > 5) {
+      console.log(`[Realms] Capped from ${governanceAccounts.length} to 5 governance accounts`);
+    }
+
     // Step 2: For each governance account, fetch proposals
     const allProposals: ProposalSummary[] = [];
 
-    for (const govAccount of governanceAccounts) {
+    for (const govAccount of cappedAccounts) {
       const govPubkey = govAccount.pubkey;
 
       // Proposals have the governance pubkey at offset 1 (after account type byte)
@@ -121,7 +127,7 @@ Deno.serve(async (req) => {
       }
 
       // Rate limit between governance accounts
-      if (governanceAccounts.length > 1) {
+      if (cappedAccounts.length > 1) {
         await new Promise((r) => setTimeout(r, 200));
       }
     }
@@ -220,9 +226,13 @@ async function rpcGetProgramAccounts(
     // Remove dataSize: 0 filter (it means "any size" which is not valid)
     const validFilters = filters.filter((f) => !(f.dataSize === 0));
 
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+
     const response = await fetch(rpcUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 1,
@@ -237,6 +247,8 @@ async function rpcGetProgramAccounts(
       }),
     });
 
+    clearTimeout(timeout);
+
     if (!response.ok) {
       console.error(`[Realms] RPC error: ${response.status}`);
       return null;
@@ -250,7 +262,11 @@ async function rpcGetProgramAccounts(
 
     return json.result || [];
   } catch (err) {
-    console.error(`[Realms] RPC fetch error:`, err);
+    if (err instanceof DOMException && err.name === "AbortError") {
+      console.error(`[Realms] RPC request timed out after 10s`);
+    } else {
+      console.error(`[Realms] RPC fetch error:`, err);
+    }
     return null;
   }
 }
