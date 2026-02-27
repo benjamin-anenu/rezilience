@@ -65,13 +65,13 @@ Deno.serve(async (req) => {
     // Step 1: Get all governance accounts owned by this realm
     // Governance accounts have the realm pubkey at byte offset 1 (after account type byte)
     const governanceAccounts = await rpcGetProgramAccounts(rpcUrl, GOV_PROGRAM_ID, [
-      { memcmp: { offset: 33, bytes: realm_address } }, // realm field in GovernanceV2
+      { memcmp: { offset: 1, bytes: realm_address } }, // realm field at offset 1 in GovernanceV2
     ]);
 
     if (!governanceAccounts || governanceAccounts.length === 0) {
-      // Try alternative offset for v1
+      // Fallback: try offset 33 (governed_account) for unusual layouts
       const govAccountsV1 = await rpcGetProgramAccounts(rpcUrl, GOV_PROGRAM_ID, [
-        { memcmp: { offset: 1, bytes: realm_address } },
+        { memcmp: { offset: 33, bytes: realm_address } },
       ]);
 
       if (!govAccountsV1 || govAccountsV1.length === 0) {
