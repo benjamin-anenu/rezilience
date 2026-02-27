@@ -1,43 +1,45 @@
 
+# Fix: Governance Account Search Using Wrong Byte Offset
 
-# Fix: CORS Error and Slow DAO Analysis
+## Root Cause
 
-## Problem
+The `fetch-realms-governance` edge function has the **primary memcmp offset backwards**. In spl-governance's `GovernanceV2` account layout:
 
-Two issues are happening together:
+```text
+Offset 0:  account_type (1 byte)
+Offset 1:  realm        (32 bytes)  <-- realm pubkey lives HERE
+Offset 33: governed_account (32 bytes)
+```
 
-1. **Slow response**: The `getProgramAccounts` RPC call against the spl-governance program on mainnet can take 10-30+ seconds for large DAOs. When it exceeds the edge function timeout (default ~60s), the function crashes without sending a response.
+The code searches at **offset 33 first** (which matches `governed_account`, not `realm`), then falls back to offset 1. This means:
 
-2. **CORS error**: When the function times out or crashes, no response headers are sent -- including CORS headers. The browser then blocks the failed request with a CORS error. Additionally, the current `Access-Control-Allow-Headers` is missing headers that the Supabase JS client sends.
+- For `7vrFDrK9GRNX7YZXbo7N3kvta7Pbn6W1hCXQ6C7WBxG9`: It finds accounts where that address is the `governed_account` (not the realm), then tries to fetch proposals for those wrong governance accounts -- resulting in `total: 0`.
+- For `jjCAwuuNpJCNMLAanpwgJZ6cdXzLPXe2GfD6TaDQBXt`: Nothing matches at either offset, so "No governance accounts found."
+- For `GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw`: This is the spl-governance **program ID** itself, so it coincidentally matches some accounts and returns data.
 
-## Changes
+## Fix
 
 ### File: `supabase/functions/fetch-realms-governance/index.ts`
 
-1. **Update CORS headers** to include all headers the Supabase client sends:
+**Swap the offsets**: Use offset 1 as the primary search (correct for realm field), and offset 33 as the fallback for edge cases.
+
 ```typescript
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
-};
+// Primary: realm field is at offset 1 in GovernanceV2
+const governanceAccounts = await rpcGetProgramAccounts(rpcUrl, GOV_PROGRAM_ID, [
+  { memcmp: { offset: 1, bytes: realm_address } },
+]);
+
+if (!governanceAccounts || governanceAccounts.length === 0) {
+  // Fallback: try offset 33 (governed_account) for unusual layouts
+  const govAccountsAlt = await rpcGetProgramAccounts(rpcUrl, GOV_PROGRAM_ID, [
+    { memcmp: { offset: 33, bytes: realm_address } },
+  ]);
+  // ... rest of fallback logic
+}
 ```
 
-2. **Add RPC request timeouts** using `AbortController` with a 10-second timeout per RPC call, so one slow call doesn't hang the entire function:
-```typescript
-const controller = new AbortController();
-const timeout = setTimeout(() => controller.abort(), 10000);
-const response = await fetch(rpcUrl, { signal: controller.signal, ... });
-clearTimeout(timeout);
-```
+This is a one-line swap in the edge function. After fixing, redeploy the function.
 
-3. **Limit governance account processing** -- cap at 5 governance accounts to prevent cascading slow RPC calls for large DAOs.
+### No Frontend Changes Needed
 
-4. **Wrap the entire handler in a try/catch** that always returns CORS headers, even on unexpected errors or timeouts.
-
-### File: `src/components/demo/LiveAnalysisSection.tsx`
-
-5. **Add a timeout indicator in the UI** -- show "This may take up to 30 seconds for large DAOs..." while loading, so users know to wait.
-
-6. **Improve error message for network failures** -- detect fetch/CORS errors and show a user-friendly message like "Request timed out. The DAO may have too many governance accounts for real-time analysis. Try a smaller DAO."
-
+The UI error handling already works correctly -- the backend was just returning wrong data due to the offset bug.
