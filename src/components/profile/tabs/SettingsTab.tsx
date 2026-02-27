@@ -30,7 +30,7 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
       discordUrl !== (profile.socials.discordUrl || '') ||
       telegramUrl !== (profile.socials.telegramUrl || '') ||
       logoUrl !== (profile.logoUrl || '') ||
-      realmsDaoAddress !== ((profile as any).realmsDaoAddress || '');
+      realmsDaoAddress !== ((profile as any).realms_dao_address || (profile as any).realmsDaoAddress || '');
     setHasChanges(changed);
   }, [websiteUrl, discordUrl, telegramUrl, logoUrl, realmsDaoAddress, profile]);
 
