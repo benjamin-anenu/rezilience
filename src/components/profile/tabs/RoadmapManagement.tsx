@@ -321,7 +321,7 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
                         )}
 
                         {/* Variance request for locked phases */}
-                        {phase.isLocked && !phase.varianceRequested && (
+                        {phase.isLocked && !phase.varianceRequested && phase.milestones.length > 0 && (
                           <Button
                             variant="outline"
                             size="sm"

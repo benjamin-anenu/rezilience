@@ -18,7 +18,7 @@ export function SettingsTab({ profile, xUserId }: SettingsTabProps) {
   const [discordUrl, setDiscordUrl] = useState(profile.socials.discordUrl || '');
   const [telegramUrl, setTelegramUrl] = useState(profile.socials.telegramUrl || '');
   const [logoUrl, setLogoUrl] = useState(profile.logoUrl || '');
-  const [realmsDaoAddress, setRealmsDaoAddress] = useState((profile as any).realmsDaoAddress || '');
+  const [realmsDaoAddress, setRealmsDaoAddress] = useState((profile as any).realms_dao_address || (profile as any).realmsDaoAddress || '');
   const [hasChanges, setHasChanges] = useState(false);
 
   const updateProfile = useUpdateProfile();

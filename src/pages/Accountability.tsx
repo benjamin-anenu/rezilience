@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ShieldCheck, ArrowRight } from 'lucide-react';
 
 const Accountability = () => {
-  const { data: daos, isLoading } = useAccountabilityDAOs();
+  const { data: daos, isLoading, isError } = useAccountabilityDAOs();
 
   return (
     <Layout>
@@ -25,7 +25,20 @@ const Accountability = () => {
             </p>
           </div>
 
-          {isLoading ? (
+          {isError ? (
+            <div className="py-16 text-center">
+              <ShieldCheck className="mx-auto mb-4 h-12 w-12 text-destructive/40" />
+              <h2 className="mb-2 font-display text-xl font-bold uppercase tracking-tight text-foreground">
+                FAILED TO LOAD
+              </h2>
+              <p className="mx-auto mb-6 max-w-md text-sm text-muted-foreground">
+                Could not fetch DAO accountability data. Please try again.
+              </p>
+              <Button onClick={() => window.location.reload()}>
+                RETRY
+              </Button>
+            </div>
+          ) : isLoading ? (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {[1, 2, 3].map((i) => (
                 <Skeleton key={i} className="h-64 rounded-sm" />
