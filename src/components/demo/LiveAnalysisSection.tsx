@@ -62,7 +62,12 @@ export function LiveAnalysisSection() {
       }
       setResult(data);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch governance data');
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('Failed to send') || msg.includes('fetch') || msg.includes('CORS') || msg.includes('NetworkError')) {
+        setError('Request timed out. The DAO may have too many governance accounts for real-time analysis. Try a smaller DAO or try again.');
+      } else {
+        setError(msg || 'Failed to fetch governance data');
+      }
     } finally {
       setLoading(false);
     }
@@ -96,7 +101,7 @@ export function LiveAnalysisSection() {
                 disabled={loading || !daoAddress}
                 className="font-display uppercase tracking-wider"
               >
-                {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Analyze'}
+                {loading ? <><Loader2 className="h-4 w-4 animate-spin mr-1" /> Analyzing...</> : 'Analyze'}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -110,6 +115,11 @@ export function LiveAnalysisSection() {
                 </Button>
               ))}
             </div>
+            {loading && (
+              <div className="rounded-sm border border-primary/20 bg-primary/5 p-3">
+                <p className="text-sm text-muted-foreground">⏳ This may take up to 30 seconds for large DAOs...</p>
+              </div>
+            )}
             {error && (
               <div className="rounded-sm border border-destructive/30 bg-destructive/5 p-3">
                 <p className="text-sm text-destructive">{error}</p>
