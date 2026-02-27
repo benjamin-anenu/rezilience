@@ -19,8 +19,7 @@ interface RealmsResult {
 
 const exampleDAOs = [
   { name: 'Marinade DAO', address: 'GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw' },
-  { name: 'Mango DAO', address: 'DPiH3H3c7t47BMxqTxLsuPQpEC6Kne8GA9VXbxpnZxFE' },
-  { name: 'Drift DAO', address: 'dRiftyHA39MWEi3m9aunc5MzRF1JYuBsbn6VPcn33UH' },
+  { name: 'Realms Ecosystem DAO', address: 'By2sVGqhDB4aWvTcSwpCPMePF983W2fGro8VJf4qEBYB' },
 ];
 
 const getDeliveryColor = (rate: number | null) => {
@@ -57,6 +56,10 @@ export function LiveAnalysisSection() {
         },
       });
       if (fnError) throw fnError;
+      if (data.proposals === 0 || !data.total) {
+        setError("No governance proposals found for this address. Make sure you're using a Realm address from realms.today — not a Solana program ID.");
+        return;
+      }
       setResult(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to fetch governance data');
@@ -83,7 +86,7 @@ export function LiveAnalysisSection() {
           <CardContent className="space-y-4">
             <div className="flex gap-2">
               <Input
-                placeholder="Paste a Realms DAO address..."
+                placeholder="Paste a Realm address from realms.today..."
                 value={daoAddress}
                 onChange={(e) => setDaoAddress(e.target.value)}
                 className="font-mono"
@@ -96,6 +99,9 @@ export function LiveAnalysisSection() {
                 {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Analyze'}
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Use the Realm address from your DAO's page on realms.today — this is different from a Solana program ID.
+            </p>
             <div className="flex flex-wrap gap-2">
               <span className="text-xs text-muted-foreground">Try:</span>
               {exampleDAOs.map((dao) => (
