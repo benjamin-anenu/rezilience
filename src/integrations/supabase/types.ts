@@ -205,6 +205,69 @@ export type Database = {
           },
         ]
       }
+      bounties: {
+        Row: {
+          claimed_at: string | null
+          claimer_profile_id: string | null
+          claimer_wallet: string | null
+          claimer_x_user_id: string | null
+          created_at: string
+          creator_profile_id: string
+          creator_x_user_id: string
+          description: string | null
+          evidence_links: Json | null
+          evidence_summary: string | null
+          id: string
+          linked_milestone_id: string | null
+          realm_dao_address: string
+          resolved_at: string | null
+          reward_sol: number
+          status: string
+          submitted_at: string | null
+          title: string
+        }
+        Insert: {
+          claimed_at?: string | null
+          claimer_profile_id?: string | null
+          claimer_wallet?: string | null
+          claimer_x_user_id?: string | null
+          created_at?: string
+          creator_profile_id: string
+          creator_x_user_id: string
+          description?: string | null
+          evidence_links?: Json | null
+          evidence_summary?: string | null
+          id?: string
+          linked_milestone_id?: string | null
+          realm_dao_address: string
+          resolved_at?: string | null
+          reward_sol?: number
+          status?: string
+          submitted_at?: string | null
+          title: string
+        }
+        Update: {
+          claimed_at?: string | null
+          claimer_profile_id?: string | null
+          claimer_wallet?: string | null
+          claimer_x_user_id?: string | null
+          created_at?: string
+          creator_profile_id?: string
+          creator_x_user_id?: string
+          description?: string | null
+          evidence_links?: Json | null
+          evidence_summary?: string | null
+          id?: string
+          linked_milestone_id?: string | null
+          realm_dao_address?: string
+          resolved_at?: string | null
+          reward_sol?: number
+          status?: string
+          submitted_at?: string | null
+          title?: string
+        }
+        Relationships: []
+      }
       bounty_waitlist: {
         Row: {
           created_at: string

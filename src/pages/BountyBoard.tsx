@@ -1,18 +1,45 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '@/components/layout';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Lock, Coins, Vote, Zap, Milestone, Mail, CheckCircle2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Coins, Mail, CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { useBounties, useUserProfiles, useResolveBounty, type Bounty } from '@/hooks/useBounties';
+import { BountyCard, BountyFilters, CreateBountyDialog, ClaimBountyDialog, SubmitEvidenceDialog } from '@/components/bounty';
 
 export default function BountyBoard() {
+  const { user, isAuthenticated } = useAuth();
+  const { data: bounties = [], isLoading } = useBounties();
+  const { data: userProfiles = [] } = useUserProfiles();
+  const resolveBounty = useResolveBounty();
+
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [claimTarget, setClaimTarget] = useState<Bounty | null>(null);
+  const [evidenceTarget, setEvidenceTarget] = useState<Bounty | null>(null);
+
+  // Waitlist state
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
+
+  const realmProfiles = userProfiles.filter(p => p.realms_dao_address);
+
+  const filtered = useMemo(() => {
+    return bounties.filter(b => {
+      if (statusFilter !== 'all' && b.status !== statusFilter) return false;
+      if (search && !b.title.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+  }, [bounties, statusFilter, search]);
+
+  const totalSol = bounties.reduce((sum, b) => sum + Number(b.reward_sol), 0);
+  const openCount = bounties.filter(b => b.status === 'open').length;
 
   const handleJoinWaitlist = async () => {
     if (!email) return;
@@ -21,15 +48,14 @@ export default function BountyBoard() {
       toast.error('Please enter a valid email address');
       return;
     }
-
     setIsSubmitting(true);
     try {
-      const { data, error } = await supabase.functions.invoke('join-bounty-waitlist', {
+      const { error } = await supabase.functions.invoke('join-bounty-waitlist', {
         body: { email },
       });
       if (error) throw error;
       setIsJoined(true);
-      toast.success("You're on the list!", { description: "We'll notify you when the Bounty Board launches." });
+      toast.success("You're on the list!");
     } catch {
       toast.error('Something went wrong. Please try again.');
     } finally {
@@ -37,33 +63,10 @@ export default function BountyBoard() {
     }
   };
 
-  const features = [
-    {
-      icon: Lock,
-      title: 'Escrowed SOL Rewards',
-      description: 'Funds locked in smart contract escrow until milestones are verified and approved by the DAO.',
-    },
-    {
-      icon: Vote,
-      title: 'On-Chain Claim / Submit / Approve',
-      description: 'Builders claim bounties, submit evidence, and DAO voters approve — all on-chain via Realms.',
-    },
-    {
-      icon: Zap,
-      title: 'Automated Fund Release',
-      description: "Once a proposal passes, escrowed SOL is automatically released to the builder's wallet.",
-    },
-    {
-      icon: Milestone,
-      title: 'Milestone-Linked Payouts',
-      description: 'Bounties tied to roadmap milestones. Complete a milestone, unlock the next tranche.',
-    },
-  ];
-
   return (
     <Layout>
       <div className="min-h-screen bg-background">
-        <div className="mx-auto max-w-4xl px-4 py-12">
+        <div className="mx-auto max-w-5xl px-4 py-12">
           {/* Back link */}
           <Link
             to="/accountability"
@@ -74,72 +77,92 @@ export default function BountyBoard() {
           </Link>
 
           {/* Hero */}
-          <div className="mb-12 text-center">
-            <Badge variant="outline" className="mb-4 border-primary/30 font-mono text-xs uppercase">
-              Phase 2 · Coming Q2 2026
-            </Badge>
-            <h1 className="font-display text-4xl font-bold uppercase tracking-tight text-foreground sm:text-5xl">
-              Bounty Board
-            </h1>
-            <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
-              Escrowed rewards, on-chain governance, and automated payouts — 
-              a trustless incentive layer for Solana builders.
-            </p>
-          </div>
-
-          {/* Feature cards */}
-          <div className="mb-12 grid gap-4 sm:grid-cols-2">
-            {features.map((feature) => (
-              <Card key={feature.title} className="border-border bg-card/50">
-                <CardContent className="p-6">
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-sm bg-primary/10">
-                    <feature.icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <h3 className="mb-2 font-display text-sm font-semibold uppercase tracking-tight text-foreground">
-                    {feature.title}
-                  </h3>
-                  <p className="text-sm text-muted-foreground">{feature.description}</p>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          {/* Wireframe mockup */}
-          <Card className="mb-12 border-dashed border-border bg-muted/10">
-            <CardContent className="p-8">
-              <div className="text-center">
-                <Coins className="mx-auto mb-4 h-12 w-12 text-muted-foreground/40" />
-                <p className="font-mono text-xs uppercase text-muted-foreground">
-                  Interactive bounty board preview coming soon
+          <div className="mb-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <Badge variant="outline" className="mb-3 border-primary/30 font-mono text-xs uppercase">
+                  Bounty Board
+                </Badge>
+                <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-foreground sm:text-4xl">
+                  Open Bounties
+                </h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Claim work, submit evidence, earn SOL — governed by your DAO.
                 </p>
-                <div className="mx-auto mt-6 grid max-w-lg gap-2">
-                  {['Build token-gated access for DAO members', 'Implement staking rewards calculator', 'Create governance proposal template'].map(
-                    (item, i) => (
-                      <div
-                        key={i}
-                        className="flex items-center gap-3 rounded-sm border border-border/50 bg-card/30 px-4 py-3 text-left"
-                      >
-                        <div className="h-2 w-2 rounded-full bg-muted-foreground/30" />
-                        <span className="flex-1 text-sm text-muted-foreground/60">{item}</span>
-                        <span className="rounded-sm bg-muted px-2 py-0.5 font-mono text-xs text-muted-foreground">
-                          {(i + 1) * 500} SOL
-                        </span>
-                      </div>
-                    )
-                  )}
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="text-right">
+                  <p className="font-mono text-2xl font-bold text-primary">{totalSol.toLocaleString()}</p>
+                  <p className="text-[10px] uppercase text-muted-foreground">Total SOL</p>
+                </div>
+                <div className="text-right">
+                  <p className="font-mono text-2xl font-bold text-foreground">{openCount}</p>
+                  <p className="text-[10px] uppercase text-muted-foreground">Open</p>
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* CTA */}
-          <Card className="border-primary/20 bg-primary/5">
+            {/* Create bounty CTA */}
+            {isAuthenticated && realmProfiles.length > 0 && (
+              <div className="mt-4">
+                <CreateBountyDialog profiles={realmProfiles} />
+              </div>
+            )}
+          </div>
+
+          {/* Filters */}
+          <div className="mb-6">
+            <BountyFilters
+              activeStatus={statusFilter}
+              onStatusChange={setStatusFilter}
+              search={search}
+              onSearchChange={setSearch}
+            />
+          </div>
+
+          {/* Bounty grid */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <Card className="border-dashed border-border bg-muted/10">
+              <CardContent className="p-12 text-center">
+                <Coins className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
+                <p className="font-mono text-xs uppercase text-muted-foreground">
+                  {bounties.length === 0 ? 'No bounties yet. Create the first one!' : 'No bounties match your filters.'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map(bounty => (
+                <BountyCard
+                  key={bounty.id}
+                  bounty={bounty}
+                  isCreator={bounty.creator_x_user_id === user?.id}
+                  isClaimer={bounty.claimer_x_user_id === user?.id}
+                  onClaim={() => setClaimTarget(bounty)}
+                  onSubmitEvidence={() => setEvidenceTarget(bounty)}
+                  onApprove={() => resolveBounty.mutate({ bounty_id: bounty.id, action: 'approve' })}
+                  onReject={() => resolveBounty.mutate({ bounty_id: bounty.id, action: 'reject' })}
+                />
+              ))}
+            </div>
+          )}
+
+          {/* On-chain escrow CTA */}
+          <Card className="mt-12 border-primary/20 bg-primary/5">
             <CardContent className="p-8 text-center">
+              <Badge variant="outline" className="mb-3 border-primary/30 font-mono text-[10px] uppercase">
+                Phase 3 · On-Chain Escrow
+              </Badge>
               <h2 className="mb-2 font-display text-xl font-semibold uppercase tracking-tight text-foreground">
-                Join the Waitlist
+                Automated SOL Release — Coming Soon
               </h2>
               <p className="mb-6 text-sm text-muted-foreground">
-                Be first to know when the Bounty Board goes live. No spam, just one launch email.
+                Escrowed rewards, on-chain governance votes, and trustless payouts powered by a Solana program.
+                Be first to know when it launches.
               </p>
               {isJoined ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
@@ -152,8 +175,8 @@ export default function BountyBoard() {
                     type="email"
                     placeholder="you@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleJoinWaitlist()}
+                    onChange={e => setEmail(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && handleJoinWaitlist()}
                     className="flex-1"
                   />
                   <Button
@@ -176,6 +199,18 @@ export default function BountyBoard() {
           </Card>
         </div>
       </div>
+
+      {/* Dialogs */}
+      <ClaimBountyDialog
+        bounty={claimTarget}
+        open={!!claimTarget}
+        onOpenChange={open => !open && setClaimTarget(null)}
+      />
+      <SubmitEvidenceDialog
+        bounty={evidenceTarget}
+        open={!!evidenceTarget}
+        onOpenChange={open => !open && setEvidenceTarget(null)}
+      />
     </Layout>
   );
 }
