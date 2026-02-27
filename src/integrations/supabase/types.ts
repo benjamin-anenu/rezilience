@@ -205,6 +205,33 @@ export type Database = {
           },
         ]
       }
+      bounty_waitlist: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          wallet_address: string | null
+          x_user_id: string | null
+          x_username: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          wallet_address?: string | null
+          x_user_id?: string | null
+          x_username?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          wallet_address?: string | null
+          x_user_id?: string | null
+          x_username?: string | null
+        }
+        Relationships: []
+      }
       chat_conversations: {
         Row: {
           created_at: string
@@ -1122,6 +1149,13 @@ export type Database = {
           program_id: string | null
           project_id: string | null
           project_name: string | null
+          realms_analyzed_at: string | null
+          realms_dao_address: string | null
+          realms_delivery_rate: number | null
+          realms_last_proposal: string | null
+          realms_proposals_active: number | null
+          realms_proposals_completed: number | null
+          realms_proposals_total: number | null
           resilience_score: number | null
           score_breakdown: Json | null
           staking_pitch: string | null
@@ -1204,6 +1238,13 @@ export type Database = {
           program_id?: string | null
           project_id?: string | null
           project_name?: string | null
+          realms_analyzed_at?: string | null
+          realms_dao_address?: string | null
+          realms_delivery_rate?: number | null
+          realms_last_proposal?: string | null
+          realms_proposals_active?: number | null
+          realms_proposals_completed?: number | null
+          realms_proposals_total?: number | null
           resilience_score?: number | null
           score_breakdown?: Json | null
           staking_pitch?: string | null
@@ -1286,6 +1327,13 @@ export type Database = {
           program_id?: string | null
           project_id?: string | null
           project_name?: string | null
+          realms_analyzed_at?: string | null
+          realms_dao_address?: string | null
+          realms_delivery_rate?: number | null
+          realms_last_proposal?: string | null
+          realms_proposals_active?: number | null
+          realms_proposals_completed?: number | null
+          realms_proposals_total?: number | null
           resilience_score?: number | null
           score_breakdown?: Json | null
           staking_pitch?: string | null
