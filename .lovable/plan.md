@@ -1,36 +1,43 @@
 
 
-# Fix: Live DAO Analysis "undefined" Results
+# Fix: CORS Error and Slow DAO Analysis
 
-## Root Causes
+## Problem
 
-1. **Wrong address type**: Users are pasting Solana program IDs (like the SPL Token Program) instead of Realm addresses. These are fundamentally different -- a Realm address is the specific DAO governance account created on realms.today, not the program's deployment address.
+Two issues are happening together:
 
-2. **Missing error handling in UI**: When the edge function returns "No governance accounts found" (shape: `{ message, proposals: 0 }`), the frontend blindly sets it as `result` and tries to render `.total`, `.delivery_rate`, etc. -- all of which are `undefined` on that response shape.
+1. **Slow response**: The `getProgramAccounts` RPC call against the spl-governance program on mainnet can take 10-30+ seconds for large DAOs. When it exceeds the edge function timeout (default ~60s), the function crashes without sending a response.
+
+2. **CORS error**: When the function times out or crashes, no response headers are sent -- including CORS headers. The browser then blocks the failed request with a CORS error. Additionally, the current `Access-Control-Allow-Headers` is missing headers that the Supabase JS client sends.
 
 ## Changes
 
-### File: `src/components/demo/LiveAnalysisSection.tsx`
+### File: `supabase/functions/fetch-realms-governance/index.ts`
 
-1. **Handle "no data" response**: After calling the function, check if the response has `proposals === 0` or is missing `total`. Show a clear "No governance data found" message instead of rendering undefined values.
-
-2. **Improve placeholder text**: Change the input placeholder from "Paste a Realms DAO address..." to "Paste a Realm address from realms.today..." to clarify what's expected.
-
-3. **Add helper text**: Add a small note below the input explaining: "Use the Realm address from your DAO's page on realms.today -- this is different from a Solana program ID."
-
-4. **Update example DAOs**: Replace the current examples with DAOs that have real, known Realm addresses that return actual proposal data. Keep "Marinade DAO" (GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw works and returns 8 proposals/100% delivery). Remove Mango and Drift if their addresses don't return data, and replace with working ones.
-
-### Technical Detail
-
-The response shape check:
+1. **Update CORS headers** to include all headers the Supabase client sends:
 ```typescript
-// After getting data from the function:
-if (data.proposals === 0 || !data.total) {
-  setError('No governance proposals found for this address. Make sure you are using a Realm address from realms.today, not a Solana program ID.');
-  return;
-}
-setResult(data);
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 ```
 
-No backend changes needed -- the edge function already returns correctly, the UI just isn't handling the "no data" case.
+2. **Add RPC request timeouts** using `AbortController` with a 10-second timeout per RPC call, so one slow call doesn't hang the entire function:
+```typescript
+const controller = new AbortController();
+const timeout = setTimeout(() => controller.abort(), 10000);
+const response = await fetch(rpcUrl, { signal: controller.signal, ... });
+clearTimeout(timeout);
+```
+
+3. **Limit governance account processing** -- cap at 5 governance accounts to prevent cascading slow RPC calls for large DAOs.
+
+4. **Wrap the entire handler in a try/catch** that always returns CORS headers, even on unexpected errors or timeouts.
+
+### File: `src/components/demo/LiveAnalysisSection.tsx`
+
+5. **Add a timeout indicator in the UI** -- show "This may take up to 30 seconds for large DAOs..." while loading, so users know to wait.
+
+6. **Improve error message for network failures** -- detect fetch/CORS errors and show a user-friendly message like "Request timed out. The DAO may have too many governance accounts for real-time analysis. Try a smaller DAO."
 
