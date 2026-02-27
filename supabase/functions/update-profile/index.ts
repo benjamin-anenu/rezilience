@@ -38,8 +38,13 @@ interface UpdateProfileRequest {
         title: string;
         description: string;
         targetDate?: string;
-        status: "upcoming" | "completed" | "overdue";
+        status: "upcoming" | "completed" | "overdue" | "dao_approved" | "dao_rejected";
         completedAt?: string;
+        deliveryEvidence?: {
+          description: string;
+          links: string[];
+          submittedAt: string;
+        };
       }>;
       order: number;
     }>;
@@ -69,6 +74,7 @@ const EDITABLE_FIELDS = [
   "team_members",
   "staking_pitch",
   "logo_url",
+  "realms_dao_address",
 ];
 
 Deno.serve(async (req) => {
