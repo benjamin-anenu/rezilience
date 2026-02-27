@@ -30,6 +30,7 @@ import PitchDeck from "./pages/PitchDeck";
 import ResilienceGPT from "./pages/ResilienceGPT";
 import Terms from "./pages/Terms";
 import HackathonDemo from "./pages/HackathonDemo";
+import BountyBoard from "./pages/BountyBoard";
 import NotFound from "./pages/NotFound";
 
 // Admin imports
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/accountability" element={<Accountability />} />
               <Route path="/accountability/:realmAddress" element={<AccountabilityDetail />} />
+              <Route path="/bounty-board" element={<BountyBoard />} />
               {/* Legacy redirects */}
               <Route path="/staking" element={<Navigate to="/accountability" replace />} />
               <Route path="/my-bonds" element={<Navigate to="/accountability" replace />} />
