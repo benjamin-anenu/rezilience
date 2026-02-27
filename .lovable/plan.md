@@ -1,170 +1,217 @@
 
-# DAO Accountability Dashboard — Pre-Production Audit
 
-## 1. Intent vs. Implementation Reconciliation
+# Complete Fix and Bounty Board Implementation Plan
 
-**Original Intent**: Convert staking into a DAO Accountability Dashboard that tracks milestone delivery, surfaces delivery evidence, and deep-links to Realms for voting. End-to-end touchpoints from registry join to DAO voter review.
+## Current State Summary
 
-**Critical Misalignment Found**:
-
-The claim flow (`ClaimProfile.tsx`) **never passes `realmsDaoAddress` or `setRealmsDaoAddress` to `CoreIdentityForm`**. The props exist on the component but are never wired. This means:
-- No project can ever get a `realms_dao_address` during registration
-- The Accountability Dashboard will **always be empty**
-- The entire feature is unreachable through the intended user flow
-
-The only path to set `realms_dao_address` is via `SettingsTab.tsx` (post-registration edit), which is a secondary, undiscoverable path.
-
-**Database confirms**: Zero rows have `realms_dao_address` set. The feature is currently dead.
+After auditing every file in the accountability flow, there are **3 blocking bugs** that make the feature dead, plus several strategic improvements needed before the Bounty Board (Phase 2) can be scaffolded.
 
 ---
 
-## 2. Blocking Issues (Must Fix Before Release)
+## Part 1: Blocking Bug Fixes (Mandatory)
 
-### B1: Claim flow does not wire Realms DAO Address
-- `ClaimProfile.tsx` lines 595-608 render `CoreIdentityForm` without `realmsDaoAddress` / `setRealmsDaoAddress` props
-- `handleDirectSubmit` (line 380-458) never sends `realms_dao_address` to the edge function
-- `claim-profile` edge function uses `...rest` spread, so it would accept the field — but the frontend never sends it
-- **Fix**: Add state variable, pass props to CoreIdentityForm, include in submission payload
+### Fix 1: `update-profile` Edge Function — Missing `realms_dao_address` in EDITABLE_FIELDS
 
-### B2: Realms field only shows for `dao` or `defi` categories
-- `CoreIdentityForm.tsx` line 51: `const isRealmsRelevant = category === 'dao' || category === 'defi';`
-- An infrastructure project with a Realm DAO would never see this field
-- **Fix**: Show the field for all categories (or at minimum add `infrastructure` and `other`), since any project type can have governance
+**File**: `supabase/functions/update-profile/index.ts`
 
-### B3: SettingsTab uses wrong property path for initialization
-- `SettingsTab.tsx` line 21: `useState((profile as any).realmsDaoAddress || '')`
-- The `ClaimedProfile` type doesn't have `realmsDaoAddress` — the DB column is `realms_dao_address`
-- The profile object from the API would have it as a snake_case or camelCase mapped field, but `(profile as any).realmsDaoAddress` is likely `undefined` always
-- **Fix**: Verify the actual key name in the deserialized profile object and use the correct one
+The `EDITABLE_FIELDS` whitelist on line 62-72 does not include `realms_dao_address`. When SettingsTab sends this field, it is silently filtered out and never saved.
 
-### B4: `useAccountabilityData` uses `as any` to bypass type safety
-- Lines 37-38 cast the Supabase query as `any`, hiding potential runtime errors
-- The `claimed_profiles_public` view (used for public reads) does NOT include `realms_dao_address`, `realms_delivery_rate`, `realms_proposals_total`, or `realms_proposals_completed`
-- The hook queries `claimed_profiles` directly, but RLS policies restrict reads to `claimer_wallet IS NOT NULL` OR `verified = true` OR `claim_status = 'unclaimed'`
-- For DAO voters (unauthenticated visitors), they can only see profiles where `verified = true` — this works, but the `as any` hides whether the columns actually return
+**Change**: Add `"realms_dao_address"` to the `EDITABLE_FIELDS` array.
 
-### B5: No error state on Accountability pages
-- `Accountability.tsx` and `AccountabilityDetail.tsx` never check `isError` from the query hook
-- If the query fails (RLS denial, network error), the user sees the loading skeleton forever
-- **Fix**: Add `isError` handling with a retry-able error state
+Also update the `milestones` type interface (lines 31-45) to include `deliveryEvidence` and the full status union (`dao_approved`, `dao_rejected`), since the edge function currently strips those fields during type narrowing.
 
----
+### Fix 2: SettingsTab Change Detection Bug
 
-## 3. Edge Cases and Failure Modes
+**File**: `src/components/profile/tabs/SettingsTab.tsx`
 
-### E1: DAO name derivation is wrong
-- `AccountabilityDetail.tsx` line 25: `const realmName = projects[0]?.projectName`
-- This shows the first PROJECT's name as the DAO name, which is misleading. If Marinade DAO has 3 projects, the DAO name shows as the first project's name, not the actual Realm name
-- Same issue in `useAccountabilityData.ts` line 87: `realmName: projects[0]?.projectName || addr.slice(0, 8)`
+Line 33 compares `realmsDaoAddress` against `(profile as any).realmsDaoAddress` but the initialization on line 21 checks `(profile as any).realms_dao_address || (profile as any).realmsDaoAddress`. These are inconsistent. The change detection comparison should match the initialization logic.
 
-### E2: Milestone status count mismatch between dashboard and detail
-- `DAOCard` counts milestones with `status === 'completed' || status === 'dao_approved'`
-- `RoadmapManagement` only sets status to `'completed'` — never `'dao_approved'`
-- No mechanism exists to transition a milestone from `completed` to `dao_approved`
-- The `dao_approved` and `dao_rejected` statuses in the type definition are aspirational — no code path sets them
+**Change**: Use the same dual-check in the `useEffect` change detection:
+```typescript
+realmsDaoAddress !== ((profile as any).realms_dao_address || (profile as any).realmsDaoAddress || '')
+```
 
-### E3: Delivery evidence is modifiable after submission
-- A builder can re-click "Complete" on an already-completed milestone (button hidden for completed, but they can modify milestones JSONB directly via update-profile)
-- No immutability enforcement on submitted evidence
-- Evidence `submittedAt` timestamp is client-generated (trivially falsifiable)
+### Fix 3: Milestone Status Type in Edge Function
 
-### E4: PhaseTimeline "Join Waitlist" button does nothing persistent
-- `PhaseTimeline.tsx` line 11: shows a toast but doesn't save the email/interest anywhere
-- Creates false confidence — user thinks they signed up but no data was captured
+**File**: `supabase/functions/update-profile/index.ts`
 
-### E5: Variance request on locked phase with no milestones crashes
-- `RoadmapManagement.tsx` line 330: `setSelectedMilestone({ phaseId: phase.id, milestone: phase.milestones[0] })`
-- If a locked phase has 0 milestones, `phase.milestones[0]` is `undefined`, causing downstream errors
+The milestone status type (line 42) only allows `"upcoming" | "completed" | "overdue"`. The frontend types include `"dao_approved" | "dao_rejected"`. If these statuses are ever set, the edge function's type interface would cause issues.
 
-### E6: URL routing vulnerability
-- `/accountability/:realmAddress` accepts any string as realmAddress
-- No validation that it's a valid base58 address
-- Malformed addresses will silently query the DB and return no results (harmless but poor UX)
+**Change**: Update the status union to match the frontend types, and add `deliveryEvidence` to the milestone sub-type.
 
 ---
 
-## 4. Touchpoints and Coupling
+## Part 2: End-to-End Testability
 
-### Missing link: claim-profile edge function
-- The `claim-profile` edge function uses `...rest` spread for additional fields, so `realms_dao_address` would be accepted IF sent — but nothing in the frontend sends it during claim
-- The `update-profile` edge function presumably handles updates from SettingsTab — this path works but is undiscoverable
+### Problem
+Zero rows exist with `realms_dao_address`. You cannot test the accountability dashboard without at least one project having a Realm DAO address.
 
-### Broken link: `claimed_profiles_public` view
-- The public view does not expose `realms_dao_address`, `realms_delivery_rate`, `realms_proposals_total`, `realms_proposals_completed`
-- The accountability hook queries `claimed_profiles` directly (not the public view), which works only because of RLS allowing reads on verified/unclaimed profiles
-- If RLS policies change, accountability breaks silently
+### Solution: Two paths to populate data
 
-### Orphaned routes
-- `/staking` and `/my-bonds` routes were removed from App.tsx but old links may exist in:
-  - External documentation, bookmarks, or indexed pages
-  - No redirect from old routes to new ones — users get 404
+**Path A — Via Claim Flow (already wired)**
+1. Go to `/claim-profile`
+2. Authenticate with X
+3. On Step 2 (Core Identity), select any category
+4. Enter a valid Realm DAO address (e.g., `7vrFDrK9GRNX7YZXbo7N3kvta7Pbn6W1hCXQ6C7WBxG9`)
+5. Complete the rest of the flow
+6. The `claim-profile` edge function uses `...rest` spread and WILL save `realms_dao_address`
+7. Navigate to `/accountability` — the project should appear
 
----
+**Path B — Via SettingsTab (currently broken, fixed in Fix 1)**
+1. Go to `/profile/:id` as the profile owner
+2. Settings tab -> enter Realm DAO address
+3. Save -> After Fix 1, this will actually persist
 
-## 5. Frontend Experience Audit
-
-### Loading states: Adequate
-- Both pages show skeletons during load
-
-### Error states: Missing
-- No error handling on either page
-- No retry mechanism
-
-### Empty state: Adequate but misleading
-- The empty state says "Projects need to link their Realm DAO address during registration" but registration doesn't actually offer this field (see B1)
-
-### Cognitive load issue: "ACCOUNTABILITY" in nav
-- This is abstract jargon for most users. "DAO Tracker" or "Governance" would be clearer
-- The nav label is long and takes significant horizontal space
-
-### Trust erosion: Phase 2 banner
-- The "BOUNTY BOARD COMING SOON" banner with "Q2 2026" is the first thing users see
-- Leading with unavailable features before showing actual value erodes confidence
-- Should be below the content, not above it
+**Path C — Quick database insert for testing**
+If needed, we can manually set a `realms_dao_address` on an existing profile via the database to validate the UI immediately.
 
 ---
 
-## 6. Backend Integrity
+## Part 3: Bounty Board (Phase 2 Scaffold)
 
-### Validation gaps
-- No server-side validation of `realms_dao_address` format in `update-profile` or `claim-profile`
-- A builder could save `"hello"` as their Realm address and it would appear on the dashboard
+The Bounty Board is intentionally Phase 2 (future). The current plan is to build the **UI scaffold with disabled/coming-soon state** so the feature shape is visible and the waitlist captures interest properly.
 
-### Data integrity
-- Milestones JSONB has no schema enforcement — any shape can be saved
-- `deliveryEvidence.submittedAt` is client-generated, not server-generated
-- Evidence can be overwritten without audit trail (only `updated_at` on the row changes)
+### 3a: Persistent Waitlist (Fix the "NOTIFY ME" button)
 
-### RLS is adequate
-- Reads work for verified profiles
-- Writes go through edge functions with service role
+**Current Problem**: `PhaseTimeline.tsx` line 10-14 shows a toast but saves nothing.
+
+**Solution**: Create a `bounty_waitlist` table and a small edge function to persist interest.
+
+**Database Migration**:
+```sql
+CREATE TABLE public.bounty_waitlist (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  email text,
+  wallet_address text,
+  x_user_id text,
+  x_username text,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT bounty_waitlist_unique_email UNIQUE (email)
+);
+
+ALTER TABLE public.bounty_waitlist ENABLE ROW LEVEL SECURITY;
+
+-- Allow inserts from anyone (public waitlist)
+CREATE POLICY "Anyone can join waitlist"
+  ON public.bounty_waitlist FOR INSERT
+  WITH CHECK (true);
+
+-- No public reads (admin only)
+CREATE POLICY "No public reads"
+  ON public.bounty_waitlist FOR SELECT
+  USING (false);
+```
+
+**Edge Function**: `supabase/functions/join-bounty-waitlist/index.ts`
+- Accepts `{ email?, wallet_address?, x_user_id?, x_username? }`
+- Upserts into `bounty_waitlist`
+- Returns success/already-registered
+
+**Frontend Change**: Update `PhaseTimeline.tsx` to:
+- Show a small email input + "NOTIFY ME" button
+- If user is authenticated (has X), auto-include their X info
+- Call the edge function instead of just showing a toast
+- Show "You're on the list!" confirmation state
+
+### 3b: Bounty Board Page Scaffold
+
+**New File**: `src/pages/BountyBoard.tsx`
+
+A page at `/bounty-board` that shows:
+- Phase 2 header with "COMING Q2 2026" badge
+- Visual mockup/wireframe of what the Bounty Board will look like
+- Feature list: Escrowed SOL rewards, on-chain claim/submit/approve, automated fund release, milestone-linked payouts
+- A larger "JOIN WAITLIST" CTA with email capture
+- Link back to the current Accountability Dashboard
+
+**New Route**: Add `/bounty-board` to `App.tsx`
+
+### 3c: Navigation Update
+
+No new nav link needed (avoid clutter). The Bounty Board is accessed via the Phase 2 card on the Accountability page.
+
+**Update `PhaseTimeline.tsx`**: Add a "LEARN MORE" link from the Phase 2 card to `/bounty-board`.
 
 ---
 
-## 7. Readiness Verdict
+## Part 4: Additional Verification Fixes
 
-**NOT READY** — The primary user flow (claim -> set DAO address -> appear on dashboard) is broken. The feature is architecturally sound but has a wiring gap that makes the entire dashboard unreachable through normal user journeys.
+### 4a: `claimed_profiles_public` View Missing Columns
+
+The public view does NOT include `realms_dao_address`, `realms_delivery_rate`, `realms_proposals_total`, `realms_proposals_completed`. The accountability hook queries `claimed_profiles` directly (not the public view), so this works via RLS. However, for consistency and to avoid future breakage if someone refactors to use the public view:
+
+**Database Migration**: Recreate the view to include the Realms columns.
+
+### 4b: Variance Request Crash Guard
+
+**File**: `src/components/profile/tabs/RoadmapManagement.tsx`
+
+Line 324 already has `phase.milestones.length > 0` guard. This was fixed in the previous round. Verified.
+
+### 4c: Legacy Route Redirects
+
+**File**: `src/App.tsx`
+
+The current code has:
+```tsx
+<Route path="/staking" element={<Accountability />} />
+<Route path="/my-bonds" element={<Accountability />} />
+```
+
+These render the Accountability page directly (not a redirect). This works but doesn't update the URL bar. For SEO and UX, these should use `<Navigate to="/accountability" replace />` instead.
 
 ---
 
-## Required Actions
+## Implementation Order
 
-### Mandatory (Blocking)
-1. **Wire `realmsDaoAddress` in ClaimProfile.tsx** — add state, pass to CoreIdentityForm, include in submission payload to claim-profile edge function
-2. **Show Realms field for ALL categories** (not just dao/defi) — or at minimum add a broader set
-3. **Fix SettingsTab property access** — verify the correct key for `realms_dao_address` in the deserialized profile
-4. **Add error states** to Accountability and AccountabilityDetail pages
-5. **Add redirects** from `/staking` and `/my-bonds` to `/accountability`
+1. **Fix update-profile edge function** (add `realms_dao_address` to EDITABLE_FIELDS, update milestone types) and redeploy
+2. **Fix SettingsTab change detection** consistency
+3. **Fix legacy route redirects** to use `<Navigate>`
+4. **Create `bounty_waitlist` table** via migration
+5. **Create `join-bounty-waitlist` edge function**
+6. **Update PhaseTimeline** with email capture and edge function call
+7. **Create BountyBoard page** scaffold with coming-soon state
+8. **Add `/bounty-board` route** to App.tsx
+9. **Update `claimed_profiles_public` view** to include Realms columns
 
-### Strategic (Soon)
-6. **Add server-side validation** of `realms_dao_address` format in edge functions
-7. **Generate `submittedAt` server-side** in update-profile edge function
-8. **Fix DAO name derivation** — use on-chain Realm name or allow builders to set a DAO display name
-9. **Fix variance request crash** when phase has no milestones
-10. **Move Phase 2 banner below content** to lead with value
+---
 
-### Polish (Later)
-11. Rename nav label to something more accessible
-12. Add `dao_approved` status transition mechanism (poll Realms proposals and auto-update)
-13. Make the "Join Waitlist" button actually persist interest
-14. Add URL validation for realmAddress route parameter
+## Files to Modify
+
+| File | Change |
+|------|--------|
+| `supabase/functions/update-profile/index.ts` | Add `realms_dao_address` to EDITABLE_FIELDS, update milestone types |
+| `src/components/profile/tabs/SettingsTab.tsx` | Fix change detection consistency |
+| `src/App.tsx` | Add `/bounty-board` route, fix legacy redirects |
+| `src/components/accountability/PhaseTimeline.tsx` | Add email capture, call waitlist edge function, link to Bounty Board |
+
+## Files to Create
+
+| File | Purpose |
+|------|---------|
+| `supabase/functions/join-bounty-waitlist/index.ts` | Persist waitlist interest |
+| `src/pages/BountyBoard.tsx` | Phase 2 scaffold page with feature preview and waitlist CTA |
+
+## Database Changes
+
+| Change | Type |
+|--------|------|
+| Create `bounty_waitlist` table with RLS | Migration |
+| Update `claimed_profiles_public` view to include Realms columns | Migration |
+
+---
+
+## Testing Checklist (End-to-End)
+
+After implementation:
+
+1. Register a new project via `/claim-profile` with Realm DAO address `7vrFDrK9GRNX7YZXbo7N3kvta7Pbn6W1hCXQ6C7WBxG9`
+2. Verify it appears on `/accountability`
+3. Click into the DAO detail page
+4. Go to `/profile/:id` Settings tab, change Realm DAO address, save, verify it persists
+5. Go to Roadmap tab, mark a milestone complete with evidence, verify evidence shows on accountability detail
+6. Click "NOTIFY ME" on Phase 2 card, enter email, verify it saves to `bounty_waitlist`
+7. Navigate to `/bounty-board`, verify the scaffold page renders
+8. Visit `/staking` and `/my-bonds`, verify redirect to `/accountability`
+9. Visit `/accountability/invalid-address`, verify graceful empty state
+
