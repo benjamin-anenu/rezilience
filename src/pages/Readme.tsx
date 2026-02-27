@@ -455,10 +455,10 @@ export default function Readme() {
                   link="/claim-profile"
                 />
                 <FeatureCard
-                  title="Staking (Coming Soon)"
-                  description="Stake tokens on projects you believe in. Economic skin-in-the-game for trust signals."
-                  link="/staking"
-                  badge="PHASE 2"
+                  title="DAO Accountability"
+                  description="Track milestone delivery and governance accountability across Solana DAOs with linked Realm addresses."
+                  link="/accountability"
+                  badge="PHASE 1"
                 />
               </div>
             </section>

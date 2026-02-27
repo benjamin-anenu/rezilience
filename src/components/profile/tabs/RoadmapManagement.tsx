@@ -33,6 +33,7 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
   const [selectedMilestone, setSelectedMilestone] = useState<{ phaseId: string; milestone: PhaseMilestone } | null>(null);
   const [newPhaseTitle, setNewPhaseTitle] = useState('');
   const [newMilestone, setNewMilestone] = useState({ title: '', description: '', targetDate: '' });
+  const [evidence, setEvidence] = useState({ summary: '', metricsAchieved: '', videoUrl: '', githubLinks: '' });
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(
     new Set((profile.milestones || []).map((p) => p.id))
   );
@@ -56,19 +57,34 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
 
   const handleMarkComplete = () => {
     if (!selectedMilestone) return;
+    if (!evidence.summary.trim()) return;
+    
+    const deliveryEvidence = {
+      summary: evidence.summary.trim(),
+      metricsAchieved: evidence.metricsAchieved.trim(),
+      videoUrl: evidence.videoUrl.trim() || undefined,
+      githubLinks: evidence.githubLinks.trim() 
+        ? evidence.githubLinks.split(',').map((l) => l.trim()).filter(Boolean)
+        : undefined,
+      submittedAt: new Date().toISOString(),
+    };
+
     const updated = phases.map((p) =>
       p.id === selectedMilestone.phaseId
         ? {
             ...p,
             milestones: p.milestones.map((m) =>
               m.id === selectedMilestone.milestone.id
-                ? { ...m, status: 'completed' as const, completedAt: new Date().toISOString() }
+                ? { ...m, status: 'completed' as const, completedAt: new Date().toISOString(), deliveryEvidence }
                 : m
             ),
           }
         : p
     );
-    savePhases(updated, () => setCompleteDialogOpen(false));
+    savePhases(updated, () => {
+      setCompleteDialogOpen(false);
+      setEvidence({ summary: '', metricsAchieved: '', videoUrl: '', githubLinks: '' });
+    });
   };
 
   const handleRequestVariance = () => {
@@ -328,26 +344,63 @@ export function RoadmapManagement({ profile, xUserId }: RoadmapManagementProps) 
         )}
       </CardContent>
 
-      {/* Mark Complete Dialog */}
-      <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
-        <DialogContent>
+      {/* Mark Complete Dialog — with Delivery Evidence */}
+      <Dialog open={completeDialogOpen} onOpenChange={(open) => {
+        setCompleteDialogOpen(open);
+        if (!open) setEvidence({ summary: '', metricsAchieved: '', videoUrl: '', githubLinks: '' });
+      }}>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle className="font-display uppercase tracking-tight">Mark Milestone Complete</DialogTitle>
+            <DialogTitle className="font-display uppercase tracking-tight">Submit Delivery Evidence</DialogTitle>
             <DialogDescription>
-              This action cannot be undone. The milestone will be publicly marked as completed with today's date.
+              Provide evidence of what was delivered. This is publicly visible and required for DAO accountability.
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-sm border border-border bg-muted/30 p-4">
+          <div className="rounded-sm border border-border bg-muted/30 p-3 mb-2">
             <p className="font-mono text-sm font-medium">{selectedMilestone?.milestone.title}</p>
-            {selectedMilestone?.milestone.description && (
-              <p className="mt-1 text-xs text-muted-foreground">{selectedMilestone.milestone.description}</p>
-            )}
+          </div>
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <Label className="font-display text-xs uppercase tracking-wider">Summary of Work Done *</Label>
+              <Textarea
+                placeholder="Describe what was built, shipped, or achieved..."
+                value={evidence.summary}
+                onChange={(e) => setEvidence((p) => ({ ...p, summary: e.target.value }))}
+                className="min-h-[80px]"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="font-display text-xs uppercase tracking-wider">Metrics Achieved *</Label>
+              <Input
+                placeholder="e.g., 1000 users, $2M TVL, 99.9% uptime"
+                value={evidence.metricsAchieved}
+                onChange={(e) => setEvidence((p) => ({ ...p, metricsAchieved: e.target.value }))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="font-display text-xs uppercase tracking-wider">Video Evidence URL</Label>
+              <Input
+                placeholder="YouTube or X video link"
+                value={evidence.videoUrl}
+                onChange={(e) => setEvidence((p) => ({ ...p, videoUrl: e.target.value }))}
+              />
+              <p className="text-[10px] text-muted-foreground">Optional — YouTube, X, or Loom link</p>
+            </div>
+            <div className="space-y-1">
+              <Label className="font-display text-xs uppercase tracking-wider">GitHub Links</Label>
+              <Input
+                placeholder="PR or commit URLs, comma-separated"
+                value={evidence.githubLinks}
+                onChange={(e) => setEvidence((p) => ({ ...p, githubLinks: e.target.value }))}
+              />
+              <p className="text-[10px] text-muted-foreground">Optional — separate multiple links with commas</p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCompleteDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleMarkComplete} disabled={updateProfile.isPending}>
+            <Button onClick={handleMarkComplete} disabled={updateProfile.isPending || !evidence.summary.trim()}>
               {updateProfile.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Confirm Complete
+              Submit Evidence & Complete
             </Button>
           </DialogFooter>
         </DialogContent>

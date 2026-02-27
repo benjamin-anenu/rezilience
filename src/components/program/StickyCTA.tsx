@@ -23,9 +23,9 @@ export function StickyCTA({ programId, projectName }: StickyCTAProps) {
           asChild 
           className="gap-2 font-display font-semibold uppercase tracking-wider shadow-lg"
         >
-          <Link to={`/staking?program=${programId}`}>
+          <Link to={`/accountability`}>
             <Heart className="h-4 w-4" />
-            STAKE NOW
+            VIEW ACCOUNTABILITY
           </Link>
         </Button>
       </div>
