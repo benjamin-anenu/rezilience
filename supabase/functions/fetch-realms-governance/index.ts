@@ -10,6 +10,11 @@ const corsHeaders = {
 // spl-governance program ID
 const GOV_PROGRAM_ID = "GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw";
 
+// Governance account type IDs in spl-governance
+// GovernanceV1=3, ProgramGovernanceV1=4, MintGovernanceV1=9, TokenGovernanceV1=10
+// GovernanceV2=18, ProgramGovernanceV2=19, MintGovernanceV2=20, TokenGovernanceV2=21
+const GOVERNANCE_ACCOUNT_TYPES = new Set([3, 4, 9, 10, 18, 19, 20, 21]);
+
 // Proposal state mapping
 const PROPOSAL_STATES: Record<number, string> = {
   0: "Draft",
@@ -62,19 +67,22 @@ Deno.serve(async (req) => {
 
     console.log(`[Realms] Fetching governance accounts for realm: ${realm_address}`);
 
-    // Step 1: Get all governance accounts owned by this realm
-    // Governance accounts have the realm pubkey at byte offset 1 (after account type byte)
-    const governanceAccounts = await rpcGetProgramAccounts(rpcUrl, GOV_PROGRAM_ID, [
-      { memcmp: { offset: 1, bytes: realm_address } }, // realm field at offset 1 in GovernanceV2
+    // Step 1: Get all spl-governance accounts with this realm at offset 1
+    const allAccounts = await rpcGetProgramAccounts(rpcUrl, GOV_PROGRAM_ID, [
+      { memcmp: { offset: 1, bytes: realm_address } },
     ]);
 
-    if (!governanceAccounts || governanceAccounts.length === 0) {
-      // Fallback: try offset 33 (governed_account) for unusual layouts
-      const govAccountsV1 = await rpcGetProgramAccounts(rpcUrl, GOV_PROGRAM_ID, [
+    // Filter to only actual governance account types by checking byte 0
+    let governanceAccounts = filterGovernanceAccounts(allAccounts || []);
+
+    if (governanceAccounts.length === 0) {
+      // Fallback: try offset 33 for unusual layouts
+      const altAccounts = await rpcGetProgramAccounts(rpcUrl, GOV_PROGRAM_ID, [
         { memcmp: { offset: 33, bytes: realm_address } },
       ]);
+      governanceAccounts = filterGovernanceAccounts(altAccounts || []);
 
-      if (!govAccountsV1 || govAccountsV1.length === 0) {
+      if (governanceAccounts.length === 0) {
         console.log(`[Realms] No governance accounts found for realm ${realm_address}`);
         await updateProfile(profile_id, {
           realms_proposals_total: 0,
@@ -93,16 +101,14 @@ Deno.serve(async (req) => {
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-
-      governanceAccounts.push(...govAccountsV1);
     }
 
-    console.log(`[Realms] Found ${governanceAccounts.length} governance accounts`);
+    console.log(`[Realms] Found ${governanceAccounts.length} governance accounts (filtered)`);
 
-    // Cap at 5 governance accounts to prevent cascading slow RPC calls
-    const cappedAccounts = governanceAccounts.slice(0, 5);
-    if (governanceAccounts.length > 5) {
-      console.log(`[Realms] Capped from ${governanceAccounts.length} to 5 governance accounts`);
+    // Cap at 10 governance accounts to prevent cascading slow RPC calls
+    const cappedAccounts = governanceAccounts.slice(0, 10);
+    if (governanceAccounts.length > 10) {
+      console.log(`[Realms] Capped from ${governanceAccounts.length} to 10 governance accounts`);
     }
 
     // Step 2: For each governance account, fetch proposals
@@ -202,6 +208,24 @@ Deno.serve(async (req) => {
 
 // ─── Helpers ───
 
+/**
+ * Filter RPC results to only governance account types by checking byte 0.
+ * spl-governance stores the account type as the first byte.
+ */
+function filterGovernanceAccounts(
+  accounts: Array<{ pubkey: string; account: { data: [string, string] } }>
+) {
+  return accounts.filter((acc) => {
+    try {
+      const buffer = Uint8Array.from(atob(acc.account.data[0]), (c) => c.charCodeAt(0));
+      if (buffer.length < 1) return false;
+      return GOVERNANCE_ACCOUNT_TYPES.has(buffer[0]);
+    } catch {
+      return false;
+    }
+  });
+}
+
 async function updateProfile(profileId: string, updates: Record<string, unknown>) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -282,9 +306,9 @@ function parseProposalAccount(
     if (buffer.length < 10) return null;
 
     // Account type byte at offset 0
-    // ProposalV1 = 6, ProposalV2 = 14
+    // ProposalV1 = 5, ProposalV2 = 14
     const accountType = buffer[0];
-    if (accountType !== 6 && accountType !== 14) return null;
+    if (accountType !== 5 && accountType !== 14) return null;
 
     // For ProposalV2 (type 14):
     // Offset layout (approximate):
