@@ -68,6 +68,9 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/accountability" element={<Accountability />} />
               <Route path="/accountability/:realmAddress" element={<AccountabilityDetail />} />
+              {/* Legacy redirects */}
+              <Route path="/staking" element={<Accountability />} />
+              <Route path="/my-bonds" element={<Accountability />} />
               <Route path="/deps/:id" element={<DependencyTree />} />
               <Route path="/grants" element={<Grants />} />
               <Route path="/library" element={<Library />} />

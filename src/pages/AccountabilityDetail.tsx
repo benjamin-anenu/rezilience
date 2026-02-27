@@ -9,7 +9,7 @@ import { toast } from 'sonner';
 
 const AccountabilityDetail = () => {
   const { realmAddress } = useParams<{ realmAddress: string }>();
-  const { data: projects, isLoading } = useAccountabilityDetail(realmAddress);
+  const { data: projects, isLoading, isError } = useAccountabilityDetail(realmAddress);
 
   const truncated = realmAddress
     ? realmAddress.slice(0, 6) + '...' + realmAddress.slice(-6)
@@ -68,7 +68,12 @@ const AccountabilityDetail = () => {
           </div>
 
           {/* Projects */}
-          {isLoading ? (
+          {isError ? (
+            <div className="py-16 text-center">
+              <p className="mb-4 text-muted-foreground">Failed to load project data.</p>
+              <Button variant="outline" onClick={() => window.location.reload()}>RETRY</Button>
+            </div>
+          ) : isLoading ? (
             <div className="space-y-6">
               {[1, 2].map((i) => (
                 <Skeleton key={i} className="h-64 rounded-sm" />

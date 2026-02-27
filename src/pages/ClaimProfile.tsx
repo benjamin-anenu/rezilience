@@ -125,6 +125,9 @@ const ClaimProfile = () => {
   // Step 5: Roadmap (Phase-based)
   const [milestones, setMilestones] = useState<Phase[]>([]);
 
+  // Realms DAO Address (optional, for DAO Accountability)
+  const [realmsDaoAddress, setRealmsDaoAddress] = useState('');
+
   // GitHub Analysis State
   const [githubAnalysisResult, setGithubAnalysisResult] = useState<GitHubAnalysisResult | null>(null);
 
@@ -180,9 +183,10 @@ const ClaimProfile = () => {
       authorityVerified,
       programVerified,
       githubVerified,
+      realmsDaoAddress,
     };
     localStorage.setItem('claimFormProgress', JSON.stringify(formData));
-  }, [projectName, description, category, country, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones, githubAnalysisResult, logoUrl, authorityData, authorityVerified, programVerified, githubVerified]);
+  }, [projectName, description, category, country, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones, githubAnalysisResult, logoUrl, authorityData, authorityVerified, programVerified, githubVerified, realmsDaoAddress]);
 
   // Restore form state on mount
   useEffect(() => {
@@ -207,6 +211,7 @@ const ClaimProfile = () => {
         if (data.authorityVerified) setAuthorityVerified(data.authorityVerified);
         if (data.programVerified) setProgramVerified(data.programVerified);
         if (data.githubVerified) setGithubVerified(data.githubVerified);
+        if (data.realmsDaoAddress) setRealmsDaoAddress(data.realmsDaoAddress);
       } catch (e) {
         // Invalid JSON, ignore
       }
@@ -423,6 +428,7 @@ const ClaimProfile = () => {
         multisig_address: authorityData?.multisigAddress || null,
         squads_version: authorityData?.squadsVersion || null,
         multisig_verified_via: authorityData?.multisigVerifiedVia || null,
+        realms_dao_address: realmsDaoAddress || null,
         // For the edge function routing
         unclaimed_profile_id: unclaimedProfileId || undefined,
       };
@@ -605,6 +611,8 @@ const ClaimProfile = () => {
                 setWebsiteUrl={setWebsiteUrl}
                 logoUrl={logoUrl}
                 setLogoUrl={setLogoUrl}
+                realmsDaoAddress={realmsDaoAddress}
+                setRealmsDaoAddress={setRealmsDaoAddress}
               />
 
               {/* Optional Identifiers */}
