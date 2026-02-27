@@ -13,8 +13,8 @@ import ClaimProfile from "./pages/ClaimProfile";
 import GitHubCallback from "./pages/GitHubCallback";
 import XCallback from "./pages/XCallback";
 import Dashboard from "./pages/Dashboard";
-import Staking from "./pages/Staking";
-import MyBonds from "./pages/MyBonds";
+import Accountability from "./pages/Accountability";
+import AccountabilityDetail from "./pages/AccountabilityDetail";
 import Readme from "./pages/Readme";
 import DependencyTree from "./pages/DependencyTree";
 import Grants from "./pages/Grants";
@@ -66,8 +66,8 @@ const App = () => (
               <Route path="/github-callback" element={<GitHubCallback />} />
               <Route path="/x-callback" element={<XCallback />} />
               <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/staking" element={<Staking />} />
-              <Route path="/my-bonds" element={<MyBonds />} />
+              <Route path="/accountability" element={<Accountability />} />
+              <Route path="/accountability/:realmAddress" element={<AccountabilityDetail />} />
               <Route path="/deps/:id" element={<DependencyTree />} />
               <Route path="/grants" element={<Grants />} />
               <Route path="/library" element={<Library />} />

@@ -114,13 +114,26 @@ export interface Milestone {
 }
 
 // Phase-based Roadmap Types (v2)
+export interface DeliveryEvidence {
+  summary: string;
+  metricsAchieved: string;
+  videoUrl?: string;
+  githubLinks?: string[];
+  submittedAt: string;
+}
+
 export interface PhaseMilestone {
   id: string;
   title: string;
   description: string;
   targetDate?: string;
-  status: 'upcoming' | 'completed' | 'overdue';
+  status: 'upcoming' | 'completed' | 'overdue' | 'dao_approved' | 'dao_rejected';
   completedAt?: string;
+  deliveryEvidence?: DeliveryEvidence;
+  realmsProposalAddress?: string;
+  realmsProposalState?: string;
+  realmsVotesFor?: number;
+  realmsVotesAgainst?: number;
 }
 
 export interface Phase {
