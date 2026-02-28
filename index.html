@@ -23,6 +23,17 @@
 </head>
 
   <body>
+    <script>
+      if (typeof globalThis.global === 'undefined') {
+        globalThis.global = globalThis;
+      }
+      if (typeof globalThis.process === 'undefined') {
+        globalThis.process = { env: {} };
+      }
+      if (typeof globalThis.Buffer === 'undefined') {
+        globalThis.Buffer = { isBuffer: function() { return false; } };
+      }
+    </script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
