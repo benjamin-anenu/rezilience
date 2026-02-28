@@ -223,9 +223,11 @@ export type Database = {
           governance_pda: string | null
           id: string
           linked_milestone_id: string | null
+          milestones: Json
           paid_at: string | null
           proposal_address: string | null
           realm_dao_address: string
+          release_mode: string
           release_tx_signature: string | null
           resolved_at: string | null
           reward_sol: number
@@ -250,9 +252,11 @@ export type Database = {
           governance_pda?: string | null
           id?: string
           linked_milestone_id?: string | null
+          milestones?: Json
           paid_at?: string | null
           proposal_address?: string | null
           realm_dao_address: string
+          release_mode?: string
           release_tx_signature?: string | null
           resolved_at?: string | null
           reward_sol?: number
@@ -277,9 +281,11 @@ export type Database = {
           governance_pda?: string | null
           id?: string
           linked_milestone_id?: string | null
+          milestones?: Json
           paid_at?: string | null
           proposal_address?: string | null
           realm_dao_address?: string
+          release_mode?: string
           release_tx_signature?: string | null
           resolved_at?: string | null
           reward_sol?: number

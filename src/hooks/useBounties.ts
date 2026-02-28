@@ -10,6 +10,8 @@ export interface Bounty {
   description: string | null;
   reward_sol: number;
   status: 'open' | 'claimed' | 'submitted' | 'approved' | 'rejected' | 'paid' | 'funded' | 'voting';
+  release_mode: 'dao_governed' | 'direct' | 'multisig';
+  milestones: Array<{ title: string; sol: number }>;
   creator_profile_id: string;
   creator_x_user_id: string;
   claimer_profile_id: string | null;
@@ -79,6 +81,8 @@ export function useCreateBounty() {
       title: string;
       description?: string;
       reward_sol: number;
+      release_mode?: string;
+      milestones?: Array<{ title: string; sol: number }>;
     }) => {
       if (!user?.id) throw new Error('Not authenticated');
       const { data, error } = await supabase.functions.invoke('manage-bounty', {

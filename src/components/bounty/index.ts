@@ -1,5 +1,6 @@
 export { BountyCard } from './BountyCard';
 export { CreateBountyDialog } from './CreateBountyDialog';
+export { CreateBountyWizard } from './CreateBountyWizard';
 export { ClaimBountyDialog } from './ClaimBountyDialog';
 export { SubmitEvidenceDialog } from './SubmitEvidenceDialog';
 export { BountyFilters } from './BountyFilters';
