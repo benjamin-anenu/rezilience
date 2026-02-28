@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Menu, User, LogOut, ExternalLink, X as XIcon } from 'lucide-react';
 import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
+import { NotificationBell } from '@/components/notifications/NotificationBell';
+import { NotificationPanel } from '@/components/notifications/NotificationPanel';
 import { Button } from '@/components/ui/button';
 import {
   Drawer,
@@ -25,6 +28,7 @@ export function Navigation() {
   const location = useLocation();
   const { user, isAuthenticated, signOut, signInWithX } = useAuth();
   const { trackEvent } = useAnalyticsTracker();
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const isActiveRoute = (href: string) => location.pathname === href;
 
@@ -88,6 +92,7 @@ export function Navigation() {
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated && user ? (
               <>
+                <NotificationBell onClick={() => setNotifOpen(true)} />
                 <Link
                   to="/dashboard"
                   className="flex items-center gap-2 rounded-sm border border-border bg-card px-3 py-1.5 transition-colors hover:border-primary/50"
@@ -268,6 +273,11 @@ export function Navigation() {
           </Drawer>
         </div>
       </div>
+
+      {/* Notification Panel */}
+      {isAuthenticated && (
+        <NotificationPanel open={notifOpen} onOpenChange={setNotifOpen} />
+      )}
     </nav>
   );
 }
