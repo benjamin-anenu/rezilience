@@ -1,13 +1,12 @@
-import { useCallback } from 'react';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
-import { PublicKey, TransactionInstruction } from '@solana/web3.js';
+import { PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js';
 import {
   getGovernanceProgramVersion,
   getTokenOwnerRecordForRealm,
   withCreateProposal,
   VoteType,
-  getGovernanceAccounts,
-  Governance,
+  getAllGovernances,
+  getRealm,
 } from '@solana/spl-governance';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,20 +46,15 @@ export function useCreateFundingProposal() {
         GOVERNANCE_PROGRAM_ID
       );
 
-      // 2. Find a governance account under this realm
-      const governances = await getGovernanceAccounts(
+      // 2. Get realm and its community mint
+      const realm = await getRealm(connection, realmPk);
+      const communityMint = realm.account.communityMint;
+
+      // 3. Find governance accounts under this realm
+      const governances = await getAllGovernances(
         connection,
         GOVERNANCE_PROGRAM_ID,
-        Governance,
-        [
-          // Filter by realm
-          {
-            memcmp: {
-              offset: 1,
-              bytes: realmPk.toBase58(),
-            },
-          },
-        ]
+        realmPk
       );
 
       if (governances.length === 0) {
@@ -72,16 +66,6 @@ export function useCreateFundingProposal() {
       const governance = governances[0];
       const governancePk = governance.pubkey;
 
-      // 3. Get the governing token mint from the governance config
-      const governingTokenMint = governance.account.config
-        ? (governance.account as any).realm
-          ? await getRealmMint(connection, realmPk)
-          : governance.pubkey
-        : governance.pubkey;
-
-      // Try to get the community mint from realm account
-      const realmMint = await getRealmMint(connection, realmPk);
-
       // 4. Check if user has a TokenOwnerRecord (i.e. deposited governance tokens)
       let tokenOwnerRecord;
       try {
@@ -89,7 +73,7 @@ export function useCreateFundingProposal() {
           connection,
           GOVERNANCE_PROGRAM_ID,
           realmPk,
-          realmMint,
+          communityMint,
           wallet.publicKey
         );
       } catch {
@@ -117,7 +101,7 @@ export function useCreateFundingProposal() {
         tokenOwnerRecord.pubkey,
         proposalTitle,
         proposalDescription,
-        realmMint,
+        communityMint,
         wallet.publicKey,
         undefined, // proposalIndex - auto
         VoteType.SINGLE_CHOICE,
@@ -128,7 +112,7 @@ export function useCreateFundingProposal() {
 
       // 6. Send transaction
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      const transaction = new (await import('@solana/web3.js')).Transaction({
+      const transaction = new Transaction({
         feePayer: wallet.publicKey,
         blockhash,
         lastValidBlockHeight,
@@ -158,7 +142,7 @@ export function useCreateFundingProposal() {
         txSignature: txSig,
       };
     },
-    onSuccess: ({ proposalAddress, txSignature }) => {
+    onSuccess: ({ proposalAddress }) => {
       queryClient.invalidateQueries({ queryKey: ['funding-proposals'] });
       toast.success('Proposal created on-chain!', {
         description: `Proposal: ${proposalAddress.slice(0, 8)}…`,
@@ -178,19 +162,4 @@ export function useCreateFundingProposal() {
       });
     },
   });
-}
-
-/** Helper to get the community token mint from a Realm account */
-async function getRealmMint(
-  connection: any,
-  realmPk: PublicKey
-): Promise<PublicKey> {
-  try {
-    const { getRealm } = await import('@solana/spl-governance');
-    const realm = await getRealm(connection, realmPk);
-    return realm.account.communityMint;
-  } catch {
-    // Fallback: use the realm PK itself (will fail gracefully)
-    return realmPk;
-  }
 }

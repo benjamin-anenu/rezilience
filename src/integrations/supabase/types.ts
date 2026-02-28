@@ -980,6 +980,42 @@ export type Database = {
           },
         ]
       }
+      notifications: {
+        Row: {
+          body: string | null
+          bounty_id: string | null
+          created_at: string
+          id: string
+          profile_id: string | null
+          read: boolean
+          recipient_x_user_id: string
+          title: string
+          type: string
+        }
+        Insert: {
+          body?: string | null
+          bounty_id?: string | null
+          created_at?: string
+          id?: string
+          profile_id?: string | null
+          read?: boolean
+          recipient_x_user_id: string
+          title: string
+          type: string
+        }
+        Update: {
+          body?: string | null
+          bounty_id?: string | null
+          created_at?: string
+          id?: string
+          profile_id?: string | null
+          read?: boolean
+          recipient_x_user_id?: string
+          title?: string
+          type?: string
+        }
+        Relationships: []
+      }
       profile_secrets: {
         Row: {
           created_at: string

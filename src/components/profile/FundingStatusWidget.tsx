@@ -1,9 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { Coins, CheckCircle2, Clock, XCircle, ExternalLink, Loader2, Vote } from 'lucide-react';
+import { Coins, CheckCircle2, Clock, XCircle, ExternalLink, Loader2, Vote, Zap } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { supabase } from '@/integrations/supabase/client';
+import { useFundingProposalState } from '@/hooks/useFundingProposal';
+import { useExecuteProposal } from '@/hooks/useExecuteProposal';
+import { ProposalStatusBadge } from '@/components/bounty/ProposalStatusBadge';
+import { VotePanel } from '@/components/bounty/VotePanel';
 
 interface FundingStatusWidgetProps {
   profileId: string;
@@ -35,16 +40,27 @@ export const FundingStatusWidget = ({ profileId, fundingStatus, fundingRequested
     enabled: !!profileId && !!fundingStatus,
   });
 
+  const latestProposal = proposals?.[0];
+
+  // Live on-chain polling for proposal state
+  const { data: onChainState, isLoading: stateLoading } = useFundingProposalState(
+    latestProposal?.proposal_address
+  );
+
+  const executeProposal = useExecuteProposal();
+
   if (!fundingStatus || !fundingRequestedSol) return null;
 
   const statusConfig = STATUS_CONFIG[fundingStatus] || STATUS_CONFIG.pending_signature;
-  const latestProposal = proposals?.[0];
 
   // Calculate milestone progress from allocations
   const milestoneAllocations = (latestProposal?.milestone_allocations as any[]) || [];
   const totalAllocated = milestoneAllocations.reduce((sum: number, a: any) => sum + (a.sol_amount || 0), 0);
-  const releasedAmount = 0; // TODO: track released per milestone
+  const releasedAmount = 0; // TODO: track released per milestone via on-chain escrow state
   const progressPercent = totalAllocated > 0 ? (releasedAmount / totalAllocated) * 100 : 0;
+
+  const showVotePanel = onChainState?.state === 'Voting' && latestProposal?.realm_dao_address;
+  const showExecuteButton = onChainState?.state === 'Succeeded' && latestProposal;
 
   return (
     <Card className="border-primary/20 bg-card">
@@ -56,10 +72,15 @@ export const FundingStatusWidget = ({ profileId, fundingStatus, fundingRequested
               DAO Funding
             </span>
           </div>
-          <Badge variant="outline" className={`font-mono text-xs ${statusConfig.color}`}>
-            {statusConfig.icon}
-            <span className="ml-1">{statusConfig.label}</span>
-          </Badge>
+          {/* Show on-chain badge if available, else DB status */}
+          {onChainState ? (
+            <ProposalStatusBadge state={onChainState} isLoading={stateLoading} compact />
+          ) : (
+            <Badge variant="outline" className={`font-mono text-xs ${statusConfig.color}`}>
+              {statusConfig.icon}
+              <span className="ml-1">{statusConfig.label}</span>
+            </Badge>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -71,6 +92,11 @@ export const FundingStatusWidget = ({ profileId, fundingStatus, fundingRequested
           </span>
         </div>
 
+        {/* Live Vote Counts */}
+        {onChainState && !onChainState.isFinalized && (
+          <ProposalStatusBadge state={onChainState} />
+        )}
+
         {/* Progress */}
         {fundingStatus !== 'rejected' && (
           <div className="space-y-1.5">
@@ -80,6 +106,39 @@ export const FundingStatusWidget = ({ profileId, fundingStatus, fundingRequested
             </div>
             <Progress value={progressPercent} className="h-2" />
           </div>
+        )}
+
+        {/* Vote Panel for DAO members */}
+        {showVotePanel && latestProposal?.proposal_address && (
+          <div className="space-y-2">
+            <h4 className="text-[10px] font-display uppercase tracking-wider text-muted-foreground">
+              Cast Your Vote
+            </h4>
+            <VotePanel
+              proposalAddress={latestProposal.proposal_address}
+              realmAddress={latestProposal.realm_dao_address}
+            />
+          </div>
+        )}
+
+        {/* Execute Release button */}
+        {showExecuteButton && (
+          <Button
+            size="sm"
+            onClick={() => executeProposal.mutate({
+              proposalAddress: latestProposal.proposal_address!,
+              proposalDbId: latestProposal.id,
+            })}
+            disabled={executeProposal.isPending}
+            className="w-full font-display text-xs uppercase tracking-wider"
+          >
+            {executeProposal.isPending ? (
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+            ) : (
+              <Zap className="mr-2 h-3 w-3" />
+            )}
+            EXECUTE RELEASE
+          </Button>
         )}
 
         {/* Milestone Breakdown */}

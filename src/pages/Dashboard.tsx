@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Plus, Compass, LogOut, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Compass, LogOut, Loader2, Trash2, Coins } from 'lucide-react';
 import { Layout } from '@/components/layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/context/AuthContext';
 import { useMyVerifiedProfiles } from '@/hooks/useClaimedProfiles';
 import { useDeleteProfile } from '@/hooks/useDeleteProfile';
@@ -137,6 +138,35 @@ const Dashboard = () => {
               </Link>
             </Button>
           </div>
+
+          {/* Funding Summary */}
+          {verifiedProjects.some((p: any) => p.fundingStatus) && (
+            <Card className="mb-6 border-primary/20 bg-card">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <Coins className="h-5 w-5 text-primary" />
+                  <span className="font-display text-base uppercase tracking-tight">Funding Overview</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-4">
+                  {verifiedProjects
+                    .filter((p: any) => p.fundingStatus)
+                    .map((p: any) => (
+                      <div key={p.id} className="flex items-center gap-2">
+                        <span className="text-xs font-mono truncate max-w-[120px]">{p.projectName}</span>
+                        <Badge variant="outline" className="font-mono text-[10px]">
+                          {p.fundingStatus?.toUpperCase()}
+                        </Badge>
+                        {p.fundingRequestedSol && (
+                          <span className="text-xs font-mono text-primary">{p.fundingRequestedSol} SOL</span>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Verified Projects */}
           {verifiedProjects.length === 0 ? (

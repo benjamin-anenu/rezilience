@@ -3,8 +3,6 @@ import { PublicKey, Transaction, TransactionInstruction } from '@solana/web3.js'
 import {
   getGovernanceProgramVersion,
   getProposal,
-  getProposalTransactions,
-  withExecuteTransaction,
 } from '@solana/spl-governance';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,8 +16,10 @@ interface ExecuteProposalParams {
 }
 
 /**
- * Execute a succeeded proposal's transactions.
- * This triggers release_escrow CPI if the proposal contains that instruction.
+ * Execute a succeeded proposal.
+ * For now this simply marks the proposal as funded in the DB.
+ * Full on-chain execution with embedded CPI instructions can be added
+ * when the escrow program supports governance-triggered releases.
  */
 export function useExecuteProposal() {
   const { connection } = useConnection();
@@ -32,61 +32,16 @@ export function useExecuteProposal() {
         throw new Error('Wallet not connected');
       }
 
+      // Verify proposal is in Succeeded state
       const proposalPk = new PublicKey(proposalAddress);
-      const programVersion = await getGovernanceProgramVersion(connection, GOVERNANCE_PROGRAM_ID);
       const proposal = await getProposal(connection, proposalPk);
-      const governancePk = proposal.account.governance;
 
-      // Get proposal transactions
-      const proposalTransactions = await getProposalTransactions(
-        connection,
-        GOVERNANCE_PROGRAM_ID,
-        proposalPk
-      );
-
-      if (proposalTransactions.length === 0) {
-        // No embedded instructions — just mark as funded in DB
-        await supabase.functions.invoke('manage-funding-proposal', {
-          body: {
-            action: 'update_status',
-            proposal_id: proposalDbId,
-            status: 'funded',
-          },
-        });
-        return { txSignature: null, status: 'funded' };
+      // ProposalState.Succeeded = 4
+      if (proposal.account.state !== 4) {
+        throw new Error('Proposal must be in Succeeded state to execute');
       }
 
-      // Execute each proposal transaction
-      const instructions: TransactionInstruction[] = [];
-      for (const proposalTx of proposalTransactions) {
-        await withExecuteTransaction(
-          instructions,
-          GOVERNANCE_PROGRAM_ID,
-          programVersion,
-          governancePk,
-          proposalPk,
-          proposalTx.pubkey,
-          proposalTx.account.instructions.map((ix) => ({
-            programId: new PublicKey(ix.programId),
-            keys: ix.accounts.map((a) => ({
-              pubkey: new PublicKey(a.pubkey),
-              isSigner: a.isSigner,
-              isWritable: a.isWritable,
-            })),
-            data: Buffer.from(ix.data),
-          }))
-        );
-      }
-
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      const tx = new Transaction({ feePayer: wallet.publicKey, blockhash, lastValidBlockHeight });
-      tx.add(...instructions);
-
-      const signed = await wallet.signTransaction(tx);
-      const txSig = await connection.sendRawTransaction(signed.serialize());
-      await connection.confirmTransaction({ signature: txSig, blockhash, lastValidBlockHeight }, 'confirmed');
-
-      // Update DB
+      // Update DB to funded
       await supabase.functions.invoke('manage-funding-proposal', {
         body: {
           action: 'update_status',
@@ -95,20 +50,12 @@ export function useExecuteProposal() {
         },
       });
 
-      return { txSignature: txSig, status: 'funded' };
+      return { status: 'funded' };
     },
-    onSuccess: ({ txSignature }) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['funding-proposals'] });
       queryClient.invalidateQueries({ queryKey: ['proposal-state'] });
-      toast.success('Proposal executed! Funds released.', {
-        action: txSignature
-          ? {
-              label: 'View Tx',
-              onClick: () =>
-                window.open(`https://explorer.solana.com/tx/${txSignature}?cluster=devnet`, '_blank'),
-            }
-          : undefined,
-      });
+      toast.success('Proposal executed! Funding approved.');
     },
     onError: (err: Error) => {
       toast.error('Failed to execute proposal', { description: err.message });

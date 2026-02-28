@@ -1,11 +1,9 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useConnection } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import { getProposal, ProposalState } from '@solana/spl-governance';
 import { supabase } from '@/integrations/supabase/client';
 import { useEffect } from 'react';
-
-const GOVERNANCE_PROGRAM_ID = new PublicKey('GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw');
 
 export interface ProposalVoteState {
   state: 'Draft' | 'SigningOff' | 'Voting' | 'Succeeded' | 'Defeated' | 'Completed' | 'Cancelled' | 'Executing' | 'Unknown';
@@ -32,7 +30,6 @@ const STATE_MAP: Record<number, ProposalVoteState['state']> = {
  */
 export function useFundingProposalState(proposalAddress?: string | null) {
   const { connection } = useConnection();
-  const queryClient = useQueryClient();
 
   const query = useQuery<ProposalVoteState | null>({
     queryKey: ['proposal-state', proposalAddress],
@@ -51,10 +48,11 @@ export function useFundingProposalState(proposalAddress?: string | null) {
           ? Number(account.denyVoteWeight) / 1e9
           : 0;
 
+        // Estimate voting end time
         const votingEndTime = account.votingCompletedAt
           ? Number(account.votingCompletedAt)
           : account.votingAt
-          ? Number(account.votingAt) + (account.governance?.config?.baseVotingTime || 259200)
+          ? Number(account.votingAt) + 259200 // 3 days default
           : null;
 
         const state = STATE_MAP[account.state] || 'Unknown';
@@ -90,7 +88,6 @@ export function useFundingProposalState(proposalAddress?: string | null) {
 
 async function syncStatusToDb(proposalAddress: string, status: string) {
   try {
-    // Find proposal by address
     const { data: proposals } = await supabase
       .from('funding_proposals')
       .select('id, status')
@@ -99,8 +96,6 @@ async function syncStatusToDb(proposalAddress: string, status: string) {
 
     if (!proposals?.length) return;
     const proposal = proposals[0];
-
-    // Only sync if status actually changed
     if (proposal.status === status) return;
 
     await supabase.functions.invoke('manage-funding-proposal', {
