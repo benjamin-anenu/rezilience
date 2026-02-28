@@ -46,10 +46,17 @@ export function BountyCard({
           <h3 className="font-display text-sm font-semibold uppercase tracking-tight text-foreground line-clamp-2">
             {bounty.title}
           </h3>
-          <Badge variant={config.variant} className="shrink-0 font-mono text-[10px]">
-            <StatusIcon className="mr-1 h-3 w-3" />
-            {config.label}
-          </Badge>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <Badge variant={config.variant} className="font-mono text-[10px]">
+              <StatusIcon className="mr-1 h-3 w-3" />
+              {config.label}
+            </Badge>
+            {bounty.release_mode && bounty.release_mode !== 'dao_governed' && (
+              <Badge variant="outline" className="font-mono text-[9px] border-primary/20">
+                {bounty.release_mode === 'direct' ? 'Direct' : 'Multi-sig'}
+              </Badge>
+            )}
+          </div>
         </div>
 
         {bounty.description && (

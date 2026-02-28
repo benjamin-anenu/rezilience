@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useBounties, useUserProfiles, useResolveBounty, type Bounty } from '@/hooks/useBounties';
 import { useFundEscrow, useCancelEscrow } from '@/hooks/useEscrowProgram';
-import { BountyCard, BountyFilters, CreateBountyDialog, ClaimBountyDialog, SubmitEvidenceDialog, LinkProposalDialog, MarkPaidDialog } from '@/components/bounty';
+import { BountyCard, BountyFilters, CreateBountyWizard, ClaimBountyDialog, SubmitEvidenceDialog, LinkProposalDialog, MarkPaidDialog } from '@/components/bounty';
 
 export default function BountyBoard() {
   const { user, isAuthenticated } = useAuth();
@@ -126,7 +126,7 @@ export default function BountyBoard() {
 
             {isAuthenticated && realmProfiles.length > 0 && (
               <div className="mt-4">
-                <CreateBountyDialog profiles={realmProfiles} />
+                <CreateBountyWizard profiles={realmProfiles} />
               </div>
             )}
           </div>

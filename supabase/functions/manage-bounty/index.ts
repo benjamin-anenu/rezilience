@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
 
     switch (action) {
       case "create": {
-        const { x_user_id, realm_dao_address, title, description, reward_sol } = body;
+        const { x_user_id, realm_dao_address, title, description, reward_sol, release_mode, milestones: rawMilestones } = body;
 
         if (!x_user_id || !realm_dao_address || !title || reward_sol === undefined) {
           return jsonResponse({ error: "Missing required fields: x_user_id, realm_dao_address, title, reward_sol" }, 400);
@@ -47,6 +47,25 @@ Deno.serve(async (req) => {
 
         if (description && description.length > 2000) {
           return jsonResponse({ error: "Description must be 2000 characters or less" }, 400);
+        }
+
+        // Validate release_mode
+        const validModes = ["dao_governed", "direct", "multisig"];
+        const mode = release_mode && validModes.includes(release_mode) ? release_mode : "dao_governed";
+
+        // Validate milestones
+        let parsedMilestones: Array<{ title: string; sol: number }> = [];
+        if (Array.isArray(rawMilestones) && rawMilestones.length > 0) {
+          parsedMilestones = rawMilestones
+            .slice(0, 5)
+            .filter((m: unknown) => {
+              const ms = m as { title?: string; sol?: number };
+              return ms && typeof ms.title === "string" && typeof ms.sol === "number" && ms.sol > 0;
+            })
+            .map((m: unknown) => {
+              const ms = m as { title: string; sol: number };
+              return { title: ms.title.slice(0, 100), sol: ms.sol };
+            });
         }
 
         const { data: profile, error: profileError } = await supabase
@@ -67,6 +86,8 @@ Deno.serve(async (req) => {
             title: title.trim(),
             description: description?.trim() || null,
             reward_sol,
+            release_mode: mode,
+            milestones: parsedMilestones,
             status: "open",
             creator_profile_id: profile.id,
             creator_x_user_id: x_user_id,
