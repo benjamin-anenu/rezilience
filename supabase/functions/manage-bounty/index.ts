@@ -49,7 +49,6 @@ Deno.serve(async (req) => {
           return jsonResponse({ error: "Description must be 2000 characters or less" }, 400);
         }
 
-        // Verify the user owns a profile with this realm_dao_address
         const { data: profile, error: profileError } = await supabase
           .from("claimed_profiles")
           .select("id, x_user_id, realms_dao_address")
@@ -90,7 +89,6 @@ Deno.serve(async (req) => {
           return jsonResponse({ error: "Missing required fields: x_user_id, bounty_id, wallet_address" }, 400);
         }
 
-        // Get the bounty
         const { data: bounty, error: bountyError } = await supabase
           .from("bounties")
           .select("*")
@@ -105,12 +103,10 @@ Deno.serve(async (req) => {
           return jsonResponse({ error: "This bounty is no longer open for claiming" }, 400);
         }
 
-        // Can't claim your own bounty
         if (bounty.creator_x_user_id === x_user_id) {
           return jsonResponse({ error: "You cannot claim your own bounty" }, 400);
         }
 
-        // Find claimer's profile
         const { data: claimerProfile } = await supabase
           .from("claimed_profiles")
           .select("id")
@@ -127,7 +123,7 @@ Deno.serve(async (req) => {
             claimed_at: new Date().toISOString(),
           })
           .eq("id", bounty_id)
-          .eq("status", "open") // Optimistic lock
+          .eq("status", "open")
           .select()
           .single();
 
@@ -167,7 +163,7 @@ Deno.serve(async (req) => {
           return jsonResponse({ error: "Only the claimer can submit evidence" }, 403);
         }
 
-        const validLinks = Array.isArray(evidence_links) 
+        const validLinks = Array.isArray(evidence_links)
           ? evidence_links.filter((l: string) => typeof l === "string" && l.length <= 500).slice(0, 10)
           : [];
 
@@ -235,8 +231,185 @@ Deno.serve(async (req) => {
         return jsonResponse({ success: true, bounty: updated });
       }
 
+      // ── Escrow lifecycle actions ──────────────────────────────────────
+
+      case "fund": {
+        const { x_user_id, bounty_id, escrow_address, escrow_tx_signature, governance_pda } = body;
+
+        if (!x_user_id || !bounty_id || !escrow_address || !escrow_tx_signature) {
+          return jsonResponse({ error: "Missing required fields for fund action" }, 400);
+        }
+
+        const { data: bounty, error: bountyError } = await supabase
+          .from("bounties")
+          .select("*")
+          .eq("id", bounty_id)
+          .single();
+
+        if (bountyError || !bounty) {
+          return jsonResponse({ error: "Bounty not found" }, 404);
+        }
+
+        if (bounty.status !== "approved") {
+          return jsonResponse({ error: "Bounty must be approved before funding escrow" }, 400);
+        }
+
+        if (bounty.creator_x_user_id !== x_user_id) {
+          return jsonResponse({ error: "Only the bounty creator can fund the escrow" }, 403);
+        }
+
+        const { data: updated, error: updateError } = await supabase
+          .from("bounties")
+          .update({
+            status: "funded",
+            escrow_address,
+            escrow_tx_signature,
+            governance_pda: governance_pda || null,
+            funded_at: new Date().toISOString(),
+          })
+          .eq("id", bounty_id)
+          .select()
+          .single();
+
+        if (updateError) {
+          console.error("Fund error:", updateError);
+          return jsonResponse({ error: "Failed to update bounty after funding" }, 500);
+        }
+
+        return jsonResponse({ success: true, bounty: updated });
+      }
+
+      case "set_voting": {
+        const { x_user_id, bounty_id, proposal_address } = body;
+
+        if (!x_user_id || !bounty_id || !proposal_address) {
+          return jsonResponse({ error: "Missing required fields for set_voting action" }, 400);
+        }
+
+        const { data: bounty, error: bountyError } = await supabase
+          .from("bounties")
+          .select("*")
+          .eq("id", bounty_id)
+          .single();
+
+        if (bountyError || !bounty) {
+          return jsonResponse({ error: "Bounty not found" }, 404);
+        }
+
+        if (bounty.status !== "funded") {
+          return jsonResponse({ error: "Bounty must be funded before creating a proposal" }, 400);
+        }
+
+        if (bounty.creator_x_user_id !== x_user_id) {
+          return jsonResponse({ error: "Only the bounty creator can link a proposal" }, 403);
+        }
+
+        const { data: updated, error: updateError } = await supabase
+          .from("bounties")
+          .update({
+            status: "voting",
+            proposal_address,
+          })
+          .eq("id", bounty_id)
+          .select()
+          .single();
+
+        if (updateError) {
+          return jsonResponse({ error: "Failed to update bounty to voting" }, 500);
+        }
+
+        return jsonResponse({ success: true, bounty: updated });
+      }
+
+      case "mark_paid": {
+        const { x_user_id, bounty_id, release_tx_signature } = body;
+
+        if (!x_user_id || !bounty_id || !release_tx_signature) {
+          return jsonResponse({ error: "Missing required fields for mark_paid action" }, 400);
+        }
+
+        const { data: bounty, error: bountyError } = await supabase
+          .from("bounties")
+          .select("*")
+          .eq("id", bounty_id)
+          .single();
+
+        if (bountyError || !bounty) {
+          return jsonResponse({ error: "Bounty not found" }, 404);
+        }
+
+        if (bounty.status !== "voting" && bounty.status !== "funded") {
+          return jsonResponse({ error: "Bounty must be in voting or funded status to mark as paid" }, 400);
+        }
+
+        // Allow creator or claimer to mark as paid (anyone can execute the Realms tx)
+        if (bounty.creator_x_user_id !== x_user_id && bounty.claimer_x_user_id !== x_user_id) {
+          return jsonResponse({ error: "Only the bounty creator or claimer can mark as paid" }, 403);
+        }
+
+        const { data: updated, error: updateError } = await supabase
+          .from("bounties")
+          .update({
+            status: "paid",
+            release_tx_signature,
+            paid_at: new Date().toISOString(),
+          })
+          .eq("id", bounty_id)
+          .select()
+          .single();
+
+        if (updateError) {
+          return jsonResponse({ error: "Failed to mark bounty as paid" }, 500);
+        }
+
+        return jsonResponse({ success: true, bounty: updated });
+      }
+
+      case "cancel_escrow": {
+        const { x_user_id, bounty_id, release_tx_signature } = body;
+
+        if (!x_user_id || !bounty_id || !release_tx_signature) {
+          return jsonResponse({ error: "Missing required fields for cancel_escrow action" }, 400);
+        }
+
+        const { data: bounty, error: bountyError } = await supabase
+          .from("bounties")
+          .select("*")
+          .eq("id", bounty_id)
+          .single();
+
+        if (bountyError || !bounty) {
+          return jsonResponse({ error: "Bounty not found" }, 404);
+        }
+
+        if (bounty.status !== "funded" && bounty.status !== "voting") {
+          return jsonResponse({ error: "Escrow can only be cancelled when funded or voting" }, 400);
+        }
+
+        if (bounty.creator_x_user_id !== x_user_id) {
+          return jsonResponse({ error: "Only the bounty creator can cancel the escrow" }, 403);
+        }
+
+        const { data: updated, error: updateError } = await supabase
+          .from("bounties")
+          .update({
+            status: "rejected",
+            release_tx_signature,
+            resolved_at: new Date().toISOString(),
+          })
+          .eq("id", bounty_id)
+          .select()
+          .single();
+
+        if (updateError) {
+          return jsonResponse({ error: "Failed to cancel escrow" }, 500);
+        }
+
+        return jsonResponse({ success: true, bounty: updated });
+      }
+
       default:
-        return jsonResponse({ error: "Invalid action. Must be: create, claim, submit, approve, reject" }, 400);
+        return jsonResponse({ error: "Invalid action. Must be: create, claim, submit, approve, reject, fund, set_voting, mark_paid, cancel_escrow" }, 400);
     }
   } catch (error) {
     console.error("Error in manage-bounty:", error);

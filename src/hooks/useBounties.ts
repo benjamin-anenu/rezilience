@@ -9,7 +9,7 @@ export interface Bounty {
   title: string;
   description: string | null;
   reward_sol: number;
-  status: 'open' | 'claimed' | 'submitted' | 'approved' | 'rejected' | 'paid';
+  status: 'open' | 'claimed' | 'submitted' | 'approved' | 'rejected' | 'paid' | 'funded' | 'voting';
   creator_profile_id: string;
   creator_x_user_id: string;
   claimer_profile_id: string | null;
@@ -22,6 +22,13 @@ export interface Bounty {
   claimed_at: string | null;
   submitted_at: string | null;
   resolved_at: string | null;
+  escrow_address: string | null;
+  escrow_tx_signature: string | null;
+  release_tx_signature: string | null;
+  proposal_address: string | null;
+  governance_pda: string | null;
+  funded_at: string | null;
+  paid_at: string | null;
 }
 
 export function useBounties(realmDaoAddress?: string) {

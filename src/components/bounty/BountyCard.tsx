@@ -1,7 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Coins, User, Clock, CheckCircle2, XCircle, FileText } from 'lucide-react';
+import { Coins, User, Clock, CheckCircle2, XCircle, FileText, Lock, Vote, ExternalLink, Loader2 } from 'lucide-react';
 import type { Bounty } from '@/hooks/useBounties';
 
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline'; icon: typeof Coins }> = {
@@ -9,6 +9,8 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
   claimed: { label: 'CLAIMED', variant: 'secondary', icon: User },
   submitted: { label: 'SUBMITTED', variant: 'outline', icon: FileText },
   approved: { label: 'APPROVED', variant: 'default', icon: CheckCircle2 },
+  funded: { label: 'FUNDED', variant: 'default', icon: Lock },
+  voting: { label: 'VOTING', variant: 'secondary', icon: Vote },
   rejected: { label: 'REJECTED', variant: 'destructive', icon: XCircle },
   paid: { label: 'PAID', variant: 'default', icon: CheckCircle2 },
 };
@@ -21,9 +23,19 @@ interface BountyCardProps {
   onSubmitEvidence?: () => void;
   onApprove?: () => void;
   onReject?: () => void;
+  onFundEscrow?: () => void;
+  onCreateProposal?: () => void;
+  onMarkPaid?: () => void;
+  onCancelEscrow?: () => void;
+  isPendingEscrow?: boolean;
 }
 
-export function BountyCard({ bounty, isCreator, isClaimer, onClaim, onSubmitEvidence, onApprove, onReject }: BountyCardProps) {
+export function BountyCard({
+  bounty, isCreator, isClaimer,
+  onClaim, onSubmitEvidence, onApprove, onReject,
+  onFundEscrow, onCreateProposal, onMarkPaid, onCancelEscrow,
+  isPendingEscrow,
+}: BountyCardProps) {
   const config = statusConfig[bounty.status] || statusConfig.open;
   const StatusIcon = config.icon;
 
@@ -61,6 +73,34 @@ export function BountyCard({ bounty, isCreator, isClaimer, onClaim, onSubmitEvid
           </p>
         )}
 
+        {/* Escrow address link */}
+        {bounty.escrow_address && (
+          <a
+            href={`https://explorer.solana.com/address/${bounty.escrow_address}?cluster=devnet`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-3 flex items-center gap-1 text-[10px] font-mono text-primary/70 hover:text-primary transition-colors"
+          >
+            <Lock className="h-3 w-3" />
+            Escrow: {bounty.escrow_address.slice(0, 4)}…{bounty.escrow_address.slice(-4)}
+            <ExternalLink className="h-2.5 w-2.5" />
+          </a>
+        )}
+
+        {/* Proposal link */}
+        {bounty.proposal_address && (
+          <a
+            href={`https://app.realms.today/proposal/${bounty.proposal_address}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mb-3 flex items-center gap-1 text-[10px] font-mono text-primary/70 hover:text-primary transition-colors"
+          >
+            <Vote className="h-3 w-3" />
+            Proposal: {bounty.proposal_address.slice(0, 4)}…{bounty.proposal_address.slice(-4)}
+            <ExternalLink className="h-2.5 w-2.5" />
+          </a>
+        )}
+
         {bounty.evidence_summary && bounty.status === 'submitted' && (
           <div className="mb-3 rounded-sm border border-border/50 bg-muted/20 p-2">
             <p className="text-[10px] font-semibold uppercase text-muted-foreground mb-1">Evidence</p>
@@ -94,10 +134,57 @@ export function BountyCard({ bounty, isCreator, isClaimer, onClaim, onSubmitEvid
               )}
             </>
           )}
-          {bounty.status === 'approved' && (
-            <Badge variant="outline" className="border-primary/30 text-[10px] font-mono">
-              🔒 SOL Release · Requires On-Chain Program
-            </Badge>
+
+          {/* Escrow lifecycle buttons */}
+          {bounty.status === 'approved' && isCreator && onFundEscrow && (
+            <Button
+              size="sm"
+              onClick={onFundEscrow}
+              disabled={isPendingEscrow}
+              className="font-display text-xs uppercase tracking-wider"
+            >
+              {isPendingEscrow ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <Lock className="mr-1 h-3 w-3" />}
+              Fund Escrow
+            </Button>
+          )}
+
+          {bounty.status === 'funded' && isCreator && onCreateProposal && (
+            <Button size="sm" variant="outline" onClick={onCreateProposal} className="font-display text-xs uppercase tracking-wider">
+              <Vote className="mr-1 h-3 w-3" />
+              Link Proposal
+            </Button>
+          )}
+
+          {bounty.status === 'voting' && (isCreator || isClaimer) && onMarkPaid && (
+            <Button size="sm" onClick={onMarkPaid} className="font-display text-xs uppercase tracking-wider">
+              <CheckCircle2 className="mr-1 h-3 w-3" />
+              Mark Paid
+            </Button>
+          )}
+
+          {(bounty.status === 'funded' || bounty.status === 'voting') && isCreator && onCancelEscrow && (
+            <Button
+              size="sm"
+              variant="destructive"
+              onClick={onCancelEscrow}
+              disabled={isPendingEscrow}
+              className="font-display text-xs uppercase tracking-wider"
+            >
+              {isPendingEscrow ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <XCircle className="mr-1 h-3 w-3" />}
+              Cancel Escrow
+            </Button>
+          )}
+
+          {bounty.status === 'paid' && bounty.release_tx_signature && (
+            <a
+              href={`https://explorer.solana.com/tx/${bounty.release_tx_signature}?cluster=devnet`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Badge variant="outline" className="border-primary/30 text-[10px] font-mono cursor-pointer hover:bg-primary/10">
+                ✅ PAID · View Tx <ExternalLink className="ml-1 h-2.5 w-2.5 inline" />
+              </Badge>
+            </a>
           )}
         </div>
       </CardContent>

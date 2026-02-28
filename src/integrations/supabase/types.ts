@@ -215,11 +215,18 @@ export type Database = {
           creator_profile_id: string
           creator_x_user_id: string
           description: string | null
+          escrow_address: string | null
+          escrow_tx_signature: string | null
           evidence_links: Json | null
           evidence_summary: string | null
+          funded_at: string | null
+          governance_pda: string | null
           id: string
           linked_milestone_id: string | null
+          paid_at: string | null
+          proposal_address: string | null
           realm_dao_address: string
+          release_tx_signature: string | null
           resolved_at: string | null
           reward_sol: number
           status: string
@@ -235,11 +242,18 @@ export type Database = {
           creator_profile_id: string
           creator_x_user_id: string
           description?: string | null
+          escrow_address?: string | null
+          escrow_tx_signature?: string | null
           evidence_links?: Json | null
           evidence_summary?: string | null
+          funded_at?: string | null
+          governance_pda?: string | null
           id?: string
           linked_milestone_id?: string | null
+          paid_at?: string | null
+          proposal_address?: string | null
           realm_dao_address: string
+          release_tx_signature?: string | null
           resolved_at?: string | null
           reward_sol?: number
           status?: string
@@ -255,11 +269,18 @@ export type Database = {
           creator_profile_id?: string
           creator_x_user_id?: string
           description?: string | null
+          escrow_address?: string | null
+          escrow_tx_signature?: string | null
           evidence_links?: Json | null
           evidence_summary?: string | null
+          funded_at?: string | null
+          governance_pda?: string | null
           id?: string
           linked_milestone_id?: string | null
+          paid_at?: string | null
+          proposal_address?: string | null
           realm_dao_address?: string
+          release_tx_signature?: string | null
           resolved_at?: string | null
           reward_sol?: number
           status?: string

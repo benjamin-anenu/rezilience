@@ -10,18 +10,23 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/context/AuthContext';
 import { useBounties, useUserProfiles, useResolveBounty, type Bounty } from '@/hooks/useBounties';
-import { BountyCard, BountyFilters, CreateBountyDialog, ClaimBountyDialog, SubmitEvidenceDialog } from '@/components/bounty';
+import { useFundEscrow, useCancelEscrow } from '@/hooks/useEscrowProgram';
+import { BountyCard, BountyFilters, CreateBountyDialog, ClaimBountyDialog, SubmitEvidenceDialog, LinkProposalDialog, MarkPaidDialog } from '@/components/bounty';
 
 export default function BountyBoard() {
   const { user, isAuthenticated } = useAuth();
   const { data: bounties = [], isLoading } = useBounties();
   const { data: userProfiles = [] } = useUserProfiles();
   const resolveBounty = useResolveBounty();
+  const fundEscrow = useFundEscrow();
+  const cancelEscrow = useCancelEscrow();
 
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [claimTarget, setClaimTarget] = useState<Bounty | null>(null);
   const [evidenceTarget, setEvidenceTarget] = useState<Bounty | null>(null);
+  const [proposalTarget, setProposalTarget] = useState<Bounty | null>(null);
+  const [paidTarget, setPaidTarget] = useState<Bounty | null>(null);
 
   // Waitlist state
   const [email, setEmail] = useState('');
@@ -63,6 +68,23 @@ export default function BountyBoard() {
     }
   };
 
+  const handleFundEscrow = (bounty: Bounty) => {
+    if (!bounty.claimer_wallet) {
+      toast.error('No claimer wallet set on this bounty');
+      return;
+    }
+    fundEscrow.mutate({
+      bounty_id: bounty.id,
+      claimer_wallet: bounty.claimer_wallet,
+      realm_dao_address: bounty.realm_dao_address,
+      reward_sol: bounty.reward_sol,
+    });
+  };
+
+  const handleCancelEscrow = (bounty: Bounty) => {
+    cancelEscrow.mutate({ bounty_id: bounty.id });
+  };
+
   return (
     <Layout>
       <div className="min-h-screen bg-background">
@@ -102,7 +124,6 @@ export default function BountyBoard() {
               </div>
             </div>
 
-            {/* Create bounty CTA */}
             {isAuthenticated && realmProfiles.length > 0 && (
               <div className="mt-4">
                 <CreateBountyDialog profiles={realmProfiles} />
@@ -146,23 +167,28 @@ export default function BountyBoard() {
                   onSubmitEvidence={() => setEvidenceTarget(bounty)}
                   onApprove={() => resolveBounty.mutate({ bounty_id: bounty.id, action: 'approve' })}
                   onReject={() => resolveBounty.mutate({ bounty_id: bounty.id, action: 'reject' })}
+                  onFundEscrow={() => handleFundEscrow(bounty)}
+                  onCreateProposal={() => setProposalTarget(bounty)}
+                  onMarkPaid={() => setPaidTarget(bounty)}
+                  onCancelEscrow={() => handleCancelEscrow(bounty)}
+                  isPendingEscrow={fundEscrow.isPending || cancelEscrow.isPending}
                 />
               ))}
             </div>
           )}
 
-          {/* On-chain escrow CTA */}
+          {/* On-chain escrow info */}
           <Card className="mt-12 border-primary/20 bg-primary/5">
             <CardContent className="p-8 text-center">
               <Badge variant="outline" className="mb-3 border-primary/30 font-mono text-[10px] uppercase">
-                Phase 3 · On-Chain Escrow
+                Realms-Governed Escrow · Live on Devnet
               </Badge>
               <h2 className="mb-2 font-display text-xl font-semibold uppercase tracking-tight text-foreground">
-                Automated SOL Release — Coming Soon
+                DAO-Governed SOL Release
               </h2>
               <p className="mb-6 text-sm text-muted-foreground">
-                Escrowed rewards, on-chain governance votes, and trustless payouts powered by a Solana program.
-                Be first to know when it launches.
+                Escrowed rewards are released via Realms governance votes. Fund an escrow, create a proposal,
+                and let your DAO decide when SOL is released to the builder.
               </p>
               {isJoined ? (
                 <div className="flex items-center justify-center gap-2 text-primary">
@@ -210,6 +236,16 @@ export default function BountyBoard() {
         bounty={evidenceTarget}
         open={!!evidenceTarget}
         onOpenChange={open => !open && setEvidenceTarget(null)}
+      />
+      <LinkProposalDialog
+        bounty={proposalTarget}
+        open={!!proposalTarget}
+        onOpenChange={open => !open && setProposalTarget(null)}
+      />
+      <MarkPaidDialog
+        bounty={paidTarget}
+        open={!!paidTarget}
+        onOpenChange={open => !open && setPaidTarget(null)}
       />
     </Layout>
   );
