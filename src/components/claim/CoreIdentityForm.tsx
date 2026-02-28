@@ -48,7 +48,7 @@ export const CoreIdentityForm = ({
   setRealmsDaoAddress,
 }: CoreIdentityFormProps) => {
 
-  const isRealmsRelevant = !!category; // Any project type can have a Realm DAO
+  const isRealmsRelevant = true; // Any project type can have a Realm DAO
   const isValidSolanaAddress = (addr: string) => !addr || /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr);
 
   return (

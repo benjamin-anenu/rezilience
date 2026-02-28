@@ -134,6 +134,7 @@ export interface PhaseMilestone {
   realmsProposalState?: string;
   realmsVotesFor?: number;
   realmsVotesAgainst?: number;
+  solAllocation?: number;
 }
 
 export interface Phase {

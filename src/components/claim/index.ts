@@ -8,3 +8,5 @@ export { RoadmapForm } from './RoadmapForm';
 export { GitHubUrlAnalyzer } from './GitHubUrlAnalyzer';
 export { GitHubAnalysisResultCard } from './GitHubAnalysisResult';
 export { AuthorityVerificationModal } from './AuthorityVerificationModal';
+export { FundingRequestForm } from './FundingRequestForm';
+export { SubmitProposalDialog } from './SubmitProposalDialog';
