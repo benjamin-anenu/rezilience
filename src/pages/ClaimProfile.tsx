@@ -19,6 +19,8 @@ import {
   MediaUploader,
   RoadmapForm,
   AuthorityVerificationModal,
+  FundingRequestForm,
+  SubmitProposalDialog,
 } from '@/components/claim';
 import type { MediaAsset, Phase, ProjectCategory } from '@/types';
 import { type GitHubAnalysisResult, suggestCategory } from '@/hooks/useGitHubAnalysis';
@@ -128,6 +130,10 @@ const ClaimProfile = () => {
   // Realms DAO Address (optional, for DAO Accountability)
   const [realmsDaoAddress, setRealmsDaoAddress] = useState('');
 
+  // Funding Request State
+  const [fundingRequested, setFundingRequested] = useState(0);
+  const [showProposalDialog, setShowProposalDialog] = useState(false);
+  const [createdProfileId, setCreatedProfileId] = useState<string | null>(null);
   // GitHub Analysis State
   const [githubAnalysisResult, setGithubAnalysisResult] = useState<GitHubAnalysisResult | null>(null);
 
@@ -184,9 +190,10 @@ const ClaimProfile = () => {
       programVerified,
       githubVerified,
       realmsDaoAddress,
+      fundingRequested,
     };
     localStorage.setItem('claimFormProgress', JSON.stringify(formData));
-  }, [projectName, description, category, country, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones, githubAnalysisResult, logoUrl, authorityData, authorityVerified, programVerified, githubVerified, realmsDaoAddress]);
+  }, [projectName, description, category, country, websiteUrl, programId, githubOrgUrl, discordUrl, telegramUrl, currentStep, mediaAssets, milestones, githubAnalysisResult, logoUrl, authorityData, authorityVerified, programVerified, githubVerified, realmsDaoAddress, fundingRequested]);
 
   // Restore form state on mount
   useEffect(() => {
@@ -212,6 +219,7 @@ const ClaimProfile = () => {
         if (data.programVerified) setProgramVerified(data.programVerified);
         if (data.githubVerified) setGithubVerified(data.githubVerified);
         if (data.realmsDaoAddress) setRealmsDaoAddress(data.realmsDaoAddress);
+        if (data.fundingRequested) setFundingRequested(data.fundingRequested);
       } catch (e) {
         // Invalid JSON, ignore
       }
@@ -429,6 +437,8 @@ const ClaimProfile = () => {
         squads_version: authorityData?.squadsVersion || null,
         multisig_verified_via: authorityData?.multisigVerifiedVia || null,
         realms_dao_address: realmsDaoAddress || null,
+        funding_requested_sol: fundingRequested > 0 ? fundingRequested : null,
+        funding_status: fundingRequested > 0 && realmsDaoAddress ? 'pending' : null,
         // For the edge function routing
         unclaimed_profile_id: unclaimedProfileId || undefined,
       };
@@ -446,11 +456,21 @@ const ClaimProfile = () => {
       localStorage.removeItem('claimingProfile');
       localStorage.setItem('verifiedProfileId', profileId);
       
-      toast({ 
-        title: unclaimedProfileId ? 'Project Claimed!' : 'Profile Created!', 
-        description: 'Your project is now registered in the Resilience Registry.' 
-      });
-      navigate(`/profile/${profileId}`);
+      // If funding was requested, show proposal dialog instead of navigating
+      if (fundingRequested > 0 && realmsDaoAddress) {
+        setCreatedProfileId(profileId);
+        setShowProposalDialog(true);
+        toast({ 
+          title: unclaimedProfileId ? 'Project Claimed!' : 'Profile Created!', 
+          description: 'Now submit your funding proposal to the DAO.' 
+        });
+      } else {
+        toast({ 
+          title: unclaimedProfileId ? 'Project Claimed!' : 'Profile Created!', 
+          description: 'Your project is now registered in the Resilience Registry.' 
+        });
+        navigate(`/profile/${profileId}`);
+      }
       
     } catch (err) {
       console.error('Direct submit error:', err);
@@ -834,6 +854,17 @@ const ClaimProfile = () => {
                 setPhases={setMilestones}
               />
 
+              {/* DAO Funding Request — only if Realm DAO address is set */}
+              <div className="mt-6">
+                <FundingRequestForm
+                  phases={milestones}
+                  setPhases={setMilestones}
+                  fundingRequested={fundingRequested}
+                  setFundingRequested={setFundingRequested}
+                  realmsDaoAddress={realmsDaoAddress}
+                />
+              </div>
+
               {/* Final Submit */}
               <Card className="mt-6 border-primary/30 bg-card">
                 <CardContent className="py-6">
@@ -939,6 +970,23 @@ const ClaimProfile = () => {
             profileId={unclaimedProfileId || undefined}
             onVerificationComplete={handleAuthorityVerified}
           />
+
+          {/* Funding Proposal Dialog */}
+          {createdProfileId && (
+            <SubmitProposalDialog
+              open={showProposalDialog}
+              onOpenChange={(open) => {
+                setShowProposalDialog(open);
+                if (!open) navigate(`/profile/${createdProfileId}`);
+              }}
+              profileId={createdProfileId}
+              projectName={projectName}
+              realmsDaoAddress={realmsDaoAddress}
+              fundingRequested={fundingRequested}
+              milestones={milestones}
+              onProposalCreated={() => navigate(`/profile/${createdProfileId}`)}
+            />
+          )}
         </div>
       </div>
     </Layout>

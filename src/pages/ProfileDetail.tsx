@@ -20,6 +20,7 @@ import {
 } from '@/components/program';
 import { SettingsTab, BuildInPublicTab, TeamManagement, MediaTab } from '@/components/profile/tabs';
 import { RoadmapManagement } from '@/components/profile/tabs/RoadmapManagement';
+import { FundingStatusWidget } from '@/components/profile/FundingStatusWidget';
 import { PROJECT_CATEGORIES } from '@/types';
 import { useClaimedProfile } from '@/hooks/useClaimedProfiles';
 import { useAuth } from '@/context/AuthContext';
@@ -278,6 +279,13 @@ const ProfileDetail = () => {
                   scoreBreakdown={profile.scoreBreakdown}
                 />
               </div>
+
+              {/* Funding Status Widget */}
+              <FundingStatusWidget
+                profileId={profile.id}
+                fundingStatus={(profile as any).fundingStatus || (profile as any).funding_status}
+                fundingRequestedSol={(profile as any).fundingRequestedSol || (profile as any).funding_requested_sol}
+              />
 
               {/* 2. QUICK STATS BAR - Same as public */}
               <div className="mb-6">

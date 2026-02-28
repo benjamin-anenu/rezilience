@@ -449,6 +449,8 @@ export type Database = {
           discord_url: string | null
           discovered_at: string | null
           discovery_source: string | null
+          funding_requested_sol: number | null
+          funding_status: string | null
           github_access_token: string | null
           github_analyzed_at: string | null
           github_commit_velocity: number | null
@@ -551,6 +553,8 @@ export type Database = {
           discord_url?: string | null
           discovered_at?: string | null
           discovery_source?: string | null
+          funding_requested_sol?: number | null
+          funding_status?: string | null
           github_access_token?: string | null
           github_analyzed_at?: string | null
           github_commit_velocity?: number | null
@@ -653,6 +657,8 @@ export type Database = {
           discord_url?: string | null
           discovered_at?: string | null
           discovery_source?: string | null
+          funding_requested_sol?: number | null
+          funding_status?: string | null
           github_access_token?: string | null
           github_analyzed_at?: string | null
           github_commit_velocity?: number | null
@@ -907,6 +913,66 @@ export type Database = {
           },
           {
             foreignKeyName: "ecosystem_trends_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles_public"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funding_proposals: {
+        Row: {
+          created_at: string
+          escrow_address: string | null
+          funded_at: string | null
+          id: string
+          milestone_allocations: Json
+          profile_id: string
+          proposal_address: string | null
+          proposal_tx: string | null
+          realm_dao_address: string
+          requested_sol: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          escrow_address?: string | null
+          funded_at?: string | null
+          id?: string
+          milestone_allocations?: Json
+          profile_id: string
+          proposal_address?: string | null
+          proposal_tx?: string | null
+          realm_dao_address: string
+          requested_sol?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          escrow_address?: string | null
+          funded_at?: string | null
+          id?: string
+          milestone_allocations?: Json
+          profile_id?: string
+          proposal_address?: string | null
+          proposal_tx?: string | null
+          realm_dao_address?: string
+          requested_sol?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funding_proposals_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "claimed_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funding_proposals_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: false
             referencedRelation: "claimed_profiles_public"
@@ -1195,6 +1261,8 @@ export type Database = {
           description: string | null
           discord_url: string | null
           discovery_source: string | null
+          funding_requested_sol: number | null
+          funding_status: string | null
           github_analyzed_at: string | null
           github_commit_velocity: number | null
           github_commits_30d: number | null
@@ -1284,6 +1352,8 @@ export type Database = {
           description?: string | null
           discord_url?: string | null
           discovery_source?: string | null
+          funding_requested_sol?: number | null
+          funding_status?: string | null
           github_analyzed_at?: string | null
           github_commit_velocity?: number | null
           github_commits_30d?: number | null
@@ -1373,6 +1443,8 @@ export type Database = {
           description?: string | null
           discord_url?: string | null
           discovery_source?: string | null
+          funding_requested_sol?: number | null
+          funding_status?: string | null
           github_analyzed_at?: string | null
           github_commit_velocity?: number | null
           github_commits_30d?: number | null

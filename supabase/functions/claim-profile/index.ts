@@ -62,6 +62,9 @@ Deno.serve(async (req) => {
       verified: true,
       verified_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
+      // Store funding data if provided
+      funding_requested_sol: rest.funding_requested_sol || null,
+      funding_status: rest.funding_status || null,
     };
 
     let resultProfile;
