@@ -1,194 +1,169 @@
 
 
-# Registry-Driven DAO Funding: Integrated Proposal and Milestone Release System
+# Next Iteration: In-App Governance, Milestone Escrow, and Notifications
 
-## Concept
+## What Has Been Built
+- Database infrastructure (funding_proposals table, claimed_profiles funding columns)
+- Registration flow with FundingRequestForm and SOL allocation per milestone
+- SubmitProposalDialog (creates DB record only, no on-chain transaction)
+- FundingStatusWidget on profile page (reads from DB)
+- manage-funding-proposal edge function (create + update_status actions)
+- Escrow program hooks for bounties (useEscrowProgram, useRealmsProposal)
 
-Instead of a separate "Apply for Grant" page, the **existing registration flow** (Claim Profile) becomes the funding application. When a builder registers their project with a Realm DAO address and milestones, the system automatically creates a governance proposal on that Realm. The DAO community votes to accept or reject. If accepted, the milestones defined during registration become the escrow release schedule -- each milestone completion triggers a proportional SOL release governed by DAO votes.
+## What Remains (Prioritized)
 
-This creates a powerful incentive loop: **register your project on Rezilience = get tracked + get funded**.
+### Phase A: In-App Governance Hooks (Core Priority)
 
-```text
-BUILDER REGISTERS ON REZILIENCE
-(with Realm DAO Address + Milestones + Requested SOL)
-            |
-            v
-AUTO-CREATE GOVERNANCE PROPOSAL ON REALM
-"Accept [Project Name] into the ecosystem for X SOL?"
-            |
-            v
-    DAO COMMUNITY VOTES
-    (Yes / No on Realms)
-            |
-     +------+------+
-     |             |
-  ACCEPTED      REJECTED
-     |             |
-     v             v
-ESCROW FUNDED   Profile stays
-(Total SOL      but unfunded
- locked in PDA)
-     |
-     v
-MILESTONE 1 COMPLETED
-(Builder submits evidence)
-     |
-     v
-DAO VOTES ON MILESTONE 1 RELEASE
-(Auto-created proposal: "Release X SOL for Milestone 1")
-     |
-     v
-SOL RELEASED TO BUILDER
-     |
-     v
-MILESTONE 2... (repeat)
-```
+**1. `useCreateFundingProposal` hook**
+- Uses `@solana/spl-governance` to build a Realms proposal transaction on-chain
+- Derives governance PDA, checks TokenOwnerRecord, creates proposal with release_escrow instruction embedded
+- Stores resulting proposal address via manage-funding-proposal `update_status` action
+- Graceful fallback: if the builder lacks governance tokens, show clear error message and offer the Realms deep link as secondary option
 
-## What Changes
+**2. `useFundingProposal` hook**
+- Polls the on-chain proposal account via RPC to get real-time vote state
+- Returns: status (Voting/Succeeded/Defeated), yesVotes, noVotes, quorum progress, voting end time
+- Updates DB status when proposal state changes (accepted/rejected)
 
-### 1. Registration Flow Enhancement (ClaimProfile.tsx)
+**3. `useCastVote` hook**
+- Constructs `castVote` instruction via spl-governance for DAO token holders
+- Supports Yes/No vote types
+- Updates local cache on success
 
-The existing Step 5 (Roadmap) gets enhanced with a **Funding Request** section:
+**4. `useExecuteProposal` hook**
+- When proposal reaches Succeeded state, builds `executeTransaction` instruction
+- This triggers the `release_escrow` CPI, releasing SOL to the builder
+- Auto-updates DB to `funded` or `completed` status
 
-- **Realm DAO Address** moves from optional to prominently featured (available for ALL categories, not just DAO/DeFi)
-- New field: **Total Funding Requested** (SOL amount)
-- New field: **SOL Allocation Per Milestone** -- builder assigns a SOL amount to each milestone within their phases
-- The Roadmap step subtitle changes to: "Define your milestones. Each milestone can unlock a portion of your funding."
-- A summary card shows: "Total requested: X SOL across Y milestones"
+### Phase B: Enhanced SubmitProposalDialog
 
-### 2. Auto-Proposal on Registration (claim-profile edge function)
+Update the existing `SubmitProposalDialog` to:
+- Use `useCreateFundingProposal` for on-chain proposal creation (wallet signs one transaction)
+- Show a "Creating proposal on-chain..." loading state
+- On success, store proposal address in DB and show confirmation
+- Keep "View on Realms" as a secondary link
 
-When a profile is claimed/created AND has a `realms_dao_address` AND has `funding_requested_sol > 0`:
+### Phase C: In-App Voting UI
 
-- The backend fires a **new edge function** (`create-funding-proposal`) that constructs a Realms governance proposal using `@solana/spl-governance`
-- Proposal title: "Accept [Project Name] for [X] SOL funding"
-- Proposal description: includes project description, milestone breakdown, GitHub link, Rezilience profile link
-- The proposal address is stored in a new `funding_proposals` table linked to the profile
+**1. `ProposalStatusBadge` component**
+- Displays live proposal state with vote counts
+- Shows quorum progress bar
+- Countdown timer for voting period
 
-However, since creating an on-chain proposal requires a wallet signature (the builder's), this cannot be fully server-side. Instead:
+**2. `VotePanel` component**
+- "Vote Yes" and "Vote No" buttons for governance token holders
+- Shows current user's vote if already cast
+- Disabled states when user lacks tokens or already voted
 
-- After successful registration, the builder is shown a **"Submit Funding Proposal"** dialog
-- This dialog pre-fills all data and asks the builder to sign a single wallet transaction
-- The transaction creates the proposal on-chain via spl-governance
-- The proposal address is saved to the database
+**3. Wire into FundingStatusWidget**
+- Replace static status display with live on-chain polling
+- Add VotePanel for DAO members viewing a project's profile
+- Add "Execute Release" button when vote succeeds
 
-### 3. New Database Table: `funding_proposals`
+### Phase D: Milestone-Based Escrow
 
-```text
-funding_proposals
-  id                    uuid (PK)
-  profile_id            uuid (FK -> claimed_profiles.id)
-  realm_dao_address     text
-  requested_sol         numeric
-  milestone_allocations jsonb    -- [{milestone_id, phase_id, sol_amount}]
-  proposal_address      text     -- on-chain Realms proposal
-  proposal_tx           text     -- creation tx signature
-  status                text     -- pending_signature, voting, accepted, rejected, funded, completed
-  funded_at             timestamptz
-  escrow_address        text
-  created_at            timestamptz
-  updated_at            timestamptz
-```
+**1. `useMilestoneRelease` hook**
+- Creates per-milestone escrow PDAs using seeds `["escrow", profile_id_hex, milestone_index_str]`
+- Each milestone completion triggers a new governance proposal for that milestone's SOL allocation
+- Tracks released vs. locked amounts per milestone
 
-### 4. New Column on `claimed_profiles`
+**2. Enhanced FundingStatusWidget**
+- Per-milestone status indicators: Locked / Voting / Released
+- Released amount tracking (currently hardcoded to 0)
+- "Submit Milestone Evidence" button for builders
+- "Create Release Proposal" button per completed milestone
 
-- `funding_requested_sol` (numeric, nullable) -- total SOL the builder is requesting
-- `funding_status` (text, nullable) -- 'pending' | 'voting' | 'accepted' | 'rejected' | 'funded' | 'completed'
+### Phase E: Notification System
 
-### 5. Milestone-Based SOL Allocation in Roadmap
+**1. Database migration**
+- New `notifications` table: id, recipient_x_user_id, type, title, body, bounty_id, profile_id, read, created_at
+- RLS: users can only read their own notifications
+- Index on recipient_x_user_id + read for fast unread counts
 
-Each `PhaseMilestone` in the types gets a new optional field:
+**2. `useNotifications` hook**
+- Fetches notifications for current user
+- Marks notifications as read
+- Returns unread count
 
-- `sol_allocation`: number -- how much SOL is allocated to this milestone
-- When a milestone is marked complete and evidence is submitted, the system creates a per-milestone release proposal on Realms
-- The escrow program is called once per milestone (each milestone creates its own escrow PDA using seeds `["escrow", profile_id_hex, milestone_index]`)
+**3. `NotificationBell` component in Navigation**
+- Bell icon with unread badge count
+- Opens NotificationPanel (slide-out sheet)
 
-### 6. Post-Registration Flow
+**4. `NotificationPanel` component**
+- List of notifications grouped by date
+- Click notification to navigate to relevant bounty/profile
+- "Mark all as read" button
 
-After registration with a Realm + funding request:
+**5. Trigger notifications from edge functions**
+- manage-funding-proposal: notify DAO members on new proposal, notify builder on vote result
+- manage-bounty: notify on claim, evidence, approval, payment
+- claim-profile: notify linked DAO on new registration with funding request
 
-1. Builder lands on their profile page
-2. A banner shows: **"Your funding proposal is ready. Sign to submit it to [DAO Name]."**
-3. Builder clicks, wallet signs, proposal goes on-chain
-4. Profile page shows proposal status (Voting / Accepted / Rejected)
-5. If accepted, the DAO (or a designated funder) funds the total escrow
-6. Builder works on milestones, marks them complete with evidence
-7. For each completed milestone, the system creates a release proposal
-8. DAO votes on each release
-9. SOL is released per milestone
+### Phase F: Dashboard Funding Summary
 
-### 7. Profile Page Funding Widget
+- Add funding status card to Dashboard page showing active proposals, total requested, total released
+- Quick links to profile funding widget
 
-A new section on the profile/dashboard page:
+### Phase G: Bounty Creation Wizard with Release Modes
 
-- Shows funding status: Proposal Pending / Voting / Accepted / In Progress / Completed
-- Shows milestone progress with SOL amounts: "Milestone 1: 5 SOL (Released) | Milestone 2: 10 SOL (In Progress) | Milestone 3: 15 SOL (Locked)"
-- "View on Realms" link (secondary, not primary)
-- If the viewer is a DAO member: "Vote" button (in-app via spl-governance SDK)
+- Replace CreateBountyDialog with a multi-step wizard
+- Step 1: Release Mode selection (DAO Governed / Direct Release / Multi-sig)
+- Step 2: Bounty details (title, description, reward)
+- Step 3: Milestone breakdown (optional)
+- Step 4: Review and create
+- Each mode configures the escrow authority differently
 
-### 8. Notification Triggers
+## Technical Considerations
 
-When integrated with a future notification system:
-- Builder registers with funding request -> DAO members notified
-- DAO votes to accept -> Builder notified
-- Milestone evidence submitted -> DAO members notified
-- Milestone SOL released -> Builder notified
+1. **spl-governance SDK**: Need to install `@solana/spl-governance` package. This is a heavy dependency (~150KB); should be lazy-loaded on governance-related routes only.
 
-## Technical Implementation
+2. **TokenOwnerRecord requirement**: Users must have deposited governance tokens into the Realm to create proposals or vote. The UI must detect this and show a clear message if tokens are missing.
 
-### New Files
-- `src/components/claim/FundingRequestForm.tsx` -- SOL allocation per milestone UI
-- `src/components/claim/SubmitProposalDialog.tsx` -- post-registration proposal signing
-- `src/components/profile/FundingStatusWidget.tsx` -- profile page funding tracker
-- `src/hooks/useCreateFundingProposal.ts` -- spl-governance proposal creation
-- `src/hooks/useFundingProposal.ts` -- fetch/poll proposal status
-- `src/hooks/useMilestoneRelease.ts` -- per-milestone escrow + release proposal
+3. **Governance program version**: Realms uses spl-governance v3. The SDK version must match. Need to verify compatibility before building hooks.
 
-### Modified Files
-- `src/pages/ClaimProfile.tsx` -- add FundingRequestForm to Step 5, post-submit proposal dialog
-- `src/components/claim/CoreIdentityForm.tsx` -- make Realm DAO address visible for all categories
-- `src/components/claim/RoadmapForm.tsx` -- add SOL allocation field per milestone
-- `src/types/index.ts` -- add `sol_allocation` to PhaseMilestone
-- `supabase/functions/claim-profile/index.ts` -- store funding_requested_sol, set funding_status
-- `src/pages/ProfileDetail.tsx` -- add FundingStatusWidget
-- `src/pages/Dashboard.tsx` -- show funding status summary
+4. **Per-milestone escrow PDA seeds**: The existing escrow program uses `["escrow", bounty_id]` seeds. For milestone-based releases, we will use `["escrow", profile_id_hex_milestone_index]` -- concatenating the profile ID and milestone index into a single 32-char bounty_id string that the program accepts.
 
-### Database Migration
-- Create `funding_proposals` table with RLS (public read, service-role write)
-- Add `funding_requested_sol` and `funding_status` columns to `claimed_profiles`
-- Update `claimed_profiles_public` view to include new columns
+5. **Notification delivery**: Initially in-app only (DB polling via React Query). Email/push can be added later. Realtime subscriptions on the notifications table would reduce polling overhead.
 
-### Dependencies
-- `@solana/spl-governance` -- required for in-app proposal creation and vote casting
+6. **Bundle size management**: spl-governance + Anchor together add ~350KB. Use React.lazy() and route-based code splitting for the bounty board and profile pages.
 
-## Edge Cases and Considerations
+## Recommended Execution Order
 
-1. **Builder must hold governance tokens**: To create a proposal on a Realm, the builder needs to be a token holder in that DAO. If they are not, the UI will show: "You need governance tokens in this DAO to submit a funding proposal. Contact the DAO to get started."
+1. Phase A (governance hooks) -- foundational, everything else depends on it
+2. Phase B (enhanced proposal dialog) -- immediate UX improvement
+3. Phase C (voting UI) -- makes the app self-contained for governance
+4. Phase D (milestone escrow) -- the core value proposition
+5. Phase E (notifications) -- keeps users engaged
+6. Phase F (dashboard summary) -- visibility
+7. Phase G (creation wizard) -- polished onboarding for funders
 
-2. **DAO may not want to fund**: The proposal is just that -- a proposal. The DAO votes no, and the project still gets tracked on Rezilience (the maintenance tracking value remains). No funding obligation.
+## New Dependencies
+- `@solana/spl-governance` (for in-app proposal creation, voting, and execution)
 
-3. **Milestone SOL allocation must sum to total**: Validation ensures the per-milestone allocations equal the total requested amount.
+## New Files
+- `src/hooks/useCreateFundingProposal.ts`
+- `src/hooks/useFundingProposal.ts`
+- `src/hooks/useCastVote.ts`
+- `src/hooks/useExecuteProposal.ts`
+- `src/hooks/useMilestoneRelease.ts`
+- `src/hooks/useNotifications.ts`
+- `src/components/bounty/ProposalStatusBadge.tsx`
+- `src/components/bounty/VotePanel.tsx`
+- `src/components/bounty/MilestoneTracker.tsx`
+- `src/components/bounty/CreateBountyWizard.tsx`
+- `src/components/notifications/NotificationBell.tsx`
+- `src/components/notifications/NotificationPanel.tsx`
 
-4. **Who funds the escrow?**: After the DAO votes to accept, a DAO treasury manager or the governance PDA itself needs to fund the escrow. This could be:
-   - Manual: A DAO admin clicks "Fund" and signs a treasury transfer
-   - Automated: The acceptance proposal itself includes a treasury transfer instruction (advanced, Phase 2)
+## Modified Files
+- `src/components/claim/SubmitProposalDialog.tsx` -- use on-chain proposal hook
+- `src/components/profile/FundingStatusWidget.tsx` -- live status, vote panel, milestone tracker
+- `src/components/bounty/BountyCard.tsx` -- proposal status badge, vote buttons
+- `src/pages/Dashboard.tsx` -- funding summary card
+- `src/components/layout/Navigation.tsx` -- notification bell
+- `supabase/functions/manage-funding-proposal/index.ts` -- notification triggers
+- `supabase/functions/manage-bounty/index.ts` -- notification triggers
 
-5. **Realm DAO address for ALL categories**: Currently the field only shows for DAO/DeFi categories. This will be changed to show for all categories since any project can seek DAO funding.
-
-6. **Projects without Realm address**: Registration works exactly as before -- no funding flow, just maintenance tracking. The funding request is entirely optional.
-
-7. **Multiple DAOs**: Initially, a project can only request funding from one DAO (the one linked during registration). Multi-DAO support can come later.
-
-## Execution Order
-
-1. Database migration (funding_proposals table, new columns on claimed_profiles)
-2. Update types (PhaseMilestone.sol_allocation)
-3. Update CoreIdentityForm (show Realm field for all categories)
-4. Build FundingRequestForm (SOL allocation per milestone)
-5. Update RoadmapForm (integrate SOL allocation)
-6. Update claim-profile edge function (store funding data)
-7. Build SubmitProposalDialog (wallet-signed proposal creation)
-8. Build FundingStatusWidget (profile page tracker)
-9. Build useMilestoneRelease hook (per-milestone escrow + release)
-10. Wire everything into ClaimProfile and ProfileDetail pages
+## Database Migrations
+- New table: `notifications` (with RLS for user-specific reads)
+- Enable realtime on `notifications` table
 
