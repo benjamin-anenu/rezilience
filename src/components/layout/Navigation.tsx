@@ -19,6 +19,7 @@ const navLinks = [
   { href: '/readme', label: 'README', external: false },
   { href: '/explorer', label: 'EXPLORER', external: false },
   { href: '/accountability', label: 'DAO TRACKER', external: false },
+  { href: '/bounty-board', label: 'BOUNTIES', external: false },
   { href: '/gpt', label: 'GPT', external: false },
   { href: '/grants', label: 'GRANTS', external: false },
   { href: '/library', label: 'LIBRARY', external: false },

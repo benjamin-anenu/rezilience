@@ -13,6 +13,30 @@ function jsonResponse(data: unknown, status = 200) {
   });
 }
 
+// Fire-and-forget notification helper
+async function notify(
+  supabase: ReturnType<typeof createClient>,
+  recipient_x_user_id: string,
+  type: string,
+  title: string,
+  body?: string,
+  bounty_id?: string,
+  profile_id?: string,
+) {
+  try {
+    await supabase.from("notifications").insert({
+      recipient_x_user_id,
+      type,
+      title,
+      body: body || null,
+      bounty_id: bounty_id || null,
+      profile_id: profile_id || null,
+    });
+  } catch (e) {
+    console.warn("Notification insert failed:", e);
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -68,15 +92,17 @@ Deno.serve(async (req) => {
             });
         }
 
+        // Authenticate: verify the x_user_id matches a claimed profile with this DAO address
         const { data: profile, error: profileError } = await supabase
           .from("claimed_profiles")
           .select("id, x_user_id, realms_dao_address")
           .eq("x_user_id", x_user_id)
+          .eq("claim_status", "claimed")
           .eq("realms_dao_address", realm_dao_address)
           .single();
 
         if (profileError || !profile) {
-          return jsonResponse({ error: "You must own a profile with this Realm DAO address to create bounties" }, 403);
+          return jsonResponse({ error: "You must own a claimed profile with this Realm DAO address to create bounties" }, 403);
         }
 
         const { data: bounty, error: insertError } = await supabase
@@ -152,6 +178,12 @@ Deno.serve(async (req) => {
           return jsonResponse({ error: "Failed to claim bounty. It may have been claimed by someone else." }, 409);
         }
 
+        // Notify creator that their bounty was claimed
+        notify(supabase, bounty.creator_x_user_id, "bounty_claimed",
+          `Bounty "${bounty.title}" was claimed`,
+          `A builder has claimed your bounty and will begin working on it.`,
+          bounty_id, bounty.creator_profile_id);
+
         return jsonResponse({ success: true, bounty: updated });
       }
 
@@ -204,6 +236,12 @@ Deno.serve(async (req) => {
           return jsonResponse({ error: "Failed to submit evidence" }, 500);
         }
 
+        // Notify creator that evidence was submitted
+        notify(supabase, bounty.creator_x_user_id, "evidence_submitted",
+          `Evidence submitted for "${bounty.title}"`,
+          `The claimer has submitted evidence for review. Please approve or reject.`,
+          bounty_id, bounty.creator_profile_id);
+
         return jsonResponse({ success: true, bounty: updated });
       }
 
@@ -247,6 +285,17 @@ Deno.serve(async (req) => {
 
         if (updateError) {
           return jsonResponse({ error: `Failed to ${action} bounty` }, 500);
+        }
+
+        // Notify claimer of approval/rejection
+        if (bounty.claimer_x_user_id) {
+          notify(supabase, bounty.claimer_x_user_id,
+            action === "approve" ? "bounty_approved" : "bounty_rejected",
+            `Bounty "${bounty.title}" was ${action === "approve" ? "approved" : "rejected"}`,
+            action === "approve"
+              ? "Your evidence was approved! The escrow funding step is next."
+              : "Your evidence was rejected by the bounty creator.",
+            bounty_id);
         }
 
         return jsonResponse({ success: true, bounty: updated });
@@ -295,6 +344,14 @@ Deno.serve(async (req) => {
         if (updateError) {
           console.error("Fund error:", updateError);
           return jsonResponse({ error: "Failed to update bounty after funding" }, 500);
+        }
+
+        // Notify claimer that escrow was funded
+        if (bounty.claimer_x_user_id) {
+          notify(supabase, bounty.claimer_x_user_id, "escrow_funded",
+            `Escrow funded for "${bounty.title}"`,
+            `${bounty.reward_sol} SOL has been locked in escrow. A governance vote will release it.`,
+            bounty_id);
         }
 
         return jsonResponse({ success: true, bounty: updated });
@@ -363,7 +420,7 @@ Deno.serve(async (req) => {
           return jsonResponse({ error: "Bounty must be in voting or funded status to mark as paid" }, 400);
         }
 
-        // Allow creator or claimer to mark as paid (anyone can execute the Realms tx)
+        // Allow creator or claimer to mark as paid
         if (bounty.creator_x_user_id !== x_user_id && bounty.claimer_x_user_id !== x_user_id) {
           return jsonResponse({ error: "Only the bounty creator or claimer can mark as paid" }, 403);
         }
@@ -381,6 +438,20 @@ Deno.serve(async (req) => {
 
         if (updateError) {
           return jsonResponse({ error: "Failed to mark bounty as paid" }, 500);
+        }
+
+        // Notify both parties
+        if (bounty.claimer_x_user_id && bounty.claimer_x_user_id !== x_user_id) {
+          notify(supabase, bounty.claimer_x_user_id, "bounty_paid",
+            `Bounty "${bounty.title}" paid!`,
+            `${bounty.reward_sol} SOL has been released to your wallet.`,
+            bounty_id);
+        }
+        if (bounty.creator_x_user_id !== x_user_id) {
+          notify(supabase, bounty.creator_x_user_id, "bounty_paid",
+            `Bounty "${bounty.title}" paid out`,
+            `${bounty.reward_sol} SOL released to the builder.`,
+            bounty_id, bounty.creator_profile_id);
         }
 
         return jsonResponse({ success: true, bounty: updated });
@@ -424,6 +495,14 @@ Deno.serve(async (req) => {
 
         if (updateError) {
           return jsonResponse({ error: "Failed to cancel escrow" }, 500);
+        }
+
+        // Notify claimer of cancellation
+        if (bounty.claimer_x_user_id) {
+          notify(supabase, bounty.claimer_x_user_id, "escrow_cancelled",
+            `Escrow cancelled for "${bounty.title}"`,
+            `The bounty creator has cancelled the escrow.`,
+            bounty_id);
         }
 
         return jsonResponse({ success: true, bounty: updated });
