@@ -173,12 +173,17 @@ export const CoreIdentityForm = ({
 
           <WebsitePreview url={websiteUrl} />
 
-          {/* Realms DAO Address — shown for DAO/DeFi categories */}
+          {/* Realms DAO Address — prominent with education */}
           {isRealmsRelevant && setRealmsDaoAddress && (
-            <div className="space-y-2">
-              <Label htmlFor="realmsDaoAddress" className="font-display text-xs uppercase tracking-wider">
-                Realms DAO Address
-              </Label>
+            <div className="space-y-3 rounded-sm border border-primary/30 bg-primary/5 p-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="realmsDaoAddress" className="font-display text-xs uppercase tracking-wider text-primary">
+                  Realms DAO Address
+                </Label>
+                <span className="rounded-sm bg-primary/20 px-2 py-0.5 text-[10px] font-mono uppercase text-primary">
+                  UNLOCKS DAO FUNDING
+                </span>
+              </div>
               <Input
                 id="realmsDaoAddress"
                 placeholder="e.g. GovER5Lthms3bLBqWub97yVrMmEogzX7xNjdXpPPCVZw"
@@ -189,9 +194,19 @@ export const CoreIdentityForm = ({
               {realmsDaoAddress && !isValidSolanaAddress(realmsDaoAddress) && (
                 <p className="text-xs text-destructive">Invalid Solana address format</p>
               )}
-              <p className="text-xs text-muted-foreground">
-                Link your Realms governance to track proposal delivery rates.
-              </p>
+              <div className="space-y-1.5">
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">Why add this?</span> Linking your Realm DAO unlocks milestone-based funding requests, 
+                  bounty creation, and delivery rate tracking on the DAO Tracker.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <span className="font-semibold text-foreground">Where to find it:</span> Go to{' '}
+                  <a href="https://app.realms.today" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    app.realms.today
+                  </a>
+                  , open your DAO, and copy the address from the URL (after <code className="text-[10px] bg-muted px-1 rounded">/dao/</code>).
+                </p>
+              </div>
             </div>
           )}
         </CardContent>

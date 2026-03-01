@@ -72,7 +72,25 @@ export const FundingRequestForm = ({
   };
 
   if (!realmsDaoAddress) {
-    return null;
+    return (
+      <Card className="border-dashed border-yellow-500/30 bg-yellow-500/5">
+        <CardContent className="py-6">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-500" />
+            <div className="space-y-1">
+              <p className="text-sm font-semibold text-foreground">
+                Want DAO Funding?
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Go back to <span className="font-semibold text-foreground">Step 2 (Identity)</span> and add your{' '}
+                <span className="font-semibold text-foreground">Realms DAO Address</span> to unlock milestone-based funding requests. 
+                This lets you request SOL from your DAO, with each milestone unlocking a portion of the funds via governance vote.
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   }
 
   if (allMilestones.length === 0) {

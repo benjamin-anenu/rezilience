@@ -56,8 +56,11 @@ export const FundingStatusWidget = ({ profileId, fundingStatus, fundingRequested
   // Calculate milestone progress from allocations
   const milestoneAllocations = (latestProposal?.milestone_allocations as any[]) || [];
   const totalAllocated = milestoneAllocations.reduce((sum: number, a: any) => sum + (a.sol_amount || 0), 0);
-  const releasedAmount = 0; // TODO: track released per milestone via on-chain escrow state
+  // Derive released amount from milestone statuses if available, otherwise show pending state
+  const completedAllocations = milestoneAllocations.filter((a: any) => a.status === 'completed' || a.released === true);
+  const releasedAmount = completedAllocations.reduce((sum: number, a: any) => sum + (a.sol_amount || 0), 0);
   const progressPercent = totalAllocated > 0 ? (releasedAmount / totalAllocated) * 100 : 0;
+  const isProgressKnown = milestoneAllocations.some((a: any) => a.status !== undefined || a.released !== undefined);
 
   const showVotePanel = onChainState?.state === 'Voting' && latestProposal?.realm_dao_address;
   const showExecuteButton = onChainState?.state === 'Succeeded' && latestProposal;
@@ -102,9 +105,19 @@ export const FundingStatusWidget = ({ profileId, fundingStatus, fundingRequested
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Released</span>
-              <span className="font-mono">{releasedAmount} / {fundingRequestedSol} SOL</span>
+              <span className="font-mono">
+                {isProgressKnown 
+                  ? `${releasedAmount} / ${fundingRequestedSol} SOL`
+                  : `Pending · ${fundingRequestedSol} SOL total`
+                }
+              </span>
             </div>
             <Progress value={progressPercent} className="h-2" />
+            {!isProgressKnown && fundingStatus !== 'pending_signature' && (
+              <p className="text-[10px] text-muted-foreground italic">
+                Release tracking activates after on-chain escrow is funded.
+              </p>
+            )}
           </div>
         )}
 
