@@ -32,7 +32,7 @@ export function BountyFilters({ activeStatus, onStatusChange, search, onSearchCh
         <Input
           value={search}
           onChange={e => onSearchChange(e.target.value)}
-          placeholder="Search bounties..."
+          placeholder="Search projects..."
           className="pl-9"
         />
       </div>

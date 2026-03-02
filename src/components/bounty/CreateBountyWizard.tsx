@@ -119,13 +119,13 @@ export function CreateBountyWizard({ profiles }: CreateBountyWizardProps) {
       <DialogTrigger asChild>
         <Button className="font-display uppercase tracking-wider">
           <Plus className="mr-1.5 h-4 w-4" />
-          Create Bounty
+          Create Project
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="font-display uppercase tracking-tight">
-            Create Bounty
+            Create Project
             <span className="ml-2 text-xs font-mono text-muted-foreground normal-case">Step {step}/4</span>
           </DialogTitle>
         </DialogHeader>
@@ -297,7 +297,7 @@ export function CreateBountyWizard({ profiles }: CreateBountyWizardProps) {
             </Button>
           ) : (
             <Button onClick={handleSubmit} disabled={createBounty.isPending} className="font-display uppercase tracking-wider">
-              {createBounty.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create Bounty'}
+              {createBounty.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Create Project'}
             </Button>
           )}
         </div>

@@ -30,7 +30,7 @@ const Accountability = () => {
             <Button asChild variant="outline" className="shrink-0 font-display uppercase tracking-wider">
               <Link to="/bounty-board">
                 <Coins className="mr-2 h-4 w-4" />
-                BOUNTY BOARD
+                PROJECT BOARD
               </Link>
             </Button>
           </div>

@@ -119,7 +119,7 @@ export function BountyCard({
         <div className="flex flex-wrap gap-2">
           {bounty.status === 'open' && !isCreator && onClaim && (
             <Button size="sm" onClick={onClaim} className="font-display text-xs uppercase tracking-wider">
-              Claim Bounty
+              Claim Project
             </Button>
           )}
           {bounty.status === 'claimed' && isClaimer && onSubmitEvidence && (
