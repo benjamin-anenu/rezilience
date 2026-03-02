@@ -103,10 +103,10 @@ export default function BountyBoard() {
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <Badge variant="outline" className="mb-3 border-primary/30 font-mono text-xs uppercase">
-                  Bounty Board
+                  Project Board
                 </Badge>
                 <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-foreground sm:text-4xl">
-                  Open Bounties
+                  Open Projects
                 </h1>
                 <p className="mt-2 text-sm text-muted-foreground">
                   Claim work, submit evidence, earn SOL — governed by your DAO.
@@ -151,7 +151,7 @@ export default function BountyBoard() {
               <CardContent className="p-12 text-center">
                 <Coins className="mx-auto mb-4 h-10 w-10 text-muted-foreground/40" />
                 <p className="font-mono text-xs uppercase text-muted-foreground">
-                  {bounties.length === 0 ? 'No bounties yet. Create the first one!' : 'No bounties match your filters.'}
+                  {bounties.length === 0 ? 'No projects yet. Create the first one!' : 'No projects match your filters.'}
                 </p>
               </CardContent>
             </Card>
