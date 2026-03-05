@@ -86,3 +86,15 @@ verify_jwt = false
 
 [functions.fetch-realms-governance]
 verify_jwt = false
+
+[functions.check-rpc-health]
+verify_jwt = false
+
+[functions.lookup-address]
+verify_jwt = false
+
+[functions.decode-transaction]
+verify_jwt = false
+
+[functions.check-ecosystem-status]
+verify_jwt = false

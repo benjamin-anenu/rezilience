@@ -29,6 +29,7 @@ const registryItems: NavDropdownItem[] = [
 ];
 
 const toolkitItems: NavDropdownItem[] = [
+  { href: '/tools', label: 'Tools', description: 'RPC health, address lookup, tx decoder & more' },
   { href: '/gpt', label: 'GPT', description: 'AI-powered Solana intelligence' },
   { href: '/grants', label: 'Grants', description: 'Discover ecosystem funding sources' },
   { href: '/library', label: 'Library', description: 'Docs, blueprints, and learning paths' },
