@@ -8,11 +8,11 @@ const corsHeaders = {
 const SERVICES = [
   { name: 'Solana Mainnet RPC', url: 'https://api.mainnet-beta.solana.com', category: 'Infrastructure', method: 'POST', body: '{"jsonrpc":"2.0","id":1,"method":"getHealth"}' },
   { name: 'Helius', url: Deno.env.get('RPC_URL') || '', category: 'Infrastructure', method: 'POST', body: '{"jsonrpc":"2.0","id":1,"method":"getHealth"}' },
-  { name: 'Jupiter', url: 'https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000', category: 'DEX' },
-  { name: 'Birdeye', url: 'https://public-api.birdeye.so/public/tokenlist?sort_by=v24hUSD&sort_type=desc&offset=0&limit=1', category: 'Analytics' },
-  { name: 'Magic Eden', url: 'https://api-mainnet.magiceden.dev/v2/collections?offset=0&limit=1', category: 'NFT' },
+  { name: 'Jupiter', url: 'https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112', category: 'DEX' },
+  { name: 'Birdeye', url: 'https://public-api.birdeye.so/defi/tokenlist?sort_by=v24hUSD&sort_type=desc&offset=0&limit=1', category: 'Analytics' },
+  { name: 'Magic Eden', url: 'https://api-mainnet.magiceden.dev/v2/collections/popular?limit=1', category: 'NFT' },
   { name: 'Jito', url: 'https://bundles.jito.wtf/api/v1/bundles/tip_floor', category: 'MEV' },
-  { name: 'Raydium', url: 'https://api-v3.raydium.io/main/pairs', category: 'DEX' },
+  { name: 'Raydium', url: 'https://api-v3.raydium.io/pools/info/list?poolType=all&poolSortField=default&sortType=desc&pageSize=1&page=1', category: 'DEX' },
   { name: 'DexScreener', url: 'https://api.dexscreener.com/latest/dex/tokens/So11111111111111111111111111111111111111112', category: 'Analytics' },
 ];
 
