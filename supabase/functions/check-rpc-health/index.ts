@@ -6,18 +6,15 @@ const corsHeaders = {
 };
 
 const RPC_ENDPOINTS = [
-  { name: 'Helius', url: Deno.env.get('RPC_URL') || '' },
-  { name: 'Solana Mainnet', url: 'https://api.mainnet-beta.solana.com' },
-  { name: 'Ankr', url: 'https://rpc.ankr.com/solana' },
-  { name: 'QuickNode', url: 'https://solana-mainnet.quiknode.pro' },
-  { name: 'GetBlock', url: 'https://go.getblock.io/solana-mainnet' },
-  { name: 'Alchemy', url: 'https://solana-mainnet.g.alchemy.com/v2/demo' },
-  { name: 'Chainstack', url: 'https://solana-mainnet.core.chainstack.com' },
-  { name: 'PublicNode', url: 'https://solana-rpc.publicnode.com' },
+  { name: 'Helius', url: Deno.env.get('RPC_URL') || '', docs_url: 'https://www.helius.dev/' },
+  { name: 'Solana Mainnet', url: 'https://api.mainnet-beta.solana.com', docs_url: 'https://solana.com/docs/core/clusters' },
+  { name: 'Ankr', url: 'https://rpc.ankr.com/solana', docs_url: 'https://www.ankr.com/rpc/solana/' },
+  { name: 'PublicNode', url: 'https://solana-rpc.publicnode.com', docs_url: 'https://www.publicnode.com/' },
+  { name: 'Extrnode', url: 'https://solana-mainnet.rpc.extrnode.com', docs_url: 'https://extrnode.com/' },
 ];
 
-async function checkEndpoint(endpoint: { name: string; url: string }) {
-  if (!endpoint.url) return { name: endpoint.name, status: 'down', latency: null, slot: null, error: 'No URL configured' };
+async function checkEndpoint(endpoint: { name: string; url: string; docs_url: string }) {
+  if (!endpoint.url) return { name: endpoint.name, status: 'down', latency: null, slot: null, docs_url: endpoint.docs_url, error: 'No URL configured' };
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -51,9 +48,10 @@ async function checkEndpoint(endpoint: { name: string; url: string }) {
       status: isHealthy ? (avgLatency < 500 ? 'healthy' : 'degraded') : 'down',
       latency: avgLatency,
       slot: slotData.result || null,
+      docs_url: endpoint.docs_url,
     };
   } catch (e) {
-    return { name: endpoint.name, status: 'down', latency: null, slot: null, error: e.message };
+    return { name: endpoint.name, status: 'down', latency: null, slot: null, docs_url: endpoint.docs_url, error: e.message };
   } finally {
     clearTimeout(timeout);
   }
