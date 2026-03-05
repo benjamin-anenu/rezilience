@@ -1,28 +1,30 @@
 
 
-# Fix Unreachable RPC and Ecosystem Endpoints
+# Expand RPC Health Monitor with All Available Public Providers
 
-## Problem
-Several hardcoded URLs in the edge functions are unreachable from the Deno runtime:
-- **Triton** (`https://mainnet.triton.one`) -- DNS fails; requires project-specific URL
-- **Jupiter** (`quote-api.jup.ag`) -- DNS fails from edge function network
-- **Birdeye** (`public-api.birdeye.so`) -- returns 404 (endpoint changed or requires API key header)
-- **Magic Eden** (`api-mainnet.magiceden.dev`) -- returns 400
-- **Raydium** (`api-v3.raydium.io/main/pairs`) -- returns 404 (path changed)
+## What Changes
 
-## Fix
+Update `supabase/functions/check-rpc-health/index.ts` to add every major publicly accessible Solana RPC endpoint. Also update the frontend grid layout to accommodate more cards.
 
-### 1. `check-rpc-health/index.ts` -- Replace Triton with reachable endpoints
-- Remove `https://mainnet.triton.one` (not publicly accessible without account)
-- Replace with **Ankr** (`https://rpc.ankr.com/solana`) and/or **GetBlock** or simply keep only the two working providers (Helius + Solana Mainnet) and add a note that more can be configured
+## New RPC Endpoints
 
-### 2. `check-ecosystem-status/index.ts` -- Update API URLs
-- **Jupiter**: Update to `https://api.jup.ag/price/v2?ids=So11111111111111111111111111111111111111112` (their current public API)
-- **Birdeye**: Update to `https://public-api.birdeye.so/defi/tokenlist?sort_by=v24hUSD&sort_type=desc&offset=0&limit=1` or use their v1 endpoint
-- **Magic Eden**: Update to `https://api-mainnet.magiceden.dev/v2/collections/popular?limit=1`
-- **Raydium**: Update to `https://api-v3.raydium.io/pools/info/list?poolType=all&poolSortField=default&sortType=desc&pageSize=1&page=1`
+Current 3 providers expand to **8+**:
 
-### Files Modified
-- `supabase/functions/check-rpc-health/index.ts` -- replace Triton URL
-- `supabase/functions/check-ecosystem-status/index.ts` -- update 4 API URLs
+| Provider | URL | Notes |
+|----------|-----|-------|
+| Helius | From `RPC_URL` secret | Already present |
+| Solana Mainnet | `api.mainnet-beta.solana.com` | Already present |
+| Ankr | `rpc.ankr.com/solana` | Already present |
+| **QuickNode (Free)** | `solana-mainnet.quiknode.pro` | Free public tier |
+| **GetBlock** | `go.getblock.io/solana-mainnet` | Free public endpoint |
+| **Alchemy** | `solana-mainnet.g.alchemy.com/v2/demo` | Demo key endpoint |
+| **Chainstack** | `solana-mainnet.core.chainstack.com` | Public endpoint |
+| **PublicNode** | `solana-rpc.publicnode.com` | Free community RPC |
+
+Some of these may fail DNS from the edge function runtime (same issue Triton had). The existing error handling already gracefully marks unreachable providers as "down" -- so no risk, just honest reporting.
+
+## Files Modified
+
+1. **`supabase/functions/check-rpc-health/index.ts`** -- Add 5 new entries to `RPC_ENDPOINTS` array
+2. **`src/components/tools/RPCHealthMonitor.tsx`** -- Update skeleton count from 3 to 8 to match, and adjust grid to `lg:grid-cols-4` for better layout with more cards
 
