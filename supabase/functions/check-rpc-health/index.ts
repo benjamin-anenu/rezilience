@@ -42,15 +42,14 @@ async function checkEndpoint(endpoint: { name: string; url: string; docs_url: st
 
     const avgLatency = Math.round((healthLatency + slotLatency) / 2);
     
-    // Some providers return { result: "ok" }, others return a slot number from getHealth,
-    // or return an error object. Consider healthy if we got a valid slot back.
-    const healthOk = healthData.result === 'ok' || (typeof healthData.result === 'string' && !healthData.error);
+    // Use HTTP status as primary health signal — if the server responds with 200,
+    // the endpoint is reachable regardless of JSON-RPC result format.
+    const httpOk = healthRes.ok || slotRes.ok;
     const slotValue = typeof slotData.result === 'number' ? slotData.result : null;
-    const isHealthy = healthOk || slotValue !== null;
 
     return {
       name: endpoint.name,
-      status: isHealthy ? (avgLatency < 500 ? 'healthy' : 'degraded') : 'down',
+      status: httpOk ? (avgLatency < 500 ? 'healthy' : 'degraded') : 'down',
       latency: avgLatency,
       slot: slotValue,
       docs_url: endpoint.docs_url,
