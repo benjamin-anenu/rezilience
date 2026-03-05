@@ -41,13 +41,18 @@ async function checkEndpoint(endpoint: { name: string; url: string; docs_url: st
     const slotLatency = Date.now() - slotStart;
 
     const avgLatency = Math.round((healthLatency + slotLatency) / 2);
-    const isHealthy = healthData.result === 'ok';
+    
+    // Some providers return { result: "ok" }, others return a slot number from getHealth,
+    // or return an error object. Consider healthy if we got a valid slot back.
+    const healthOk = healthData.result === 'ok' || (typeof healthData.result === 'string' && !healthData.error);
+    const slotValue = typeof slotData.result === 'number' ? slotData.result : null;
+    const isHealthy = healthOk || slotValue !== null;
 
     return {
       name: endpoint.name,
       status: isHealthy ? (avgLatency < 500 ? 'healthy' : 'degraded') : 'down',
       latency: avgLatency,
-      slot: slotData.result || null,
+      slot: slotValue,
       docs_url: endpoint.docs_url,
     };
   } catch (e) {
