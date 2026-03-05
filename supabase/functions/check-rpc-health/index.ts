@@ -53,6 +53,7 @@ async function checkEndpoint(endpoint: { name: string; url: string; docs_url: st
       latency: avgLatency,
       slot: slotValue,
       docs_url: endpoint.docs_url,
+      http_status: { health: healthRes.status, slot: slotRes.status },
     };
   } catch (e) {
     return { name: endpoint.name, status: 'down', latency: null, slot: null, docs_url: endpoint.docs_url, error: e.message };
