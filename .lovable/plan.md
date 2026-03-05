@@ -1,35 +1,26 @@
 
 
-# Fix Broken RPC Providers in Health Monitor
+# Fix Ankr and Extrnode False "Down" Status
 
-## Root Cause
+## Problem
+Ankr and Extrnode respond successfully (low latency, HTTP 200) but return non-standard responses to `getHealth` and `getSlot`. The current logic only marks a provider healthy if it gets `result: "ok"` from getHealth OR a numeric slot from getSlot. These providers likely return error objects for both (e.g. rate-limit messages or different response formats), so they get marked "down" despite being reachable and functional.
 
-From the live network responses, the failures are clear:
+Showing "down" is misleading -- the endpoint is alive and responding, just not returning the expected JSON-RPC result format.
 
-| Provider | Error | Reason |
-|----------|-------|--------|
-| **Ankr** | Returns data but no valid slot | `getHealth` likely returns non-"ok" or rate-limited |
-| **QuickNode** | DNS failure | `solana-mainnet.quiknode.pro` requires a project-specific subdomain (paid) |
-| **GetBlock** | Empty JSON response | `go.getblock.io/solana-mainnet` requires an API key in the URL path |
-| **Alchemy** | Empty JSON response | `solana-mainnet.g.alchemy.com/v2/demo` demo key is deprecated/blocked |
-| **Chainstack** | "Access token" error | Requires authentication token |
+## Solution
 
-**These are not public endpoints.** They all require paid accounts or API keys to function. Only Helius (via secret), Solana Mainnet, and PublicNode are truly free and open.
+### 1. Edge function: Use HTTP response status as the primary health signal
+In `supabase/functions/check-rpc-health/index.ts`, change the health determination logic:
+- If the endpoint responds with HTTP 200 to either request, it is **reachable** -- mark as "healthy" or "degraded" based on latency
+- Only mark "down" if the fetch throws (DNS failure, timeout, connection refused) or returns HTTP 4xx/5xx
+- Still try to extract slot number, but treat it as optional metadata, not a health gate
 
-## Plan
-
-### 1. Update `supabase/functions/check-rpc-health/index.ts`
-- Remove QuickNode, GetBlock, Alchemy, Chainstack (require API keys, will always show "down" without them)
-- Keep: Helius, Solana Mainnet, Ankr (fix URL to use their documented public endpoint), PublicNode
-- Add **Extrnode** (`https://solana-mainnet.rpc.extrnode.com`) -- a truly public free endpoint
-- Add each provider's signup/docs URL as a `docs_url` field in the response so the frontend can link to it
-
-### 2. Update `src/components/tools/RPCHealthMonitor.tsx`
-- Display a small link icon or "Get API Key" link for providers that have a `docs_url`
-- Update skeleton count to match the new provider count (5-6)
-- Add a note below the grid: "Want to add more providers? Many RPC services offer free tiers with API keys."
+### 2. Frontend: Show "reachable" context for providers without slot data
+In `src/components/tools/RPCHealthMonitor.tsx`:
+- When `slot` is null but status is healthy/degraded, show "Reachable (slot unavailable)" instead of nothing
+- This gives users honest information without painting a false "down" picture
 
 ### Files Modified
-- `supabase/functions/check-rpc-health/index.ts` -- trim to working endpoints, add docs URLs
-- `src/components/tools/RPCHealthMonitor.tsx` -- show docs links, update count
+- `supabase/functions/check-rpc-health/index.ts` -- use HTTP status codes as health signal
+- `src/components/tools/RPCHealthMonitor.tsx` -- handle null slot for reachable providers
 
