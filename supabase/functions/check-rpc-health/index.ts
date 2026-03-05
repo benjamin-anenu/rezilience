@@ -9,6 +9,11 @@ const RPC_ENDPOINTS = [
   { name: 'Helius', url: Deno.env.get('RPC_URL') || '' },
   { name: 'Solana Mainnet', url: 'https://api.mainnet-beta.solana.com' },
   { name: 'Ankr', url: 'https://rpc.ankr.com/solana' },
+  { name: 'QuickNode', url: 'https://solana-mainnet.quiknode.pro' },
+  { name: 'GetBlock', url: 'https://go.getblock.io/solana-mainnet' },
+  { name: 'Alchemy', url: 'https://solana-mainnet.g.alchemy.com/v2/demo' },
+  { name: 'Chainstack', url: 'https://solana-mainnet.core.chainstack.com' },
+  { name: 'PublicNode', url: 'https://solana-rpc.publicnode.com' },
 ];
 
 async function checkEndpoint(endpoint: { name: string; url: string }) {

@@ -53,9 +53,9 @@ export function RPCHealthMonitor() {
         </p>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {isLoading
-          ? Array.from({ length: 3 }).map((_, i) => (
+          ? Array.from({ length: 8 }).map((_, i) => (
               <Card key={i} className="border-border/50">
                 <CardHeader className="pb-3">
                   <Skeleton className="h-5 w-32" />
