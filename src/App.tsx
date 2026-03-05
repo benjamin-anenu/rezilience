@@ -31,6 +31,7 @@ import ResilienceGPT from "./pages/ResilienceGPT";
 import Terms from "./pages/Terms";
 import HackathonDemo from "./pages/HackathonDemo";
 import BountyBoard from "./pages/BountyBoard";
+import Tools from "./pages/Tools";
 import NotFound from "./pages/NotFound";
 
 // Admin imports
@@ -88,6 +89,7 @@ const App = () => (
               <Route path="/gpt" element={<ResilienceGPT />} />
               <Route path="/terms" element={<Terms />} />
               <Route path="/demo" element={<HackathonDemo />} />
+              <Route path="/tools" element={<Tools />} />
 
               {/* Admin Portal */}
               <Route path="/admin/login" element={<AdminLogin />} />
