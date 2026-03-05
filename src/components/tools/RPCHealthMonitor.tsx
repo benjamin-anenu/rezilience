@@ -122,11 +122,15 @@ export function RPCHealthMonitor() {
                     ) : (
                       <p className="text-sm text-muted-foreground">{rpc.error || 'Unreachable'}</p>
                     )}
-                    {rpc.slot && (
+                    {rpc.slot ? (
                       <p className="text-xs text-muted-foreground font-mono">
                         Slot: {rpc.slot.toLocaleString()}
                       </p>
-                    )}
+                    ) : rpc.status !== 'down' ? (
+                      <p className="text-xs text-muted-foreground/60 italic">
+                        Reachable (slot unavailable)
+                      </p>
+                    ) : null}
                     {rpc.docs_url && (
                       <a
                         href={rpc.docs_url}
