@@ -3,9 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Activity, RefreshCw, ExternalLink } from 'lucide-react';
+import { Activity, RefreshCw, ExternalLink, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useMemo, useState } from 'react';
 
 interface RPCResult {
   name: string;
@@ -17,6 +18,7 @@ interface RPCResult {
 }
 
 export function RPCHealthMonitor() {
+  const [sortByLatency, setSortByLatency] = useState(true);
   const { data, isLoading, refetch, dataUpdatedAt } = useQuery({
     queryKey: ['rpc-health'],
     queryFn: async () => {
@@ -26,6 +28,21 @@ export function RPCHealthMonitor() {
     },
     refetchInterval: 30000,
   });
+
+  const sortedResults = useMemo(() => {
+    if (!data?.results) return [];
+    if (!sortByLatency) return data.results;
+    return [...data.results].sort((a, b) => {
+      // Healthy first, then by latency
+      const statusOrder = { healthy: 0, degraded: 1, down: 2 };
+      const aOrder = statusOrder[a.status] ?? 2;
+      const bOrder = statusOrder[b.status] ?? 2;
+      if (aOrder !== bOrder) return aOrder - bOrder;
+      if (a.latency === null) return 1;
+      if (b.latency === null) return -1;
+      return a.latency - b.latency;
+    });
+  }, [data?.results, sortByLatency]);
 
   const statusConfig = {
     healthy: { label: 'Healthy', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
@@ -42,10 +59,16 @@ export function RPCHealthMonitor() {
             Live latency and status of major Solana RPC providers. Auto-refreshes every 30s.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
-          <RefreshCw className="h-3.5 w-3.5" />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={() => setSortByLatency(!sortByLatency)} className="gap-2">
+            <ArrowUpDown className="h-3.5 w-3.5" />
+            {sortByLatency ? 'Sorted' : 'Sort'}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => refetch()} className="gap-2">
+            <RefreshCw className="h-3.5 w-3.5" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {dataUpdatedAt > 0 && (
@@ -67,7 +90,7 @@ export function RPCHealthMonitor() {
                 </CardContent>
               </Card>
             ))
-          : data?.results.map((rpc) => {
+          : sortedResults.map((rpc, index) => {
               const config = statusConfig[rpc.status] || statusConfig.down;
               return (
                 <Card key={rpc.name} className="border-border/50 bg-card/50">
