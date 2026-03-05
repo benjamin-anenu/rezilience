@@ -3,17 +3,18 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Activity, RefreshCw, ExternalLink, ArrowUpDown } from 'lucide-react';
+import { RefreshCw, ExternalLink, ArrowUpDown, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useMemo, useState } from 'react';
 
 interface RPCResult {
   name: string;
-  status: 'healthy' | 'degraded' | 'down';
+  status: 'healthy' | 'degraded' | 'down' | 'private';
   latency: number | null;
   slot: number | null;
   docs_url?: string;
+  requires_key?: boolean;
   error?: string;
 }
 
@@ -33,10 +34,9 @@ export function RPCHealthMonitor() {
     if (!data?.results) return [];
     if (!sortByLatency) return data.results;
     return [...data.results].sort((a, b) => {
-      // Healthy first, then by latency
-      const statusOrder = { healthy: 0, degraded: 1, down: 2 };
-      const aOrder = statusOrder[a.status] ?? 2;
-      const bOrder = statusOrder[b.status] ?? 2;
+      const statusOrder: Record<string, number> = { healthy: 0, degraded: 1, private: 2, down: 3 };
+      const aOrder = statusOrder[a.status] ?? 3;
+      const bOrder = statusOrder[b.status] ?? 3;
       if (aOrder !== bOrder) return aOrder - bOrder;
       if (a.latency === null) return 1;
       if (b.latency === null) return -1;
@@ -44,10 +44,11 @@ export function RPCHealthMonitor() {
     });
   }, [data?.results, sortByLatency]);
 
-  const statusConfig = {
+  const statusConfig: Record<string, { label: string; color: string }> = {
     healthy: { label: 'Healthy', color: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' },
     degraded: { label: 'Degraded', color: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' },
     down: { label: 'Down', color: 'bg-destructive/20 text-destructive border-destructive/30' },
+    private: { label: 'Requires Key', color: 'bg-primary/20 text-primary border-primary/30' },
   };
 
   return (
@@ -77,7 +78,7 @@ export function RPCHealthMonitor() {
         </p>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {isLoading
           ? Array.from({ length: 5 }).map((_, i) => (
               <Card key={i} className="border-border/50">
@@ -90,13 +91,16 @@ export function RPCHealthMonitor() {
                 </CardContent>
               </Card>
             ))
-          : sortedResults.map((rpc, index) => {
+          : sortedResults.map((rpc) => {
               const config = statusConfig[rpc.status] || statusConfig.down;
               return (
                 <Card key={rpc.name} className="border-border/50 bg-card/50">
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-base font-display">{rpc.name}</CardTitle>
+                      <CardTitle className="text-base font-display flex items-center gap-1.5">
+                        {rpc.requires_key && <Lock className="h-3.5 w-3.5 text-muted-foreground" />}
+                        {rpc.name}
+                      </CardTitle>
                       <Badge variant="outline" className={cn('text-xs', config.color)}>
                         {config.label}
                       </Badge>
@@ -113,7 +117,9 @@ export function RPCHealthMonitor() {
                           <div
                             className={cn(
                               'h-full rounded-full transition-all',
-                              rpc.latency < 200 ? 'bg-emerald-500' : rpc.latency < 500 ? 'bg-yellow-500' : 'bg-destructive'
+                              rpc.status === 'private'
+                                ? 'bg-primary'
+                                : rpc.latency < 200 ? 'bg-emerald-500' : rpc.latency < 500 ? 'bg-yellow-500' : 'bg-destructive'
                             )}
                             style={{ width: `${Math.min((rpc.latency / 1000) * 100, 100)}%` }}
                           />
@@ -125,6 +131,10 @@ export function RPCHealthMonitor() {
                     {rpc.slot ? (
                       <p className="text-xs text-muted-foreground font-mono">
                         Slot: {rpc.slot.toLocaleString()}
+                      </p>
+                    ) : rpc.status === 'private' ? (
+                      <p className="text-xs text-muted-foreground/60 italic">
+                        Reachable · API key required for full access
                       </p>
                     ) : rpc.status !== 'down' ? (
                       <p className="text-xs text-muted-foreground/60 italic">
@@ -138,7 +148,7 @@ export function RPCHealthMonitor() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
                       >
-                        Get API Key <ExternalLink className="h-3 w-3" />
+                        {rpc.requires_key ? 'Get API Key' : 'Docs'} <ExternalLink className="h-3 w-3" />
                       </a>
                     )}
                   </CardContent>
@@ -148,8 +158,8 @@ export function RPCHealthMonitor() {
       </div>
 
       <p className="text-xs text-muted-foreground/60 mt-2">
-        Only truly public (no-auth) RPC endpoints are monitored. Providers like QuickNode, Alchemy, GetBlock, and Chainstack require API keys —{' '}
-        visit their sites to get a free-tier key.
+        Endpoints marked with <Lock className="inline h-3 w-3" /> require an API key for full RPC access.
+        Visit their sites to obtain a free-tier key.
       </p>
     </div>
   );
