@@ -1,52 +1,71 @@
 
 
-# Navigation Reorganization + Bounty-to-Project Rename
+# Solana Builder Toolkit -- Four Public-Good Tools
 
-## Two Changes
+## What We're Building
 
-### 1. Rename "Bounty/Bounties" to "Project/Projects"
+A new `/tools` hub page under the TOOLKIT dropdown with four live utility tools that solve real, daily Solana builder pain points:
 
-All user-facing text changes from "Bounty" to "Project":
-- `BountyBoard.tsx`: Page title, hero badge, empty states, toasts
-- `Accountability.tsx`: "BOUNTY BOARD" button becomes "PROJECT BOARD"
-- `BountyCard.tsx`: Any visible "bounty" labels
-- `BountyFilters.tsx`: Search placeholder "Search projects..."
-- `CreateBountyWizard.tsx`: Dialog title "Create Project", step labels
-- Routes stay as `/bounty-board` (no URL breakage)
+1. **RPC Health Monitor** -- Live latency and status of major RPC providers
+2. **Token/Program Lookup** -- Paste any Solana address, get decoded info instantly
+3. **Transaction Decoder** -- Human-readable breakdown of any transaction
+4. **Ecosystem Status Page** -- Operational status of major Solana services
 
-### 2. Reorganize Navigation: README + REGISTRY + TOOLKIT
+## Architecture
 
-The 7 flat nav items collapse to 3 top-level items:
+All four tools live on a single `/tools` page with tab-based navigation (like the Library rooms). Each tool calls a dedicated edge function that queries public Solana RPC endpoints and APIs -- no API keys needed beyond the existing `RPC_URL` (Helius) secret.
 
 ```text
-README          REGISTRY [v]          TOOLKIT [v]
-                  |                      |
-                Explorer               GPT
-                DAO Tracker            Grants
-                Projects               Library
+TOOLKIT dropdown
+  ├── Tools (NEW) -- /tools
+  ├── GPT
+  ├── Grants
+  └── Library
 ```
 
-- **README** -- standalone link, as requested
-- **REGISTRY** -- the core product: exploring, tracking, and funding projects
-- **TOOLKIT** -- support resources: AI assistant, funding sources, documentation
+## Tool Details
 
-**Desktop**: Radix Popover dropdowns triggered on hover/click. Each item shows a label and a short description (e.g. "Explorer -- Browse and score Solana projects"). Active child route highlights the parent trigger.
+### 1. RPC Health Monitor
+- Edge function `check-rpc-health` pings 5 public RPC endpoints (Helius, Triton, QuickNode free, Alchemy, mainnet-beta) with `getHealth` + `getSlot` calls
+- Measures latency, reports status (healthy/degraded/down), shows last block height
+- Frontend renders a card grid with green/yellow/red indicators and latency bars
+- Auto-refreshes every 30 seconds via `useQuery` with `refetchInterval`
 
-**Mobile drawer**: Keeps full list but organized under "REGISTRY" and "TOOLKIT" section headers.
+### 2. Token/Program Lookup
+- Edge function `lookup-address` accepts a base58 address, calls `getAccountInfo` via Helius RPC
+- Detects account type (Program, Token Mint, Token Account, Wallet, Unknown)
+- For programs: shows executable status, owner, upgrade authority, data size
+- For token mints: shows supply, decimals, mint authority, freeze authority
+- Frontend: search bar + result card with parsed fields
+
+### 3. Transaction Decoder
+- Edge function `decode-transaction` accepts a signature, calls `getTransaction` with `maxSupportedTransactionVersion: 0`
+- Parses: fee, block time, signers, instructions (program + parsed data), token balance changes, logs
+- Frontend: search bar + structured breakdown with collapsible instruction cards
+
+### 4. Ecosystem Status Page
+- Edge function `check-ecosystem-status` pings health endpoints of major services (Helius, Jupiter, Birdeye, Magic Eden, Jito, Marinade, Raydium, Orca, Phantom)
+- Simple HTTP HEAD/GET with 5s timeout -- marks as up/degraded/down
+- Frontend: status grid with uptime indicators, auto-refresh every 60s
+
+## Files Created
+
+- `src/pages/Tools.tsx` -- Hub page with four tabs
+- `src/components/tools/RPCHealthMonitor.tsx` -- RPC health card grid
+- `src/components/tools/AddressLookup.tsx` -- Address search + result display
+- `src/components/tools/TransactionDecoder.tsx` -- Tx search + instruction breakdown
+- `src/components/tools/EcosystemStatus.tsx` -- Service status grid
+- `supabase/functions/check-rpc-health/index.ts`
+- `supabase/functions/lookup-address/index.ts`
+- `supabase/functions/decode-transaction/index.ts`
+- `supabase/functions/check-ecosystem-status/index.ts`
 
 ## Files Modified
 
-- `src/components/layout/Navigation.tsx` -- Replace flat navLinks with grouped structure, add dropdown components for desktop, update mobile drawer with section headers
-- `src/pages/BountyBoard.tsx` -- Rename all "Bounty/Bounties" labels to "Project/Projects"
-- `src/pages/Accountability.tsx` -- Rename "BOUNTY BOARD" button to "PROJECT BOARD"
-- `src/components/bounty/BountyFilters.tsx` -- Update placeholder text
-- `src/components/bounty/CreateBountyWizard.tsx` -- Update dialog title and labels
-- `src/components/bounty/BountyCard.tsx` -- Update visible label text
+- `src/components/layout/Navigation.tsx` -- Add "Tools" to `toolkitItems` array
+- `src/App.tsx` -- Add `/tools` route
 
-## Technical Details
+## No New Secrets Needed
 
-- Dropdowns use Radix Popover (already installed) with mouse enter/leave for hover behavior
-- Each dropdown item is a React Router Link wrapped in PopoverClose
-- The parent trigger gets `text-primary` styling when any child route is active (checked via `location.pathname.startsWith`)
-- No new dependencies, no database changes, no route changes
+All tools use the existing `RPC_URL` secret (Helius) for Solana queries, and public HTTP endpoints for ecosystem status checks.
 
