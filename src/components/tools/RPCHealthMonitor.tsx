@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Activity, RefreshCw } from 'lucide-react';
+import { Activity, RefreshCw, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +12,7 @@ interface RPCResult {
   status: 'healthy' | 'degraded' | 'down';
   latency: number | null;
   slot: number | null;
+  docs_url?: string;
   error?: string;
 }
 
@@ -53,9 +54,9 @@ export function RPCHealthMonitor() {
         </p>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {isLoading
-          ? Array.from({ length: 8 }).map((_, i) => (
+          ? Array.from({ length: 5 }).map((_, i) => (
               <Card key={i} className="border-border/50">
                 <CardHeader className="pb-3">
                   <Skeleton className="h-5 w-32" />
@@ -103,11 +104,26 @@ export function RPCHealthMonitor() {
                         Slot: {rpc.slot.toLocaleString()}
                       </p>
                     )}
+                    {rpc.docs_url && (
+                      <a
+                        href={rpc.docs_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                      >
+                        Get API Key <ExternalLink className="h-3 w-3" />
+                      </a>
+                    )}
                   </CardContent>
                 </Card>
               );
             })}
       </div>
+
+      <p className="text-xs text-muted-foreground/60 mt-2">
+        Only truly public (no-auth) RPC endpoints are monitored. Providers like QuickNode, Alchemy, GetBlock, and Chainstack require API keys —{' '}
+        visit their sites to get a free-tier key.
+      </p>
     </div>
   );
 }
