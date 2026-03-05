@@ -44,7 +44,7 @@ export function TransactionDecoder() {
       const { data, error } = await supabase.functions.invoke('decode-transaction', {
         body: { signature: signature.trim() },
       });
-      if (error) throw error;
+      if (error) throw new Error(error.message || JSON.stringify(error));
       if (data.error) throw new Error(data.error);
       return data as DecodedTx;
     },
