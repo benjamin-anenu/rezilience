@@ -5,16 +5,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
-const RPC_ENDPOINTS = [
+interface RPCEndpoint {
+  name: string;
+  url: string;
+  docs_url: string;
+  requires_key?: boolean; // true = private endpoint (will get 401/403 without key)
+}
+
+const RPC_ENDPOINTS: RPCEndpoint[] = [
   { name: 'Helius', url: Deno.env.get('RPC_URL') || '', docs_url: 'https://www.helius.dev/' },
   { name: 'Solana Mainnet', url: 'https://api.mainnet-beta.solana.com', docs_url: 'https://solana.com/docs/core/clusters' },
-  { name: 'Ankr', url: 'https://rpc.ankr.com/solana', docs_url: 'https://www.ankr.com/rpc/solana/' },
   { name: 'PublicNode', url: 'https://solana-rpc.publicnode.com', docs_url: 'https://www.publicnode.com/' },
-  { name: 'Extrnode', url: 'https://solana-mainnet.rpc.extrnode.com', docs_url: 'https://extrnode.com/' },
+  // Private endpoints — we still ping them for latency but flag them differently
+  { name: 'Ankr', url: 'https://rpc.ankr.com/solana', docs_url: 'https://www.ankr.com/rpc/solana/', requires_key: true },
+  { name: 'Extrnode', url: 'https://solana-mainnet.rpc.extrnode.com', docs_url: 'https://extrnode.com/', requires_key: true },
 ];
 
-async function checkEndpoint(endpoint: { name: string; url: string; docs_url: string }) {
-  if (!endpoint.url) return { name: endpoint.name, status: 'down', latency: null, slot: null, docs_url: endpoint.docs_url, error: 'No URL configured' };
+async function checkEndpoint(endpoint: RPCEndpoint) {
+  if (!endpoint.url) return { name: endpoint.name, status: 'down', latency: null, slot: null, docs_url: endpoint.docs_url, requires_key: !!endpoint.requires_key, error: 'No URL configured' };
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 8000);
@@ -27,36 +35,49 @@ async function checkEndpoint(endpoint: { name: string; url: string; docs_url: st
       body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'getHealth' }),
       signal: controller.signal,
     });
-    const healthData = await healthRes.json();
     const healthLatency = Date.now() - start;
 
-    const slotStart = Date.now();
-    const slotRes = await fetch(endpoint.url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'getSlot' }),
-      signal: controller.signal,
-    });
-    const slotData = await slotRes.json();
-    const slotLatency = Date.now() - slotStart;
+    let slotValue: number | null = null;
+    let slotLatency = 0;
 
-    const avgLatency = Math.round((healthLatency + slotLatency) / 2);
-    
-    // Use HTTP status as primary health signal — if the server responds with 200,
-    // the endpoint is reachable regardless of JSON-RPC result format.
-    const httpOk = healthRes.ok || slotRes.ok;
-    const slotValue = typeof slotData.result === 'number' ? slotData.result : null;
+    // Only try getSlot if health request succeeded with HTTP 200
+    if (healthRes.ok) {
+      const slotStart = Date.now();
+      const slotRes = await fetch(endpoint.url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'getSlot' }),
+        signal: controller.signal,
+      });
+      const slotData = await slotRes.json();
+      slotLatency = Date.now() - slotStart;
+      slotValue = typeof slotData.result === 'number' ? slotData.result : null;
+    }
+
+    const avgLatency = Math.round(slotLatency > 0 ? (healthLatency + slotLatency) / 2 : healthLatency);
+
+    // For private endpoints that return 401/403, they are "reachable" but need a key
+    if (!healthRes.ok && endpoint.requires_key) {
+      return {
+        name: endpoint.name,
+        status: 'private',
+        latency: avgLatency,
+        slot: null,
+        docs_url: endpoint.docs_url,
+        requires_key: true,
+      };
+    }
 
     return {
       name: endpoint.name,
-      status: httpOk ? (avgLatency < 500 ? 'healthy' : 'degraded') : 'down',
+      status: healthRes.ok ? (avgLatency < 500 ? 'healthy' : 'degraded') : 'down',
       latency: avgLatency,
       slot: slotValue,
       docs_url: endpoint.docs_url,
-      http_status: { health: healthRes.status, slot: slotRes.status },
+      requires_key: !!endpoint.requires_key,
     };
   } catch (e) {
-    return { name: endpoint.name, status: 'down', latency: null, slot: null, docs_url: endpoint.docs_url, error: e.message };
+    return { name: endpoint.name, status: 'down', latency: null, slot: null, docs_url: endpoint.docs_url, requires_key: !!endpoint.requires_key, error: e.message };
   } finally {
     clearTimeout(timeout);
   }
