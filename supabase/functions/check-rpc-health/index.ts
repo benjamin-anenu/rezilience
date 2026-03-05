@@ -8,7 +8,7 @@ const corsHeaders = {
 const RPC_ENDPOINTS = [
   { name: 'Helius', url: Deno.env.get('RPC_URL') || '' },
   { name: 'Solana Mainnet', url: 'https://api.mainnet-beta.solana.com' },
-  { name: 'Triton (Free)', url: 'https://mainnet.triton.one' },
+  { name: 'Ankr', url: 'https://rpc.ankr.com/solana' },
 ];
 
 async function checkEndpoint(endpoint: { name: string; url: string }) {
