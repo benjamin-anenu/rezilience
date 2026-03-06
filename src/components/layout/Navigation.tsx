@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Menu, User, LogOut, X as XIcon, ChevronDown,
-  Compass, GitBranch, Coins, Rocket,
+  Compass, GitBranch, Coins, Rocket, Gift,
   Activity, Globe, MessageCircle,
   Target, FolderKanban,
   BookOpen, Layers, BookA,
