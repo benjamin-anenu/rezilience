@@ -1,61 +1,82 @@
 import { useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, User, LogOut, ExternalLink, X as XIcon, ChevronDown } from 'lucide-react';
+import {
+  Menu, User, LogOut, X as XIcon, ChevronDown,
+  Compass, GitBranch, Coins,
+  Activity, Globe, MessageCircle,
+  Target, FolderKanban,
+  BookOpen, Layers, BookA,
+} from 'lucide-react';
 import { useAnalyticsTracker } from '@/hooks/useAnalyticsTracker';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
 import { NotificationPanel } from '@/components/notifications/NotificationPanel';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerTrigger,
+  Drawer, DrawerClose, DrawerContent, DrawerTrigger,
 } from '@/components/ui/drawer';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import logo from '@/assets/logo.png';
+import type { LucideIcon } from 'lucide-react';
 
-interface NavDropdownItem {
+/* ─── Menu data ─────────────────────────────────────────── */
+
+interface NavItem {
   href: string;
   label: string;
   description: string;
+  icon: LucideIcon;
 }
 
-const registryItems: NavDropdownItem[] = [
-  { href: '/explorer', label: 'Explorer', description: 'Browse and score Solana projects' },
-  { href: '/accountability', label: 'DAO Tracker', description: 'Track milestone delivery across DAOs' },
-  { href: '/bounty-board', label: 'Projects', description: 'Claim work, submit evidence, earn SOL' },
-];
-
-const toolkitItems: NavDropdownItem[] = [
-  { href: '/tools', label: 'Tools', description: 'RPC health, address lookup, tx decoder & more' },
-  { href: '/gpt', label: 'GPT', description: 'AI-powered Solana intelligence' },
-  { href: '/grants', label: 'Grants', description: 'Discover ecosystem funding sources' },
-  { href: '/library', label: 'Library', description: 'Docs, blueprints, and learning paths' },
-];
-
-function NavDropdown({
-  label,
-  items,
-  isActive,
-}: {
+interface NavGroup {
   label: string;
-  items: NavDropdownItem[];
-  isActive: boolean;
-}) {
+  items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
+  {
+    label: 'EXPLORE',
+    items: [
+      { href: '/explorer', label: 'Explorer', description: 'Browse & score Solana projects', icon: Compass },
+      { href: '/deps', label: 'Dependency Map', description: 'Supply-chain visualization', icon: GitBranch },
+      { href: '/grants', label: 'Grants', description: 'Discover ecosystem funding', icon: Coins },
+    ],
+  },
+  {
+    label: 'MONITOR',
+    items: [
+      { href: '/tools', label: 'Tools', description: 'RPC health, address lookup, tx decoder', icon: Activity },
+      { href: '/tools?tab=status', label: 'Ecosystem Status', description: 'Service uptime dashboard', icon: Globe },
+      { href: '/gpt', label: 'GPT', description: 'AI-powered Solana intelligence', icon: MessageCircle },
+    ],
+  },
+  {
+    label: 'TRACK',
+    items: [
+      { href: '/accountability', label: 'DAO Tracker', description: 'Track milestone delivery across DAOs', icon: Target },
+      { href: '/bounty-board', label: 'Projects', description: 'Claim work, submit evidence, earn SOL', icon: FolderKanban },
+    ],
+  },
+  {
+    label: 'BUILD',
+    items: [
+      { href: '/library', label: 'Library', description: 'Docs, blueprints & learning paths', icon: BookOpen },
+      { href: '/library/protocols', label: 'Protocols', description: 'Integration registry', icon: Layers },
+      { href: '/library/dictionary', label: 'Dictionary', description: 'Solana terminology', icon: BookA },
+    ],
+  },
+];
+
+/* ─── Desktop mega-dropdown ─────────────────────────────── */
+
+function NavDropdown({ group, isActive }: { group: NavGroup; isActive: boolean }) {
   const [open, setOpen] = useState(false);
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const { trackEvent } = useAnalyticsTracker();
 
-  const handleEnter = useCallback(() => {
-    clearTimeout(timeoutRef.current);
-    setOpen(true);
-  }, []);
-
-  const handleLeave = useCallback(() => {
-    timeoutRef.current = setTimeout(() => setOpen(false), 150);
-  }, []);
+  const handleEnter = useCallback(() => { clearTimeout(timeoutRef.current); setOpen(true); }, []);
+  const handleLeave = useCallback(() => { timeoutRef.current = setTimeout(() => setOpen(false), 180); }, []);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -65,40 +86,56 @@ function NavDropdown({
           onMouseLeave={handleLeave}
           className={cn(
             'flex items-center gap-1 font-display text-sm font-medium tracking-wider transition-colors hover:text-foreground',
-            isActive ? 'text-primary' : 'text-muted-foreground'
+            isActive ? 'text-primary' : 'text-muted-foreground',
           )}
         >
-          {label}
-          <ChevronDown className={cn('h-3 w-3 transition-transform', open && 'rotate-180')} />
+          {group.label}
+          <ChevronDown className={cn('h-3 w-3 transition-transform duration-200', open && 'rotate-180')} />
         </button>
       </PopoverTrigger>
+
       <PopoverContent
         align="start"
-        sideOffset={12}
-        className="w-64 p-1.5"
+        sideOffset={14}
         onMouseEnter={handleEnter}
         onMouseLeave={handleLeave}
+        className="w-[320px] rounded-lg border border-primary/10 bg-card/90 p-2 shadow-xl shadow-black/20 backdrop-blur-xl data-[state=open]:animate-in data-[state=open]:fade-in-50 data-[state=open]:slide-in-from-top-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0"
       >
-        {items.map((item) => (
+        {/* Category header */}
+        <p className="mb-1.5 px-3 pt-1 font-mono text-[10px] uppercase tracking-widest text-muted-foreground/60">
+          {group.label}
+        </p>
+        <div className="mb-1 h-px bg-border/50" />
+
+        {group.items.map((item) => (
           <Link
             key={item.href}
             to={item.href}
-            onClick={() => {
-              trackEvent('click', `nav_${item.label.toLowerCase()}`);
-              setOpen(false);
-            }}
-            className="block rounded-sm px-3 py-2.5 transition-colors hover:bg-muted/50"
+            onClick={() => { trackEvent('click', `nav_${item.label.toLowerCase()}`); setOpen(false); }}
+            className="group flex items-start gap-3 rounded-md px-3 py-2.5 transition-colors hover:bg-primary/5"
           >
-            <span className="font-display text-sm font-semibold tracking-wide text-foreground">
-              {item.label}
-            </span>
-            <p className="mt-0.5 text-xs text-muted-foreground">{item.description}</p>
+            {/* Icon */}
+            <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-border/50 bg-muted/30 transition-colors group-hover:border-primary/30 group-hover:bg-primary/10">
+              <item.icon className="h-4 w-4 text-muted-foreground transition-colors group-hover:text-primary" />
+            </div>
+
+            {/* Text */}
+            <div className="min-w-0">
+              <span className="font-display text-sm font-semibold tracking-wide text-foreground">
+                {item.label}
+              </span>
+              <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                {item.description}
+              </p>
+            </div>
           </Link>
         ))}
       </PopoverContent>
     </Popover>
   );
 }
+
+/* ─── Main Navigation ───────────────────────────────────── */
 
 export function Navigation() {
   const location = useLocation();
@@ -107,8 +144,8 @@ export function Navigation() {
   const [notifOpen, setNotifOpen] = useState(false);
 
   const isActiveRoute = (href: string) => location.pathname === href;
-  const isGroupActive = (items: NavDropdownItem[]) =>
-    items.some((item) => location.pathname.startsWith(item.href));
+  const isGroupActive = (group: NavGroup) =>
+    group.items.some((item) => location.pathname.startsWith(item.href.split('?')[0]));
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -117,9 +154,7 @@ export function Navigation() {
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2">
             <img src={logo} alt="Rezilience" className="h-8 w-8 object-contain" />
-            <span className="font-display text-xl font-bold tracking-tight text-foreground">
-              REZILIENCE
-            </span>
+            <span className="font-display text-xl font-bold tracking-tight text-foreground">REZILIENCE</span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -129,21 +164,22 @@ export function Navigation() {
               onClick={() => trackEvent('click', 'nav_readme')}
               className={cn(
                 'font-display text-sm font-medium tracking-wider transition-colors hover:text-foreground',
-                isActiveRoute('/readme') ? 'text-primary' : 'text-muted-foreground'
+                isActiveRoute('/readme') ? 'text-primary' : 'text-muted-foreground',
               )}
             >
               README
             </Link>
 
-            <NavDropdown label="REGISTRY" items={registryItems} isActive={isGroupActive(registryItems)} />
-            <NavDropdown label="TOOLKIT" items={toolkitItems} isActive={isGroupActive(toolkitItems)} />
+            {navGroups.map((group) => (
+              <NavDropdown key={group.label} group={group} isActive={isGroupActive(group)} />
+            ))}
 
             {isAuthenticated && (
               <Link
                 to="/dashboard"
                 className={cn(
                   'font-display text-sm font-medium tracking-wider transition-colors hover:text-foreground',
-                  isActiveRoute('/dashboard') ? 'text-primary' : 'text-muted-foreground'
+                  isActiveRoute('/dashboard') ? 'text-primary' : 'text-muted-foreground',
                 )}
               >
                 MY REGISTRY
@@ -151,7 +187,7 @@ export function Navigation() {
             )}
           </div>
 
-          {/* Desktop Auth Section */}
+          {/* Desktop Auth */}
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated && user ? (
               <>
@@ -163,12 +199,7 @@ export function Navigation() {
                   <img src={user.avatarUrl} alt={user.username} className="h-6 w-6 rounded-full" />
                   <span className="font-mono text-sm text-muted-foreground">@{user.username}</span>
                 </Link>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={signOut}
-                  className="text-muted-foreground hover:text-destructive"
-                >
+                <Button variant="ghost" size="icon" onClick={signOut} className="text-muted-foreground hover:text-destructive">
                   <LogOut className="h-4 w-4" />
                 </Button>
               </>
@@ -203,9 +234,7 @@ export function Navigation() {
               <div className="flex items-center justify-between border-b border-border p-4">
                 <Link to="/" className="flex items-center gap-2">
                   <img src={logo} alt="Rezilience" className="h-6 w-6 object-contain" />
-                  <span className="font-display text-lg font-bold tracking-tight text-foreground">
-                    REZILIENCE
-                  </span>
+                  <span className="font-display text-lg font-bold tracking-tight text-foreground">REZILIENCE</span>
                 </Link>
                 <DrawerClose asChild>
                   <Button variant="ghost" size="icon" className="touch-feedback">
@@ -214,85 +243,62 @@ export function Navigation() {
                 </DrawerClose>
               </div>
 
-              {/* User Profile Section */}
+              {/* User Profile */}
               {isAuthenticated && user && (
                 <div className="border-b border-border p-4">
                   <div className="flex items-center gap-3 rounded-sm border border-border bg-card/50 p-3">
-                    <img
-                      src={user.avatarUrl}
-                      alt={user.username}
-                      className="h-10 w-10 rounded-full ring-2 ring-primary/20"
-                    />
+                    <img src={user.avatarUrl} alt={user.username} className="h-10 w-10 rounded-full ring-2 ring-primary/20" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-display text-sm font-semibold text-foreground truncate">
-                        @{user.username}
-                      </p>
+                      <p className="font-display text-sm font-semibold text-foreground truncate">@{user.username}</p>
                       <p className="text-xs text-muted-foreground">Connected via X</p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Navigation Links */}
+              {/* Links */}
               <div className="flex-1 overflow-y-auto p-4">
-                {/* README standalone */}
+                {/* README */}
                 <DrawerClose asChild>
                   <Link
                     to="/readme"
                     className={cn(
-                      'flex min-h-[48px] items-center rounded-sm px-3 py-3 font-display text-sm font-medium tracking-wider transition-colors hover:bg-muted/50 touch-feedback',
+                      'flex min-h-[48px] items-center gap-3 rounded-sm px-3 py-3 font-display text-sm font-medium tracking-wider transition-colors hover:bg-muted/50 touch-feedback',
                       isActiveRoute('/readme')
                         ? 'border-l-2 border-primary bg-primary/5 text-primary'
-                        : 'text-muted-foreground hover:text-foreground'
+                        : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
                     README
                   </Link>
                 </DrawerClose>
 
-                {/* REGISTRY section */}
-                <p className="mb-1 mt-5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3">
-                  Registry
-                </p>
-                <div className="space-y-1">
-                  {registryItems.map((item) => (
-                    <DrawerClose key={item.href} asChild>
-                      <Link
-                        to={item.href}
-                        className={cn(
-                          'flex min-h-[48px] items-center rounded-sm px-3 py-3 font-display text-sm font-medium tracking-wider transition-colors hover:bg-muted/50 touch-feedback',
-                          isActiveRoute(item.href)
-                            ? 'border-l-2 border-primary bg-primary/5 text-primary'
-                            : 'text-muted-foreground hover:text-foreground'
-                        )}
-                      >
-                        {item.label.toUpperCase()}
-                      </Link>
-                    </DrawerClose>
-                  ))}
-                </div>
-
-                {/* TOOLKIT section */}
-                <p className="mb-1 mt-5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3">
-                  Toolkit
-                </p>
-                <div className="space-y-1">
-                  {toolkitItems.map((item) => (
-                    <DrawerClose key={item.href} asChild>
-                      <Link
-                        to={item.href}
-                        className={cn(
-                          'flex min-h-[48px] items-center rounded-sm px-3 py-3 font-display text-sm font-medium tracking-wider transition-colors hover:bg-muted/50 touch-feedback',
-                          isActiveRoute(item.href)
-                            ? 'border-l-2 border-primary bg-primary/5 text-primary'
-                            : 'text-muted-foreground hover:text-foreground'
-                        )}
-                      >
-                        {item.label.toUpperCase()}
-                      </Link>
-                    </DrawerClose>
-                  ))}
-                </div>
+                {/* Groups */}
+                {navGroups.map((group) => (
+                  <div key={group.label}>
+                    <p className="mb-1 mt-5 font-mono text-[10px] uppercase tracking-wider text-muted-foreground/60 px-3">
+                      {group.label}
+                    </p>
+                    <div className="space-y-0.5">
+                      {group.items.map((item) => (
+                        <DrawerClose key={item.href} asChild>
+                          <Link
+                            to={item.href}
+                            className={cn(
+                              'flex min-h-[48px] items-center gap-3 rounded-sm px-3 py-3 font-display text-sm font-medium tracking-wider transition-colors hover:bg-muted/50 touch-feedback',
+                              isActiveRoute(item.href.split('?')[0])
+                                ? 'border-l-2 border-primary bg-primary/5 text-primary'
+                                : 'text-muted-foreground hover:text-foreground',
+                            )}
+                          >
+                            <item.icon className="h-4 w-4 shrink-0" />
+                            {item.label.toUpperCase()}
+                          </Link>
+                        </DrawerClose>
+                      ))}
+                    </div>
+                  </div>
+                ))}
 
                 {isAuthenticated && (
                   <>
@@ -306,7 +312,7 @@ export function Navigation() {
                           'flex min-h-[48px] items-center rounded-sm px-3 py-3 font-display text-sm font-medium tracking-wider transition-colors hover:bg-muted/50 touch-feedback',
                           isActiveRoute('/dashboard')
                             ? 'border-l-2 border-primary bg-primary/5 text-primary'
-                            : 'text-muted-foreground hover:text-foreground'
+                            : 'text-muted-foreground hover:text-foreground',
                         )}
                       >
                         MY REGISTRY
@@ -341,10 +347,7 @@ export function Navigation() {
                       </Button>
                     </DrawerClose>
                     <DrawerClose asChild>
-                      <Button
-                        asChild
-                        className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider touch-feedback"
-                      >
+                      <Button asChild className="w-full min-h-[48px] font-display font-semibold uppercase tracking-wider touch-feedback">
                         <Link to="/claim-profile">
                           <User className="mr-2 h-4 w-4" />
                           JOIN THE REGISTRY
@@ -360,9 +363,7 @@ export function Navigation() {
       </div>
 
       {/* Notification Panel */}
-      {isAuthenticated && (
-        <NotificationPanel open={notifOpen} onOpenChange={setNotifOpen} />
-      )}
+      {isAuthenticated && <NotificationPanel open={notifOpen} onOpenChange={setNotifOpen} />}
     </nav>
   );
 }

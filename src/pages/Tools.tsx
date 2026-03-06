@@ -15,7 +15,9 @@ const tabs = [
 ];
 
 export default function Tools() {
-  const [activeTab, setActiveTab] = useState('rpc');
+  const params = new URLSearchParams(window.location.search);
+  const initialTab = params.get('tab') || 'rpc';
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   return (
     <Layout>
