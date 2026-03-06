@@ -18,6 +18,7 @@ import AccountabilityDetail from "./pages/AccountabilityDetail";
 import Readme from "./pages/Readme";
 import DependencyTree from "./pages/DependencyTree";
 import Grants from "./pages/Grants";
+import AirdropCalendar from "./pages/AirdropCalendar";
 import Library from "./pages/Library";
 import LibraryLearn from "./pages/LibraryLearn";
 import LibraryDictionary from "./pages/LibraryDictionary";
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/my-bonds" element={<Navigate to="/accountability" replace />} />
               <Route path="/deps/:id" element={<DependencyTree />} />
               <Route path="/grants" element={<Grants />} />
+              <Route path="/airdrops" element={<AirdropCalendar />} />
               <Route path="/library" element={<Library />} />
               <Route path="/library/learn" element={<LibraryLearn />} />
               <Route path="/library/learn/:level" element={<LibraryLearn />} />

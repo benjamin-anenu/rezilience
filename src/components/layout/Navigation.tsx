@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Menu, User, LogOut, X as XIcon, ChevronDown,
-  Compass, GitBranch, Coins, Rocket,
+  Compass, GitBranch, Coins, Rocket, Gift,
   Activity, Globe, MessageCircle,
   Target, FolderKanban,
   BookOpen, Layers, BookA,
@@ -41,6 +41,7 @@ const navGroups: NavGroup[] = [
       { href: '/explorer', label: 'Explorer', description: 'Browse & score Solana projects', icon: Compass },
       { href: '/deps', label: 'Dependency Map', description: 'Supply-chain visualization', icon: GitBranch },
       { href: '/grants', label: 'Grants', description: 'Discover ecosystem funding', icon: Coins },
+      { href: '/airdrops', label: 'Airdrops', description: 'Token launches & airdrop calendar', icon: Gift },
     ],
   },
   {

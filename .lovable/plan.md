@@ -1,52 +1,36 @@
 
 
-# Airdrop & Token Launch Calendar
+# Fix False "Down" Status in Ecosystem Status Monitor
 
-## Overview
-A new page at `/airdrops` under the EXPLORE menu, following the same pattern as the Grants page — a curated, static data file with real, verified Solana ecosystem airdrops and TGE events, rendered in a calendar-style card layout.
+## Problem
+Jupiter (401), Birdeye (401), and Magic Eden (429) are marked "down" because the check only considers `res.ok` (HTTP 200-299). These services are alive and responding with low latency -- they just require API keys or are rate-limiting.
 
-## Data Source Strategy
-Since airdrop data changes frequently and there's no reliable free API, we'll use a **curated static data file** (like `solana-grants.ts`) with real, verified events sourced from current research. Each entry includes source URLs so users can verify. A "last updated" timestamp and disclaimer make it clear this is editable/community-driven data.
+## Solution
+Apply the same HTTP-first strategy used in the RPC Health Monitor.
 
-### Real Airdrop Data (verified from research)
-Events will include both **completed** (for credibility) and **ongoing/upcoming** entries:
+### 1. Edge Function (`supabase/functions/check-ecosystem-status/index.ts`)
+- Add a `requires_key` flag to service definitions for Jupiter and Birdeye
+- Treat HTTP 401/403 from `requires_key` services as a new `"auth_required"` status instead of "down"
+- Treat HTTP 429 as `"rate_limited"` (degraded) instead of "down" -- the service is clearly alive
+- Only mark "down" for network failures, timeouts, or HTTP 5xx errors
+- Keep latency data for all reachable services
 
-**Completed (historical reference):**
-- Jupiter (JUP) — Jan 2024, 1B tokens to 955K wallets
-- Jito (JTO) — Dec 2023, to stakers
-- Kamino (KMNO) — Apr 2024
-- Tensor (TNSR) — Apr 2024
-- Drift (DRIFT) — May 2024
-- Sanctum (CLOUD) — Jul 2024
-- Solana Mobile SKR — Jan 2026, 30% of 10B supply
+Updated status logic:
+```text
+HTTP 200-299          → "up" (or "degraded" if latency > 2000ms)
+HTTP 401/403 + key    → "auth_required"
+HTTP 429              → "rate_limited"  
+HTTP 5xx / timeout    → "down"
+```
 
-**Ongoing / Upcoming (farmable):**
-- trade.fun — Volume-based trading tiers + referral
-- Starpower — DePIN, link smart devices / StarQuests
-- Velvet — AI-DeFi, farm "Gems"
-- Solstice — Social tasks + LP provision
-- Aster — Volume perp trading
-- PiggyBank — DeFi yield vault, ends March 2026
-- Gradient Network — $10M backed by Pantera/Multicoin
+### 2. Frontend (`src/components/tools/EcosystemStatus.tsx`)
+- Add status config entries for `auth_required` and `rate_limited`
+- `auth_required`: Lock icon + "Requires Key" badge (same pattern as RPC monitor)
+- `rate_limited`: Yellow/orange badge showing "Rate Limited" -- clearly not down
+- Update the summary pills to account for the new statuses
+- Show latency for all reachable services regardless of auth status
 
-## Files to Create/Modify
-
-### 1. `src/data/solana-airdrops.ts`
-- Type definitions: `SolanaAirdrop` with fields: name, project, category, status (completed/ongoing/upcoming/speculated), date/dateRange, eligibility, howToQualify, estimatedValue, sourceUrl, projectUrl, chain
-- Array of ~14 verified entries
-- `lastUpdated` export
-
-### 2. `src/pages/AirdropCalendar.tsx`
-- Layout with hero section matching Grants page style
-- Filter tabs: All / Ongoing / Upcoming / Completed
-- Category filter chips: DeFi, DePIN, Trading, AI, Infrastructure
-- Card grid showing each airdrop with: status badge, project name, category, eligibility criteria, "How to qualify" steps, estimated value, source link
-- Timeline visual for date-based events
-- Disclaimer banner about DYOR
-
-### 3. `src/App.tsx`
-- Add route `/airdrops` → `AirdropCalendar`
-
-### 4. `src/components/layout/Navigation.tsx`
-- Add entry under EXPLORE: `{ href: '/airdrops', label: 'Airdrops', description: 'Token launches & airdrop calendar', icon: Gift }`
+### Files Modified
+- `supabase/functions/check-ecosystem-status/index.ts`
+- `src/components/tools/EcosystemStatus.tsx`
 
