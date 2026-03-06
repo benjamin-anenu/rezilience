@@ -91,6 +91,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/demo" element={<HackathonDemo />} />
               <Route path="/tools" element={<Tools />} />
+              <Route path="/deploy-feed" element={<DeployFeed />} />
 
               {/* Admin Portal */}
               <Route path="/admin/login" element={<AdminLogin />} />

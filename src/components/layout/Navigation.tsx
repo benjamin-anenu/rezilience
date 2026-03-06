@@ -46,7 +46,8 @@ const navGroups: NavGroup[] = [
   {
     label: 'MONITOR',
     items: [
-      { href: '/tools', label: 'Tools', description: 'RPC health, address lookup, tx decoder', icon: Activity },
+      { href: '/tools', label: 'Tools', description: 'RPC health, fee tracker, address lookup, tx decoder', icon: Activity },
+      { href: '/deploy-feed', label: 'Deploy Feed', description: 'Real-time program deploys & upgrades', icon: Rocket },
       { href: '/tools?tab=status', label: 'Ecosystem Status', description: 'Service uptime dashboard', icon: Globe },
       { href: '/gpt', label: 'GPT', description: 'AI-powered Solana intelligence', icon: MessageCircle },
     ],
