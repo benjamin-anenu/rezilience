@@ -32,6 +32,7 @@ import Terms from "./pages/Terms";
 import HackathonDemo from "./pages/HackathonDemo";
 import BountyBoard from "./pages/BountyBoard";
 import Tools from "./pages/Tools";
+import DeployFeed from "./pages/DeployFeed";
 import NotFound from "./pages/NotFound";
 
 // Admin imports
@@ -90,6 +91,7 @@ const App = () => (
               <Route path="/terms" element={<Terms />} />
               <Route path="/demo" element={<HackathonDemo />} />
               <Route path="/tools" element={<Tools />} />
+              <Route path="/deploy-feed" element={<DeployFeed />} />
 
               {/* Admin Portal */}
               <Route path="/admin/login" element={<AdminLogin />} />

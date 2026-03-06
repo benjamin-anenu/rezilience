@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { Layout } from '@/components/layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, Search, FileCode, Globe } from 'lucide-react';
+import { Activity, Search, FileCode, Globe, Zap } from 'lucide-react';
 import { RPCHealthMonitor } from '@/components/tools/RPCHealthMonitor';
 import { AddressLookup } from '@/components/tools/AddressLookup';
 import { TransactionDecoder } from '@/components/tools/TransactionDecoder';
 import { EcosystemStatus } from '@/components/tools/EcosystemStatus';
+import { PriorityFeeTracker } from '@/components/tools/PriorityFeeTracker';
 
 const tabs = [
   { id: 'rpc', label: 'RPC Health', icon: Activity },
+  { id: 'fees', label: 'Fee Tracker', icon: Zap },
   { id: 'lookup', label: 'Address Lookup', icon: Search },
   { id: 'tx', label: 'TX Decoder', icon: FileCode },
   { id: 'status', label: 'Ecosystem Status', icon: Globe },
@@ -32,14 +34,14 @@ export default function Tools() {
             Solana Toolkit
           </h1>
           <p className="mt-2 max-w-2xl text-muted-foreground">
-            Public-good utilities for Solana builders. Check RPC health, decode transactions,
-            look up addresses, and monitor ecosystem service status — all in one place.
+            Public-good utilities for Solana builders. Check RPC health, track priority fees,
+            decode transactions, look up addresses, and monitor ecosystem status.
           </p>
         </div>
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-8 w-full justify-start bg-muted/30 border border-border/50">
+          <TabsList className="mb-8 w-full justify-start bg-muted/30 border border-border/50 overflow-x-auto">
             {tabs.map((tab) => (
               <TabsTrigger
                 key={tab.id}
@@ -53,6 +55,7 @@ export default function Tools() {
           </TabsList>
 
           <TabsContent value="rpc"><RPCHealthMonitor /></TabsContent>
+          <TabsContent value="fees"><PriorityFeeTracker /></TabsContent>
           <TabsContent value="lookup"><AddressLookup /></TabsContent>
           <TabsContent value="tx"><TransactionDecoder /></TabsContent>
           <TabsContent value="status"><EcosystemStatus /></TabsContent>

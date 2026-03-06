@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   Menu, User, LogOut, X as XIcon, ChevronDown,
-  Compass, GitBranch, Coins,
+  Compass, GitBranch, Coins, Rocket,
   Activity, Globe, MessageCircle,
   Target, FolderKanban,
   BookOpen, Layers, BookA,
@@ -46,7 +46,8 @@ const navGroups: NavGroup[] = [
   {
     label: 'MONITOR',
     items: [
-      { href: '/tools', label: 'Tools', description: 'RPC health, address lookup, tx decoder', icon: Activity },
+      { href: '/tools', label: 'Tools', description: 'RPC health, fee tracker, address lookup, tx decoder', icon: Activity },
+      { href: '/deploy-feed', label: 'Deploy Feed', description: 'Real-time program deploys & upgrades', icon: Rocket },
       { href: '/tools?tab=status', label: 'Ecosystem Status', description: 'Service uptime dashboard', icon: Globe },
       { href: '/gpt', label: 'GPT', description: 'AI-powered Solana intelligence', icon: MessageCircle },
     ],
