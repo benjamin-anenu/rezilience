@@ -41,6 +41,7 @@ const navGroups: NavGroup[] = [
       { href: '/explorer', label: 'Explorer', description: 'Browse & score Solana projects', icon: Compass },
       { href: '/deps', label: 'Dependency Map', description: 'Supply-chain visualization', icon: GitBranch },
       { href: '/grants', label: 'Grants', description: 'Discover ecosystem funding', icon: Coins },
+      { href: '/airdrops', label: 'Airdrops', description: 'Token launches & airdrop calendar', icon: Gift },
     ],
   },
   {
