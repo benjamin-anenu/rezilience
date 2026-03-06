@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Layout } from '@/components/layout';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Activity, Search, FileCode, Globe, Zap } from 'lucide-react';
+import { Activity, Search, FileCode, Globe, Zap, Code2 } from 'lucide-react';
 import { RPCHealthMonitor } from '@/components/tools/RPCHealthMonitor';
 import { AddressLookup } from '@/components/tools/AddressLookup';
 import { TransactionDecoder } from '@/components/tools/TransactionDecoder';
 import { EcosystemStatus } from '@/components/tools/EcosystemStatus';
+import { IDLExplorer } from '@/components/tools/IDLExplorer';
 import { PriorityFeeTracker } from '@/components/tools/PriorityFeeTracker';
 
 const tabs = [
@@ -14,6 +15,7 @@ const tabs = [
   { id: 'lookup', label: 'Address Lookup', icon: Search },
   { id: 'tx', label: 'TX Decoder', icon: FileCode },
   { id: 'status', label: 'Ecosystem Status', icon: Globe },
+  { id: 'idl', label: 'IDL Explorer', icon: Code2 },
 ];
 
 export default function Tools() {
@@ -59,6 +61,7 @@ export default function Tools() {
           <TabsContent value="lookup"><AddressLookup /></TabsContent>
           <TabsContent value="tx"><TransactionDecoder /></TabsContent>
           <TabsContent value="status"><EcosystemStatus /></TabsContent>
+          <TabsContent value="idl"><IDLExplorer /></TabsContent>
         </Tabs>
       </div>
     </Layout>
