@@ -32,6 +32,7 @@ import Terms from "./pages/Terms";
 import HackathonDemo from "./pages/HackathonDemo";
 import BountyBoard from "./pages/BountyBoard";
 import Tools from "./pages/Tools";
+import DeployFeed from "./pages/DeployFeed";
 import NotFound from "./pages/NotFound";
 
 // Admin imports
