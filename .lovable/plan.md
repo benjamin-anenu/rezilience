@@ -1,26 +1,36 @@
 
 
-# Fix Ankr and Extrnode False "Down" Status
+# Fix False "Down" Status in Ecosystem Status Monitor
 
 ## Problem
-Ankr and Extrnode respond successfully (low latency, HTTP 200) but return non-standard responses to `getHealth` and `getSlot`. The current logic only marks a provider healthy if it gets `result: "ok"` from getHealth OR a numeric slot from getSlot. These providers likely return error objects for both (e.g. rate-limit messages or different response formats), so they get marked "down" despite being reachable and functional.
-
-Showing "down" is misleading -- the endpoint is alive and responding, just not returning the expected JSON-RPC result format.
+Jupiter (401), Birdeye (401), and Magic Eden (429) are marked "down" because the check only considers `res.ok` (HTTP 200-299). These services are alive and responding with low latency -- they just require API keys or are rate-limiting.
 
 ## Solution
+Apply the same HTTP-first strategy used in the RPC Health Monitor.
 
-### 1. Edge function: Use HTTP response status as the primary health signal
-In `supabase/functions/check-rpc-health/index.ts`, change the health determination logic:
-- If the endpoint responds with HTTP 200 to either request, it is **reachable** -- mark as "healthy" or "degraded" based on latency
-- Only mark "down" if the fetch throws (DNS failure, timeout, connection refused) or returns HTTP 4xx/5xx
-- Still try to extract slot number, but treat it as optional metadata, not a health gate
+### 1. Edge Function (`supabase/functions/check-ecosystem-status/index.ts`)
+- Add a `requires_key` flag to service definitions for Jupiter and Birdeye
+- Treat HTTP 401/403 from `requires_key` services as a new `"auth_required"` status instead of "down"
+- Treat HTTP 429 as `"rate_limited"` (degraded) instead of "down" -- the service is clearly alive
+- Only mark "down" for network failures, timeouts, or HTTP 5xx errors
+- Keep latency data for all reachable services
 
-### 2. Frontend: Show "reachable" context for providers without slot data
-In `src/components/tools/RPCHealthMonitor.tsx`:
-- When `slot` is null but status is healthy/degraded, show "Reachable (slot unavailable)" instead of nothing
-- This gives users honest information without painting a false "down" picture
+Updated status logic:
+```text
+HTTP 200-299          → "up" (or "degraded" if latency > 2000ms)
+HTTP 401/403 + key    → "auth_required"
+HTTP 429              → "rate_limited"  
+HTTP 5xx / timeout    → "down"
+```
+
+### 2. Frontend (`src/components/tools/EcosystemStatus.tsx`)
+- Add status config entries for `auth_required` and `rate_limited`
+- `auth_required`: Lock icon + "Requires Key" badge (same pattern as RPC monitor)
+- `rate_limited`: Yellow/orange badge showing "Rate Limited" -- clearly not down
+- Update the summary pills to account for the new statuses
+- Show latency for all reachable services regardless of auth status
 
 ### Files Modified
-- `supabase/functions/check-rpc-health/index.ts` -- use HTTP status codes as health signal
-- `src/components/tools/RPCHealthMonitor.tsx` -- handle null slot for reachable providers
+- `supabase/functions/check-ecosystem-status/index.ts`
+- `src/components/tools/EcosystemStatus.tsx`
 
